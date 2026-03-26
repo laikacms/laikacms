@@ -22,7 +22,8 @@
   "dependencies": {
     "zod": "catalog:schema",
     "@laikacms/core": "workspace:*",
-    "@laikacms/i18n": "workspace:*"
+    "@laikacms/i18n": "workspace:*",
+    "effect": "catalog:default"
   },
   "devDependencies": {
     "typescript": "^5.7.2",

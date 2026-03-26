@@ -30,6 +30,7 @@
     "@laikacms/documents": "workspace:*",
     "@laikacms/documents-api": "workspace:*",
     "@laikacms/json-api": "workspace:*",
+    "effect": "catalog:default",
     "zod": "catalog:schema"
   },
   "devDependencies": {

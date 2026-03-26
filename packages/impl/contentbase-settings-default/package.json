@@ -31,6 +31,7 @@
     "@laikacms/storage": "workspace:*",
     "@laikacms/documents": "workspace:*",
     "@laikacms/contentbase-settings": "workspace:*",
+    "effect": "catalog:default",
     "zod": "catalog:schema",
     "ajv": "catalog:schema",
     "json-schema": "catalog:schema"

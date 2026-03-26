@@ -1,24 +1,24 @@
-import { InvalidData, Result } from '@laikacms/core'
+import { LaikaResult } from '@laikacms/core'
 
 import type {
-  Folder,
   Atom,
-  FolderCreate,
-  StorageObject,
-  StorageObjectUpdate,
   AtomSummary,
+  Folder,
+  FolderCreate,
   Pagination,
+  StorageObject,
   StorageObjectCreate,
+  StorageObjectUpdate,
 } from '../entities/index.js'
-import { StorageSerializerRegistry } from '../types/storage-serializer.js'
-import { StorageProvider } from '../types/storage-provider.js'
 import { AsyncCache } from '../types/cache.js'
-import { StorageFormat } from '../types/storage-format.js'
+import { Key } from '../types/key.js'
 
 export interface ListAtomsOptions {
   depth: number,
   pagination: Pagination,
 }
+
+type ResultStream<T> = AsyncGenerator<LaikaResult<T>>;
 
 export abstract class StorageRepository {
   protected readonly cache?: AsyncCache<string, unknown>;
@@ -30,18 +30,18 @@ export abstract class StorageRepository {
   }
 
   // Storage Objects (formerly Files)
-  abstract getObject(key: string): Promise<Result<StorageObject>>
-  abstract updateObject(update: StorageObjectUpdate): Promise<Result<StorageObject>>
-  abstract createObject(create: StorageObjectCreate): Promise<Result<StorageObject>>
-  abstract createOrUpdateObject(create: StorageObjectCreate): Promise<Result<StorageObject>>
+  abstract getObject(key: Key): ResultStream<StorageObject>
+  abstract updateObject(update: StorageObjectUpdate): ResultStream<StorageObject>
+  abstract createObject(create: StorageObjectCreate): ResultStream<StorageObject>
+  abstract createOrUpdateObject(create: StorageObjectCreate): ResultStream<StorageObject>
 
   // Folders (formerly Directories)
-  abstract getFolder(key: string): Promise<Result<Folder>>
-  abstract listAtomSummaries(folderKey: string, options: ListAtomsOptions): AsyncGenerator<Result<readonly AtomSummary[]>>
-  abstract listAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<Result<readonly Atom[]>>
-  abstract createFolder(folderCreate: FolderCreate): Promise<Result<Folder>>
+  abstract getFolder(key: Key): ResultStream<Folder>
+  abstract listAtomSummaries(folderKey: Key, options: ListAtomsOptions): ResultStream<readonly AtomSummary[]>
+  abstract listAtoms(folderKey: Key, options: ListAtomsOptions): ResultStream<readonly Atom[]>
+  abstract createFolder(folderCreate: FolderCreate): ResultStream<Folder>
 
   // Atoms (formerly Entries)
-  abstract getAtom(key: string): Promise<Result<Atom>>
-  abstract removeAtoms(keys: readonly string[]): AsyncGenerator<Result<readonly string[]>>
+  abstract getAtom(key: Key): ResultStream<Atom>
+  abstract removeAtoms(keys: readonly Key[]): ResultStream<readonly Key[]>
 }

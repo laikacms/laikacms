@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { StorageRepository } from "@laikacms/storage";
-import { errorCode, failure, Result, success } from "@laikacms/core";
+import { LaikaResult, LaikaError, NotFoundError } from "@laikacms/core";
+import * as Result from "effect/Result";
 import {
   collectionToJsonApiZ,
   toJsonApi,
@@ -15,16 +16,26 @@ import z from "zod";
 // JSON:API error response
 function respondError(
   c: Context,
-  result: Result<any>,
+  result: LaikaResult<any>,
   status: 400 | 404 | 500 = 400
 ) {
+  if (Result.isFailure(result)) {
+    return c.json(
+      {
+        errors: [
+          {
+            status: String(status),
+            title: result.failure.code || "Error",
+            detail: result.failure.message,
+          },
+        ],
+      },
+      status
+    );
+  }
   return c.json(
     {
-      errors: result.messages?.map((m) => ({
-        status: String(status),
-        title: "Validation Error",
-        detail: m,
-      })) ?? [
+      errors: [
         {
           status: String(status),
           title: "Unknown Error",
@@ -39,26 +50,26 @@ function respondError(
 // JSON:API success response for single resource
 function respondResource<T>(
   c: Context,
-  result: Result<T>,
+  result: LaikaResult<T>,
   outputSchema: ReturnType<typeof toJsonApi> | z.ZodUnion<any>
 ) {
-  if (!result.success) {
+  if (Result.isFailure(result)) {
     return respondError(c, result);
   }
-  return c.json(outputSchema.parse(result.data));
+  return c.json(outputSchema.parse(result.success));
 }
 
 // JSON:API success response for resource collection
 function respondCollection<T>(
   c: Context,
-  result: Result<readonly T[]>,
+  result: LaikaResult<readonly T[]>,
   outputSchema: ReturnType<typeof toJsonApi> | z.ZodUnion<any>
 ) {
-  if (!result.success) {
+  if (Result.isFailure(result)) {
     return respondError(c, result);
   }
   return c.json({
-    data: result.data.map((item) => outputSchema.parse(item)),
+    data: result.success.map((item) => outputSchema.parse(item)),
   });
 }
 
@@ -95,32 +106,25 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
   // Collections
   app.get("/collections", async (c) => {
     const settings = await repo.getSettings();
-    if (!settings.success) {
+    if (Result.isFailure(settings)) {
       return respondError(c, settings);
     }
-    const settingsList = Object.values(settings.data.collections);
-    return respondCollection(c, success(settingsList), collectionZ);
+    const settingsList = Object.values(settings.success.collections);
+    return respondCollection(c, Result.succeed(settingsList), collectionZ);
   });
   app.get("/collections/:key", async (c) => {
     // TODO: This should be simplified a lot 
 
     const key = c.req.param("key");
     const allSettings = await repo.getSettings();
-    if (!allSettings.success) {
+    if (Result.isFailure(allSettings)) {
       return respondError(c, allSettings);
     }
-    const collectionSettings = allSettings.data.collections[key];
+    const collectionSettings = allSettings.success.collections[key];
     if (!collectionSettings) {
       return respondError(
         c,
-        failure(errorCode.NOT_FOUND, [`Collection '${key}' not found.`]),
-        404
-      );
-    }
-    if (!collectionSettings) {
-      return respondError(
-        c,
-        failure(errorCode.NOT_FOUND, [`Collection '${key}' not found.`]),
+        Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
         404
       );
     }
@@ -128,7 +132,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
       const docSettingsResult = await repo.getDocumentCollectionSettings(
         key
       );
-      if (!docSettingsResult.success) {
+      if (Result.isFailure(docSettingsResult)) {
         return respondError(c, docSettingsResult);
       }
       return respondResource(
@@ -138,7 +142,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
       );
     } else if (collectionSettings.type === "media") {
       const mediaSettingsResult = await repo.getMediaCollectionSettings(key);
-      if (!mediaSettingsResult.success) {
+      if (Result.isFailure(mediaSettingsResult)) {
         return respondError(c, mediaSettingsResult);
       }
       return respondResource(
@@ -187,21 +191,21 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
     // TODO: This should be simplified a lot 
     const key = c.req.param("key");
     const allSettings = await repo.getSettings();
-    if (!allSettings.success) {
+    if (Result.isFailure(allSettings)) {
       return respondError(c, allSettings);
     }
-    const collectionSettings = allSettings.data.collections[key];
+    const collectionSettings = allSettings.success.collections[key];
     if (!collectionSettings) {
       return respondError(
         c,
-        failure(errorCode.NOT_FOUND, [`Collection '${key}' not found.`]),
+        Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
         404
       );
     }
     // Remove collection settings
-    delete allSettings.data.collections[key];
-    const result = await repo.putSettings(allSettings.data);
-    if (!result.success) {
+    delete allSettings.success.collections[key];
+    const result = await repo.putSettings(allSettings.success);
+    if (Result.isFailure(result)) {
       return respondError(c, result);
     }
     return c.status(204);

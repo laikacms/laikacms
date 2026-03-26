@@ -1,15 +1,14 @@
 import {
   GetCommand,
   PutCommand,
-  UpdateCommand,
   type DynamoDBDocumentClient,
 } from '@aws-sdk/lib-dynamodb';
 import {
-  Result,
-  success,
-  failure,
+  LaikaError,
+  LaikaResult,
   NotFoundError,
   InvalidData,
+  InternalError,
 } from "@laikacms/core";
 import {
   CollectionSettings,
@@ -22,6 +21,7 @@ import {
 } from "@laikacms/contentbase-settings";
 import type { JSONSchema7 } from 'json-schema';
 import superjson from 'superjson';
+import * as Result from 'effect/Result';
 
 // DynamoDB Key Prefixes
 const PREFIX_PROJECT = 'PROJECT';
@@ -31,6 +31,13 @@ type SettingsDocument = {
     collections: Record<string, CollectionSettings>;
     schemas: Record<string, JSONSchema7>;
 };
+
+/**
+ * Helper to convert a failure result to a different type while preserving the error
+ */
+function failAs<T>(error: LaikaError): LaikaResult<T> {
+  return Result.fail(error);
+}
 
 /**
  * DynamoDB-backed ContentBase settings repository
@@ -58,7 +65,7 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
   /**
    * Get the entire settings document from DynamoDB
    */
-  private async getSettingsDocument(): Promise<Result<SettingsDocument>> {
+  private async getSettingsDocument(): Promise<LaikaResult<SettingsDocument>> {
     try {
       const result = await this.docClient.send(new GetCommand({
         TableName: this.tableName,
@@ -85,15 +92,15 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
           },
         }));
 
-        return success(settingsObj);
+        return Result.succeed(settingsObj);
       }
 
       const settingsData = superjson.deserialize(result.Item.settings);
 
-      return success(settingsData as SettingsDocument);
+      return Result.succeed(settingsData as SettingsDocument);
     } catch (error) {
       console.error(error);
-      return failure('internal_error', [`Failed to get settings: ${error}`]);
+      return Result.fail(new InternalError(`Failed to get settings: ${error}`));
     }
   }
 
@@ -103,7 +110,7 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
   private async putSettingsDocument(document: {
     collections: Record<string, CollectionSettings>;
     schemas: Record<string, JSONSchema7>;
-  }): Promise<Result<void>> {
+  }): Promise<LaikaResult<void>> {
     try {
       await this.docClient.send(new PutCommand({
         TableName: this.tableName,
@@ -114,112 +121,130 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
         },
       }));
 
-      return success(undefined);
+      return Result.succeed(undefined);
     } catch (error) {
       console.error(error);
-      return failure('internal_error', [`Failed to put settings: ${error}`]);
+      return Result.fail(new InternalError(`Failed to put settings: ${error}`));
     }
   }
 
-  async getSettings(): Promise<Result<ContentBaseSettings>> {
+  async getSettings(): Promise<LaikaResult<ContentBaseSettings>> {
     const document = await this.getSettingsDocument();
-    if (!document.success) return document;
+    if (Result.isFailure(document)) {
+      return failAs<ContentBaseSettings>(document.failure);
+    }
 
     const settings: ContentBaseSettings = {
-      collections: document.data.collections,
+      collections: document.success.collections,
     };
 
     const parsedSettings = parseSettings(settings);
-    if (!parsedSettings.success) return parsedSettings;
+    if (Result.isFailure(parsedSettings)) {
+      return failAs<ContentBaseSettings>(parsedSettings.failure);
+    }
 
-    return success(parsedSettings.data);
+    return Result.succeed(parsedSettings.success);
   }
 
-  async putSettings(settings: ContentBaseSettings): Promise<Result<void>> {
+  async putSettings(settings: ContentBaseSettings): Promise<LaikaResult<void>> {
     const document = await this.getSettingsDocument();
-    if (!document.success) return document;
+    if (Result.isFailure(document)) {
+      return failAs<void>(document.failure);
+    }
 
     // Update collections while preserving schemas
-    document.data.collections = settings.collections;
+    document.success.collections = settings.collections;
 
-    return this.putSettingsDocument(document.data);
+    return this.putSettingsDocument(document.success);
   }
 
-  async getCollectionSettings(collection: string): Promise<Result<CollectionSettings>> {
+  async getCollectionSettings(collection: string): Promise<LaikaResult<CollectionSettings>> {
     const settings = await this.getSettings();
-    if (!settings.success) return settings;
+    if (Result.isFailure(settings)) {
+      return failAs<CollectionSettings>(settings.failure);
+    }
 
-    const collectionSettings = settings.data.collections[collection];
+    const collectionSettings = settings.success.collections[collection];
     if (!collectionSettings) {
-      return failure(NotFoundError.CODE, [`Collection '${collection}' not found in settings`]);
+      return Result.fail(new NotFoundError(`Collection '${collection}' not found in settings`));
     }
 
-    return success(collectionSettings);
+    return Result.succeed(collectionSettings);
   }
 
-  async getDocumentCollectionSettings(collection: string): Promise<Result<DocumentCollectionSettings>> {
+  async getDocumentCollectionSettings(collection: string): Promise<LaikaResult<DocumentCollectionSettings>> {
     const collectionSettings = await this.getCollectionSettings(collection);
-    if (!collectionSettings.success) return failure(collectionSettings.code, collectionSettings.messages);
+    if (Result.isFailure(collectionSettings)) {
+      return failAs<DocumentCollectionSettings>(collectionSettings.failure);
+    }
     console.log('Document collection settings:', collectionSettings);
-    if (collectionSettings.data.type !== 'document') {
-      return failure(InvalidData.CODE, [
-        `Settings for document collection '${collection}' are of type '${collectionSettings.data.type}' not of type 'document'.`
-      ]);
+    if (collectionSettings.success.type !== 'document') {
+      return Result.fail(new InvalidData(
+        `Settings for document collection '${collection}' are of type '${collectionSettings.success.type}' not of type 'document'.`
+      ));
     }
 
-    return success(collectionSettings.data, collectionSettings.messages);
+    return Result.succeed(collectionSettings.success as DocumentCollectionSettings);
   }
 
-  async getMediaCollectionSettings(collection: string): Promise<Result<MediaCollectionSettings>> {
+  async getMediaCollectionSettings(collection: string): Promise<LaikaResult<MediaCollectionSettings>> {
     const collectionSettings = await this.getCollectionSettings(collection);
-    if (!collectionSettings.success) return failure(collectionSettings.code, collectionSettings.messages);
-
-    if (collectionSettings.data.type !== 'media') {
-      return failure(InvalidData.CODE, [
-        `Settings for media collection '${collection}' are of type '${collectionSettings.data.type}' not of type 'media'.`
-      ]);
+    if (Result.isFailure(collectionSettings)) {
+      return failAs<MediaCollectionSettings>(collectionSettings.failure);
     }
 
-    return success(collectionSettings.data, collectionSettings.messages);
+    if (collectionSettings.success.type !== 'media') {
+      return Result.fail(new InvalidData(
+        `Settings for media collection '${collection}' are of type '${collectionSettings.success.type}' not of type 'media'.`
+      ));
+    }
+
+    return Result.succeed(collectionSettings.success as MediaCollectionSettings);
   }
 
-  async putCollectionSettings(collection: string, settings: CollectionSettings): Promise<Result<void>> {
+  async putCollectionSettings(collection: string, settings: CollectionSettings): Promise<LaikaResult<void>> {
     const document = await this.getSettingsDocument();
-    if (!document.success) return document;
+    if (Result.isFailure(document)) {
+      return failAs<void>(document.failure);
+    }
 
     // Update the specific collection
-    document.data.collections[collection] = settings;
+    document.success.collections[collection] = settings;
 
-    return this.putSettingsDocument(document.data);
+    return this.putSettingsDocument(document.success);
   }
 
-  async putDocumentCollectionSettings(collection: string, settings: DocumentCollectionSettings): Promise<Result<void>> {
+  async putDocumentCollectionSettings(collection: string, settings: DocumentCollectionSettings): Promise<LaikaResult<void>> {
     return this.putCollectionSettings(collection, settings);
   }
 
-  async putMediaCollectionSettings(collection: string, settings: MediaCollectionSettings): Promise<Result<void>> {
+  async putMediaCollectionSettings(collection: string, settings: MediaCollectionSettings): Promise<LaikaResult<void>> {
     return this.putCollectionSettings(collection, settings);
   }
 
-  async getCollectionSchema(collection: string): Promise<Result<JSONSchema7>> {
+  async getCollectionSchema(collection: string): Promise<LaikaResult<JSONSchema7>> {
     const document = await this.getSettingsDocument();
-    if (!document.success) return failure(document.code, document.messages);
-
-    const schema = document.data.schemas[collection];
-    if (!schema) {
-      return failure(NotFoundError.CODE, [`Schema for collection '${collection}' not found`]);
+    if (Result.isFailure(document)) {
+      return failAs<JSONSchema7>(document.failure);
     }
 
-    return success(schema);
+    const schema = document.success.schemas[collection];
+    if (!schema) {
+      return Result.fail(new NotFoundError(`Schema for collection '${collection}' not found`));
+    }
+
+    return Result.succeed(schema);
   }
 
-  async putCollectionSchema(collection: string, schema: JSONSchema7): Promise<Result<void>> {
+  async putCollectionSchema(collection: string, schema: JSONSchema7): Promise<LaikaResult<void>> {
     const document = await this.getSettingsDocument();
-    if (!document.success) return failure(document.code, document.messages);
+    if (Result.isFailure(document)) {
+      return failAs<void>(document.failure);
+    }
 
     // Update the specific schema
-    document.data.schemas[collection] = schema;
+    document.success.schemas[collection] = schema;
 
-    return this.putSettingsDocument(document.data);
+    return this.putSettingsDocument(document.success);
   }
 }

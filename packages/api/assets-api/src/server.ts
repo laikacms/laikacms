@@ -1,4 +1,4 @@
-import { Result, failure, ErrorStatus, errorStatus } from '@laikacms/core';
+import { LaikaResult, LaikaError, ErrorStatus, errorStatus, BadRequestError } from '@laikacms/core';
 import { AssetsRepository, FetchHints } from '@laikacms/assets';
 import {
   JsonApiResource,
@@ -18,6 +18,7 @@ import {
   assetUrlToJsonApi,
   assetCreateWithContentZ,
 } from './jsonapi.js';
+import * as Result from 'effect/Result';
 
 // ============================================
 // Types
@@ -50,15 +51,13 @@ const json = <T>(
   });
 };
 
-function respondError(result: Result<unknown>, status: ErrorStatus = 400): Response {
-  // Result has code and messages directly, not an errors array
-  const errorResult = result as { code: string; messages: string[] };
+function respondError(error: LaikaError, status: ErrorStatus = 400): Response {
   return json(
     {
       errors: [{
         status: String(status),
-        code: errorResult.code,
-        detail: errorResult.messages.join(', '),
+        code: error.code,
+        detail: error.message,
       }],
     },
     status
@@ -161,42 +160,42 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           depth,
           hints,
         })) {
-          if (!batch.success) {
-            return respondError(batch, errorStatus.BAD_REQUEST);
+          if (Result.isFailure(batch)) {
+            return respondError(batch.failure, errorStatus.BAD_REQUEST);
           }
 
-          resources.push(...batch.data.map(resource => resourceToJsonApi.parse(resource)));
+          resources.push(...batch.success.map(resource => resourceToJsonApi.parse(resource)));
 
-          const assets = batch.data.filter(r => r.type === 'asset');
+          const assets = batch.success.filter(r => r.type === 'asset');
 
           for await (const metadataResult of repository.getMetadata(assets)) {
-            if (metadataResult.success) {
-              for (const metadata of metadataResult.data) {
+            if (Result.isSuccess(metadataResult)) {
+              for (const metadata of metadataResult.success) {
                 included.push(assetMetadataToJsonApi.parse(metadata));
               }
             }
           }
 
           for await (const urlsResult of repository.getUrls(assets)) {
-            if (urlsResult.success) {
-              for (const urls of urlsResult.data) {
+            if (Result.isSuccess(urlsResult)) {
+              for (const urls of urlsResult.success) {
                 included.push(assetUrlToJsonApi.parse(urls));
               }
             }
           }
 
           for await (const variationsResult of repository.getVariations(assets)) {
-            if (variationsResult.success) {
-              for (const variations of variationsResult.data) {
+            if (Result.isSuccess(variationsResult)) {
+              for (const variations of variationsResult.success) {
                 included.push(assetVariationsToJsonApi.parse(variations));
               }
             }
           }
 
           // Check if there are more results
-          if (batch.data.length >= paginationOptions.limit) {
+          if (batch.success.length >= paginationOptions.limit) {
             hasMore = true;
-            nextCursor = batch.data[batch.data.length - 1]?.key;
+            nextCursor = batch.success[batch.success.length - 1]?.key;
           }
         }
 
@@ -216,41 +215,48 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       if (path.startsWith(`${basePath}/resources/`) && method === 'GET') {
         const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
         
-        const result = await repository.getResource(key, { hints });
+        for await (const result of repository.getResource(key, { hints })) {
+          if (Result.isFailure(result)) {
+            return respondError(result.failure, errorStatus.NOT_FOUND);
+          }
+          
+          const resourceData = result.success[0];
+          if (!resourceData) {
+            return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
+          }
+
+          const resource = resourceToJsonApi.parse(resourceData);
+          const included: JsonApiResource[] = [];
+
+          // Fetch included data for assets
+          if (resourceData.type === 'asset') {
+            if (hints.metadata) {
+              for await (const metadataResult of repository.getMetadata([resourceData])) {
+                if (Result.isSuccess(metadataResult)) {
+                  included.push(assetMetadataToJsonApi.parse(metadataResult.success[0]));
+                }
+              }
+            }
+            if (hints.urls) {
+              for await (const urlsResult of repository.getUrls([resourceData])) {
+                if (Result.isSuccess(urlsResult)) {
+                  included.push(assetUrlToJsonApi.parse(urlsResult.success[0]));
+                }
+              }
+            }
+            if (hints.variations) {
+              for await (const variationsResult of repository.getVariations([resourceData])) {
+                if (Result.isSuccess(variationsResult)) {
+                  included.push(assetVariationsToJsonApi.parse(variationsResult.success[0]));
+                }
+              }
+            }
+          }
+
+          return respondResource(resource, included);
+        }
         
-        if (!result.success) {
-          return respondError(result, errorStatus.NOT_FOUND);
-        }
-
-        const resource = resourceToJsonApi.parse(result.data);
-        const included: JsonApiResource[] = [];
-
-        // Fetch included data for assets
-        if (result.data.type === 'asset') {
-          if (hints.metadata) {
-            for await (const metadataResult of repository.getMetadata([result.data])) {
-              if (metadataResult.success) {
-                included.push(assetMetadataToJsonApi.parse(metadataResult.data[0]));
-              }
-            }
-          }
-          if (hints.urls) {
-            for await (const urlsResult of repository.getUrls([result.data])) {
-              if (urlsResult.success) {
-                included.push(assetUrlToJsonApi.parse(urlsResult.data[0]));
-              }
-            }
-          }
-          if (hints.variations) {
-            for await (const variationsResult of repository.getVariations([result.data])) {
-              if (variationsResult.success) {
-                included.push(assetVariationsToJsonApi.parse(variationsResult.data[0]));
-              }
-            }
-          }
-        }
-
-        return respondResource(resource, included);
+        return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
       }
 
       // Route: POST /resources
@@ -273,7 +279,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           
           if (!file) {
             return respondError(
-              failure('bad_request', ['Missing file in multipart form data']),
+              new BadRequestError('Missing file in multipart form data'),
               errorStatus.BAD_REQUEST
             );
           }
@@ -284,7 +290,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
               metadata = JSON.parse(metadataJson);
             } catch {
               return respondError(
-                failure('bad_request', ['Invalid metadata JSON']),
+                new BadRequestError('Invalid metadata JSON'),
                 errorStatus.BAD_REQUEST
               );
             }
@@ -301,26 +307,25 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           }
 
           // Priority: individual fields > metadata JSON > file properties
-          const key = keyField || metadata?.key || file.name;
+          const assetKey = keyField || metadata?.key || file.name;
           const mimeType = mimeTypeField || metadata?.mimeType || file.type || 'application/octet-stream';
           const filename = filenameField || metadata?.filename || file.name;
           const cacheControl = cacheControlField || metadata?.cacheControl;
           const content = await file.arrayBuffer();
 
-          const result = await repository.createAsset({
-            key,
+          for await (const result of repository.createAsset({
+            key: assetKey,
             mimeType,
             content,
             filename,
             customMetadata,
             cacheControl,
-          });
-
-          if (!result.success) {
-            return respondError(result, errorStatus.BAD_REQUEST);
+          })) {
+            if (Result.isFailure(result)) {
+              return respondError(result.failure, errorStatus.BAD_REQUEST);
+            }
+            return respondResource(assetToJsonApi.parse(result.success));
           }
-
-          return respondResource(assetToJsonApi.parse(result.data));
         }
 
         // Handle JSON:API request for folder creation
@@ -338,12 +343,12 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             }
 
             const folderCreate = folderCreateFromJsonApiZ.parse(data);
-            const result = await repository.createFolder(folderCreate);
-            if (!result.success) {
-              return respondError(result, errorStatus.BAD_REQUEST);
+            for await (const result of repository.createFolder(folderCreate)) {
+              if (Result.isFailure(result)) {
+                return respondError(result.failure, errorStatus.BAD_REQUEST);
+              }
+              return respondResource(folderToJsonApi.parse(result.success));
             }
-
-            return respondResource(folderToJsonApi.parse(result.data));
           }
 
           // Asset creation via JSON (content must be base64 encoded)
@@ -360,7 +365,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             const base64Content = parsed.data.content;
             if (!base64Content) {
               return respondError(
-                failure('bad_request', ['Missing content in asset creation. Use multipart/form-data for binary uploads.']),
+                new BadRequestError('Missing content in asset creation. Use multipart/form-data for binary uploads.'),
                 errorStatus.BAD_REQUEST
               );
             }
@@ -372,26 +377,25 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
               bytes[i] = binaryString.charCodeAt(i);
             }
 
-            const result = await repository.createAsset({
+            for await (const result of repository.createAsset({
               ...parsed.data,
               content: bytes.buffer,
-            });
-
-            if (!result.success) {
-              return respondError(result, errorStatus.BAD_REQUEST);
+            })) {
+              if (Result.isFailure(result)) {
+                return respondError(result.failure, errorStatus.BAD_REQUEST);
+              }
+              return respondResource(assetToJsonApi.parse(result.success));
             }
-
-            return respondResource(assetToJsonApi.parse(result.data));
           }
 
           return respondError(
-            failure('bad_request', ['Invalid resource type. Must be "asset" or "folder".']),
+            new BadRequestError('Invalid resource type. Must be "asset" or "folder".'),
             errorStatus.BAD_REQUEST
           );
         }
 
         return respondError(
-          failure('bad_request', ['Unsupported Content-Type. Use multipart/form-data or application/vnd.api+json.']),
+          new BadRequestError('Unsupported Content-Type. Use multipart/form-data or application/vnd.api+json.'),
           errorStatus.BAD_REQUEST
         );
       }
@@ -412,12 +416,12 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           );
         }
 
-        const result = await repository.updateAsset(parsed.data);
-        if (!result.success) {
-          return respondError(result, errorStatus.BAD_REQUEST);
+        for await (const result of repository.updateAsset(parsed.data)) {
+          if (Result.isFailure(result)) {
+            return respondError(result.failure, errorStatus.BAD_REQUEST);
+          }
+          return respondResource(assetToJsonApi.parse(result.success));
         }
-
-        return respondResource(assetToJsonApi.parse(result.data));
       }
 
       // Route: DELETE /resources/:key
@@ -427,21 +431,32 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         const recursive = query['recursive'] === 'true';
 
         // Try to determine if it's an asset or folder
-        const resourceResult = await repository.getResource(key);
-        
-        if (!resourceResult.success) {
-          return respondError(resourceResult, errorStatus.NOT_FOUND);
+        let resourceType: 'asset' | 'folder' | undefined;
+        for await (const resourceResult of repository.getResource(key)) {
+          if (Result.isFailure(resourceResult)) {
+            return respondError(resourceResult.failure, errorStatus.NOT_FOUND);
+          }
+          const firstResource = resourceResult.success[0];
+          if (firstResource) {
+            resourceType = firstResource.type;
+          }
         }
 
-        if (resourceResult.data.type === 'folder') {
-          const result = await repository.deleteFolder(key, recursive);
-          if (!result.success) {
-            return respondError(result, errorStatus.BAD_REQUEST);
+        if (!resourceType) {
+          return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
+        }
+
+        if (resourceType === 'folder') {
+          for await (const result of repository.deleteFolder(key, recursive)) {
+            if (Result.isFailure(result)) {
+              return respondError(result.failure, errorStatus.BAD_REQUEST);
+            }
           }
         } else {
-          const result = await repository.deleteAsset(key);
-          if (!result.success) {
-            return respondError(result, errorStatus.BAD_REQUEST);
+          for await (const result of repository.deleteAsset(key)) {
+            if (Result.isFailure(result)) {
+              return respondError(result.failure, errorStatus.BAD_REQUEST);
+            }
           }
         }
 

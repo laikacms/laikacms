@@ -1,11 +1,12 @@
 import {
-  failure,
+  BadRequestError,
+  ConflictError,
   InternalError,
-  NotFoundError,
-  Result,
-  ResultError,
-  success
+  LaikaResult,
+  NotFoundError
 } from '@laikacms/core';
+import * as Cause from 'effect/Cause';
+import * as Result from 'effect/Result';
 
 /**
  * Entry in an R2 directory listing
@@ -62,16 +63,16 @@ export class R2AssetsDataSource {
   /**
    * Get object metadata without fetching the body
    */
-  async getObjectMeta(key: string): Promise<Result<R2AssetMeta>> {
+  async getObjectMeta(key: string): Promise<LaikaResult<R2AssetMeta>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       const object = await this.bucket.head(normalizedKey);
       
       if (!object) {
-        return failure(NotFoundError.CODE, [`Asset at ${key} does not exist`]);
+        return Result.fail(new NotFoundError(`Asset at ${key} does not exist`));
       }
 
-      return success({
+      return Result.succeed({
         key: normalizedKey,
         size: object.size,
         etag: object.etag,
@@ -81,25 +82,25 @@ export class R2AssetsDataSource {
       });
     } catch (error) {
       console.error(error);
-      return failure(InternalError.CODE, [`Failed to get asset metadata: ${error instanceof Error ? error.message : String(error)}`]);
+      return Result.fail(new InternalError(`Failed to get asset metadata: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
   /**
    * Get object body as ArrayBuffer
    */
-  async getObjectBody(key: string): Promise<Result<{ body: ArrayBuffer; meta: R2AssetMeta }>> {
+  async getObjectBody(key: string): Promise<LaikaResult<{ body: ArrayBuffer; meta: R2AssetMeta }>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       const object = await this.bucket.get(normalizedKey);
       
       if (!object) {
-        return failure(NotFoundError.CODE, [`Asset at ${key} does not exist`]);
+        return Result.fail(new NotFoundError(`Asset at ${key} does not exist`));
       }
 
       const body = await object.arrayBuffer();
       
-      return success({
+      return Result.succeed({
         body,
         meta: {
           key: normalizedKey,
@@ -112,23 +113,23 @@ export class R2AssetsDataSource {
       });
     } catch (error) {
       console.error(error);
-      return failure(InternalError.CODE, [`Failed to get asset body: ${error instanceof Error ? error.message : String(error)}`]);
+      return Result.fail(new InternalError(`Failed to get asset body: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
   /**
    * Get object body as ReadableStream
    */
-  async getObjectStream(key: string): Promise<Result<{ stream: ReadableStream; meta: R2AssetMeta }>> {
+  async getObjectStream(key: string): Promise<LaikaResult<{ stream: ReadableStream; meta: R2AssetMeta }>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       const object = await this.bucket.get(normalizedKey);
       
       if (!object) {
-        return failure(NotFoundError.CODE, [`Asset at ${key} does not exist`]);
+        return Result.fail(new NotFoundError(`Asset at ${key} does not exist`));
       }
 
-      return success({
+      return Result.succeed({
         stream: object.body,
         meta: {
           key: normalizedKey,
@@ -141,7 +142,7 @@ export class R2AssetsDataSource {
       });
     } catch (error) {
       console.error(error);
-      return failure(InternalError.CODE, [`Failed to get asset stream: ${error instanceof Error ? error.message : String(error)}`]);
+      return Result.fail(new InternalError(`Failed to get asset stream: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
@@ -156,7 +157,7 @@ export class R2AssetsDataSource {
       cacheControl?: string;
       customMetadata?: Record<string, string>;
     }
-  ): Promise<Result<R2AssetMeta>> {
+  ): Promise<LaikaResult<R2AssetMeta>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       
@@ -168,7 +169,7 @@ export class R2AssetsDataSource {
         customMetadata: options?.customMetadata,
       });
 
-      return success({
+      return Result.succeed({
         key: normalizedKey,
         size: object.size,
         etag: object.etag,
@@ -178,48 +179,43 @@ export class R2AssetsDataSource {
       });
     } catch (error) {
       console.error(error);
-      return ResultError.fromError(error).toResult();
+      return Result.fail(new InternalError(`Failed to put object: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
   /**
    * Delete an object
    */
-  async deleteObject(key: string): Promise<Result<void>> {
+  async deleteObject(key: string): Promise<LaikaResult<void>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       await this.bucket.delete(normalizedKey);
-      return success(undefined);
+      return Result.succeed(undefined);
     } catch (error) {
       console.error(error);
-      return ResultError.fromError(error).toResult();
+      return Result.fail(new InternalError(`Failed to delete object: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
   /**
    * Delete multiple objects
    */
-  async deleteObjects(keys: readonly string[]): Promise<Result<string[]>> {
-    const deletedKeys: string[] = [];
-    const errorMessages: string[] = [];
-
+  async *deleteObjects(keys: readonly string[]): AsyncGenerator<LaikaResult<string>> {
     for (const key of keys) {
       try {
         const normalizedKey = this.normalizeKey(key);
         await this.bucket.delete(normalizedKey);
-        deletedKeys.push(normalizedKey);
+        yield Result.succeed(normalizedKey);
       } catch (error) {
-        errorMessages.push(error instanceof Error ? error.message : String(error));
+        yield Result.fail(new InternalError(`Failed to delete object at ${key}: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
       }
     }
-
-    return success(deletedKeys, errorMessages);
   }
 
   /**
    * List objects in a "directory" (prefix)
    */
-  async listDirectory(prefix: string, options?: { includeMetadata?: boolean }): Promise<Result<R2AssetEntry[]>> {
+  async listDirectory(prefix: string, options?: { includeMetadata?: boolean }): Promise<LaikaResult<R2AssetEntry[]>> {
     const normalizedPrefix = this.normalizeKey(prefix);
     const searchPrefix = normalizedPrefix ? `${normalizedPrefix}/` : '';
     
@@ -268,10 +264,10 @@ export class R2AssetsDataSource {
         cursor = listed.truncated ? listed.cursor : undefined;
       } while (cursor);
 
-      return success(entries);
+      return Result.succeed(entries);
     } catch (error) {
       console.error(error);
-      return failure(InternalError.CODE, [`Failed to list directory: ${error instanceof Error ? error.message : String(error)}`]);
+      return Result.fail(new InternalError(`Failed to list directory: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
@@ -293,7 +289,7 @@ export class R2AssetsDataSource {
   /**
    * Get folder metadata (for R2, folders don't have real metadata)
    */
-  async getFolderMeta(key: string): Promise<Result<{ createdAt: Date; updatedAt: Date }>> {
+  async getFolderMeta(key: string): Promise<LaikaResult<{ createdAt: Date; updatedAt: Date }>> {
     const normalizedKey = this.normalizeKey(key);
     const prefix = normalizedKey ? `${normalizedKey}/` : '';
     
@@ -301,38 +297,38 @@ export class R2AssetsDataSource {
       const listed = await this.bucket.list({ prefix, limit: 1 });
       
       if (listed.objects.length === 0 && listed.delimitedPrefixes.length === 0) {
-        return failure(NotFoundError.CODE, [`Folder at ${key} does not exist`]);
+        return Result.fail(new NotFoundError(`Folder at ${key} does not exist`));
       }
 
       // R2 folders don't have real timestamps
       const now = new Date();
-      return success({ createdAt: now, updatedAt: now });
+      return Result.succeed({ createdAt: now, updatedAt: now });
     } catch (error) {
       console.error(error);
-      return failure(InternalError.CODE, [`Failed to get folder metadata: ${error instanceof Error ? error.message : String(error)}`]);
+      return Result.fail(new InternalError(`Failed to get folder metadata: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
   /**
    * Create an empty folder (using .keep file)
    */
-  async createFolder(key: string): Promise<Result<void>> {
+  async createFolder(key: string): Promise<LaikaResult<void>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       const keepKey = `${normalizedKey}/.keep`;
       
       await this.bucket.put(keepKey, '');
-      return success(undefined);
+      return Result.succeed(undefined);
     } catch (error) {
       console.error(error);
-      return ResultError.fromError(error).toResult();
+      return Result.fail(new InternalError(`Failed to create folder: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
   /**
    * Delete a folder and optionally all its contents
    */
-  async deleteFolder(key: string, recursive: boolean = false): Promise<Result<void>> {
+  async deleteFolder(key: string, recursive: boolean = false): Promise<LaikaResult<void>> {
     const normalizedKey = this.normalizeKey(key);
     const prefix = normalizedKey ? `${normalizedKey}/` : '';
     
@@ -343,7 +339,7 @@ export class R2AssetsDataSource {
         const nonKeepObjects = listed.objects.filter(obj => !obj.key.endsWith('/.keep'));
         
         if (nonKeepObjects.length > 0 || listed.delimitedPrefixes.length > 0) {
-          return failure('conflict', ['Folder is not empty. Use recursive=true to delete all contents.']);
+          return Result.fail(new ConflictError('Folder is not empty. Use recursive=true to delete all contents.'));
         }
       }
 
@@ -360,10 +356,10 @@ export class R2AssetsDataSource {
         cursor = listed.truncated ? listed.cursor : undefined;
       } while (cursor);
 
-      return success(undefined);
+      return Result.succeed(undefined);
     } catch (error) {
       console.error(error);
-      return ResultError.fromError(error).toResult();
+      return Result.fail(new InternalError(`Failed to delete folder: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
@@ -380,7 +376,7 @@ export class R2AssetsDataSource {
       contentType?: string;
       customMetadata?: Record<string, string>;
     }
-  ): Promise<Result<{ uploadId: string }>> {
+  ): Promise<LaikaResult<{ uploadId: string }>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       
@@ -391,10 +387,10 @@ export class R2AssetsDataSource {
         customMetadata: options?.customMetadata,
       });
 
-      return success({ uploadId: upload.uploadId });
+      return Result.succeed({ uploadId: upload.uploadId });
     } catch (error) {
       console.error(error);
-      return ResultError.fromError(error).toResult();
+      return Result.fail(new InternalError(`Failed to start multipart upload: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
@@ -406,20 +402,20 @@ export class R2AssetsDataSource {
     uploadId: string,
     partNumber: number,
     body: ReadableStream | ArrayBuffer | ArrayBufferView | string | Uint8Array
-  ): Promise<Result<{ etag: string; partNumber: number }>> {
+  ): Promise<LaikaResult<{ etag: string; partNumber: number }>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       const upload = this.bucket.resumeMultipartUpload(normalizedKey, uploadId);
       
       const part = await upload.uploadPart(partNumber, body);
       
-      return success({
+      return Result.succeed({
         etag: part.etag,
         partNumber: part.partNumber,
       });
     } catch (error) {
       console.error(error);
-      return ResultError.fromError(error).toResult();
+      return Result.fail(new InternalError(`Failed to upload part: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
@@ -430,14 +426,14 @@ export class R2AssetsDataSource {
     key: string,
     uploadId: string,
     parts: Array<{ partNumber: number; etag: string }>
-  ): Promise<Result<R2AssetMeta>> {
+  ): Promise<LaikaResult<R2AssetMeta>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       const upload = this.bucket.resumeMultipartUpload(normalizedKey, uploadId);
       
       const object = await upload.complete(parts);
       
-      return success({
+      return Result.succeed({
         key: normalizedKey,
         size: object.size,
         etag: object.etag,
@@ -447,23 +443,23 @@ export class R2AssetsDataSource {
       });
     } catch (error) {
       console.error(error);
-      return ResultError.fromError(error).toResult();
+      return Result.fail(new InternalError(`Failed to complete multipart upload: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 
   /**
    * Abort a multipart upload
    */
-  async abortMultipartUpload(key: string, uploadId: string): Promise<Result<void>> {
+  async abortMultipartUpload(key: string, uploadId: string): Promise<LaikaResult<void>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       const upload = this.bucket.resumeMultipartUpload(normalizedKey, uploadId);
       
       await upload.abort();
-      return success(undefined);
+      return Result.succeed(undefined);
     } catch (error) {
       console.error(error);
-      return ResultError.fromError(error).toResult();
+      return Result.fail(new InternalError(`Failed to abort multipart upload: ${error instanceof Error ? error.message : String(error)}`, { cause: Cause.fail(error) }));
     }
   }
 }

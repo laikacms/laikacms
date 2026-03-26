@@ -4,12 +4,11 @@ import {
   ErrorStatus,
   InternalError,
   InvalidData,
-  Logger,
+  LaikaResult,
+  LaikaError,
   NotFoundError,
-  Result,
-  failure,
-  success,
 } from "@laikacms/core";
+import * as Result from "effect/Result";
 import {
   folderToJsonApiZ,
   storageObjectFromJsonApiZ,
@@ -54,21 +53,21 @@ const json = <
 };
 
 // JSON:API error response
-function respondError(result: Result<any>, status: ErrorStatus = 400) {
-  if (result.success)
+function respondError(result: LaikaResult<any>, status: ErrorStatus = 400) {
+  if (Result.isSuccess(result))
     throw new InternalError("respondError called with success result");
   return json(errorToJsonApiMapper(result), status);
 }
 
 // JSON:API success response for single resource
 function respondResource<T>(
-  result: Result<T>,
+  result: LaikaResult<T>,
   outputSchema: ReturnType<typeof toJsonApi>,
 ) {
-  if (!result.success) {
+  if (Result.isFailure(result)) {
     return respondError(result);
   }
-  return json({ data: outputSchema.parse(result.data) });
+  return json({ data: outputSchema.parse(result.success) });
 }
 
 // JSON:API success response for resource collection with pagination
@@ -118,11 +117,20 @@ async function respondCollection<T>(
   return json(response);
 }
 
+// Helper to get first result from async generator
+async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<LaikaResult<T>> {
+  const { value, done } = await gen.next();
+  if (done) {
+    return Result.fail(new NotFoundError("No result returned"));
+  }
+  return value;
+}
+
 interface StorageApiOptions {
   repo: StorageRepository;
   basePath?: string | undefined;
   onError?(error: unknown): void;
-  logger?: Logger | undefined;
+  logger?: Console | undefined;
 }
 
 export function buildJsonApi(options: StorageApiOptions) {
@@ -164,52 +172,74 @@ export function buildJsonApi(options: StorageApiOptions) {
 
       const [resource, key, operation] = path.split("/");
 
-      const listAtoms = async <SummariesOnly extends boolean, T = SummariesOnly extends true ? AtomSummary : Atom>(summariesOnly: SummariesOnly) => {
+      const listFullAtoms = async () => {
         console.log("Listing atoms for collection", key);
-        const options = {
+        const listOptions = {
           depth: 1,
           pagination: {
             perPage: 10,
           },
         }
-        const result = summariesOnly ? repo.listAtomSummaries(key, options) : repo.listAtoms(key, options);
-
-        let results: T[] = [] as T[];
-        for await (const listOfAtoms of result) {
-          if (!listOfAtoms.success) {
+        let results: Atom[] = [];
+        for await (const listOfAtoms of repo.listAtoms(key, listOptions)) {
+          if (Result.isFailure(listOfAtoms)) {
+            const errorCode = listOfAtoms.failure.code as keyof typeof ErrorCodeToStatusMap;
             return respondError(
               listOfAtoms,
-              ErrorCodeToStatusMap[listOfAtoms.code],
+              ErrorCodeToStatusMap[errorCode] || 400,
             );
           }
-          results = results.concat(listOfAtoms.data as T[]);
+          results = results.concat([...listOfAtoms.success]);
         }
-
-        return respondCollection(request, results, summariesOnly ? atomSummaryToJsonApiZ : atomToJsonApiZ, request.url);
+        return respondCollection(request, results, atomToJsonApiZ, request.url);
       }
 
-      if (resource === "atoms" && request.method === "GET") return listAtoms(false);
-      else if (resource === "atom-summaries" && request.method === "GET") return listAtoms(true);
+      const listAtomSummaries = async () => {
+        console.log("Listing atom summaries for collection", key);
+        const listOptions = {
+          depth: 1,
+          pagination: {
+            perPage: 10,
+          },
+        }
+        let results: AtomSummary[] = [];
+        for await (const listOfAtoms of repo.listAtomSummaries(key, listOptions)) {
+          if (Result.isFailure(listOfAtoms)) {
+            const errorCode = listOfAtoms.failure.code as keyof typeof ErrorCodeToStatusMap;
+            return respondError(
+              listOfAtoms,
+              ErrorCodeToStatusMap[errorCode] || 400,
+            );
+          }
+          results = results.concat([...listOfAtoms.success]);
+        }
+        return respondCollection(request, results, atomSummaryToJsonApiZ, request.url);
+      }
+
+      if (resource === "atoms" && request.method === "GET") return listFullAtoms();
+      else if (resource === "atom-summaries" && request.method === "GET") return listAtomSummaries();
 
       else if (resource === "objects" && request.method === "POST") {
         const { data } = storageObjectCreateBodyZ.parse(await request.json());
+        const result = await firstResult(repo.createObject(data));
         return respondResource(
-          await repo.createObject(data),
+          result,
           storageObjectToJsonApiZ,
         );
       }
 
       if (path.startsWith("objects") && request.method === "PATCH") {
-        const [_, key] = path.split("/");
+        const [_, pathKey] = path.split("/");
         const { data } = storageObjectUpdateBodyZ.parse(await request.json());
-        if (data.key !== key) {
+        if (data.key !== pathKey) {
           return respondError(
-            failure(InvalidData.CODE, ["Key in URL does not match key in body"]),
+            Result.fail(new InvalidData("Key in URL does not match key in body")),
             ErrorCodeToStatusMap[InvalidData.CODE],
           );
         }
+        const result = await firstResult(repo.updateObject(data));
         return respondResource(
-          await repo.updateObject(data),
+          result,
           storageObjectToJsonApiZ,
         );
       }
@@ -249,11 +279,11 @@ export function buildJsonApi(options: StorageApiOptions) {
         type Ref = { key: string; type: string };
         const removeOperations: [
           string,
-          (ref: Result<Ref>) => void,
+          (ref: LaikaResult<Ref>) => void,
           Function,
         ][] = [];
 
-        const remove = (key: string): Promise<Result<Ref>> =>
+        const remove = (key: string): Promise<LaikaResult<Ref>> =>
           new Promise((resolve, reject) =>
             removeOperations.push([key, resolve, reject]),
           );
@@ -263,20 +293,17 @@ export function buildJsonApi(options: StorageApiOptions) {
             switch (operation.op) {
               case "add":
                 if (operation.data.type === "object") {
-                  return repo
-                    .createObject(operation.data)
-                    .then((op) => ({ op, operation }));
+                  const result = await firstResult(repo.createObject(operation.data));
+                  return { op: result, operation };
                 } else if (operation.data.type === "folder") {
-                  return repo
-                    .createFolder(operation.data)
-                    .then((op) => ({ op, operation }));
+                  const result = await firstResult(repo.createFolder(operation.data));
+                  return { op: result, operation };
                 }
                 break;
               case "update":
                 if (operation.data.type === "object") {
-                  return repo
-                    .updateObject(operation.data)
-                    .then((op) => ({ op, operation }));
+                  const result = await firstResult(repo.updateObject(operation.data));
+                  return { op: result, operation };
                 }
                 break;
               case "remove":
@@ -286,9 +313,9 @@ export function buildJsonApi(options: StorageApiOptions) {
                 }));
             }
             return Promise.resolve({
-              op: failure(InvalidData.CODE, [
-                `Unsupported operation ${operation.op} for ${operation.data.type}`,
-              ]),
+              op: Result.fail(new InvalidData(
+                `Unsupported operation ${operation.op} for ${(operation as any).data?.type}`,
+              )),
               operation,
             });
           })
@@ -297,10 +324,11 @@ export function buildJsonApi(options: StorageApiOptions) {
         for await (const atoms of repo.removeAtoms(
           removeOperations.map(([key]) => key),
         )) {
-          if (!atoms.success) return respondError(atoms);
-          for (const atom of atoms.data) {
+          if (Result.isFailure(atoms)) return respondError(atoms);
+          const removedAtoms = atoms.success;
+          for (const atom of removedAtoms) {
             const [, resolve] = removeOperations.find(([key]) => key === atom)!;
-            resolve(success({ type: "atom", key: atom }));
+            resolve(Result.succeed({ type: "atom", key: atom }));
           }
         }
 
@@ -310,12 +338,12 @@ export function buildJsonApi(options: StorageApiOptions) {
           .map((promiseResult) => {
             if (promiseResult.status === "rejected")
               return errorToJsonApiMapper(promiseResult);
-            if (promiseResult.value.op.success) {
+            if (Result.isSuccess(promiseResult.value.op)) {
               if (
                 promiseResult.value.operation.op === "add" ||
                 promiseResult.value.operation.op === "update"
               ) {
-                const data = promiseResult.value.op.data;
+                const data = promiseResult.value.op.success;
                 const outputSchema =
                   data.type === "object"
                     ? storageObjectToJsonApiZ
@@ -336,7 +364,7 @@ export function buildJsonApi(options: StorageApiOptions) {
       else {
         options.logger?.debug('storage endpoint not found:', path);
         return respondError(
-          new NotFoundError("Storage endpoint not found").toResult(),
+          Result.fail(new NotFoundError("Storage endpoint not found")),
           404,
         );
       }

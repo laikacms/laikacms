@@ -1,10 +1,11 @@
-import { ErrorResult, ResultError } from "../types/result.js";
+import * as Result from 'effect/Result';
+import * as Cause from 'effect/Cause';
 import type { TranslationKey } from '@laikacms/i18n'
 
 type ErrorSource = { pointer: string } | { parameter: string };
 
 // Pass the actual error into the cause field.
-export abstract class LaikaError<C extends ErrorCode, S extends number> extends Error {
+export abstract class LaikaError<C extends ErrorCode = any, S extends number = any> extends Error {
     public static TITLE: string; // PUBLIC
     public static STATUS: number; // PUBLIC
     public static CODE: ErrorCode; // PUBLIC
@@ -14,7 +15,7 @@ export abstract class LaikaError<C extends ErrorCode, S extends number> extends 
     public code: C; // PUBLIC
     public title: string; // PUBLIC
 
-    constructor(message? /* PUBLIC */: string, options?: { translation?: { title?: TranslationKey | undefined, message?: TranslationKey | undefined } | undefined, jsonApiSource?: ErrorSource | undefined, cause?: Error | undefined /* PRIVATE */ }) {
+    constructor(message? /* PUBLIC */: string, options?: { translation?: { title?: TranslationKey | undefined, message?: TranslationKey | undefined } | undefined, jsonApiSource?: ErrorSource | undefined, cause?: Cause.Cause<any> /* PRIVATE */ }) {
         super(message, options);
         this.status = new.target.STATUS as S; // PUBLIC
         this.jsonApiSource = options?.jsonApiSource; // PUBLIC
@@ -24,15 +25,8 @@ export abstract class LaikaError<C extends ErrorCode, S extends number> extends 
         Object.setPrototypeOf(this, LaikaError.prototype);
     }
 
-    /**
-     * @deprecated Use `toResult`
-     */
-    public toResultError() {
-        return ErrorResult.fromError(this);
-    }
-
     public toResult() {
-        return ErrorResult.fromError(this);
+        return Result.fail(this);
     }
 }
 

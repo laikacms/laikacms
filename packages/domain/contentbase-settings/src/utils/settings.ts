@@ -1,6 +1,7 @@
 import { JSONSchema7 } from "json-schema";
 import { ContentBaseSettings, contentBaseSettingsZ } from "../entities/settings.js";
-import { failure, InvalidData, Result, success } from "@laikacms/core";
+import * as Result from "effect/Result";
+import { LaikaError, LaikaResult, ValidationError } from "@laikacms/core";
 
 export const createDefaultSchema = () : JSONSchema7 => ({
   type: 'object',
@@ -12,7 +13,7 @@ export const createDefaultSettingsFile = (): ContentBaseSettings => ({
   collections: {},
 });
 
-export const parseSettingsJSON = <T>(json: string): Result<ContentBaseSettings> => {
+export const parseSettingsJSON = <T>(json: string): LaikaResult<ContentBaseSettings> => {
   let data: ContentBaseSettings;
   let validationErrors: string[] = [];
   try {
@@ -26,16 +27,12 @@ export const parseSettingsJSON = <T>(json: string): Result<ContentBaseSettings> 
     ); 
   }
   
-  const settings = parseSettings(data);
-  if (!settings.success) {
-    return failure(settings.code, settings.messages.concat(validationErrors));
-  }
-  return success(settings.data, settings.messages.concat(validationErrors));
+  return parseSettings(data);
 }
   
 export const parseSettings = (
   data: unknown
-): Result<ContentBaseSettings> => {
+): LaikaResult<ContentBaseSettings> => {
   let validationErrors: string[] = [];
 
   const valid = contentBaseSettingsZ.safeParse(data);
@@ -46,8 +43,8 @@ export const parseSettings = (
       valid.error.issues.map((e) => `Settings validation error at ${e.path.join('.')} : ${e.message} (received ${JSON.stringify(e.input)})`)
     );
 
-    return failure(InvalidData.CODE, validationErrors);
+    return Result.fail(new ValidationError("Invalid settings data: " + validationErrors.join(', ')));
   }
 
-  return success(valid.data!, validationErrors);
+  return Result.succeed(valid.data);
 };

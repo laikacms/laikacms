@@ -1,7 +1,34 @@
-import { BadRequestError, EntryAlreadyExistsError, failure, InvalidData, Result, success } from '@laikacms/core';
-import { Folder, FolderCreate, Atom, StorageRepository, AtomSummary, StorageObject, StorageObjectContent, StorageObjectUpdate, ListAtomsOptions, pathCombine, StorageObjectCreate, StorageSerializerRegistry, extension } from '@laikacms/storage';
+import {
+  BadRequestError,
+  EntryAlreadyExistsError,
+  InvalidData,
+  LaikaError,
+  LaikaResult
+} from '@laikacms/core';
+import {
+  Folder,
+  FolderCreate,
+  Atom,
+  StorageRepository,
+  AtomSummary,
+  StorageObject,
+  StorageObjectContent,
+  StorageObjectUpdate,
+  ListAtomsOptions,
+  pathCombine,
+  StorageObjectCreate,
+  StorageSerializerRegistry
+} from '@laikacms/storage';
 import * as minimatch from 'minimatch';
+import * as Result from 'effect/Result';
 import { FileSystemDataSource } from '../datasources/filesystem-datasource.js';
+
+/**
+ * Helper to convert a failure result to a different type while preserving the error
+ */
+function failAs<T>(error: LaikaError): LaikaResult<T> {
+  return Result.fail(error);
+}
 
 export class FileSystemStorageRepository extends StorageRepository {
   private excludeFilter: minimatch.MMRegExp[];
@@ -78,47 +105,47 @@ export class FileSystemStorageRepository extends StorageRepository {
 
   async *removeAtoms(
     keys: readonly string[]
-  ): AsyncGenerator<Result<readonly string[]>> {
+  ): AsyncGenerator<LaikaResult<readonly string[]>> {
   
     const dirSubToAtomMapping = new Map<string, string>();
 
     const result = await this.fileSystemDataSource.deleteEntries(
       this.rootDirectory,
-      keys.map(path => ({ path, type: 'file' }))
+      keys.map(path => ({ path, type: 'file' as const }))
     );
 
-    if (result.success) {
-      const resultAtoms = result.data
+    if (Result.isSuccess(result)) {
+      const resultAtoms = result.success
         .map((dirSub) => dirSubToAtomMapping.get(dirSub.path))
-        .filter(Boolean) as readonly string[];
-      return success(resultAtoms, [...result.messages]);
+        .filter(Boolean) as string[];
+      yield Result.succeed(resultAtoms as readonly string[]);
     } else {
-      return result;
+      yield failAs<readonly string[]>(result.failure);
     }
   };
 
-  getFolder = async (
-    key: string
-  ): Promise<Result<Folder>> => {
-
+  async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
     const dirSubs = await this.fileSystemDataSource.getDirMeta(
       this.rootDirectory,
       key
     );
 
-    if (!dirSubs.success) return dirSubs;
+    if (Result.isFailure(dirSubs)) {
+      yield failAs<Folder>(dirSubs.failure);
+      return;
+    }
 
     const folder: Folder = {
       type: 'folder',
       key,
-      createdAt: dirSubs.data.createdAt.toISOString(),
-      updatedAt: dirSubs.data.updatedAt.toISOString(),
+      createdAt: dirSubs.success.createdAt.toISOString(),
+      updatedAt: dirSubs.success.updatedAt.toISOString(),
     };
 
-    return success(folder);
+    yield Result.succeed(folder);
   };
 
-  async getAtom(key: string): Promise<Result<Atom>> {
+  async *getAtom(key: string): AsyncGenerator<LaikaResult<Atom>> {
     const isDir = await this.fileSystemDataSource.isDir(
       this.rootDirectory,
       key
@@ -128,13 +155,16 @@ export class FileSystemStorageRepository extends StorageRepository {
       ? 'dir'
       : 'file';
 
-    if (type === 'file') return this.getObject(key);
-    else if (type === 'dir')
-      return this.getFolder(key);
-    else throw new BadRequestError('Invalid type: ' + type);
+    if (type === 'file') {
+      yield* this.getObject(key);
+    } else if (type === 'dir') {
+      yield* this.getFolder(key);
+    } else {
+      yield Result.fail(new BadRequestError('Invalid type: ' + type));
+    }
   };
 
-  async getObject(key: string): Promise<Result<StorageObject>> {
+  async *getObject(key: string): AsyncGenerator<LaikaResult<StorageObject>> {
     const [fileMetaResult, fileContentResult] = await Promise.all([
       this.fileSystemDataSource.getFileMeta(
         this.rootDirectory,
@@ -146,34 +176,43 @@ export class FileSystemStorageRepository extends StorageRepository {
       ),
     ]);
 
-    if (!fileMetaResult.success) return fileMetaResult;
-    if (!fileContentResult.success) return fileContentResult;
+    if (Result.isFailure(fileMetaResult)) {
+      yield failAs<StorageObject>(fileMetaResult.failure);
+      return;
+    }
+    if (Result.isFailure(fileContentResult)) {
+      yield failAs<StorageObject>(fileContentResult.failure);
+      return;
+    }
 
     // Use the path without extension from the datasource
-    const keyWithoutExt = fileContentResult.data.path;
-    const ext = fileContentResult.data.extension;
+    const keyWithoutExt = fileContentResult.success.path;
+    const ext = fileContentResult.success.extension;
 
     const storageObject: StorageObject = {
       type: 'object',
       key: keyWithoutExt,
-      createdAt: fileMetaResult.data.createdAt.toISOString(),
-      updatedAt: fileMetaResult.data.updatedAt.toISOString(),
-      content: await this.deserialize(ext, fileContentResult.data.content)
+      createdAt: fileMetaResult.success.createdAt.toISOString(),
+      updatedAt: fileMetaResult.success.updatedAt.toISOString(),
+      content: await this.deserialize(ext, fileContentResult.success.content)
     };
 
-    return success(storageObject);
+    yield Result.succeed(storageObject);
   }
 
-  async updateObject(update: StorageObjectUpdate): Promise<Result<StorageObject>> {
+  async *updateObject(update: StorageObjectUpdate): AsyncGenerator<LaikaResult<StorageObject>> {
     // First resolve the key to get the actual file extension
     const fileMetaResult = await this.fileSystemDataSource.getFileMeta(
       this.rootDirectory,
       update.key
     );
     
-    if (!fileMetaResult.success) return fileMetaResult;
+    if (Result.isFailure(fileMetaResult)) {
+      yield failAs<StorageObject>(fileMetaResult.failure);
+      return;
+    }
     
-    const ext = fileMetaResult.data.extension;
+    const ext = fileMetaResult.success.extension;
     const stringified = update.content ? await this.serialize(ext, update.content) : undefined;
 
     if (stringified) {
@@ -183,15 +222,19 @@ export class FileSystemStorageRepository extends StorageRepository {
         stringified,
         ext
       );
-      if (!updateResult.success) return updateResult;
+      if (Result.isFailure(updateResult)) {
+        yield failAs<StorageObject>(updateResult.failure);
+        return;
+      }
     }
 
-    return this.getObject(update.key);
+    yield* this.getObject(update.key);
   }
 
-  async createObject(create: StorageObjectCreate): Promise<Result<StorageObject>> {
+  async *createObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
     if (!create.content) {
-      return failure(InvalidData.CODE, ['Object content is required for creation']);
+      yield Result.fail(new InvalidData('Object content is required for creation'));
+      return;
     }
     
     // Check if an object with this key already exists with any available extension
@@ -201,10 +244,10 @@ export class FileSystemStorageRepository extends StorageRepository {
     );
     
     if (existingExt) {
-      return failure(
-        EntryAlreadyExistsError.CODE,
-        [`An object with key "${create.key}" already exists with extension .${existingExt}`]
-      );
+      yield Result.fail(new EntryAlreadyExistsError(
+        `An object with key "${create.key}" already exists with extension .${existingExt}`
+      ));
+      return;
     }
     
     // Use the default file extension for new objects
@@ -218,26 +261,36 @@ export class FileSystemStorageRepository extends StorageRepository {
       ext
     );
 
-    if (!createResult.success) return createResult;
+    if (Result.isFailure(createResult)) {
+      yield failAs<StorageObject>(createResult.failure);
+      return;
+    }
 
-    return this.getObject(create.key);
+    yield* this.getObject(create.key);
   }
 
-  async createOrUpdateObject(create: StorageObjectCreate): Promise<Result<StorageObject>> {
+  async *createOrUpdateObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
     const ext = await this.fileSystemDataSource.findExistingFileExtension(
       this.rootDirectory,
       create.key
     ) || this.defaultFileExtension;
-    await this.fileSystemDataSource.createOrUpdate(
+    
+    const createResult = await this.fileSystemDataSource.createOrUpdate(
       this.rootDirectory,
       create.key,
       create.content ? await this.serialize(ext, create.content) : '',
       ext
     );
-    return await this.getObject(create.key);
+    
+    if (Result.isFailure(createResult)) {
+      yield failAs<StorageObject>(createResult.failure);
+      return;
+    }
+    
+    yield* this.getObject(create.key);
   }
 
-  async createFolder(folderCreate: FolderCreate): Promise<Result<Folder>> {
+  async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
     const createResult = await this.fileSystemDataSource.createOrUpdate(
       this.rootDirectory,
       pathCombine(folderCreate.key, '.keep'),
@@ -245,32 +298,42 @@ export class FileSystemStorageRepository extends StorageRepository {
       '' // .keep files don't need an extension
     );
 
-    if (!createResult.success) return createResult;
+    if (Result.isFailure(createResult)) {
+      yield failAs<Folder>(createResult.failure);
+      return;
+    }
 
-    return this.getFolder(folderCreate.key);
+    yield* this.getFolder(folderCreate.key);
   }
 
-  listAtomSummaries(folderKey: string, options: ListAtomsOptions): AsyncGenerator<Result<readonly AtomSummary[]>> {
+  listAtomSummaries(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
     return this.getAtomsList<AtomSummary>(folderKey, options, true);
   }
 
-  listAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<Result<readonly Atom[]>> {
+  listAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly Atom[]>> {
     return this.getAtomsList<Atom>(folderKey, options, false);
   }
 
-  private async *getAtomsList<T extends AtomSummary | Atom>(folderKey: string, options: ListAtomsOptions, summariesOnly: T extends AtomSummary ? true : false): AsyncGenerator<Result<readonly T[]>> {
+  private async *getAtomsList<T extends AtomSummary | Atom>(
+    folderKey: string,
+    options: ListAtomsOptions,
+    summariesOnly: T extends AtomSummary ? true : false
+  ): AsyncGenerator<LaikaResult<readonly T[]>> {
     const dirSubs = await this.fileSystemDataSource.listFileSystemDirectory(
       this.rootDirectory,
       folderKey,
     );
 
-    if (!dirSubs.success) return yield dirSubs;
+    if (Result.isFailure(dirSubs)) {
+      yield failAs<readonly T[]>(dirSubs.failure);
+      return;
+    }
 
     const availableExtensions = Object.keys(this.serializerRegistry);
     
-    const filteredDirSubs = dirSubs.data.filter(dirSub => {
+    const filteredDirSubs = dirSubs.success.filter((dirSub: { path: string; type: string }) => {
       return this.excludeFilter.every((pattern) => !pattern.test(dirSub.path))
-    }).map(dirSub => {
+    }).map((dirSub: { path: string; type: string }) => {
       let key = dirSub.path;
       
       // Strip extension from files if it matches an available extension
@@ -291,22 +354,27 @@ export class FileSystemStorageRepository extends StorageRepository {
     });
 
     if (summariesOnly) {
-      return yield success(filteredDirSubs as unknown as readonly T[]);
+      yield Result.succeed(filteredDirSubs as unknown as readonly T[]);
+      return;
     }
 
     const atoms: T[] = [];
     for (const dirSub of filteredDirSubs) {
       if (dirSub.type === 'object-summary') {
-        const objectResult = await this.getObject(dirSub.key);
-        if (objectResult.success) {
-          atoms.push(objectResult.data as unknown as T);
+        for await (const objectResult of this.getObject(dirSub.key)) {
+          if (Result.isSuccess(objectResult)) {
+            atoms.push(objectResult.success as unknown as T);
+          }
         }
       } else if (dirSub.type === 'folder-summary') {
-        const folderResult = await this.getFolder(dirSub.key);
-        if (folderResult.success) {
-          atoms.push(folderResult.data as unknown as T);
+        for await (const folderResult of this.getFolder(dirSub.key)) {
+          if (Result.isSuccess(folderResult)) {
+            atoms.push(folderResult.success as unknown as T);
+          }
         }
       }
     }
+    
+    yield Result.succeed(atoms as readonly T[]);
   }
 }

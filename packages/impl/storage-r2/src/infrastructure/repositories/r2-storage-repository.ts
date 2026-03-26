@@ -1,4 +1,10 @@
-import { BadRequestError, EntryAlreadyExistsError, failure, InvalidData, Result, success } from '@laikacms/core';
+import {
+  BadRequestError,
+  EntryAlreadyExistsError,
+  InvalidData,
+  LaikaError,
+  LaikaResult
+} from '@laikacms/core';
 import { 
   Folder, 
   FolderCreate, 
@@ -14,7 +20,15 @@ import {
   StorageSerializerRegistry 
 } from '@laikacms/storage';
 import * as minimatch from 'minimatch';
+import * as Result from 'effect/Result';
 import { R2DataSource } from '../datasources/r2-datasource.js';
+
+/**
+ * Helper to convert a failure result to a different type while preserving the error
+ */
+function failAs<T>(error: LaikaError): LaikaResult<T> {
+  return Result.fail(error);
+}
 
 /**
  * R2StorageRepository implements the StorageRepository interface using Cloudflare R2 as the backing store.
@@ -99,82 +113,103 @@ export class R2StorageRepository extends StorageRepository {
 
   async *removeAtoms(
     keys: readonly string[]
-  ): AsyncGenerator<Result<readonly string[]>> {
-    const result = await this.r2DataSource.deleteObjects(keys);
+  ): AsyncGenerator<LaikaResult<readonly string[]>> {
+    const deletedKeys: string[] = [];
+    const errors: string[] = [];
+    
+    for await (const result of this.r2DataSource.deleteObjects(keys)) {
+      if (Result.isSuccess(result)) {
+        deletedKeys.push(result.success);
+      } else {
+        errors.push(result.failure.message);
+      }
+    }
 
-    if (result.success) {
-      yield success(result.data as readonly string[], [...result.messages]);
+    if (errors.length > 0 && deletedKeys.length === 0) {
+      yield Result.fail(new BadRequestError(`Failed to delete atoms: ${errors.join(', ')}`));
     } else {
-      yield result;
+      yield Result.succeed(deletedKeys as readonly string[]);
     }
   }
 
-  getFolder = async (
-    key: string
-  ): Promise<Result<Folder>> => {
+  async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
     const folderMeta = await this.r2DataSource.getFolderMeta(key);
 
-    if (!folderMeta.success) return folderMeta;
+    if (Result.isFailure(folderMeta)) {
+      yield failAs<Folder>(folderMeta.failure);
+      return;
+    }
 
     const folder: Folder = {
       type: 'folder',
       key,
-      createdAt: folderMeta.data.createdAt.toISOString(),
-      updatedAt: folderMeta.data.updatedAt.toISOString(),
+      createdAt: folderMeta.success.createdAt.toISOString(),
+      updatedAt: folderMeta.success.updatedAt.toISOString(),
     };
 
-    return success(folder);
+    yield Result.succeed(folder);
   };
 
-  async getAtom(key: string): Promise<Result<Atom>> {
+  async *getAtom(key: string): AsyncGenerator<LaikaResult<Atom>> {
     // First check if it's a file
     const isFile = await this.r2DataSource.isFile(key);
     
     if (isFile) {
-      return this.getObject(key);
+      yield* this.getObject(key);
+      return;
     }
     
     // Then check if it's a directory
     const isDir = await this.r2DataSource.isDirectory(key);
     
     if (isDir) {
-      return this.getFolder(key);
+      yield* this.getFolder(key);
+      return;
     }
     
-    throw new BadRequestError(`Path not found: ${key}`);
+    yield Result.fail(new BadRequestError(`Path not found: ${key}`));
   }
 
-  async getObject(key: string): Promise<Result<StorageObject>> {
+  async *getObject(key: string): AsyncGenerator<LaikaResult<StorageObject>> {
     const [objectMetaResult, objectContentResult] = await Promise.all([
       this.r2DataSource.getObjectMeta(key),
       this.r2DataSource.getObjectContents(key),
     ]);
 
-    if (!objectMetaResult.success) return objectMetaResult;
-    if (!objectContentResult.success) return objectContentResult;
+    if (Result.isFailure(objectMetaResult)) {
+      yield failAs<StorageObject>(objectMetaResult.failure);
+      return;
+    }
+    if (Result.isFailure(objectContentResult)) {
+      yield failAs<StorageObject>(objectContentResult.failure);
+      return;
+    }
 
     // Use the key without extension from the datasource
-    const keyWithoutExt = objectContentResult.data.key;
-    const ext = objectContentResult.data.extension;
+    const keyWithoutExt = objectContentResult.success.key;
+    const ext = objectContentResult.success.extension;
 
     const storageObject: StorageObject = {
       type: 'object',
       key: keyWithoutExt,
-      createdAt: objectMetaResult.data.createdAt.toISOString(),
-      updatedAt: objectMetaResult.data.updatedAt.toISOString(),
-      content: await this.deserialize(ext, objectContentResult.data.content)
+      createdAt: objectMetaResult.success.createdAt.toISOString(),
+      updatedAt: objectMetaResult.success.updatedAt.toISOString(),
+      content: await this.deserialize(ext, objectContentResult.success.content)
     };
 
-    return success(storageObject);
+    yield Result.succeed(storageObject);
   }
 
-  async updateObject(update: StorageObjectUpdate): Promise<Result<StorageObject>> {
+  async *updateObject(update: StorageObjectUpdate): AsyncGenerator<LaikaResult<StorageObject>> {
     // First resolve the key to get the actual file extension
     const objectMetaResult = await this.r2DataSource.getObjectMeta(update.key);
     
-    if (!objectMetaResult.success) return objectMetaResult;
+    if (Result.isFailure(objectMetaResult)) {
+      yield failAs<StorageObject>(objectMetaResult.failure);
+      return;
+    }
     
-    const ext = objectMetaResult.data.extension;
+    const ext = objectMetaResult.success.extension;
     const stringified = update.content ? await this.serialize(ext, update.content) : undefined;
 
     if (stringified) {
@@ -183,25 +218,29 @@ export class R2StorageRepository extends StorageRepository {
         stringified,
         ext
       );
-      if (!updateResult.success) return updateResult;
+      if (Result.isFailure(updateResult)) {
+        yield failAs<StorageObject>(updateResult.failure);
+        return;
+      }
     }
 
-    return this.getObject(update.key);
+    yield* this.getObject(update.key);
   }
 
-  async createObject(create: StorageObjectCreate): Promise<Result<StorageObject>> {
+  async *createObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
     if (!create.content) {
-      return failure(InvalidData.CODE, ['Object content is required for creation']);
+      yield Result.fail(new InvalidData('Object content is required for creation'));
+      return;
     }
     
     // Check if an object with this key already exists with any available extension
     const existingExt = await this.r2DataSource.findExistingObjectExtension(create.key);
     
     if (existingExt) {
-      return failure(
-        EntryAlreadyExistsError.CODE,
-        [`An object with key "${create.key}" already exists with extension .${existingExt}`]
-      );
+      yield Result.fail(new EntryAlreadyExistsError(
+        `An object with key "${create.key}" already exists with extension .${existingExt}`
+      ));
+      return;
     }
     
     // Use the default file extension for new objects
@@ -214,24 +253,32 @@ export class R2StorageRepository extends StorageRepository {
       ext
     );
 
-    if (!createResult.success) return createResult;
+    if (Result.isFailure(createResult)) {
+      yield failAs<StorageObject>(createResult.failure);
+      return;
+    }
 
-    return this.getObject(create.key);
+    yield* this.getObject(create.key);
   }
 
-  async createOrUpdateObject(create: StorageObjectCreate): Promise<Result<StorageObject>> {
+  async *createOrUpdateObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
     const ext = await this.r2DataSource.findExistingObjectExtension(create.key) || this.defaultFileExtension;
     
-    await this.r2DataSource.createOrUpdate(
+    const createResult = await this.r2DataSource.createOrUpdate(
       create.key,
       create.content ? await this.serialize(ext, create.content) : '',
       ext
     );
     
-    return await this.getObject(create.key);
+    if (Result.isFailure(createResult)) {
+      yield failAs<StorageObject>(createResult.failure);
+      return;
+    }
+    
+    yield* this.getObject(create.key);
   }
 
-  async createFolder(folderCreate: FolderCreate): Promise<Result<Folder>> {
+  async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
     // Create a .keep file to represent the folder
     const createResult = await this.r2DataSource.createOrUpdate(
       pathCombine(folderCreate.key, '.keep'),
@@ -239,33 +286,36 @@ export class R2StorageRepository extends StorageRepository {
       '' // .keep files don't need an extension
     );
 
-    if (!createResult.success) return createResult;
+    if (Result.isFailure(createResult)) {
+      yield failAs<Folder>(createResult.failure);
+      return;
+    }
 
-    return this.getFolder(folderCreate.key);
+    yield* this.getFolder(folderCreate.key);
   }
 
-  listAtomSummaries(folderKey: string, options: ListAtomsOptions): AsyncGenerator<Result<readonly AtomSummary[]>> {
+  listAtomSummaries(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
     return this.getAtomSummariesList(folderKey, options);
   }
 
-  listAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<Result<readonly Atom[]>> {
+  listAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly Atom[]>> {
     return this.getFullAtomsList(folderKey, options);
   }
 
   private async *getAtomSummariesList(
     folderKey: string,
     _options: ListAtomsOptions
-  ): AsyncGenerator<Result<readonly AtomSummary[]>> {
+  ): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
     const entries = await this.r2DataSource.listDirectory(folderKey);
 
-    if (!entries.success) {
-      yield entries;
+    if (Result.isFailure(entries)) {
+      yield failAs<readonly AtomSummary[]>(entries.failure);
       return;
     }
 
     const availableExtensions = Object.keys(this.serializerRegistry);
     
-    const filteredEntries = entries.data.filter((entry: { key: string; type: string }) => {
+    const filteredEntries = entries.success.filter((entry: { key: string; type: string }) => {
       return this.excludeFilter.every((pattern) => !pattern.test(entry.key));
     }).map((entry: { key: string; type: string }) => {
       let key = entry.key;
@@ -287,23 +337,23 @@ export class R2StorageRepository extends StorageRepository {
       return atomSummary;
     });
 
-    yield success(filteredEntries as readonly AtomSummary[]);
+    yield Result.succeed(filteredEntries as readonly AtomSummary[]);
   }
 
   private async *getFullAtomsList(
     folderKey: string,
     _options: ListAtomsOptions
-  ): AsyncGenerator<Result<readonly Atom[]>> {
+  ): AsyncGenerator<LaikaResult<readonly Atom[]>> {
     const entries = await this.r2DataSource.listDirectory(folderKey);
 
-    if (!entries.success) {
-      yield entries;
+    if (Result.isFailure(entries)) {
+      yield failAs<readonly Atom[]>(entries.failure);
       return;
     }
 
     const availableExtensions = Object.keys(this.serializerRegistry);
     
-    const filteredEntries = entries.data.filter((entry: { key: string; type: string }) => {
+    const filteredEntries = entries.success.filter((entry: { key: string; type: string }) => {
       return this.excludeFilter.every((pattern) => !pattern.test(entry.key));
     }).map((entry: { key: string; type: string }) => {
       let key = entry.key;
@@ -327,18 +377,20 @@ export class R2StorageRepository extends StorageRepository {
     const atoms: Atom[] = [];
     for (const entry of filteredEntries) {
       if (entry.type === 'object-summary') {
-        const objectResult = await this.getObject(entry.key);
-        if (objectResult.success) {
-          atoms.push(objectResult.data);
+        for await (const objectResult of this.getObject(entry.key)) {
+          if (Result.isSuccess(objectResult)) {
+            atoms.push(objectResult.success);
+          }
         }
       } else if (entry.type === 'folder-summary') {
-        const folderResult = await this.getFolder(entry.key);
-        if (folderResult.success) {
-          atoms.push(folderResult.data);
+        for await (const folderResult of this.getFolder(entry.key)) {
+          if (Result.isSuccess(folderResult)) {
+            atoms.push(folderResult.success);
+          }
         }
       }
     }
     
-    yield success(atoms as readonly Atom[]);
+    yield Result.succeed(atoms as readonly Atom[]);
   }
 }

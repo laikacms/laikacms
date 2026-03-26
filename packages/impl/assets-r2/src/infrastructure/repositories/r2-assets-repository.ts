@@ -1,4 +1,10 @@
-import { ErrorResult, failure, InternalError, NotFoundError, Result, success } from '@laikacms/core';
+import {
+  BadRequestError,
+  InternalError,
+  LaikaError,
+  LaikaResult,
+  NotFoundError
+} from '@laikacms/core';
 import { Folder, FolderCreate } from '@laikacms/storage';
 import {
   AssetsRepository,
@@ -12,10 +18,17 @@ import {
   Resource,
   GetResourceOptions,
   ListResourcesOptions,
-  FetchHints,
 } from '@laikacms/assets';
 import type { Sanitizer } from '@laikacms/sanitizer';
+import * as Result from 'effect/Result';
 import { R2AssetMeta, R2AssetsDataSource } from '../datasources/r2-assets-datasource.js';
+
+/**
+ * Helper to convert a failure result to a different type while preserving the error
+ */
+function failAs<T>(error: LaikaError): LaikaResult<T> {
+  return Result.fail(error);
+}
 
 /**
  * Base configuration options for R2AssetsRepository (without sanitizer)
@@ -68,41 +81,55 @@ export class R2AssetsRepository extends AssetsRepository {
   // Resource Operations (unified endpoint)
   // ============================================
 
-  async getResource(key: string, _options?: GetResourceOptions): Promise<Result<Resource>> {
+  async *getResource(key: string, _options?: GetResourceOptions): AsyncGenerator<LaikaResult<Resource[]>> {
     // Check if it's a file first
     const exists = await this.datasource.exists(key);
     
     if (exists) {
-      return this.getAsset(key, _options);
+      for await (const result of this.getAsset(key, _options)) {
+        if (Result.isFailure(result)) {
+          yield failAs<Resource[]>(result.failure);
+        } else {
+          yield Result.succeed([result.success] as Resource[]);
+        }
+      }
+      return;
     }
     
     // Check if it's a directory
     const isDir = await this.datasource.isDirectory(key);
     
     if (isDir) {
-      return this.getFolder(key);
+      for await (const result of this.getFolder(key)) {
+        if (Result.isFailure(result)) {
+          yield failAs<Resource[]>(result.failure);
+        } else {
+          yield Result.succeed([result.success] as Resource[]);
+        }
+      }
+      return;
     }
     
-    return failure(NotFoundError.CODE, [`Resource at ${key} does not exist`]);
+    yield Result.fail(new NotFoundError(`Resource at ${key} does not exist`));
   }
 
   async *listResources(
     folderKey: string,
     options: ListResourcesOptions
-  ): AsyncGenerator<Result<readonly Resource[]>> {
+  ): AsyncGenerator<LaikaResult<Resource[]>> {
     const depth = Math.max(1, options.depth ?? 1);
     
     // Helper function to list a single directory
-    const listDirectory = async (key: string): Promise<Result<Resource[]>> => {
+    const listDirectory = async (key: string): Promise<LaikaResult<Resource[]>> => {
       const entriesResult = await this.datasource.listDirectory(key, { includeMetadata: true });
       
-      if (!entriesResult.success) {
-        return entriesResult;
+      if (Result.isFailure(entriesResult)) {
+        return failAs<Resource[]>(entriesResult.failure);
       }
       
       const resources: Resource[] = [];
       
-      for (const entry of entriesResult.data) {
+      for (const entry of entriesResult.success) {
         if (entry.type === 'file') {
           resources.push({
             type: 'asset',
@@ -127,49 +154,52 @@ export class R2AssetsRepository extends AssetsRepository {
         }
       }
       
-      return success(resources);
+      return Result.succeed(resources);
     };
     
     // Recursive helper to list with depth
-    const listRecursive = async (key: string, currentDepth: number): Promise<Result<Resource[]>> => {
+    const listRecursive = async (key: string, currentDepth: number): Promise<LaikaResult<Resource[]>> => {
       const result = await listDirectory(key);
       
-      if (!result.success) {
+      if (Result.isFailure(result)) {
         return result;
       }
       
-      const resources = [...result.data];
+      const resources = [...result.success];
       
       // If we haven't reached max depth, recurse into folders
       if (currentDepth < depth) {
-        const folders = result.data.filter(r => r.type === 'folder');
+        const folders = result.success.filter((r: Resource) => r.type === 'folder');
         
         for (const folder of folders) {
           const subResult = await listRecursive(folder.key, currentDepth + 1);
-          if (subResult.success) {
-            resources.push(...subResult.data);
+          if (Result.isSuccess(subResult)) {
+            resources.push(...subResult.success);
           }
           // Continue even if a subfolder fails
         }
       }
       
-      return success(resources);
+      return Result.succeed(resources);
     };
     
     const result = await listRecursive(folderKey, 1);
-    yield result as Result<readonly Resource[]>;
+    yield result;
   }
 
   // ============================================
   // Asset Operations
   // ============================================
 
-  async getAsset(key: string, _options?: GetResourceOptions): Promise<Result<Asset>> {
+  async *getAsset(key: string, _options?: GetResourceOptions): AsyncGenerator<LaikaResult<Asset>> {
     const metaResult = await this.datasource.getObjectMeta(key);
     
-    if (!metaResult.success) return metaResult;
+    if (Result.isFailure(metaResult)) {
+      yield failAs<Asset>(metaResult.failure);
+      return;
+    }
     
-    const meta = metaResult.data;
+    const meta = metaResult.success;
     
     const asset: Asset = {
       type: 'asset',
@@ -184,26 +214,28 @@ export class R2AssetsRepository extends AssetsRepository {
       },
     };
     
-    return success(asset);
+    yield Result.succeed(asset);
   }
 
-  async getAssetContent(key: string): Promise<Result<{
+  async getAssetContent(key: string): Promise<LaikaResult<{
     body: ArrayBuffer | ReadableStream;
     contentType: string;
     size: number;
   }>> {
     const bodyResult = await this.datasource.getObjectBody(key);
     
-    if (!bodyResult.success) return bodyResult;
+    if (Result.isFailure(bodyResult)) {
+      return failAs<{ body: ArrayBuffer | ReadableStream; contentType: string; size: number }>(bodyResult.failure);
+    }
     
-    return success({
-      body: bodyResult.data.body,
-      contentType: bodyResult.data.meta.contentType || 'application/octet-stream',
-      size: bodyResult.data.meta.size,
+    return Result.succeed({
+      body: bodyResult.success.body,
+      contentType: bodyResult.success.meta.contentType || 'application/octet-stream',
+      size: bodyResult.success.meta.size,
     });
   }
 
-  async createAsset(create: AssetCreate): Promise<Result<Asset>> {
+  async *createAsset(create: AssetCreate): AsyncGenerator<LaikaResult<Asset>> {
     let body: Uint8Array;
     
     // Convert content to Uint8Array for sanitization
@@ -234,7 +266,8 @@ export class R2AssetsRepository extends AssetsRepository {
       
       body = combined;
     } else {
-      return failure('bad_request', ['Content must be ArrayBuffer, Uint8Array, or ReadableStream']);
+      yield Result.fail(new BadRequestError('Content must be ArrayBuffer, Uint8Array, or ReadableStream'));
+      return;
     }
     
     // Apply sanitization if a sanitizer is configured
@@ -244,8 +277,6 @@ export class R2AssetsRepository extends AssetsRepository {
       body = sanitizeResult.data;
     }
     
-    const size = body.byteLength;
-    
     // Simple single-request upload
     const putResult = await this.datasource.putObject(create.key, body, {
       contentType: create.mimeType,
@@ -253,20 +284,26 @@ export class R2AssetsRepository extends AssetsRepository {
       customMetadata: create.customMetadata,
     });
     
-    if (!putResult.success) return putResult;
+    if (Result.isFailure(putResult)) {
+      yield failAs<Asset>(putResult.failure);
+      return;
+    }
     
-    return this.getAsset(create.key);
+    yield* this.getAsset(create.key);
   }
 
-  async updateAsset(update: AssetUpdate): Promise<Result<Asset>> {
+  async *updateAsset(update: AssetUpdate): AsyncGenerator<LaikaResult<Asset>> {
     // AssetUpdate only updates metadata, not content
     // R2 doesn't support updating metadata without re-uploading
     // So we need to download and re-upload with new metadata
     
     const existingResult = await this.datasource.getObjectBody(update.key);
-    if (!existingResult.success) return existingResult;
+    if (Result.isFailure(existingResult)) {
+      yield failAs<Asset>(existingResult.failure);
+      return;
+    }
     
-    const { body, meta } = existingResult.data;
+    const { body, meta } = existingResult.success;
     
     // Re-upload with updated metadata
     const putResult = await this.datasource.putObject(update.key, body, {
@@ -275,64 +312,87 @@ export class R2AssetsRepository extends AssetsRepository {
       customMetadata: update.customMetadata || meta.customMetadata,
     });
     
-    if (!putResult.success) return putResult;
+    if (Result.isFailure(putResult)) {
+      yield failAs<Asset>(putResult.failure);
+      return;
+    }
     
-    return this.getAsset(update.key);
+    yield* this.getAsset(update.key);
   }
 
-  async deleteAsset(key: string): Promise<Result<void>> {
-    return this.datasource.deleteObject(key);
+  async *deleteAsset(key: string): AsyncGenerator<LaikaResult<void>> {
+    yield await this.datasource.deleteObject(key);
   }
 
-  async *deleteAssets(keys: readonly string[]): AsyncGenerator<Result<readonly string[]>> {
-    const result = await this.datasource.deleteObjects(keys);
+  async *deleteAssets(keys: readonly string[]): AsyncGenerator<LaikaResult<string[]>> {
+    const deletedKeys: string[] = [];
+    const errors: string[] = [];
     
-    if (result.success) {
-      yield success(result.data as readonly string[], [...result.messages]);
+    for await (const result of this.datasource.deleteObjects(keys)) {
+      if (Result.isSuccess(result)) {
+        deletedKeys.push(result.success);
+      } else {
+        errors.push(result.failure.message);
+      }
+    }
+    
+    if (errors.length > 0 && deletedKeys.length === 0) {
+      yield Result.fail(new InternalError(`Failed to delete assets: ${errors.join(', ')}`));
     } else {
-      yield result;
+      yield Result.succeed(deletedKeys);
     }
   }
 
-  async *getVariations(assets: Asset[]): AsyncGenerator<Result<AssetVariations[]>> {
-    yield success(assets.map(asset => ({
+  async *getVariations(assets: Asset[]): AsyncGenerator<LaikaResult<AssetVariations[]>> {
+    yield Result.succeed(assets.map(asset => ({
       key: asset.key,
       variations: {},
     })));
   }
 
-  async *getUrls(assets: Asset[]): AsyncGenerator<Result<AssetUrl[]>> {
-    yield success(assets.map(asset => ({
+  async *getUrls(assets: Asset[]): AsyncGenerator<LaikaResult<AssetUrl[]>> {
+    yield Result.succeed(assets.map(asset => ({
       key: asset.key,
       url: this.publicUrlBase ? `${this.publicUrlBase}/${asset.key}` : undefined,
     })));
   }
 
-  async *getMetadata(assets: Asset[]): AsyncGenerator<Result<AssetMetadata[]>> {
+  async *getMetadata(assets: Asset[]): AsyncGenerator<LaikaResult<AssetMetadata[]>> {
     const metas = await Promise.allSettled(
       assets.map(asset => this.datasource.getObjectMeta(asset.key))
     );
-    const successes = metas.filter(m => m.status === 'fulfilled' && m.value.success) as PromiseFulfilledResult<Result<R2AssetMeta>>[];
-    const failures = metas.filter(m => m.status === 'rejected' || (m.status === 'fulfilled' && !m.value.success)) as (PromiseRejectedResult | PromiseFulfilledResult<Result<R2AssetMeta>>)[];
-
-    yield success(successes.map(s => {
-      const meta = s.value.orThrow();
-      const metadata: AssetMetadataContent = {
-        size: meta.size,
-        kind: 'binary',
-        mimeType: meta.contentType || 'application/octet-stream',
-      };
-      return {
-        key: meta.key,
-        metadata,
-      };
-    }));
-    for (const fail of failures) {
-      if (fail.status === 'rejected') {
-        yield failure(InternalError.CODE, [fail.reason instanceof Error ? fail.reason.message : String(fail.reason)]);
+    
+    const successfulMetas: AssetMetadata[] = [];
+    const failedResults: LaikaResult<AssetMetadata[]>[] = [];
+    
+    for (const metaResult of metas) {
+      if (metaResult.status === 'fulfilled') {
+        const result = metaResult.value;
+        if (Result.isSuccess(result)) {
+          const meta = result.success;
+          const metadata: AssetMetadataContent = {
+            size: meta.size,
+            kind: 'binary',
+            mimeType: meta.contentType || 'application/octet-stream',
+          };
+          successfulMetas.push({
+            key: meta.key,
+            metadata,
+          });
+        } else {
+          failedResults.push(failAs<AssetMetadata[]>(result.failure));
+        }
       } else {
-        yield fail.value as ErrorResult;
+        failedResults.push(Result.fail(new InternalError(metaResult.reason instanceof Error ? metaResult.reason.message : String(metaResult.reason))));
       }
+    }
+    
+    if (successfulMetas.length > 0) {
+      yield Result.succeed(successfulMetas);
+    }
+    
+    for (const fail of failedResults) {
+      yield fail;
     }
   }
 
@@ -340,31 +400,36 @@ export class R2AssetsRepository extends AssetsRepository {
   // Folder Operations
   // ============================================
 
-  async getFolder(key: string): Promise<Result<Folder>> {
+  async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
     const metaResult = await this.datasource.getFolderMeta(key);
     
-    if (!metaResult.success) return metaResult;
+    if (Result.isFailure(metaResult)) {
+      yield failAs<Folder>(metaResult.failure);
+      return;
+    }
     
     const folder: Folder = {
       type: 'folder',
       key,
-      createdAt: metaResult.data.createdAt.toISOString(),
-      updatedAt: metaResult.data.updatedAt.toISOString(),
+      createdAt: metaResult.success.createdAt.toISOString(),
+      updatedAt: metaResult.success.updatedAt.toISOString(),
     };
     
-    return success(folder);
+    yield Result.succeed(folder);
   }
 
-  async createFolder(folderCreate: FolderCreate): Promise<Result<Folder>> {
+  async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
     const createResult = await this.datasource.createFolder(folderCreate.key);
     
-    if (!createResult.success) return createResult;
+    if (Result.isFailure(createResult)) {
+      yield failAs<Folder>(createResult.failure);
+      return;
+    }
     
-    return this.getFolder(folderCreate.key);
+    yield* this.getFolder(folderCreate.key);
   }
 
-  async deleteFolder(key: string, recursive?: boolean): Promise<Result<void>> {
-    return this.datasource.deleteFolder(key, recursive);
+  async *deleteFolder(key: string, recursive?: boolean): AsyncGenerator<LaikaResult<void>> {
+    yield await this.datasource.deleteFolder(key, recursive);
   }
 }
-

@@ -1,13 +1,12 @@
 import {
-  failure,
-  ForbiddenError,
   InternalError,
-  NotFoundError,
-  Result,
-  ResultError,
-  success
+  LaikaResult,
+  NotFoundError
 } from '@laikacms/core';
-import { R2Entry, R2FileOrDir } from '../../domain/entities/r2-object.js';
+import { Key } from '@laikacms/storage';
+import * as Cause from 'effect/Cause';
+import * as Result from 'effect/Result';
+import { R2Entry } from '../../domain/entities/r2-object.js';
 
 /**
  * R2DataSource provides low-level operations for interacting with Cloudflare R2 storage.
@@ -24,7 +23,7 @@ export class R2DataSource {
    * Strip any extension from the key if it matches one of the available extensions.
    * This ensures the interface never exposes file extensions.
    */
-  private stripExtension(key: string): string {
+  private stripExtension(key: Key): Key {
     for (const ext of this.availableExtensions) {
       if (key.endsWith(`.${ext}`)) {
         return key.slice(0, -(ext.length + 1));
@@ -36,7 +35,7 @@ export class R2DataSource {
   /**
    * Normalize a key by removing leading/trailing slashes and handling empty keys
    */
-  private normalizeKey(key: string): string {
+  private normalizeKey(key: Key): Key {
     // Remove leading and trailing slashes
     return key.replace(/^\/+|\/+$/g, '');
   }
@@ -46,7 +45,7 @@ export class R2DataSource {
    * Tries to find the object with any available extension.
    * Returns the resolved key with extension, or null if not found.
    */
-  private async resolveKeyWithExtension(key: string): Promise<string | null> {
+  private async resolveKeyWithExtension(key: Key): Promise<Key | null> {
     const normalizedKey = this.normalizeKey(key);
     const keyWithoutExt = this.stripExtension(normalizedKey);
     
@@ -68,7 +67,7 @@ export class R2DataSource {
    * Check if an object exists with any of the available extensions.
    * Returns the extension if found, null otherwise.
    */
-  async findExistingObjectExtension(key: string): Promise<string | null> {
+  async findExistingObjectExtension(key: Key): Promise<string | null> {
     const normalizedKey = this.normalizeKey(key);
     const keyWithoutExt = this.stripExtension(normalizedKey);
     
@@ -87,7 +86,7 @@ export class R2DataSource {
   /**
    * Delete multiple objects from R2
    */
-  async deleteObjects(keys: readonly string[]): Promise<Result<string[]>> {
+  async *deleteObjects(keys: readonly string[]): AsyncGenerator<LaikaResult<Key>> {
     const deletedKeys: string[] = [];
     const errorMessages: string[] = [];
 
@@ -101,31 +100,31 @@ export class R2DataSource {
         }
 
         await this.bucket.delete(resolvedKey);
-        deletedKeys.push(this.stripExtension(resolvedKey));
+        const keyWithoutExt = this.stripExtension(resolvedKey);
+        yield Result.succeed(keyWithoutExt);
       } catch (error) {
         errorMessages.push(error instanceof Error ? error.message : String(error));
+        yield Result.fail(new InternalError(`Failed to delete object at ${key}`, { cause: Cause.fail(error) }));
       }
     }
-
-    return success(deletedKeys, errorMessages);
   }
 
   /**
    * Get the contents of an object
    */
-  async getObjectContents(key: string): Promise<Result<{ content: string; key: string; extension: string }>> {
+  async getObjectContents(key: string): Promise<LaikaResult<{ content: string; key: string; extension: string }>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       const resolvedKey = await this.resolveKeyWithExtension(normalizedKey);
       
       if (!resolvedKey) {
-        return failure(NotFoundError.CODE, [`Object at ${key} does not exist`]);
+        return Result.fail(new NotFoundError(`Object at ${key} cannot be resolved`));
       }
       
       const object = await this.bucket.get(resolvedKey);
       
       if (!object) {
-        return failure(NotFoundError.CODE, [`Object at ${key} does not exist`]);
+        return Result.fail(new NotFoundError(`Object at ${key} does not exist`));
       }
 
       const content = await object.text();
@@ -137,17 +136,17 @@ export class R2DataSource {
       // Return key without extension for the interface
       const keyWithoutExt = this.stripExtension(resolvedKey);
       
-      return success({ content, key: keyWithoutExt, extension });
+      return Result.succeed({ content, key: keyWithoutExt, extension });
     } catch (error) {
       console.error(error);
-      return failure(InternalError.CODE, [`Failed to get object contents: ${error instanceof Error ? error.message : String(error)}`]);
+      return Result.fail(new InternalError(`Failed to get object contents`, { cause: Cause.fail(error) }));
     }
   }
 
   /**
    * Get metadata for an object
    */
-  async getObjectMeta(key: string): Promise<Result<{ 
+  async getObjectMeta(key: string): Promise<LaikaResult<{ 
     size: number; 
     createdAt: Date; 
     updatedAt: Date; 
@@ -160,13 +159,13 @@ export class R2DataSource {
       const resolvedKey = await this.resolveKeyWithExtension(normalizedKey);
       
       if (!resolvedKey) {
-        return failure(NotFoundError.CODE, [`Object at ${key} does not exist`]);
+        return Result.fail(new NotFoundError(`Object at ${key} cannot be resolved`));
       }
       
       const object = await this.bucket.head(resolvedKey);
       
       if (!object) {
-        return failure(NotFoundError.CODE, [`Object at ${key} does not exist`]);
+        return Result.fail(new NotFoundError(`Object at ${key} does not exist`));
       }
 
       // Extract extension from resolved key
@@ -179,7 +178,7 @@ export class R2DataSource {
       // R2 doesn't have a separate created time, so we use uploaded time for both
       const uploadedDate = object.uploaded;
       
-      return success({ 
+      return Result.succeed({ 
         size: object.size, 
         createdAt: uploadedDate, 
         updatedAt: uploadedDate, 
@@ -189,7 +188,7 @@ export class R2DataSource {
       });
     } catch (error) {
       console.error(error);
-      return failure(InternalError.CODE, [`Failed to get object metadata: ${error instanceof Error ? error.message : String(error)}`]);
+      return Result.fail(new InternalError(`Failed to get object metadata`, { cause: Cause.fail(error) }));
     }
   }
 
@@ -198,7 +197,7 @@ export class R2DataSource {
    * Since R2 is a flat object store, folders don't have real metadata.
    * We return the current time as a placeholder.
    */
-  async getFolderMeta(key: string): Promise<Result<{ createdAt: Date; updatedAt: Date }>> {
+  async getFolderMeta(key: string): Promise<LaikaResult<{ createdAt: Date; updatedAt: Date }>> {
     const normalizedKey = this.normalizeKey(key);
     const prefix = normalizedKey ? `${normalizedKey}/` : '';
     
@@ -207,22 +206,22 @@ export class R2DataSource {
       const listed = await this.bucket.list({ prefix, limit: 1 });
       
       if (listed.objects.length === 0 && listed.delimitedPrefixes.length === 0) {
-        return failure(NotFoundError.CODE, [`Folder at ${key} does not exist`]);
+        return Result.fail(new NotFoundError(`Folder at ${key} does not exist`));
       }
 
       // R2 folders don't have real timestamps, use current time
       const now = new Date();
-      return success({ createdAt: now, updatedAt: now });
+      return Result.succeed({ createdAt: now, updatedAt: now });
     } catch (error) {
       console.error(error);
-      return failure(InternalError.CODE, [`Failed to get folder metadata: ${error instanceof Error ? error.message : String(error)}`]);
+      return Result.fail(new InternalError(`Failed to get folder metadata`, { cause: Cause.fail(error) }));
     }
   }
 
   /**
    * List objects in a "directory" (prefix in R2)
    */
-  async listDirectory(prefix: string): Promise<Result<R2Entry[]>> {
+  async listDirectory(prefix: string): Promise<LaikaResult<R2Entry[]>> {
     const normalizedPrefix = this.normalizeKey(prefix);
     const searchPrefix = normalizedPrefix ? `${normalizedPrefix}/` : '';
     
@@ -263,10 +262,10 @@ export class R2DataSource {
         cursor = listed.truncated ? listed.cursor : undefined;
       } while (cursor);
 
-      return success(entries);
+      return Result.succeed(entries);
     } catch (error) {
       console.error(error);
-      return failure(InternalError.CODE, [`Failed to list directory: ${error instanceof Error ? error.message : String(error)}`]);
+      return Result.fail(new InternalError(`Failed to list directory`, { cause: Cause.fail(error) }));
     }
   }
 
@@ -277,7 +276,7 @@ export class R2DataSource {
     key: string,
     content: string,
     extension: string
-  ): Promise<Result<{ key: string }>> {
+  ): Promise<LaikaResult<{ key: string }>> {
     const normalizedKey = this.normalizeKey(key);
     // Strip any extension user may have added and use the provided extension
     const keyWithoutExt = this.stripExtension(normalizedKey);
@@ -291,10 +290,10 @@ export class R2DataSource {
       });
 
       // Return key without extension for the interface
-      return success({ key: keyWithoutExt });
+      return Result.succeed({ key: keyWithoutExt });
     } catch (error) {
       console.error(error);
-      return ResultError.fromError(error).toResult();
+      return Result.fail(new InternalError(`Failed to create or update object`, { cause: Cause.fail(error) }));
     }
   }
 
@@ -308,7 +307,8 @@ export class R2DataSource {
     try {
       const listed = await this.bucket.list({ prefix, limit: 1 });
       return listed.objects.length > 0 || listed.delimitedPrefixes.length > 0;
-    } catch {
+    } catch (error) {
+      console.error(error);
       return false;
     }
   }

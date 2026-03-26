@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "zod": "catalog:schema",
+    "effect": "catalog:default",
     "@laikacms/i18n": "workspace:*"
   },
   "devDependencies": {

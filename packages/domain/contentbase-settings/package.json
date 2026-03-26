@@ -27,7 +27,8 @@
   "dependencies": {
     "@laikacms/storage": "workspace:*",
     "@laikacms/core": "workspace:*",
-    "zod": "catalog:schema"
+    "zod": "catalog:schema",
+    "effect": "catalog:default"
   },
   "devDependencies": {
     "@types/json-schema": "^7.0.15",

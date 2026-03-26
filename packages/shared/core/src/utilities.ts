@@ -1,3 +1,5 @@
+import * as Result from "effect/Result";
+import { LaikaError, LaikaResult, NotFoundError } from "./domain";
 
 
 export const lazy = <T>(func: () => T) => {
@@ -37,6 +39,17 @@ export const AsyncGenerator = {
       return item;
     }
     return undefined;
+  },
+  accumulateFirst: async <T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<Result.Result<T, LaikaError[]>> => {
+    const errors: LaikaError[] = [];
+    for await (const item of gen) {
+      if (Result.isSuccess(item)) {
+        return Result.succeed(item.success);
+      } else if (Result.isFailure(item)) {
+        errors.push(item.failure);
+      }
+    }
+    return Result.fail(errors);
   }
 }
 
@@ -117,3 +130,4 @@ export const Header = {
     return match ? match[1] : undefined;
   },
 }
+

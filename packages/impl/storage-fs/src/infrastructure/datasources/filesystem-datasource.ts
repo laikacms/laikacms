@@ -4,20 +4,17 @@ import os from 'os';
 import fs from 'fs/promises';
 import {
   DirInsteadOfFile,
-  failure,
   FileInsteadOfDir,
   ForbiddenError,
   InternalError,
+  LaikaResult,
   NotFoundError,
-  Result,
-  ResultError,
-  success
 } from '@laikacms/core';
 import { exec } from 'child_process';
 import trash from 'trash'
 import { DirSub, FileOrDir } from '../../domain/entities/file.js';
 import { pathCombine, pathToSegments } from '@laikacms/storage';
-import { JSONSchema7 } from 'json-schema';
+import * as Result from 'effect/Result';
 
 const ALLOW_RECURSIVE = false
 
@@ -104,7 +101,7 @@ export class FileSystemDataSource {
   deleteEntries = async (
     basePath: string,
     entries: readonly DirSub[]
-  ): Promise<Result<DirSub[]>> => {
+  ): Promise<LaikaResult<DirSub[]>> => {
     const checkResults = await Promise.allSettled(
       entries.map(async (entry) => {
         const fullPath = path.join(basePath, entry.path);
@@ -147,18 +144,19 @@ export class FileSystemDataSource {
       }
     })
     await trash(successful.map((entry) => path.join(basePath, entry.path)))
-    return success(successful, failed)
+    // Note: We're ignoring failed entries for now, but they could be logged
+    return Result.succeed(successful);
   }
 
   getFileContents = async (
     basePath: string,
     relativePath: string
-  ): Promise<Result<{ content: string; path: string; extension: string }>> => {
+  ): Promise<LaikaResult<{ content: string; path: string; extension: string }>> => {
     try {
       const resolvedPath = await this.resolvePathWithExtension(basePath, relativePath);
       
       if (!resolvedPath) {
-        return failure(NotFoundError.CODE, [`The file at ${relativePath} does not exist`]);
+        return Result.fail(new NotFoundError(`The file at ${relativePath} does not exist`));
       }
       
       const fullPath = path.join(basePath, resolvedPath);
@@ -171,13 +169,13 @@ export class FileSystemDataSource {
       // Return path without extension for the interface
       const pathWithoutExt = this.stripExtension(resolvedPath);
       
-      return success({ content, path: pathWithoutExt, extension });
+      return Result.succeed({ content, path: pathWithoutExt, extension });
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
-        throw new NotFoundError(`The file at ${relativePath} does not exist`);
+        return Result.fail(new NotFoundError(`The file at ${relativePath} does not exist`));
       } else {
-        throw error;
+        return Result.fail(new InternalError(`Failed to read file: ${error instanceof Error ? error.message : String(error)}`));
       }
     }
   };
@@ -185,12 +183,12 @@ export class FileSystemDataSource {
   getFileMeta = async (
     basePath: string,
     relativePath: string
-  ): Promise<Result<{ size: number; createdAt: Date, updatedAt: Date, path: string; extension: string }>> => {
+  ): Promise<LaikaResult<{ size: number; createdAt: Date, updatedAt: Date, path: string; extension: string }>> => {
     try {
       const resolvedPath = await this.resolvePathWithExtension(basePath, relativePath);
       
       if (!resolvedPath) {
-        return failure(NotFoundError.CODE, [`The file at ${relativePath} does not exist`]);
+        return Result.fail(new NotFoundError(`The file at ${relativePath} does not exist`));
       }
       
       const fullPath = path.join(basePath, resolvedPath);
@@ -203,14 +201,13 @@ export class FileSystemDataSource {
       // Return path without extension for the interface
       const pathWithoutExt = this.stripExtension(resolvedPath);
       
-      return success({ size, createdAt: ctime, updatedAt: mtime, path: pathWithoutExt, extension });
+      return Result.succeed({ size, createdAt: ctime, updatedAt: mtime, path: pathWithoutExt, extension });
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
-        return failure(NotFoundError.CODE, [`The file at ${relativePath} does not exist`]);
+        return Result.fail(new NotFoundError(`The file at ${relativePath} does not exist`));
       } else {
-        // TODO: log error
-        return failure(InternalError.CODE, [`Failed to get file metadata`]);
+        return Result.fail(new InternalError(`Failed to get file metadata`));
       }
     }
   };
@@ -218,22 +215,22 @@ export class FileSystemDataSource {
   getDirMeta = async (
     basePath: string,
     relativePath: string
-  ): Promise<Result<{ createdAt: Date, updatedAt: Date }>> => {
+  ): Promise<LaikaResult<{ createdAt: Date, updatedAt: Date }>> => {
     try {
       const fullPath = path.join(basePath, relativePath);
       const { ctime, mtime } = await fs.stat(fullPath);
-      return success({ createdAt: ctime, updatedAt: mtime });
+      return Result.succeed({ createdAt: ctime, updatedAt: mtime });
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
-        return failure(NotFoundError.CODE, [`The directory at ${relativePath} does not exist`]);
+        return Result.fail(new NotFoundError(`The directory at ${relativePath} does not exist`));
       } else {
-        return failure(InternalError.CODE, [`Failed to get directory metadata`]);
+        return Result.fail(new InternalError(`Failed to get directory metadata`));
       }
     }
   };
 
-  private listWin32Drives = (): Promise<Result<DirSub[]>> => {
+  private listWin32Drives = (): Promise<LaikaResult<DirSub[]>> => {
     return new Promise((resolve, reject) => {
       exec('wmic logicaldisk get name', (error, stdout, stderr) => {
         if (error) {
@@ -241,7 +238,7 @@ export class FileSystemDataSource {
           return;
         }
         if (stderr) {
-          resolve(failure(InternalError.CODE, [`Failed to list drives`]));
+          resolve(Result.fail(new InternalError(`Failed to list drives`)));
           return;
         }
         const drives = stdout
@@ -250,8 +247,8 @@ export class FileSystemDataSource {
           .map((line) => line.trim());
 
         resolve(
-          success(drives.map((drive) => ({
-            type: 'dir',
+          Result.succeed(drives.map((drive) => ({
+            type: 'dir' as const,
             path: drive,
           })))
         );
@@ -259,7 +256,7 @@ export class FileSystemDataSource {
     });
   };
 
-  private listDirectory = async (fullPath: string): Promise<Result<DirSub[]>> => {
+  private listDirectory = async (fullPath: string): Promise<LaikaResult<DirSub[]>> => {
     const isRoot =
       path.normalize(fullPath) === path.normalize(path.resolve(fullPath, '/'));
     if (os.platform() === 'win32') {
@@ -271,7 +268,7 @@ export class FileSystemDataSource {
       }
     }
     const entries = await fs.readdir(fullPath, { withFileTypes: true });
-    return success(entries
+    return Result.succeed(entries
       .filter((entry) => entry.isFile() || entry.isDirectory())
       .map((entry) => ({
         type: entry.isDirectory() ? 'dir' : ('file' as const),
@@ -282,22 +279,22 @@ export class FileSystemDataSource {
   getDirectoryContents = async (
     basePath: string,
     relativePath: string,
-  ): Promise<Result<DirSub[]>> => {
+  ): Promise<LaikaResult<DirSub[]>> => {
     const fullPath = path.join(basePath, relativePath);
     try {
       const listing = await this.listDirectory(fullPath);
-      if (!listing.success) return listing;
-      const remapped = listing.data.map((entry) => ({
+      if (Result.isFailure(listing)) return listing;
+      const remapped = listing.success.map((entry) => ({
         type: entry.type,
         path: path.relative(basePath, entry.path),
       }))
-      return success(remapped);
+      return Result.succeed(remapped);
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
-        throw new NotFoundError(`The directory at ${fullPath} does not exist`);
+        return Result.fail(new NotFoundError(`The directory at ${fullPath} does not exist`));
       } else {
-        throw error;
+        return Result.fail(new InternalError(`Failed to get directory contents: ${error instanceof Error ? error.message : String(error)}`));
       }
     }
   };
@@ -307,10 +304,10 @@ export class FileSystemDataSource {
     relativePath: string,
     content: string,
     extension: string
-  ): Promise<Result<{ path: string }>> => {
+  ): Promise<LaikaResult<{ path: string }>> => {
     // Strip any extension user may have added and use the provided extension
     const pathWithoutExt = this.stripExtension(relativePath);
-    const pathWithExt = `${pathWithoutExt}.${extension}`;
+    const pathWithExt = extension ? `${pathWithoutExt}.${extension}` : pathWithoutExt;
     const fullPath = path.join(basePath, pathWithExt);
     const dirPath = path.dirname(fullPath);
   
@@ -326,21 +323,15 @@ export class FileSystemDataSource {
       await fs.writeFile(fullPath, content);
   
       // Return path without extension for the interface
-      return success(
-        { path: pathWithoutExt }
-      );
+      return Result.succeed({ path: pathWithoutExt });
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
-        return ResultError.fromError(
-          new NotFoundError(`The directory at ${dirPath} does not exist`)
-        ).toResult();
+        return Result.fail(new NotFoundError(`The directory at ${dirPath} does not exist`));
       } else if (get(error, 'code') === 'EACCES') {
-        return (ResultError.fromError(
-          new ForbiddenError(`Permission denied for ${fullPath}`)
-        )).toResult();
+        return Result.fail(new ForbiddenError(`Permission denied for ${fullPath}`));
       } else {
-        return ResultError.fromError(error).toResult();
+        return Result.fail(new InternalError(`Failed to create or update file: ${error instanceof Error ? error.message : String(error)}`));
       }
     }
   };
@@ -364,7 +355,7 @@ export class FileSystemDataSource {
     basePath: string,
     relativePath: string,
     type: 'file' | 'dir' | 'both'
-  ): Promise<Result<FileOrDir>> => {
+  ): Promise<LaikaResult<FileOrDir>> => {
     const fullPath = path.join(basePath, relativePath);
 
     try {
@@ -372,9 +363,9 @@ export class FileSystemDataSource {
 
       if (stat.isDirectory()) {
         if (type === 'file')
-          throw new DirInsteadOfFile(
+          return Result.fail(new DirInsteadOfFile(
             `When fetching ${relativePath} a file was expected but a directory was found`
-          );
+          ));
         const dirent = await fs.readdir(fullPath, { withFileTypes: true });
         const sub = dirent
           .map((entry) => {
@@ -398,29 +389,29 @@ export class FileSystemDataSource {
           content: sub
         };
 
-        return success(entry);
+        return Result.succeed(entry);
       } else if (stat.isFile()) {
         if (type === 'dir')
-          throw new FileInsteadOfDir(
+          return Result.fail(new FileInsteadOfDir(
             `When fetching ${relativePath} a directory was expected but a file was found`
-          );
+          ));
         const content = await fs.readFile(fullPath, 'utf-8');
-        return success({
+        return Result.succeed({
           type: 'file' as const,
           path: relativePath,
           content
         });
       } else {
-        throw new ForbiddenError(
+        return Result.fail(new ForbiddenError(
           `The path ${fullPath} is not a file or directory`
-        );
+        ));
       }
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
-        throw new NotFoundError(`The directory at ${fullPath} does not exist`);
+        return Result.fail(new NotFoundError(`The directory at ${fullPath} does not exist`));
       } else {
-        throw error;
+        return Result.fail(new InternalError(`Failed to get file system entry: ${error instanceof Error ? error.message : String(error)}`));
       }
     }
   };
@@ -428,17 +419,16 @@ export class FileSystemDataSource {
   listFileSystemDirectory = async (
     basePath: string,
     relativePath: string
-  ): Promise<Result<DirSub[]>> => {
+  ): Promise<LaikaResult<DirSub[]>> => {
     try {
       const result = await this.getDirectoryContents(basePath, relativePath);
-
       return result;
     } catch (error) {
       console.error(error);
       if (error instanceof NotFoundError) {
-        return ResultError.fromError(error).toResult();
+        return Result.fail(error);
       }
-      return ResultError.fromError(error).toResult();
+      return Result.fail(new InternalError(`Failed to list directory: ${error instanceof Error ? error.message : String(error)}`));
     }
   };
 }

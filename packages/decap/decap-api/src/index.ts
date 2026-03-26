@@ -2,7 +2,7 @@
 
 import { AssetsRepository } from '@laikacms/assets';
 import { buildAssetsApi } from '@laikacms/assets-api';
-import { AuthenticationError, Header, Logger, NotFoundError, TemplateLiteral as TL, Url } from '@laikacms/core';
+import { AuthenticationError, Header, NotFoundError, TemplateLiteral as TL, Url } from '@laikacms/core';
 import { addTimingJitter } from '@laikacms/crypto';
 import { DocumentsRepository } from '@laikacms/documents';
 import { buildJsonApi as buildDocumentsApi } from '@laikacms/documents-api';
@@ -63,7 +63,7 @@ export interface DecapOptions {
    * API keys can be passed via X-API-Key header or Authorization: ApiKey <key>
    */
   authenticateApiToken?: (token: string) => Promise<User>;
-  logger?: Logger | undefined;
+  logger?: Console | undefined;
 }
 
 export interface DecapApi {

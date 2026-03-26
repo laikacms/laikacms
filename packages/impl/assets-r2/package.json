@@ -29,6 +29,7 @@
     "@laikacms/assets": "workspace:*",
     "@laikacms/storage": "workspace:*",
     "@laikacms/sanitizer": "workspace:*",
+    "effect": "catalog:default",
     "zod": "catalog:schema"
   },
   "devDependencies": {

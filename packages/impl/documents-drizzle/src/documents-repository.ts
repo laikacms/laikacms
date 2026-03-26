@@ -7,17 +7,13 @@ import {
   InferModelFromColumns,
   ColumnBaseConfig,
   SQL,
-  or,
   like,
-  lt,
   lte,
 } from "drizzle-orm";
 import {
-  Result,
-  success,
-  failure,
+  LaikaError,
+  LaikaResult,
   NotFoundError,
-  Logger,
   InvalidData,
 } from "@laikacms/core";
 import { StorageObjectContent } from "@laikacms/storage";
@@ -38,8 +34,16 @@ import {
   pathToSegments,
   ListRecordSummaries,
 } from "@laikacms/documents";
+import * as Result from 'effect/Result';
 
 const PUBLISHED_STATUS = "published";
+
+/**
+ * Helper to convert a failure result to a different type while preserving the error
+ */
+function failAs<T>(error: LaikaError): LaikaResult<T> {
+  return Result.fail(error);
+}
 
 type DocumentColumnOptions = {
   key: Column<ColumnBaseConfig<"string", string>>;
@@ -105,7 +109,7 @@ export interface DrizzleDocumentsRepositoryOptions<
   RevColumns,
   RevModel,
 > {
-  logger?: Logger;
+  logger?: Console;
   documentColumns: DocColumns;
   revisionColumns: RevColumns;
   callbacks: DrizzleDocumentsCallbacks<DocModel, RevModel>;
@@ -142,35 +146,37 @@ export class DrizzleDocumentsRepository<
     return row[key];
   }
 
-  async getDocument(key: string): Promise<Result<Document>> {
+  async *getDocument(key: string): AsyncGenerator<LaikaResult<Document>> {
     const cols = this.options.documentColumns;
     const rows = await this.options.callbacks.documents.select({
       where: and(eq(cols.key, key), eq(cols.status, PUBLISHED_STATUS)),
       limit: 1,
     });
-    if (rows.length === 0)
-      return failure(NotFoundError.CODE, [`Document not found: ${key}`]);
+    if (rows.length === 0) {
+      yield Result.fail(new NotFoundError(`Document not found: ${key}`));
+      return;
+    }
     const row = rows[0];
     try {
       const content = JSON.parse(
         String(this.getDocValue(row, "content")),
       ) as StorageObjectContent;
-      return success({
-        type: "published",
+      yield Result.succeed({
+        type: "published" as const,
         key: String(this.getDocValue(row, "key")),
-        status: PUBLISHED_STATUS,
+        status: "published" as const,
         content,
         createdAt: String(this.getDocValue(row, "createdAt")),
         updatedAt: String(this.getDocValue(row, "updatedAt")),
       });
     } catch (error) {
-      return failure(InvalidData.CODE, [
-        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`,
-      ]);
+      yield Result.fail(new InvalidData(
+        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`
+      ));
     }
   }
 
-  async createDocument(create: DocumentCreate): Promise<Result<Document>> {
+  async *createDocument(create: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
     const cols = this.options.documentColumns;
     const now = new Date().toISOString();
     const values = {
@@ -185,10 +191,10 @@ export class DrizzleDocumentsRepository<
       where: eq(cols.key, create.key),
       values,
     });
-    return this.getDocument(create.key);
+    yield* this.getDocument(create.key);
   }
 
-  async updateDocument(update: DocumentCreate): Promise<Result<Document>> {
+  async *updateDocument(update: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
     const cols = this.options.documentColumns;
     const now = new Date().toISOString();
     const values: Partial<DocModel> = {
@@ -199,34 +205,34 @@ export class DrizzleDocumentsRepository<
       where: and(eq(cols.key, update.key), eq(cols.status, PUBLISHED_STATUS)),
       values,
     });
-    return this.getDocument(update.key);
+    yield* this.getDocument(update.key);
   }
 
-  async deleteDocument(key: string): Promise<Result<void>> {
+  async *deleteDocument(key: string): AsyncGenerator<LaikaResult<void>> {
     const cols = this.options.documentColumns;
     await this.options.callbacks.documents.delete({
       where: and(eq(cols.key, key)),
     });
-    return success(undefined);
+    yield Result.succeed(undefined);
   }
 
-  async getUnpublished(key: string): Promise<Result<Unpublished>> {
+  async *getUnpublished(key: string): AsyncGenerator<LaikaResult<Unpublished>> {
     const cols = this.options.documentColumns;
     const rows = await this.options.callbacks.documents.select({
       where: and(eq(cols.key, key), ne(cols.status, PUBLISHED_STATUS)),
       limit: 1,
     });
-    if (rows.length === 0)
-      return failure(NotFoundError.CODE, [
-        `Unpublished document not found: ${key}`,
-      ]);
+    if (rows.length === 0) {
+      yield Result.fail(new NotFoundError(`Unpublished document not found: ${key}`));
+      return;
+    }
     const row = rows[0];
     try {
       const content = JSON.parse(
         String(this.getDocValue(row, "content")),
       ) as StorageObjectContent;
-      return success({
-        type: "unpublished",
+      yield Result.succeed({
+        type: "unpublished" as const,
         key: String(this.getDocValue(row, "key")),
         status: String(this.getDocValue(row, "status")),
         content,
@@ -234,15 +240,15 @@ export class DrizzleDocumentsRepository<
         updatedAt: String(this.getDocValue(row, "updatedAt")),
       });
     } catch (error) {
-      return failure(InvalidData.CODE, [
-        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`,
-      ]);
+      yield Result.fail(new InvalidData(
+        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`
+      ));
     }
   }
 
-  async createUnpublished(
+  async *createUnpublished(
     create: UnpublishedCreate,
-  ): Promise<Result<Unpublished>> {
+  ): AsyncGenerator<LaikaResult<Unpublished>> {
     const cols = this.options.documentColumns;
     const now = new Date().toISOString();
     const values = {
@@ -257,12 +263,12 @@ export class DrizzleDocumentsRepository<
       where: eq(cols.key, create.key),
       values,
     });
-    return this.getUnpublished(create.key);
+    yield* this.getUnpublished(create.key);
   }
 
-  async updateUnpublished(
+  async *updateUnpublished(
     update: UnpublishedUpdate,
-  ): Promise<Result<Unpublished>> {
+  ): AsyncGenerator<LaikaResult<Unpublished>> {
     const cols = this.options.documentColumns;
     const now = new Date().toISOString();
     const values: Partial<DocModel> = {
@@ -278,10 +284,10 @@ export class DrizzleDocumentsRepository<
       where: and(eq(cols.key, update.key), ne(cols.status, PUBLISHED_STATUS)),
       values,
     });
-    return this.getUnpublished(update.key);
+    yield* this.getUnpublished(update.key);
   }
 
-  async deleteUnpublished(key: string): Promise<Result<void>> {
+  async *deleteUnpublished(key: string): AsyncGenerator<LaikaResult<void>> {
     const cols = this.options.documentColumns;
     await this.options.callbacks.documents.delete({
       where: and(
@@ -290,12 +296,24 @@ export class DrizzleDocumentsRepository<
         ne(cols.status, PUBLISHED_STATUS),
       ),
     });
-    return success(undefined);
+    yield Result.succeed(undefined);
   }
 
-  async publish(key: string): Promise<Result<Document>> {
-    const unpublishedResult = await this.getUnpublished(key);
-    if (!unpublishedResult.success) return unpublishedResult;
+  async *publish(key: string): AsyncGenerator<LaikaResult<Document>> {
+    // Get unpublished first to verify it exists
+    let unpublishedExists = false;
+    for await (const result of this.getUnpublished(key)) {
+      if (Result.isFailure(result)) {
+        yield failAs<Document>(result.failure);
+        return;
+      }
+      unpublishedExists = true;
+    }
+    if (!unpublishedExists) {
+      yield Result.fail(new NotFoundError(`Unpublished document not found: ${key}`));
+      return;
+    }
+
     const cols = this.options.documentColumns;
     const now = new Date().toISOString();
     const values = {
@@ -306,12 +324,24 @@ export class DrizzleDocumentsRepository<
       where: eq(cols.key, key),
       values,
     });
-    return this.getDocument(key);
+    yield* this.getDocument(key);
   }
 
-  async unpublish(key: string, status: string): Promise<Result<Unpublished>> {
-    const documentResult = await this.getDocument(key);
-    if (!documentResult.success) return documentResult;
+  async *unpublish(key: string, status: string): AsyncGenerator<LaikaResult<Unpublished>> {
+    // Get document first to verify it exists
+    let documentExists = false;
+    for await (const result of this.getDocument(key)) {
+      if (Result.isFailure(result)) {
+        yield failAs<Unpublished>(result.failure);
+        return;
+      }
+      documentExists = true;
+    }
+    if (!documentExists) {
+      yield Result.fail(new NotFoundError(`Document not found: ${key}`));
+      return;
+    }
+
     const cols = this.options.documentColumns;
     const now = new Date().toISOString();
     const values = {
@@ -322,7 +352,7 @@ export class DrizzleDocumentsRepository<
       where: eq(cols.key, key),
       values,
     });
-    return this.getUnpublished(key);
+    yield* this.getUnpublished(key);
   }
 
   private async *listRecordsInternal<
@@ -331,7 +361,7 @@ export class DrizzleDocumentsRepository<
   >(
     options: SummaryOnly extends true ? ListRecordsOptions : ListRecordsOptions,
     summaryOnly: SummaryOnly,
-  ): AsyncGenerator<Result<readonly T[]>> {
+  ): AsyncGenerator<LaikaResult<readonly T[]>> {
     const cols = this.options.documentColumns;
     const records: T[] = [];
 
@@ -367,44 +397,44 @@ export class DrizzleDocumentsRepository<
               }),
         } as T);
       } catch (error) {
-        yield failure(InvalidData.CODE, [
-          `Invalid JSON content format for document key "${String(this.getDocValue(row, "key"))}": ${error instanceof Error ? error.message : "Unknown error"}`,
-        ]);
+        yield Result.fail(new InvalidData(
+          `Invalid JSON content format for document key "${String(this.getDocValue(row, "key"))}": ${error instanceof Error ? error.message : "Unknown error"}`
+        ));
         return;
       }
     }
-    yield success(records);
+    yield Result.succeed(records);
   }
 
   listRecords(
     options: ListRecordsOptions,
-  ): AsyncGenerator<Result<readonly DocumentRecord[]>> {
+  ): AsyncGenerator<LaikaResult<readonly DocumentRecord[]>> {
     return this.listRecordsInternal(options, false);
   }
 
   listRecordSummaries(
     options: ListRecordSummaries,
-  ): AsyncGenerator<Result<readonly RecordSummary[]>> {
+  ): AsyncGenerator<LaikaResult<readonly RecordSummary[]>> {
     return this.listRecordsInternal(options, true);
   }
 
-  async getRevision(key: string, revision: string): Promise<Result<Revision>> {
+  async *getRevision(key: string, revision: string): AsyncGenerator<LaikaResult<Revision>> {
     const cols = this.options.revisionColumns;
     const rows = await this.options.callbacks.revisions.select({
       where: and(eq(cols.key, key), eq(cols.revision, revision)),
       limit: 1,
     });
-    if (rows.length === 0)
-      return failure(NotFoundError.CODE, [
-        `Revision not found: ${key}/${revision}`,
-      ]);
+    if (rows.length === 0) {
+      yield Result.fail(new NotFoundError(`Revision not found: ${key}/${revision}`));
+      return;
+    }
     const row = rows[0];
     try {
       const content = JSON.parse(
         String(this.getRevValue(row, "content")),
       ) as StorageObjectContent;
-      return success({
-        type: "revision",
+      yield Result.succeed({
+        type: "revision" as const,
         key: String(this.getRevValue(row, "key")),
         revision: String(this.getRevValue(row, "revision")),
         content,
@@ -412,13 +442,13 @@ export class DrizzleDocumentsRepository<
         updatedAt: String(this.getRevValue(row, "updatedAt")),
       });
     } catch (error) {
-      return failure(InvalidData.CODE, [
-        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`,
-      ]);
+      yield Result.fail(new InvalidData(
+        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`
+      ));
     }
   }
 
-  async createRevision(create: RevisionCreate): Promise<Result<Revision>> {
+  async *createRevision(create: RevisionCreate): AsyncGenerator<LaikaResult<Revision>> {
     const cols = this.options.revisionColumns;
     const now = new Date().toISOString();
     const values = {
@@ -433,13 +463,13 @@ export class DrizzleDocumentsRepository<
       where: and(eq(cols.key, create.key), eq(cols.revision, create.revision)),
       values,
     });
-    return this.getRevision(create.key, create.revision);
+    yield* this.getRevision(create.key, create.revision);
   }
 
   async *listRevisions(
     key: string,
     _options: ListRevisionsOptions,
-  ): AsyncGenerator<Result<readonly RevisionSummary[]>> {
+  ): AsyncGenerator<LaikaResult<readonly RevisionSummary[]>> {
     const cols = this.options.revisionColumns;
     const rows = await this.options.callbacks.revisions.select({
       where: eq(cols.key, key),
@@ -451,6 +481,6 @@ export class DrizzleDocumentsRepository<
       createdAt: String(this.getRevValue(row, "createdAt")),
       updatedAt: String(this.getRevValue(row, "updatedAt")),
     }));
-    yield success(summaries);
+    yield Result.succeed(summaries);
   }
 }

@@ -1,11 +1,9 @@
 import {
   EntryAlreadyExistsError,
-  failure,
+  LaikaError,
+  LaikaResult,
   InvalidData,
-  Logger,
   NotFoundError,
-  Result,
-  success
 } from "@laikacms/core";
 import {
   Atom,
@@ -30,6 +28,14 @@ import {
   lte,
   SQL,
 } from "drizzle-orm";
+import * as Result from 'effect/Result';
+
+/**
+ * Helper to convert a failure result to a different type while preserving the error
+ */
+function failAs<T>(error: LaikaError): LaikaResult<T> {
+  return Result.fail(error);
+}
 
 type ColumnOptions = {
   key: Column<ColumnBaseConfig<"string", any>>;
@@ -57,7 +63,7 @@ export type DrizzleStorageCallbacks<Model> = {
 };
 
 export interface DrizzleStorageRepositoryOptions<Columns, Model> {
-  logger?: Logger | undefined;
+  logger?: Console | undefined;
   columns: Columns;
   callbacks: DrizzleStorageCallbacks<Model>;
 }
@@ -86,61 +92,73 @@ export class DrizzleStorageRepository<
 
   async *removeAtoms(
     keys: readonly string[],
-  ): AsyncGenerator<Result<readonly string[]>> {
+  ): AsyncGenerator<LaikaResult<readonly string[]>> {
     for (const key of keys) {
       await this.options.callbacks.delete({
         where: eq(this.options.columns.key, key),
       });
     }
-    yield success([...keys]);
+    yield Result.succeed([...keys]);
   }
 
-  async getFolder(key: string): Promise<Result<Folder>> {
+  async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
     const objects = await this.options.callbacks.select({
       where: like(this.options.columns.key, `${key}/%`),
       limit: 1,
     });
-    if (objects.length === 0)
-      return failure(NotFoundError.CODE, [`Folder not found: ${key}`]);
+    if (objects.length === 0) {
+      yield Result.fail(new NotFoundError(`Folder not found: ${key}`));
+      return;
+    }
     const now = new Date().toISOString();
-    return success({ type: "folder", key, createdAt: now, updatedAt: now });
+    yield Result.succeed({ type: "folder" as const, key, createdAt: now, updatedAt: now });
   }
 
-  async getAtom(key: string): Promise<Result<Atom>> {
-    const objectResult = await this.getObject(key);
-    if (objectResult.success) return objectResult;
-    return this.getFolder(key);
+  async *getAtom(key: string): AsyncGenerator<LaikaResult<Atom>> {
+    // Try to get as object first
+    let foundObject = false;
+    for await (const objectResult of this.getObject(key)) {
+      if (Result.isSuccess(objectResult)) {
+        yield objectResult;
+        return;
+      }
+      foundObject = true;
+    }
+    // If not found as object, try as folder
+    yield* this.getFolder(key);
   }
 
-  async getObject(key: string): Promise<Result<StorageObject>> {
+  async *getObject(key: string): AsyncGenerator<LaikaResult<StorageObject>> {
     const rows = await this.options.callbacks.select({
       where: eq(this.options.columns.key, key),
       limit: 1,
     });
-    if (rows.length === 0)
-      return failure(NotFoundError.CODE, [`Object not found: ${key}`]);
+    if (rows.length === 0) {
+      yield Result.fail(new NotFoundError(`Object not found: ${key}`));
+      return;
+    }
     const row = rows[0];
     const contentRaw = this.getValue(row, "content");
 
     try {
       const content = JSON.parse(String(contentRaw));
-      return success({
-        type: "object",
+      yield Result.succeed({
+        type: "object" as const,
         key: String(this.getValue(row, "key")),
         createdAt: String(this.getValue(row, "createdAt")),
         updatedAt: String(this.getValue(row, "updatedAt")),
         content,
       });
     } catch (error) {
-      return failure(InvalidData.CODE, [
-        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`,
-      ]);
+      yield Result.fail(new InvalidData(
+        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`
+      ));
     }
   }
 
-  async updateObject(
+  async *updateObject(
     update: StorageObjectUpdate,
-  ): Promise<Result<StorageObject>> {
+  ): AsyncGenerator<LaikaResult<StorageObject>> {
     const now = new Date().toISOString();
     if (update.content !== undefined) {
       const model = {
@@ -152,23 +170,22 @@ export class DrizzleStorageRepository<
         values: model,
       });
     }
-    return this.getObject(update.key);
+    yield* this.getObject(update.key);
   }
 
-  async createObject(
+  async *createObject(
     create: StorageObjectCreate,
-  ): Promise<Result<StorageObject>> {
-    if (!create.content)
-      return failure(InvalidData.CODE, [
-        "Object content is required for creation",
-      ]);
+  ): AsyncGenerator<LaikaResult<StorageObject>> {
+    if (!create.content) {
+      yield Result.fail(new InvalidData("Object content is required for creation"));
+      return;
+    }
     const exists = await this.options.callbacks.select({
       where: eq(this.options.columns.key, create.key),
     });
     if (exists.length > 0 && exists[0]) {
-      return failure(EntryAlreadyExistsError.CODE, [
-        `An object with key "${create.key}" already exists`,
-      ]);
+      yield Result.fail(new EntryAlreadyExistsError(`An object with key "${create.key}" already exists`));
+      return;
     }
     const now = new Date().toISOString();
     const values = {
@@ -183,24 +200,27 @@ export class DrizzleStorageRepository<
       where: eq(this.options.columns.key, create.key),
       values,
     });
-    return this.getObject(create.key);
+    yield* this.getObject(create.key);
   }
 
-  async createOrUpdateObject(
+  async *createOrUpdateObject(
     create: StorageObjectCreate,
-  ): Promise<Result<StorageObject>> {
-    if (!create.content)
-      return failure(InvalidData.CODE, ["Object content is required"]);
+  ): AsyncGenerator<LaikaResult<StorageObject>> {
+    if (!create.content) {
+      yield Result.fail(new InvalidData("Object content is required"));
+      return;
+    }
     const exists = await this.options.callbacks.select({
       where: eq(this.options.columns.key, create.key),
     });
     if (exists.length > 0) {
-      return this.updateObject({ key: create.key, content: create.content });
+      yield* this.updateObject({ key: create.key, content: create.content });
+      return;
     }
-    return this.createObject(create);
+    yield* this.createObject(create);
   }
 
-  async createFolder(folderCreate: FolderCreate): Promise<Result<Folder>> {
+  async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
     const keepKey = pathCombine(folderCreate.key, ".keep");
     const now = new Date().toISOString();
     const values = {
@@ -215,30 +235,30 @@ export class DrizzleStorageRepository<
       where: eq(this.options.columns.key, keepKey),
       values,
     });
-    return this.getFolder(folderCreate.key);
+    yield* this.getFolder(folderCreate.key);
   }
 
   async *listAtomSummaries(
     folderKey: string,
     options: ListAtomsOptions,
-  ): AsyncGenerator<Result<readonly AtomSummary[]>> {
+  ): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
     for await (const result of this.listAtoms(folderKey, options)) {
-      if (!result.success) {
-        yield result;
+      if (Result.isFailure(result)) {
+        yield failAs<readonly AtomSummary[]>(result.failure);
         return;
       }
-      const summaries: AtomSummary[] = result.data.map((atom) => ({
+      const summaries: AtomSummary[] = result.success.map((atom: Atom) => ({
         type: "object-summary" as const,
         key: atom.key,
       }));
-      yield success(summaries);
+      yield Result.succeed(summaries);
     }
   }
 
   async *listAtoms(
     folderKey: string,
     options: ListAtomsOptions,
-  ): AsyncGenerator<Result<readonly Atom[]>> {
+  ): AsyncGenerator<LaikaResult<readonly Atom[]>> {
     const pattern = folderKey ? `${folderKey}/%` : "%";
     const baseDepth = folderKey ? this.calculateDepth(folderKey) : 0;
     const maxDepth = baseDepth + options.depth;
@@ -265,12 +285,12 @@ export class DrizzleStorageRepository<
           content,
         });
       } catch (error) {
-        yield failure(InvalidData.CODE, [
-          `Invalid JSON content format for key "${key}": ${error instanceof Error ? error.message : "Unknown error"}`,
-        ]);
+        yield Result.fail(new InvalidData(
+          `Invalid JSON content format for key "${key}": ${error instanceof Error ? error.message : "Unknown error"}`
+        ));
         return;
       }
     }
-    yield success(atoms);
+    yield Result.succeed(atoms);
   }
 }

@@ -1,5 +1,4 @@
-import { Result } from '@laikacms/core';
-import { Folder, FolderCreate, Pagination } from '@laikacms/storage';
+import { Folder, FolderCreate, Key, Pagination } from '@laikacms/storage';
 
 import type {
   Asset,
@@ -10,6 +9,7 @@ import type {
   AssetMetadata,
   Resource,
 } from '../entities/index.js';
+import { LaikaError, LaikaResult } from '@laikacms/core';
 
 /**
  * Hints for prefetching related data.
@@ -62,6 +62,8 @@ export interface ListResourcesOptions {
   hints?: FetchHints;
 }
 
+type ResultStream<T> = AsyncGenerator<LaikaResult<T>>;
+
 /**
  * Abstract repository for managing binary assets (images, files, media).
  *
@@ -105,7 +107,7 @@ export abstract class AssetsRepository {
    * @param key The resource key
    * @param options Options including hints for prefetching
    */
-  abstract getResource(key: string, options?: GetResourceOptions): Promise<Result<Resource>>;
+  abstract getResource(key: string, options?: GetResourceOptions): ResultStream<Resource[]>;
   
   /**
    * List all resources (assets and folders) in a folder.
@@ -121,7 +123,7 @@ export abstract class AssetsRepository {
   abstract listResources(
     folderKey: string,
     options: ListResourcesOptions
-  ): AsyncGenerator<Result<readonly Resource[]>>;
+  ): ResultStream<Resource[]>;
   
   // ============================================
   // Asset Operations
@@ -133,7 +135,7 @@ export abstract class AssetsRepository {
    * @param key The asset key
    * @param options Options including hints for prefetching
    */
-  abstract getAsset(key: string, options?: GetResourceOptions): Promise<Result<Asset>>;
+  abstract getAsset(key: string, options?: GetResourceOptions): ResultStream<Asset>;
   
   /**
    * Create a new asset.
@@ -143,29 +145,29 @@ export abstract class AssetsRepository {
    * - Large files may use multipart uploads (S3, R2)
    * - Streaming uploads may use resumable protocols (Google Drive)
    */
-  abstract createAsset(create: AssetCreate): Promise<Result<Asset>>;
+  abstract createAsset(create: AssetCreate): ResultStream<Asset>;
   
   /**
    * Update an asset's metadata.
    */
-  abstract updateAsset(update: AssetUpdate): Promise<Result<Asset>>;
+  abstract updateAsset(update: AssetUpdate): ResultStream<Asset>;
   
   /**
    * Delete an asset.
    */
-  abstract deleteAsset(key: string): Promise<Result<void>>;
+  abstract deleteAsset(key: Key): ResultStream<void>;
   
   /**
    * Delete multiple assets.
    * Yields results in batches for progress tracking.
    */
-  abstract deleteAssets(keys: readonly string[]): AsyncGenerator<Result<readonly string[]>>;
+  abstract deleteAssets(keys: readonly Key[]): ResultStream<Key[]>;
   
-  abstract getVariations(assets: Asset[]): AsyncGenerator<Result<AssetVariations[]>>;
+  abstract getVariations(assets: Asset[]): ResultStream<AssetVariations[]>;
   
-  abstract getUrls(assets: Asset[]): AsyncGenerator<Result<AssetUrl[]>>;
+  abstract getUrls(assets: Asset[]): ResultStream<AssetUrl[]>;
   
-  abstract getMetadata(assets: Asset[]): AsyncGenerator<Result<AssetMetadata[]>>;
+  abstract getMetadata(assets: Asset[]): ResultStream<AssetMetadata[]>;
   
   // ============================================
   // Folder Operations
@@ -174,16 +176,16 @@ export abstract class AssetsRepository {
   /**
    * Get folder metadata.
    */
-  abstract getFolder(key: string): Promise<Result<Folder>>;
+  abstract getFolder(key: Key): ResultStream<Folder>;
   
   /**
    * Create a new folder.
    */
-  abstract createFolder(folderCreate: FolderCreate): Promise<Result<Folder>>;
+  abstract createFolder(folderCreate: FolderCreate): ResultStream<Folder>;
   
   /**
    * Delete a folder.
    * @param recursive If true, delete all contents. If false, fail if not empty.
    */
-  abstract deleteFolder(key: string, recursive?: boolean): Promise<Result<void>>;
+  abstract deleteFolder(key: string, recursive?: boolean): ResultStream<void>;
 }

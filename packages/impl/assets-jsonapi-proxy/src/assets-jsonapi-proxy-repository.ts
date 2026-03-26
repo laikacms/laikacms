@@ -6,15 +6,15 @@ import {
   type AssetVariations,
   type AssetUrl,
   type AssetMetadata,
-  type AssetMetadataContent,
   type Resource,
   type GetResourceOptions,
   type ListResourcesOptions,
 } from '@laikacms/assets';
 import { type Folder, type FolderCreate } from '@laikacms/storage';
-import { Result, success, failure, InvalidData, InternalError } from '@laikacms/core';
+import { LaikaResult, LaikaError, InvalidData, InternalError } from '@laikacms/core';
 import { JsonApiCollectionResponse } from '@laikacms/json-api';
-import { assetFromJsonApi, assetMetadataFromJsonApiZ, assetUrlFromJsonApiZ, assetVariantsFromJsonApiZ, folderFromJsonApiZ, includedFromJsonApiZ, resourceFromJsonApiZ } from './jsonapi.js';
+import { assetFromJsonApi, assetMetadataFromJsonApiZ, assetUrlFromJsonApiZ, assetVariantsFromJsonApiZ, folderFromJsonApiZ, resourceFromJsonApiZ } from './jsonapi.js';
+import * as Result from 'effect/Result';
 
 export interface AssetsJsonApiProxyRepositoryOptions {
   baseUrl: string;
@@ -27,6 +27,13 @@ interface JsonApiResource {
   type: string;
   id: string;
   attributes?: Record<string, unknown>;
+}
+
+/**
+ * Helper to convert a failure result to a different type while preserving the error
+ */
+function failAs<T>(error: LaikaError): LaikaResult<T> {
+  return Result.fail(error);
 }
 
 /**
@@ -70,30 +77,30 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     return this.staticHeaders;
   }
 
-  private async handleResponse<T, I = undefined, Data = JsonApiCollectionResponse & { data: T, included?: I[] }>(response: Response): Promise<Result<Data>> {
+  private async handleResponse<T, I = undefined, Data = JsonApiCollectionResponse & { data: T, included?: I[] }>(response: Response): Promise<LaikaResult<Data>> {
     const contentType = response.headers.get('content-type');
     
     if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-      return failure(InvalidData.CODE, [`Expected JSON:API response, got ${contentType}`]);
+      return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
     }
 
     const json = await response.json();
 
     if (!response.ok) {
       const errors = json.errors || [{ detail: 'Unknown error' }];
-      return failure(InvalidData.CODE, errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error'));
+      return Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
     }
 
     if (json.errors) {
-      return failure(InvalidData.CODE, json.errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error'));
+      return Result.fail(new InvalidData(json.errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
     }
 
     // Return the full JSON response, not just json.data
     // The caller expects { data: T, included?: I[] } structure
-    return success(json as Data);
+    return Result.succeed(json as Data);
   }
 
-  async getResource(key: string, options?: GetResourceOptions): Promise<Result<Resource>> {
+  async *getResource(key: string, options?: GetResourceOptions): AsyncGenerator<LaikaResult<Resource[]>> {
     try {
       const headers = await this.getHeaders();
       
@@ -111,14 +118,17 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       });
 
       const result = await this.handleResponse<JsonApiResource, JsonApiResource>(response);
-      if (!result.success) return result;
+      if (Result.isFailure(result)) {
+        yield failAs<Resource[]>(result.failure);
+        return;
+      }
 
-      const resource = resourceFromJsonApiZ.parse(result.data.data) as Resource;
+      const resource = resourceFromJsonApiZ.parse(result.success.data) as Resource;
 
-      this.storeIncludedResources(result.data.included);
-      return success(resource);
+      this.storeIncludedResources(result.success.included);
+      yield Result.succeed([resource]);
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
@@ -138,7 +148,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     }
   }
 
-  async *listResources(folderKey: string, options: ListResourcesOptions): AsyncGenerator<Result<readonly Resource[]>> {
+  async *listResources(folderKey: string, options: ListResourcesOptions): AsyncGenerator<LaikaResult<Resource[]>> {
     try {
       const headers = await this.getHeaders();
       
@@ -193,7 +203,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
 
       const contentType = response.headers.get('content-type');
       if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-        yield failure(InvalidData.CODE, [`Expected JSON:API response, got ${contentType}`]);
+        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
         return;
       }
 
@@ -201,30 +211,36 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
 
       if (!response.ok || 'errors' in json) {
         const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
-        yield failure(InvalidData.CODE, errors.map((e) => e.detail || e.title || 'Unknown error'));
+        yield Result.fail(new InvalidData(errors.map((e) => e.detail || e.title || 'Unknown error').join(', ')));
         return;
       }
 
       const resources: Resource[] = json.data.map((item: JsonApiResource) => resourceFromJsonApiZ.parse(item) as Resource);
       this.storeIncludedResources(json.included);
-      yield success(resources);
+      yield Result.succeed(resources);
     } catch (error) {
-      yield failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async getAsset(key: string, options?: GetResourceOptions): Promise<Result<Asset>> {
-    const result = await this.getResource(key, options);
-    if (!result.success) return result;
-    
-    if (result.data.type !== 'asset') {
-      return failure(InvalidData.CODE, [`Expected asset but got ${result.data.type}`]);
+  async *getAsset(key: string, options?: GetResourceOptions): AsyncGenerator<LaikaResult<Asset>> {
+    for await (const result of this.getResource(key, options)) {
+      if (Result.isFailure(result)) {
+        yield failAs<Asset>(result.failure);
+        return;
+      }
+      
+      const resource = result.success[0];
+      if (!resource || resource.type !== 'asset') {
+        yield Result.fail(new InvalidData(`Expected asset but got ${resource?.type || 'nothing'}`));
+        return;
+      }
+      
+      yield Result.succeed(resource as Asset);
     }
-    
-    return success(result.data as Asset);
   }
 
-  async createAsset(create: AssetCreate): Promise<Result<Asset>> {
+  async *createAsset(create: AssetCreate): AsyncGenerator<LaikaResult<Asset>> {
     try {
       const headers = await this.getHeaders();
       
@@ -252,10 +268,10 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         const chunks: Uint8Array[] = [];
         let done = false;
         while (!done) {
-          const result = await reader.read();
-          done = result.done;
-          if (result.value) {
-            chunks.push(result.value);
+          const readResult = await reader.read();
+          done = readResult.done;
+          if (readResult.value) {
+            chunks.push(readResult.value);
           }
         }
         // Calculate total length
@@ -268,7 +284,8 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         }
         blobContent = combined.buffer as ArrayBuffer;
       } else {
-        throw new Error('Unsupported content type');
+        yield Result.fail(new InvalidData('Unsupported content type'));
+        return;
       }
       
       // Use File instead of Blob to preserve the filename
@@ -287,19 +304,18 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       });
 
       const result = await this.handleResponse<JsonApiResource, JsonApiResource>(response);
-      if (!result.success) return result;
-
-      for (const element of result.data.included || []) {
-        
+      if (Result.isFailure(result)) {
+        yield failAs<Asset>(result.failure);
+        return;
       }
 
-      return success(assetFromJsonApi.parse(result.data.data));
+      yield Result.succeed(assetFromJsonApi.parse(result.success.data));
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async updateAsset(update: AssetUpdate): Promise<Result<Asset>> {
+  async *updateAsset(update: AssetUpdate): AsyncGenerator<LaikaResult<Asset>> {
     try {
       const headers = await this.getHeaders();
       
@@ -321,15 +337,18 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       });
 
       const result = await this.handleResponse<JsonApiResource>(response);
-      if (!result.success) return result;
+      if (Result.isFailure(result)) {
+        yield failAs<Asset>(result.failure);
+        return;
+      }
 
-      return success(assetFromJsonApi.parse(result.data));
+      yield Result.succeed(assetFromJsonApi.parse(result.success));
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async *deleteAssets(keys: readonly string[]): AsyncGenerator<Result<readonly string[]>> {
+  async *deleteAssets(keys: readonly string[]): AsyncGenerator<LaikaResult<string[]>> {
     try {
       const headers = await this.getHeaders();
       const deletedKeys: string[] = [];
@@ -345,13 +364,13 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         }
       }
       
-      yield success(deletedKeys);
+      yield Result.succeed(deletedKeys);
     } catch (error) {
-      yield failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async deleteAsset(key: string): Promise<Result<void>> {
+  async *deleteAsset(key: string): AsyncGenerator<LaikaResult<void>> {
     try {
       const headers = await this.getHeaders();
       
@@ -363,16 +382,17 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       if (!response.ok) {
         const json = await response.json().catch(() => ({}));
         const errors = json.errors || [{ detail: 'Failed to delete asset' }];
-        return failure(InvalidData.CODE, errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error'));
+        yield Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+        return;
       }
 
-      return success(undefined);
+      yield Result.succeed(undefined);
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async deleteFolder(key: string, recursive?: boolean): Promise<Result<void>> {
+  async *deleteFolder(key: string, recursive?: boolean): AsyncGenerator<LaikaResult<void>> {
     try {
       const headers = await this.getHeaders();
       
@@ -392,84 +412,103 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       if (!response.ok) {
         const json = await response.json().catch(() => ({}));
         const errors = json.errors || [{ detail: 'Failed to delete folder' }];
-        return failure(InvalidData.CODE, errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error'));
+        yield Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+        return;
       }
 
-      return success(undefined);
+      yield Result.succeed(undefined);
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async *getVariations(assets: Asset[]): AsyncGenerator<Result<AssetVariations[]>> {
+  async *getVariations(assets: Asset[]): AsyncGenerator<LaikaResult<AssetVariations[]>> {
     const results: AssetVariations[] = [];
     for (const asset of assets) {
       const variation = this.variations.get(asset.key);
       if (variation) {
         results.push(variation);
       } else {
-        const result = await this.getAsset(asset.key, { hints: { variations: true } });
-        if (!result.success) yield result;
-        else if (!this.variations.has(asset.key)) {
-          yield failure(InternalError.CODE, [`Hint for variations was requested but no variations found for asset: ${asset.key}`]);
-        } else {
+        for await (const result of this.getAsset(asset.key, { hints: { variations: true } })) {
+          if (Result.isFailure(result)) {
+            yield failAs<AssetVariations[]>(result.failure);
+            return;
+          }
+          if (!this.variations.has(asset.key)) {
+            yield Result.fail(new InternalError(`Hint for variations was requested but no variations found for asset: ${asset.key}`));
+            return;
+          }
           results.push(this.variations.get(asset.key)!);
         }
       }
     }
-    yield success(results);
+    yield Result.succeed(results);
   }
 
-  async *getUrls(assets: Asset[]): AsyncGenerator<Result<AssetUrl[]>> {
+  async *getUrls(assets: Asset[]): AsyncGenerator<LaikaResult<AssetUrl[]>> {
     const results: AssetUrl[] = [];
     for (const asset of assets) {
       const url = this.urls.get(asset.key);
       if (url) {
         results.push(url);
       } else {
-        const result = await this.getAsset(asset.key, { hints: { urls: true } });
-        if (!result.success) yield result;
-        else if (!this.urls.has(asset.key)) {
-          yield failure(InternalError.CODE, [`Hint for URLs was requested but no URLs found for asset: ${asset.key}`]);
-        } else {
+        for await (const result of this.getAsset(asset.key, { hints: { urls: true } })) {
+          if (Result.isFailure(result)) {
+            yield failAs<AssetUrl[]>(result.failure);
+            return;
+          }
+          if (!this.urls.has(asset.key)) {
+            yield Result.fail(new InternalError(`Hint for URLs was requested but no URLs found for asset: ${asset.key}`));
+            return;
+          }
           results.push(this.urls.get(asset.key)!);
         }
       }
     }
-    yield success(results);
+    yield Result.succeed(results);
   }
 
-  async *getMetadata(assets: Asset[]): AsyncGenerator<Result<AssetMetadata[]>> {
+  async *getMetadata(assets: Asset[]): AsyncGenerator<LaikaResult<AssetMetadata[]>> {
     const results: AssetMetadata[] = [];
     for (const asset of assets) {
       const metadataContent = this.metadata.get(asset.key);
       if (metadataContent) {
         results.push(metadataContent);
       } else {
-        const result = await this.getAsset(asset.key, { hints: { metadata: true } });
-        if (!result.success) yield result;
-        else if (!this.metadata.has(asset.key)) {
-          yield failure(InternalError.CODE, [`Hint for metadata was requested but no metadata found for asset: ${asset.key}`]);
-        } else {
+        for await (const result of this.getAsset(asset.key, { hints: { metadata: true } })) {
+          if (Result.isFailure(result)) {
+            yield failAs<AssetMetadata[]>(result.failure);
+            return;
+          }
+          if (!this.metadata.has(asset.key)) {
+            yield Result.fail(new InternalError(`Hint for metadata was requested but no metadata found for asset: ${asset.key}`));
+            return;
+          }
           results.push(this.metadata.get(asset.key)!);
         }
       }
     }
-    yield success(results);
+    yield Result.succeed(results);
   }
 
-  async getFolder(key: string): Promise<Result<Folder>> {
-    const result = await this.getResource(key);
-    if (!result.success) return result;
-    
-    if (result.data.type !== 'folder') {
-      return failure(InvalidData.CODE, [`Expected folder but got ${result.data.type}`]);
+  async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
+    for await (const result of this.getResource(key)) {
+      if (Result.isFailure(result)) {
+        yield failAs<Folder>(result.failure);
+        return;
+      }
+      
+      const resource = result.success[0];
+      if (!resource || resource.type !== 'folder') {
+        yield Result.fail(new InvalidData(`Expected folder but got ${resource?.type || 'nothing'}`));
+        return;
+      }
+      
+      yield Result.succeed(resource as Folder);
     }
-    
-    return success(result.data as Folder);
   }
 
-  async createFolder(folderCreate: FolderCreate): Promise<Result<Folder>> {
+  async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
     try {
       const headers = await this.getHeaders();
       
@@ -486,11 +525,14 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       });
 
       const result = await this.handleResponse<JsonApiResource>(response);
-      if (!result.success) return result;
+      if (Result.isFailure(result)) {
+        yield failAs<Folder>(result.failure);
+        return;
+      }
 
-      return success(folderFromJsonApiZ.parse(result.data.data) as Folder);
+      yield Result.succeed(folderFromJsonApiZ.parse(result.success.data) as Folder);
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 }

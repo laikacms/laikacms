@@ -18,12 +18,24 @@ import type {
   UnpublishedEntry,
 } from "decap-cms-lib-util";
 
-import type { DocumentsRepository, DocumentCreate } from "@laikacms/documents";
+import type { DocumentsRepository } from "@laikacms/documents";
 import type { AssetsRepository, AssetCreate } from "@laikacms/assets";
 import { DocumentsJsonApiProxyRepository } from "@laikacms/documents-jsonapi-proxy";
 import { AssetsJsonApiProxyRepository } from "@laikacms/assets-jsonapi-proxy";
-import { errorCode, ErrorCodeToStatusMap, IllegalStateException, AsyncGenerator, Url, TemplateLiteral as TL } from "@laikacms/core";
+import { errorCode, ErrorCodeToStatusMap, IllegalStateException, Url, TemplateLiteral as TL, LaikaResult, LaikaError, ErrorCode, AsyncGenerator } from "@laikacms/core";
+import * as Result from "effect/Result";
+import * as f from "effect/Function";
+import * as Effect from "effect/Effect";
 import { Pagination } from "@laikacms/storage";
+
+// Helper to get first result from async generator
+async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<LaikaResult<T>> {
+  const { value, done } = await gen.next();
+  if (done || value === undefined) {
+    return Result.fail({ code: errorCode.NOT_FOUND, message: "No result returned" } as any);
+  }
+  return value;
+}
 
 /**
  * Configuration for the Laika backend
@@ -490,20 +502,22 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
         type: 'published',
         depth: 10
       })) {
-        if (!result.success) {
-          console.error("Error listing records:", result.messages);
+        if (Result.isFailure(result)) {
+          console.error("Error listing records:", result.failure);
           continue;
         }
         
-        for (const record of result.data) {
-          if (record.type === 'published') {
-            const entry: ImplementationEntry = {
-              file: { path: record.key, id: record.key },
-              data: contentToRawString(record.content),
-            };
-            entries.push(entry);
-            // Pre-populate the entry cache to avoid redundant fetches
-            this.entryCache.set(record.key, entry);
+        if (Result.isSuccess(result)) {
+          for (const record of result.success) {
+            if (record.type === 'published') {
+              const entry: ImplementationEntry = {
+                file: { path: record.key, id: record.key },
+                data: contentToRawString(record.content),
+              };
+              entries.push(entry);
+              // Pre-populate the entry cache to avoid redundant fetches
+              this.entryCache.set(record.key, entry);
+            }
           }
         }
       }
@@ -549,28 +563,35 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
       // Use getOrFetch for request deduplication
       return this.entryCache.getOrFetch(key, async () => {
         const repo = this.getDocumentsRepo();
+
+        let failedResults: LaikaError[] = [];
         
-        // Try to get as published document first
-        const publishedResult = await repo.getDocument(key);
-        
-        if (publishedResult.success) {
-          return {
-            file: { path: publishedResult.data.key, id: publishedResult.data.key },
-            data: contentToRawString(publishedResult.data.content),
-          };
+        for await (const result of repo.getDocument(key)) {
+          if (Result.isSuccess(result)) {
+            return {
+              file: { path: result.success.key, id: result.success.key },
+              data: contentToRawString(result.success.content),
+            };
+          } else {
+            failedResults.push(result.failure);
+          }
         }
-        
-        // If not found as published, try as unpublished (draft)
-        const unpublishedResult = await repo.getUnpublished(key);
-        
-        if (unpublishedResult.success) {
-          return {
-            file: { path: unpublishedResult.data.key, id: unpublishedResult.data.key },
-            data: contentToRawString(unpublishedResult.data.content),
-          };
+
+        for await (const result of repo.getUnpublished(key)) {
+          if (Result.isSuccess(result)) {
+            return {
+              file: { path: result.success.key, id: result.success.key },
+              data: contentToRawString(result.success.content),
+            };
+          } else if (Result.isFailure(result)) {
+            failedResults.push(result.failure);
+          }
         }
-        
-        throw new APIError(unpublishedResult.messages.join(', '), ErrorCodeToStatusMap[unpublishedResult.code], "Laika Backend");
+
+        const errors = failedResults.map(fr => `Code: ${fr.code}, Message: ${fr.message}`).join('; ');
+        const status: ErrorCode = failedResults[0]?.code ?? errorCode.INTERNAL_ERROR;
+
+        throw new APIError(errors, ErrorCodeToStatusMap[status], "Laika Backend");
       });
     }
 
@@ -621,20 +642,28 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
         if (options.useWorkflow && typeof options.status === 'string' && options.status !== 'published') {
           const newEntry = options.newEntry || options.unpublished === false;
           if (newEntry) {
-            const result = await repo.createUnpublished({
+            const result = repo.createUnpublished({
               type: 'unpublished',
               status: options.status || 'draft',
               key: entryKey,
               content,
             });
-            if (!result.success) throw new APIError(`Failed to persist new unpublished entry: ${result.messages.join(', ')}`, ErrorCodeToStatusMap[result.code], "Laika Backend");
+            for await (const element of result) {
+              if (Result.isFailure(element)) {
+                throw new APIError(`Failed to persist new unpublished entry: ${element.failure.message}`, ErrorCodeToStatusMap[element.failure.code as ErrorCode], "Laika Backend");
+              }
+            }
           } else {
             const result = await repo.updateUnpublished({
               key: entryKey,
               content,
               status: options.status,
             });
-            if (!result.success) throw new APIError(`Failed to update unpublished entry: ${result.messages.join(', ')}`, ErrorCodeToStatusMap[result.code], "Laika Backend");
+            for await (const element of result) {
+              if (Result.isFailure(element)) {
+                throw new APIError(`Failed to update unpublished entry: ${element.failure.message}`, ErrorCodeToStatusMap[element.failure.code as ErrorCode], "Laika Backend");
+              }
+            }
           }
         } else {
           // Published document
@@ -646,13 +675,21 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
               key: entryKey,
               content,
             });
-            if (!result.success) throw new APIError(`Failed to persist new entry: ${result.messages.join(', ')}`, ErrorCodeToStatusMap[result.code], "Laika Backend");
+            for await (const element of result) {
+              if (Result.isFailure(element)) {
+                throw new APIError(`Failed to persist new entry: ${element.failure.message}`, ErrorCodeToStatusMap[element.failure.code as ErrorCode], "Laika Backend");
+              }
+            }
           } else {
             const result = await repo.updateDocument({
               key: entryKey,
               content,
             });
-            if (!result.success) throw new APIError(`Failed to update entry: ${result.messages.join(', ')}`, ErrorCodeToStatusMap[result.code], "Laika Backend");
+            for await (const element of result) {
+              if (Result.isFailure(element)) {
+                 throw new APIError(`Failed to update entry: ${element.failure.message}`, ErrorCodeToStatusMap[element.failure.code as ErrorCode], "Laika Backend");
+              }
+            }
           }
         }
       }
@@ -672,12 +709,22 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
       for (const path of paths) {
         const key = normalizeKey(path);
         // Try to delete as document first
-        const docResult = await repo.deleteDocument(key);
-        if (!docResult.success) {
+        const docResult = repo.deleteDocument(key);
+        let deleted = false;
+        for await (const element of docResult) {
+           if (Result.isSuccess(element)) {
+             console.log(`Deleted published document: ${path}`);
+             deleted = true;
+             continue;
+           }
+        }
+        if (!deleted) {
           // Try to delete as unpublished
-          const unpubResult = await repo.deleteUnpublished(key);
-          if (!unpubResult.success) {
-            console.error(`Failed to delete ${path}:`, unpubResult.messages);
+          const unpublishedResult = repo.deleteUnpublished(key);
+          for await (const element of unpublishedResult) {
+            if (Result.isSuccess(element)) {
+              console.error(`Failed to delete ${path}:`, element.success);
+            }
           }
         }
       }
@@ -713,37 +760,37 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
         pagination,
         hints: { urls: true }
       })) {
-        if (!result.success) {
-          console.error("Error listing media:", result.messages);
+        if (Result.isFailure(result)) {
+          console.error("Error listing media:", result);
           continue;
-        }
-        
-        for (const resource of result.data) {
-          if (resource.type === 'asset') {
-            // Get the URL for display - use repository method
-            for await (const urlsResult of repo.getUrls([resource])) {
-              console.log('urlsResult', urlsResult);
-              if (!urlsResult.success) {
-                throw new APIError(`Failed to get media URLs: ${urlsResult.messages.join(', ')}`, ErrorCodeToStatusMap[urlsResult.code], "Laika Backend");
-              }
-              for (const urlData of urlsResult.data) {
-                const displayUrl = urlData.url;
-                
-                if (!displayUrl) {
-                  throw new APIError(`No URL available for asset: ${resource.key}`, 500, "Laika Backend");
+        } else if (Result.isSuccess(result)) {
+          for (const resource of result.success) {
+            if (resource.type === 'asset') {
+              // Get the URL for display - use repository method
+              for await (const urlsResult of repo.getUrls([resource])) {
+                console.log('urlsResult', urlsResult);
+                if (Result.isFailure(urlsResult)) {
+                  throw new APIError(`Failed to get media URLs: ${urlsResult.failure.message}`, ErrorCodeToStatusMap[urlsResult.failure.code as ErrorCode], "Laika Backend");
                 }
-                
-                // Use public path for the path property so it matches what's in content
-                const publicPath = this.getPublicPath(resource.key);
-                
-                media.push({
-                  id: resource.key,
-                  name: resource.key.split('/').pop() || resource.key,
-                  size: (resource.content as { size?: number })?.size || 0,
-                  displayURL: displayUrl,
-                  path: publicPath,
-                  url: displayUrl,
-                });
+                for (const urlData of urlsResult.success) {
+                  const displayUrl = urlData.url;
+                  
+                  if (!displayUrl) {
+                    throw new APIError(`No URL available for asset: ${resource.key}`, 500, "Laika Backend");
+                  }
+                  
+                  // Use public path for the path property so it matches what's in content
+                  const publicPath = this.getPublicPath(resource.key);
+                  
+                  media.push({
+                    id: resource.key,
+                    name: resource.key.split('/').pop() || resource.key,
+                    size: (resource.content as { size?: number })?.size || 0,
+                    displayURL: displayUrl,
+                    path: publicPath,
+                    url: displayUrl,
+                  });
+                }
               }
             }
           }
@@ -791,58 +838,50 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
     }
 
     async getMediaFile(path: string): Promise<ImplementationMediaFile & { file: File; url: string }> {
-      const repo = this.getAssetsRepo();
-      
-      // Convert public path to storage key
-      const storageKey = this.getStorageKey(path);
-      
-      // Get asset metadata
-      const assetResult = await repo.getAsset(storageKey);
-      
-      if (!assetResult.success) {
-        throw new APIError(assetResult.messages.join(', '), ErrorCodeToStatusMap[assetResult.code], "Laika Backend");
+      try {
+        const repo = this.getAssetsRepo();
+        
+        // Convert public path to storage key
+        const storageKey = this.getStorageKey(path);
+
+        const asset = Result.getOrThrow(await AsyncGenerator.accumulateFirst(repo.getAsset(storageKey)));
+        const [{ metadata }] = Result.getOrThrow(await AsyncGenerator.accumulateFirst(repo.getMetadata([asset])));
+        const [{ url }] = Result.getOrThrow(await AsyncGenerator.accumulateFirst(repo.getUrls([asset])));
+
+        if (!url) {
+          throw new APIError(`No URL available for asset: ${asset.key}`, 500, "Laika Backend");
+        }
+        
+        const name = path.split('/').pop() || path;
+
+        const mimeType = metadata.mimeType || 'application/octet-stream';
+
+        // Create a File object - for now we create an empty file since we don't have the binary content
+        // The URL should be used to fetch the actual content
+        const blob = new Blob([], { type: mimeType });
+        const file = new File([blob], name, { type: mimeType });
+        
+        // Use public path for the path property so it matches what's in content
+        const publicPath = this.getPublicPath(asset.key);
+        
+        const actualFile = {
+          id: asset.key,
+          name,
+          size: (asset.content as { size?: number })?.size || 0,
+          displayURL: url,
+          path: publicPath,
+          file,
+          url,
+        };
+
+        console.log('getMediaFile()', actualFile);
+
+        return actualFile;
+      } catch (error) {
+        console.error(`Error getting media file for path ${path}:`, error);
+
+        throw new APIError(`Failed to get media file for path ${path}: ${(error as Error).message}`, 500, "Laika Backend");
       }
-      
-      const asset = assetResult.data;
-      const name = path.split('/').pop() || path;
-      
-      const [metadataResult] = await AsyncGenerator.toArray(repo.getMetadata([asset]));
-
-      const mimeType = metadataResult.success ? metadataResult.data[0].metadata.mimeType : 'application/octet-stream';
-      
-      const [urlsResult] = await AsyncGenerator.toArray(repo.getUrls([asset]));
-
-      console.log('urlsResult', urlsResult);
-
-      const [assetUrl] = urlsResult.orThrow();
-
-      if (!assetUrl.url) {
-        throw new APIError("No URL available for media asset", 500, "Laika Backend");
-      }
-
-      const url = assetUrl.url
-      
-      // Create a File object - for now we create an empty file since we don't have the binary content
-      // The URL should be used to fetch the actual content
-      const blob = new Blob([], { type: mimeType });
-      const file = new File([blob], name, { type: mimeType });
-      
-      // Use public path for the path property so it matches what's in content
-      const publicPath = this.getPublicPath(asset.key);
-      
-      const actualFile = {
-        id: asset.key,
-        name,
-        size: (asset.content as { size?: number })?.size || 0,
-        displayURL: url,
-        path: publicPath,
-        file,
-        url,
-      };
-
-      console.log('getMediaFile()', actualFile);
-
-      return actualFile;
     }
 
     async persistMedia(mediaFile: AssetProxy, options: PersistOptions): Promise<ImplementationMediaFile> {
@@ -883,21 +922,17 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
         filename: originalFilename,
       };
       
-      const result = await repo.createAsset(createData);
-      
-      if (!result.success) {
-        throw new APIError(`Failed to persist media: ${result.messages.join(', ')}`, ErrorCodeToStatusMap[result.code], "Laika Backend");
-      }
+      const newAsset = Result.getOrThrowWith(
+        await AsyncGenerator.accumulateFirst(repo.createAsset(createData)),
+        ([error]) => new APIError(`Failed to persist media: ${error.message}`, ErrorCodeToStatusMap[error.code as ErrorCode], "Laika Backend")
+      );
 
-      const newAsset = result.data;
+      const [urlResult] = Result.getOrThrowWith(
+        await AsyncGenerator.accumulateFirst(repo.getUrls([newAsset])),
+        ([error]) => new APIError(`Failed to get media URL: ${error.message}`, ErrorCodeToStatusMap[error.code as ErrorCode], "Laika Backend")
+      )
       
-      const [urlsResult] = await AsyncGenerator.toArray(repo.getUrls([newAsset]));
-
-      const [assetUrl] = urlsResult.orThrow();
-
-      const url = assetUrl.url;
-      
-      if (!url) {
+      if (!urlResult.url) {
         throw new APIError(`No URL available for newly created asset: ${newAsset.key}`, 500, "Laika Backend");
       }
       
@@ -909,9 +944,9 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
         id: newAsset.key,
         name: name,
         size: fileBlob.size,
-        displayURL: url,
+        displayURL: urlResult.url,
         path: publicPath,
-        url: url,
+        url: urlResult.url,
         file: fileBlob,
       };
       
@@ -937,12 +972,12 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
             type: 'unpublished',
             depth: 10,
           })) {
-            if (!result.success) {
-              console.error(`Error listing unpublished for ${collectionName}:`, result.messages);
+            if (Result.isFailure(result)) {
+              console.error(`Error listing unpublished for ${collectionName}:`, result.failure);
               continue;
             }
             
-            for (const unpub of result.data) {
+            for (const unpub of result.success) {
               if (unpub.type !== 'unpublished') {
                 throw new IllegalStateException(`Expected unpublished type but got ${unpub.type}`);
               }
@@ -1002,17 +1037,9 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
       // Use getOrFetch for request deduplication
       return this.unpublishedEntryCache.getOrFetch(key, async () => {
         const repo = this.getDocumentsRepo();
-        const result = await repo.getUnpublished(key);
-        
-        if (!result.success) {
-          if (result.code === errorCode.NOT_FOUND) {
-            throw new EditorialWorkflowError(`No unpublished entry found for key: ${key}, but a published entry exists.`, true);
-          } else {
-            throw new APIError(`Failed to get unpublished entry: ${result.messages.join(', ')}`, ErrorCodeToStatusMap[result.code], "Laika Backend");
-          }
-        }
-        
-        const unpub = result.data;
+        const unpub = Result.getOrThrowWith(await AsyncGenerator.accumulateFirst(repo.getUnpublished(key)),
+          ([error]) => new APIError(`Failed to get unpublished entry: ${error.message}`, ErrorCodeToStatusMap[error.code as ErrorCode], "Laika Backend")
+        );
         
         // Extract collection and slug from the key if not provided
         // Key format is typically "collection/slug" or "collection/path/to/slug"
@@ -1042,13 +1069,11 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
       // Normalize all possible key sources
       const key = normalizeKey(id || path || `${collection}/${slug}`);
       
-      const result = await repo.getUnpublished(key);
+      const result = Result.getOrThrowWith(await AsyncGenerator.accumulateFirst(repo.getUnpublished(key)),
+        ([error]) => new APIError(`Failed to get unpublished entry data: ${error.message}`, ErrorCodeToStatusMap[error.code as ErrorCode], "Laika Backend")
+      );
       
-      if (!result.success) {
-        throw new APIError(`Failed to get unpublished entry data: ${result.messages.join(', ')}`, ErrorCodeToStatusMap[result.code], "Laika Backend");
-      }
-      
-      return contentToRawString(result.data.content);
+      return contentToRawString(result.content);
     }
 
     async unpublishedEntryMediaFile(
@@ -1069,11 +1094,9 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
       const repo = this.getDocumentsRepo();
       const key = normalizeKey(`${collection}/${slug}`);
       
-      const result = await repo.updateUnpublished({ key, status: newStatus });
-      
-      if (!result.success) {
-        throw new APIError(`Failed to update status: ${result.messages.join(', ')}`, ErrorCodeToStatusMap[result.code], "Laika Backend");
-      }
+      Result.getOrThrowWith(await AsyncGenerator.accumulateFirst(repo.updateUnpublished({ key, status: newStatus })),
+        ([error]) => new APIError(`Failed to update status: ${error.message}`, ErrorCodeToStatusMap[error.code as ErrorCode], "Laika Backend")
+      );
     }
 
     async deleteUnpublishedEntry(collection: string, slug: string): Promise<void> {
@@ -1081,10 +1104,11 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
       const key = normalizeKey(`${collection}/${slug}`);
       
       const result = await repo.deleteUnpublished(key);
-      
-      if (!result.success) {
-        throw new APIError(`Failed to delete unpublished entry: ${result.messages.join(', ')}`, ErrorCodeToStatusMap[result.code], "Laika Backend");
-      }
+
+      Result.getOrThrowWith(
+        await AsyncGenerator.accumulateFirst(repo.deleteUnpublished(key)),
+        ([error]) => new APIError(`Failed to delete unpublished entry: ${error.message}`, ErrorCodeToStatusMap[error.code as ErrorCode], "Laika Backend")
+      )
     }
 
     async publishUnpublishedEntry(collection: string, slug: string): Promise<void> {
@@ -1093,9 +1117,10 @@ export default function createLaikaBackend(options: CreateLaikaBackendOptions = 
       
       const result = await repo.publish(key);
       
-      if (!result.success) {
-        throw new APIError(`Failed to publish entry: ${result.messages.join(', ')}`, ErrorCodeToStatusMap[result.code], "Laika Backend");
-      }
+      Result.getOrThrowWith(
+        await AsyncGenerator.accumulateFirst(repo.publish(key)),
+        ([error]) => new APIError(`Failed to publish entry: ${error.message}`, ErrorCodeToStatusMap[error.code as ErrorCode], "Laika Backend")
+      )
     }
 
     // ===== CURSOR/PAGINATION =====

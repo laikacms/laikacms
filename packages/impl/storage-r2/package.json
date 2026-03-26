@@ -28,6 +28,7 @@
     "@laikacms/core": "workspace:*",
     "@laikacms/storage": "workspace:*",
     "@types/json-schema": "^7.0.15",
+    "effect": "catalog:default",
     "minimatch": "^10.0.3",
     "zod": "catalog:schema"
   },

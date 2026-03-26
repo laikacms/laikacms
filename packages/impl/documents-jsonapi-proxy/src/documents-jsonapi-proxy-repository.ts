@@ -1,12 +1,11 @@
 import {
-  failure,
   IllegalStateException,
   InternalError,
   InvalidData,
-  Result,
-  ResultError,
-  success,
+  LaikaResult,
+  LaikaError,
 } from "@laikacms/core";
+import * as Result from "effect/Result";
 import {
   DocumentsRepository,
   type Document,
@@ -39,6 +38,10 @@ import {
 } from "@laikacms/documents-api";
 import { paginationCodec } from "./pagination-codec.js";
 import { errorFromResponse } from "@laikacms/json-api";
+
+function failAs<T>(error: LaikaError): LaikaResult<T> {
+  return Result.fail(error);
+}
 
 export interface DocumentsJsonApiProxyRepositoryOptions {
   baseUrl: string;
@@ -86,45 +89,40 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
     return this.staticHeaders;
   }
 
-  private async handleResponse<T>(response: Response): Promise<Result<T>> {
+  private async handleResponse<T>(response: Response): Promise<LaikaResult<T>> {
     const contentType = response.headers.get("content-type");
 
     if (
       !contentType?.includes("application/vnd.api+json") &&
       !contentType?.includes("application/json")
     ) {
-      return failure(InvalidData.CODE, [
-        `Expected JSON:API response, got ${contentType}`,
-      ]);
+      return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
     }
 
     const json = await response.json();
 
     if (!response.ok) {
       const errorResult = await errorFromResponse(response);
-      return failure(errorResult.code, [errorResult.message]);
+      return Result.fail(new InvalidData(errorResult.message));
     }
 
     if ("errors" in json && Array.isArray(json.errors)) {
-      return failure(
-        InvalidData.CODE,
-        json.errors.map((e: any) => e.detail || e.title || "Unknown error"),
-      );
+      return Result.fail(new InvalidData(
+        json.errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+      ));
     }
 
-    return success(json.data as T);
+    return Result.succeed(json.data as T);
   }
 
-  private async handleVoidResponse(response: Response): Promise<Result<void>> {
+  private async handleVoidResponse(response: Response): Promise<LaikaResult<void>> {
     const contentType = response.headers.get("content-type");
 
     if (
       !contentType?.includes("application/vnd.api+json") &&
       !contentType?.includes("application/json")
     ) {
-      return failure(InvalidData.CODE, [
-        `Expected JSON:API response, got ${contentType}`,
-      ]);
+      return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
     }
 
     const json = await response.json();
@@ -134,34 +132,43 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         "errors" in json && Array.isArray(json.errors)
           ? json.errors
           : [{ detail: "Unknown error" }];
-      return failure(
-        InvalidData.CODE,
-        errors.map((e: any) => e.detail || e.title || "Unknown error"),
-      );
+      return Result.fail(new InvalidData(
+        errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+      ));
     }
 
     if ("errors" in json && Array.isArray(json.errors)) {
-      return failure(
-        InvalidData.CODE,
-        json.errors.map((e: any) => e.detail || e.title || "Unknown error"),
-      );
+      return Result.fail(new InvalidData(
+        json.errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+      ));
     }
 
-    return success(undefined);
+    return Result.succeed(undefined);
   }
 
   // ===== RECORDS =====
 
   /**
-   * Private helper to list records with configurable output type
+   * List full record objects with content
    */
-  private async *listRecordsInternal<
-    Mode extends "full" | "summary",
-    T extends Mode extends "full" ? Record : RecordSummary,
-  >(
+  listRecords(
     options: ListRecordsOptions,
-    mode: Mode,
-  ): AsyncGenerator<Result<readonly T[]>> {
+  ): AsyncGenerator<LaikaResult<readonly Record[]>> {
+    return this.listFullRecords(options);
+  }
+
+  /**
+   * List record summaries (without content) for efficient listing
+   */
+  listRecordSummaries(
+    options: ListRecordsOptions,
+  ): AsyncGenerator<LaikaResult<readonly RecordSummary[]>> {
+    return this.listRecordSummariesInternal(options);
+  }
+
+  private async *listFullRecords(
+    options: ListRecordsOptions,
+  ): AsyncGenerator<LaikaResult<readonly Record[]>> {
     try {
       const params = paginationCodec.encode(options.pagination);
       if (options.type) {
@@ -171,7 +178,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       params.set("filter[folder]", options.folder);
 
       const headers = await this.getHeaders();
-      const response = await fetch(`${this.baseUrl}/${mode === 'full' ? 'records' : 'record-summaries'}?${params}`, {
+      const response = await fetch(`${this.baseUrl}/records?${params}`, {
         method: "GET",
         headers,
       });
@@ -181,9 +188,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         !contentType?.includes("application/vnd.api+json") &&
         !contentType?.includes("application/json")
       ) {
-        yield failure(InvalidData.CODE, [
-          `Expected JSON:API response, got ${contentType}`,
-        ]) as any;
+        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
         return;
       }
 
@@ -194,90 +199,128 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
           "errors" in json && Array.isArray(json.errors)
             ? json.errors
             : [{ detail: "Unknown error" }];
-        yield failure(
-          InvalidData.CODE,
-          errors.map((e: any) => e.detail || e.title || "Unknown error"),
-        ) as any;
+        yield Result.fail(new InvalidData(
+          errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+        ));
         return;
       }
 
-      // Parse each item based on its type and mode
-      const items: T[] = [];
+      // Parse each item based on its type
+      const items: Record[] = [];
       for (const item of json.data) {
         let parsed;
-        if (mode === "full") {
-          switch (item.type) {
-            case "published":
-              parsed = documentFromJsonApiZ.safeParse(item);
-              break;
-            case "unpublished":
-              parsed = unpublishedFromJsonApiZ.safeParse(item);
-              break;
-            case "revision":
-              parsed = revisionFromJsonApiZ.safeParse(item);
-              break;
-            case "folder":
-              continue;
-            default:
-              throw new IllegalStateException("Unknown record type: " + item.type);
-          }
-        } else {
-          switch (item.type) {
-            case "published":
-            case "published-summary":
-              parsed = documentSummaryFromJsonApiZ.safeParse(item);
-              break;
-            case "unpublished":
-            case "unpublished-summary":
-              parsed = unpublishedSummaryFromJsonApiZ.safeParse(item);
-              break;
-            case "revision":
-            case "revision-summary":
-              parsed = revisionSummaryFromJsonApiZ.safeParse(item);
-              break;
-            case "folder":
-              continue;
-            default:
-              throw new IllegalStateException("Unknown record type: " + item.type);
-          }
+        switch (item.type) {
+          case "published":
+            parsed = documentFromJsonApiZ.safeParse(item);
+            break;
+          case "unpublished":
+            parsed = unpublishedFromJsonApiZ.safeParse(item);
+            break;
+          case "revision":
+            parsed = revisionFromJsonApiZ.safeParse(item);
+            break;
+          case "folder":
+            continue;
+          default:
+            throw new IllegalStateException("Unknown record type: " + item.type);
         }
 
         if (parsed.success) {
-          items.push(parsed.data as T);
+          items.push(parsed.data as Record);
         } else {
-          yield failure(
-            InvalidData.CODE,
-            parsed.error.issues.map((e) => e.message),
-          ) as any;
+          yield Result.fail(new InvalidData(
+            parsed.error.issues.map((e) => e.message).join(", "),
+          ));
+          return;
         }
       }
 
-      yield success(items) as any;
+      yield Result.succeed(items);
     } catch (error) {
-      yield ResultError.fromError(error).toResult() as any;
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
-  /**
-   * List full record objects with content
-   */
-  listRecords(
+  private async *listRecordSummariesInternal(
     options: ListRecordsOptions,
-  ): AsyncGenerator<Result<readonly Record[]>> {
-    return this.listRecordsInternal(options, "full");
-  }
+  ): AsyncGenerator<LaikaResult<readonly RecordSummary[]>> {
+    try {
+      const params = paginationCodec.encode(options.pagination);
+      if (options.type) {
+        params.set("filter[type]", options.type);
+      }
+      params.set('filter[depth]', '' + options.depth)
+      params.set("filter[folder]", options.folder);
 
-  /**
-   * List record summaries (without content) for efficient listing
-   */
-  listRecordSummaries(
-    options: ListRecordsOptions,
-  ): AsyncGenerator<Result<readonly RecordSummary[]>> {
-    return this.listRecordsInternal(options, "summary");
+      const headers = await this.getHeaders();
+      const response = await fetch(`${this.baseUrl}/record-summaries?${params}`, {
+        method: "GET",
+        headers,
+      });
+
+      const contentType = response.headers.get("content-type");
+      if (
+        !contentType?.includes("application/vnd.api+json") &&
+        !contentType?.includes("application/json")
+      ) {
+        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
+        return;
+      }
+
+      const json: JsonApiCollectionResponse = await response.json();
+
+      if (!response.ok || ("errors" in json && Array.isArray(json.errors))) {
+        const errors =
+          "errors" in json && Array.isArray(json.errors)
+            ? json.errors
+            : [{ detail: "Unknown error" }];
+        yield Result.fail(new InvalidData(
+          errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+        ));
+        return;
+      }
+
+      // Parse each item based on its type
+      const items: RecordSummary[] = [];
+      for (const item of json.data) {
+        let parsed;
+        switch (item.type) {
+          case "published":
+          case "published-summary":
+            parsed = documentSummaryFromJsonApiZ.safeParse(item);
+            break;
+          case "unpublished":
+          case "unpublished-summary":
+            parsed = unpublishedSummaryFromJsonApiZ.safeParse(item);
+            break;
+          case "revision":
+          case "revision-summary":
+            parsed = revisionSummaryFromJsonApiZ.safeParse(item);
+            break;
+          case "folder":
+            continue;
+          default:
+            throw new IllegalStateException("Unknown record type: " + item.type);
+        }
+
+        if (parsed.success) {
+          items.push(parsed.data as RecordSummary);
+        } else {
+          yield Result.fail(new InvalidData(
+            parsed.error.issues.map((e) => e.message).join(", "),
+          ));
+          return;
+        }
+      }
+
+      yield Result.succeed(items);
+    } catch (error) {
+      yield Result.fail(new InternalError((error as Error).message));
+    }
   }
 
   // ===== DOCUMENTS (PUBLISHED) =====
-  async getDocument(key: string): Promise<Result<Document>> {
+  async *getDocument(key: string): AsyncGenerator<LaikaResult<Document>> {
     try {
       const headers = await this.getHeaders();
       const response = await fetch(
@@ -286,23 +329,26 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       );
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      const parsed = documentFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(
-          InvalidData.CODE,
-          parsed.error.issues.map((e: any) => e.message),
-        );
+      if (Result.isFailure(result)) {
+        yield failAs<Document>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      const parsed = documentFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(
+          parsed.error.issues.map((e: any) => e.message).join(", "),
+        ));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
-  async createDocument(create: DocumentCreate): Promise<Result<Document>> {
+  async *createDocument(create: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
     try {
       const jsonApiData = documentCreateToJsonApiZ.parse(create);
       console.log("Creating document with JSON:API data:", jsonApiData);
@@ -315,23 +361,26 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       });
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      const parsed = documentFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(
-          InvalidData.CODE,
-          parsed.error.issues.map((e: any) => e.message),
-        );
+      if (Result.isFailure(result)) {
+        yield failAs<Document>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      const parsed = documentFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(
+          parsed.error.issues.map((e: any) => e.message).join(", "),
+        ));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
-  async updateDocument(update: DocumentUpdate): Promise<Result<Document>> {
+  async *updateDocument(update: DocumentUpdate): AsyncGenerator<LaikaResult<Document>> {
     try {
       const jsonApiData = documentUpdateToJsonApiZ.parse(update);
       const headers = await this.getHeaders();
@@ -346,23 +395,26 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       );
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      const parsed = documentFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(
-          InvalidData.CODE,
-          parsed.error.issues.map((e: any) => e.message),
-        );
+      if (Result.isFailure(result)) {
+        yield failAs<Document>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      const parsed = documentFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(
+          parsed.error.issues.map((e: any) => e.message).join(", "),
+        ));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
-  async deleteDocument(key: string): Promise<Result<void>> {
+  async *deleteDocument(key: string): AsyncGenerator<LaikaResult<void>> {
     try {
       const headers = await this.getHeaders();
       const response = await fetch(
@@ -370,14 +422,14 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         { method: "DELETE", headers },
       );
 
-      return this.handleVoidResponse(response);
+      yield await this.handleVoidResponse(response);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
   // ===== UNPUBLISHED =====
-  async getUnpublished(key: string): Promise<Result<Unpublished>> {
+  async *getUnpublished(key: string): AsyncGenerator<LaikaResult<Unpublished>> {
     try {
       const headers = await this.getHeaders();
       const response = await fetch(
@@ -386,25 +438,28 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       );
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      const parsed = unpublishedFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(
-          InvalidData.CODE,
-          parsed.error.issues.map((e: any) => e.message),
-        );
+      if (Result.isFailure(result)) {
+        yield failAs<Unpublished>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      const parsed = unpublishedFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(
+          parsed.error.issues.map((e: any) => e.message).join(", "),
+        ));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
-  async createUnpublished(
+  async *createUnpublished(
     create: UnpublishedCreate,
-  ): Promise<Result<Unpublished>> {
+  ): AsyncGenerator<LaikaResult<Unpublished>> {
     try {
       const jsonApiData = unpublishedCreateToJsonApiZ.parse(create);
       const headers = await this.getHeaders();
@@ -416,25 +471,28 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       });
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      const parsed = unpublishedFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(
-          InvalidData.CODE,
-          parsed.error.issues.map((e: any) => e.message),
-        );
+      if (Result.isFailure(result)) {
+        yield failAs<Unpublished>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      const parsed = unpublishedFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(
+          parsed.error.issues.map((e: any) => e.message).join(", "),
+        ));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
-  async updateUnpublished(
+  async *updateUnpublished(
     update: UnpublishedUpdate,
-  ): Promise<Result<Unpublished>> {
+  ): AsyncGenerator<LaikaResult<Unpublished>> {
     try {
       const jsonApiData = unpublishedUpdateToJsonApiZ.parse(update);
       const headers = await this.getHeaders();
@@ -449,23 +507,26 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       );
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      const parsed = unpublishedFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(
-          InvalidData.CODE,
-          parsed.error.issues.map((e: any) => e.message),
-        );
+      if (Result.isFailure(result)) {
+        yield failAs<Unpublished>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      const parsed = unpublishedFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(
+          parsed.error.issues.map((e: any) => e.message).join(", "),
+        ));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
-  async deleteUnpublished(key: string): Promise<Result<void>> {
+  async *deleteUnpublished(key: string): AsyncGenerator<LaikaResult<void>> {
     try {
       const headers = await this.getHeaders();
       const response = await fetch(
@@ -473,13 +534,13 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         { method: "DELETE", headers },
       );
 
-      return this.handleVoidResponse(response);
+      yield await this.handleVoidResponse(response);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
-  async publish(key: string): Promise<Result<Document>> {
+  async *publish(key: string): AsyncGenerator<LaikaResult<Document>> {
     try {
       const headers = await this.getHeaders();
       const response = await fetch(
@@ -488,23 +549,26 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       );
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      const parsed = documentFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(
-          InvalidData.CODE,
-          parsed.error.issues.map((e: any) => e.message),
-        );
+      if (Result.isFailure(result)) {
+        yield failAs<Document>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      const parsed = documentFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(
+          parsed.error.issues.map((e: any) => e.message).join(", "),
+        ));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
-  async unpublish(key: string, status: string): Promise<Result<Unpublished>> {
+  async *unpublish(key: string, status: string): AsyncGenerator<LaikaResult<Unpublished>> {
     try {
       const headers = await this.getHeaders();
       const response = await fetch(
@@ -522,24 +586,27 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       );
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      const parsed = unpublishedFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(
-          InvalidData.CODE,
-          parsed.error.issues.map((e: any) => e.message),
-        );
+      if (Result.isFailure(result)) {
+        yield failAs<Unpublished>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      const parsed = unpublishedFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(
+          parsed.error.issues.map((e: any) => e.message).join(", "),
+        ));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
   // ===== REVISIONS =====
-  async getRevision(key: string, revision: string): Promise<Result<Revision>> {
+  async *getRevision(key: string, revision: string): AsyncGenerator<LaikaResult<Revision>> {
     try {
       const headers = await this.getHeaders();
       const response = await fetch(
@@ -548,23 +615,26 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       );
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      const parsed = revisionFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(
-          InvalidData.CODE,
-          parsed.error.issues.map((e: any) => e.message),
-        );
+      if (Result.isFailure(result)) {
+        yield failAs<Revision>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      const parsed = revisionFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(
+          parsed.error.issues.map((e: any) => e.message).join(", "),
+        ));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
-  async createRevision(create: RevisionCreate): Promise<Result<Revision>> {
+  async *createRevision(create: RevisionCreate): AsyncGenerator<LaikaResult<Revision>> {
     try {
       const jsonApiData = revisionCreateToJsonApiZ.parse(create);
       const headers = await this.getHeaders();
@@ -576,26 +646,29 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       });
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      const parsed = revisionFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(
-          InvalidData.CODE,
-          parsed.error.issues.map((e: any) => e.message),
-        );
+      if (Result.isFailure(result)) {
+        yield failAs<Revision>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      const parsed = revisionFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(
+          parsed.error.issues.map((e: any) => e.message).join(", "),
+        ));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 
   async *listRevisions(
     key: string,
     options: ListRevisionsOptions,
-  ): AsyncGenerator<Result<readonly RevisionSummary[]>> {
+  ): AsyncGenerator<LaikaResult<readonly RevisionSummary[]>> {
     try {
       const params = paginationCodec.encode(options.pagination);
       const headers = await this.getHeaders();
@@ -610,9 +683,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         !contentType?.includes("application/vnd.api+json") &&
         !contentType?.includes("application/json")
       ) {
-        yield failure(InvalidData.CODE, [
-          `Expected JSON:API response, got ${contentType}`,
-        ]);
+        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
         return;
       }
 
@@ -623,10 +694,9 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
           "errors" in json && Array.isArray(json.errors)
             ? json.errors
             : [{ detail: "Unknown error" }];
-        yield failure(
-          InvalidData.CODE,
-          errors.map((e: any) => e.detail || e.title || "Unknown error"),
-        );
+        yield Result.fail(new InvalidData(
+          errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+        ));
         return;
       }
 
@@ -638,9 +708,9 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         }
       }
 
-      yield success(items);
+      yield Result.succeed(items);
     } catch (error) {
-      yield ResultError.fromError(error).toResult();
+      yield Result.fail(new InternalError((error as Error).message));
     }
   }
 }

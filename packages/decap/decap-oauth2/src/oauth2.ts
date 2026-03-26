@@ -7,8 +7,7 @@ import {
   sha256,
   verifyPassword
 } from '@laikacms/crypto';
-
-import { Logger, TemplateLiteral as TL, Url } from '@laikacms/core';
+import { TemplateLiteral as TL, Url } from '@laikacms/core';
 import { requestPasswordReset, resetPassword, type PasswordResetConfig } from './email/email.js';
 import { type OAuthMessages } from './i18n/index.js';
 import { setupOAuthTOTP, verifyOAuthTOTPSetup, verifyTOTP, type OAuthTotpConfig } from './totp/totp.js';
@@ -25,6 +24,14 @@ import { renderForgotPasswordPage, renderForgotPasswordSuccessPage, renderResetP
 import { renderTotpSetupPage } from './templates/totp-setup-page.js';
 import { renderTotpVerificationPage } from './templates/totp-verification-page.js';
 export type { AuthorizationPageOptions } from './templates/authorization-page.js';
+
+interface Logger {
+  debug(...args: any[]): void;
+  info(...args: any[]): void;
+  warn(...args: any[]): void;
+  error(...args: any[]): void;
+  fatal(...args: any[]): void;
+}
 
 export {
   authorizeUrl,
@@ -43,6 +50,7 @@ export {
 export type { HtmlTemplate, ProcessedLogo, TemplateVariables, TemplateVarsType } from './templates/html.js';
 
 import { buildCspWithLogo, processCustomLogo } from './templates/html.js';
+import { info } from 'effect/Console';
 
 // Security constants for post-quantum resistance
 const SECURITY_CONSTANTS = {

@@ -2,7 +2,6 @@ import z, { ZodError } from "zod";
 import * as errors from "@laikacms/core"
 import {
   ErrorCodeToStatusMap,
-  IErrorResult,
   InternalError,
   LaikaError,
   ServiceUnavailableError,
@@ -10,29 +9,14 @@ import {
 } from "@laikacms/core";
 import { JsonApiError } from "./types.js";
 import { jsonApiErrorZ } from "./schemas.js";
+import * as Result from 'effect/Result';
 
-/**
- * Type guard for IErrorResult objects (from Result<T> failure cases)
- */
-export function isErrorResult(obj: unknown): obj is IErrorResult {
-  return (
-    typeof obj === 'object' &&
-    obj !== null &&
-    'code' in obj &&
-    typeof obj.code === 'string' &&
-    'messages' in obj &&
-    Array.isArray(obj.messages)
-  );
-}
-
-export const errorToJsonApiMapper = <T extends LaikaError<any, any> | Error | object>(
-  err: T | string
-) => {
+export const errorToJsonApiMapper = (
+  err: unknown
+): JsonApiError & { status: errors.ErrorStatus } => {
   console.error('errorToJsonApiMapper():', err)
 
   const errorObj = typeof err === 'string' ? new errors.UnknownError() /* explicitly do not show a message since we dont know if the message is internal or not */ : err
-
-  if ('cause' in errorObj && errorObj.cause) console.error('Error cause:', errorObj.cause)
 
   if (err instanceof ZodError) {
     return {
@@ -56,22 +40,12 @@ export const errorToJsonApiMapper = <T extends LaikaError<any, any> | Error | ob
   }
 
   // Handle IErrorResult objects (from Result<T> failure cases)
-  if (isErrorResult(err)) {
-    const status = ErrorCodeToStatusMap[err.code] ?? 500;
-    return {
-      errors: err.messages.map((message) => ({
-        status: "" + status,
-        code: err.code,
-        // TODO: Map error code to title
-        title: err.code.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
-        detail: message,
-      })),
-      status,
-    };
+  if (Result.isResult(err) && Result.isFailure(err)) {
+    return errorToJsonApiMapper(err.failure);
   }
 
   // Handle AWS SDK errors
-  if ("name" in errorObj && errorObj.name === "NetworkingError" || "name" in errorObj && errorObj.name === "TimeoutError") {
+  if (typeof errorObj === 'object' && errorObj !== null && ("name" in errorObj && errorObj.name === "NetworkingError" || "name" in errorObj && errorObj.name === "TimeoutError")) {
     return {
       errors: [
         {
@@ -81,7 +55,7 @@ export const errorToJsonApiMapper = <T extends LaikaError<any, any> | Error | ob
           detail: `Cannot connect to a required service.`,
         },
       ],
-      status: +ServiceUnavailableError.STATUS,
+      status: ServiceUnavailableError.STATUS,
     };
   }
 

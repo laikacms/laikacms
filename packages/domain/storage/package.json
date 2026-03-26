@@ -30,6 +30,7 @@
   },
   "dependencies": {
     "@laikacms/core": "workspace:*",
-    "zod": "catalog:schema"
+    "zod": "catalog:schema",
+    "effect": "catalog:default"
   }
 }

@@ -10,7 +10,8 @@ import {
   type StorageObjectCreate,
   type StorageObjectUpdate,
 } from '@laikacms/storage';
-import { Result, success, failure, InvalidData } from '@laikacms/core';
+import { LaikaResult, LaikaError, InvalidData } from '@laikacms/core';
+import * as Result from 'effect/Result';
 import {
   storageObjectToJsonApiZ,
   storageObjectFromJsonApiZ,
@@ -24,6 +25,10 @@ import {
   atomFromJsonApiZ,
 } from '@laikacms/storage-api';
 import { paginationCodec } from './pagination-codec.js';
+
+function failAs<T>(error: LaikaError): LaikaResult<T> {
+  return Result.fail(error);
+}
 
 export interface StorageJsonApiProxyRepositoryOptions {
   baseUrl: string;
@@ -69,28 +74,28 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
     return this.staticHeaders;
   }
 
-  private async handleResponse<T>(response: Response): Promise<Result<T>> {
+  private async handleResponse<T>(response: Response): Promise<LaikaResult<T>> {
     const contentType = response.headers.get('content-type');
     
     if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-      return failure(InvalidData.CODE, [`Expected JSON:API response, got ${contentType}`]);
+      return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
     }
 
     const json = await response.json();
 
     if (!response.ok) {
       const errors = json.errors || [{ detail: 'Unknown error' }];
-      return failure(InvalidData.CODE, errors.map((e: any) => e.detail || e.title || 'Unknown error'));
+      return Result.fail(new InvalidData(errors.map((e: any) => e.detail || e.title || 'Unknown error').join(', ')));
     }
 
     if (json.errors) {
-      return failure(InvalidData.CODE, json.errors.map((e: any) => e.detail || e.title || 'Unknown error'));
+      return Result.fail(new InvalidData(json.errors.map((e: any) => e.detail || e.title || 'Unknown error').join(', ')));
     }
 
-    return success(json.data as T);
+    return Result.succeed(json.data as T);
   }
 
-  async getObject(key: string): Promise<Result<StorageObject>> {
+  async *getObject(key: string): AsyncGenerator<LaikaResult<StorageObject>> {
     try {
       const headers = await this.getHeaders();
       const response = await fetch(`${this.baseUrl}/objects/${encodeURIComponent(key)}`, {
@@ -99,26 +104,30 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
       });
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
+      if (Result.isFailure(result)) {
+        yield failAs<StorageObject>(result.failure);
+        return;
+      }
 
-      console.log('getObject - result.data (JSON:API resource):', JSON.stringify(result.data, null, 2));
+      console.log('getObject - result.success (JSON:API resource):', JSON.stringify(result.success, null, 2));
 
       // Parse from JSON:API format to domain format
-      const parsed = storageObjectFromJsonApiZ.safeParse(result.data);
+      const parsed = storageObjectFromJsonApiZ.safeParse(result.success);
       console.log('getObject - parsed:', parsed);
       if (!parsed.success) {
         console.error('getObject - parsing errors:', parsed.error.issues);
-        return failure(InvalidData.CODE, parsed.error.issues.map(e => `${e.path.join('.')}: ${e.message}`));
+        yield Result.fail(new InvalidData(parsed.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')));
+        return;
       }
 
       console.log('getObject - parsed.data (domain object):', JSON.stringify(parsed.data, null, 2));
-      return success(parsed.data);
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async updateObject(update: StorageObjectUpdate): Promise<Result<StorageObject>> {
+  async *updateObject(update: StorageObjectUpdate): AsyncGenerator<LaikaResult<StorageObject>> {
     try {
       // Transform to JSON:API format
       const jsonApiData = storageObjectUpdateToJsonApiZ.parse(update);
@@ -131,21 +140,25 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
       });
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      // Parse from JSON:API format to domain format
-      const parsed = storageObjectFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(InvalidData.CODE, parsed.error.issues.map(e => e.message));
+      if (Result.isFailure(result)) {
+        yield failAs<StorageObject>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      // Parse from JSON:API format to domain format
+      const parsed = storageObjectFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async createObject(create: StorageObjectCreate): Promise<Result<StorageObject>> {
+  async *createObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
     try {
       // Transform to JSON:API format
       const jsonApiData = storageObjectCreateToJsonApiZ.parse(create);
@@ -158,34 +171,41 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
       });
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      // Parse from JSON:API format to domain format
-      const parsed = storageObjectFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(InvalidData.CODE, parsed.error.issues.map(e => e.message));
+      if (Result.isFailure(result)) {
+        yield failAs<StorageObject>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      // Parse from JSON:API format to domain format
+      const parsed = storageObjectFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async createOrUpdateObject(create: StorageObjectCreate): Promise<Result<StorageObject>> {
+  async *createOrUpdateObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
     // Try to get the object first
-    const existing = await this.getObject(create.key);
+    let existing: LaikaResult<StorageObject> | undefined;
+    for await (const result of this.getObject(create.key)) {
+      existing = result;
+    }
     
-    if (existing.success) {
+    if (existing && Result.isSuccess(existing)) {
       // Object exists, update it
-      return this.updateObject({ ...create, key: create.key });
+      yield* this.updateObject({ ...create, key: create.key });
     } else {
       // Object doesn't exist, create it
-      return this.createObject(create);
+      yield* this.createObject(create);
     }
   }
 
-  async getFolder(key: string): Promise<Result<Folder>> {
+  async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
     try {
       const headers = await this.getHeaders();
       const response = await fetch(`${this.baseUrl}/folders/${encodeURIComponent(key)}`, {
@@ -194,37 +214,39 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
       });
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      // Parse from JSON:API format to domain format
-      const parsed = folderFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(InvalidData.CODE, parsed.error.issues.map(e => e.message));
+      if (Result.isFailure(result)) {
+        yield failAs<Folder>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      // Parse from JSON:API format to domain format
+      const parsed = folderFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  listAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<Result<readonly Atom[]>> {
-    return this.listAllAtoms<Atom>(folderKey, options, false);
+  listAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly Atom[]>> {
+    return this.listFullAtoms(folderKey, options);
   }
 
-  listAtomSummaries(folderKey: string, options: ListAtomsOptions): AsyncGenerator<Result<readonly AtomSummary[]>> {
-    return this.listAllAtoms<AtomSummary>(folderKey, options, true);
+  listAtomSummaries(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
+    return this.listAtomSummariesInternal(folderKey, options);
   }
 
-  private async *listAllAtoms<T extends AtomSummary | Atom>(folderKey: string, options: ListAtomsOptions, summaryOnly: boolean): AsyncGenerator<Result<readonly T[]>> {
+  private async *listFullAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly Atom[]>> {
     try {
       const params = paginationCodec.encode(options.pagination);
 
-      const resourceType = summaryOnly ? 'atom-summaries' : 'atoms';
-
       const url = folderKey
-        ? `${this.baseUrl}/${resourceType}/${encodeURIComponent(folderKey)}?${params}`
-        : `${this.baseUrl}/${resourceType}?${params}`;
+        ? `${this.baseUrl}/atoms/${encodeURIComponent(folderKey)}?${params}`
+        : `${this.baseUrl}/atoms?${params}`;
 
       const headers = await this.getHeaders();
       const response = await fetch(url, {
@@ -234,7 +256,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       const contentType = response.headers.get('content-type');
       if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-        yield failure(InvalidData.CODE, [`Expected JSON:API response, got ${contentType}`]);
+        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
         return;
       }
 
@@ -244,28 +266,77 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       if (!response.ok || 'errors' in json) {
         const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
-        yield failure(InvalidData.CODE, errors.map((e: any) => e.detail || e.title || 'Unknown error'));
+        yield Result.fail(new InvalidData(errors.map((e: any) => e.detail || e.title || 'Unknown error').join(', ')));
         return;
       }
 
-      const items: T[] = [];
+      const items: Atom[] = [];
       for (const item of json.data) {
-        const parsed = summaryOnly ? atomSummaryFromJsonApiZ.safeParse(item) : atomFromJsonApiZ.safeParse(item);
+        const parsed = atomFromJsonApiZ.safeParse(item);
 
         if (parsed.success) {
-          items.push(parsed.data as T);
+          items.push(parsed.data);
         } else {
-          yield failure(InvalidData.CODE, parsed.error.issues.map(e => e.message));
+          yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+          return;
         }
       }
 
-      yield success(items);
+      yield Result.succeed(items);
     } catch (error) {
-      yield failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async createFolder(folderCreate: FolderCreate): Promise<Result<Folder>> {
+  private async *listAtomSummariesInternal(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
+    try {
+      const params = paginationCodec.encode(options.pagination);
+
+      const url = folderKey
+        ? `${this.baseUrl}/atom-summaries/${encodeURIComponent(folderKey)}?${params}`
+        : `${this.baseUrl}/atom-summaries?${params}`;
+
+      const headers = await this.getHeaders();
+      const response = await fetch(url, {
+        method: 'GET',
+        headers,
+      });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
+        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
+        return;
+      }
+
+      const json: JsonApiCollectionResponse = await response.json();
+
+      console.log('ListAtomSummaries response JSON:', json);
+
+      if (!response.ok || 'errors' in json) {
+        const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
+        yield Result.fail(new InvalidData(errors.map((e: any) => e.detail || e.title || 'Unknown error').join(', ')));
+        return;
+      }
+
+      const items: AtomSummary[] = [];
+      for (const item of json.data) {
+        const parsed = atomSummaryFromJsonApiZ.safeParse(item);
+
+        if (parsed.success) {
+          items.push(parsed.data);
+        } else {
+          yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+          return;
+        }
+      }
+
+      yield Result.succeed(items);
+    } catch (error) {
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
+    }
+  }
+
+  async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
     try {
       // Transform to JSON:API format
       const jsonApiData = folderCreateToJsonApiZ.parse(folderCreate);
@@ -278,31 +349,40 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
       });
 
       const result = await this.handleResponse<any>(response);
-      if (!result.success) return result;
-
-      // Parse from JSON:API format to domain format
-      const parsed = folderFromJsonApiZ.safeParse(result.data);
-      if (!parsed.success) {
-        return failure(InvalidData.CODE, parsed.error.issues.map(e => e.message));
+      if (Result.isFailure(result)) {
+        yield failAs<Folder>(result.failure);
+        return;
       }
 
-      return success(parsed.data);
+      // Parse from JSON:API format to domain format
+      const parsed = folderFromJsonApiZ.safeParse(result.success);
+      if (!parsed.success) {
+        yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+        return;
+      }
+
+      yield Result.succeed(parsed.data);
     } catch (error) {
-      return failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 
-  async getAtom(key: string): Promise<Result<Atom>> {
+  async *getAtom(key: string): AsyncGenerator<LaikaResult<Atom>> {
     // Try to get as object first, then as folder
-    const objectResult = await this.getObject(key);
-    if (objectResult.success) {
-      return objectResult;
+    let objectResult: LaikaResult<StorageObject> | undefined;
+    for await (const result of this.getObject(key)) {
+      objectResult = result;
+    }
+    
+    if (objectResult && Result.isSuccess(objectResult)) {
+      yield objectResult;
+      return;
     }
 
-    return this.getFolder(key);
+    yield* this.getFolder(key);
   }
 
-  async *removeAtoms(keys: readonly string[]): AsyncGenerator<Result<readonly string[]>> {
+  async *removeAtoms(keys: readonly string[]): AsyncGenerator<LaikaResult<readonly string[]>> {
     try {
       // Build atomic operations for removal
       const operations = keys.map(key => ({
@@ -322,7 +402,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       const contentType = response.headers.get('content-type');
       if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-        yield failure(InvalidData.CODE, [`Expected JSON:API response, got ${contentType}`]);
+        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
         return;
       }
 
@@ -330,7 +410,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       if (!response.ok) {
         const errors = json.errors || [{ detail: 'Unknown error' }];
-        yield failure(InvalidData.CODE, errors.map((e: any) => e.detail || e.title || 'Unknown error'));
+        yield Result.fail(new InvalidData(errors.map((e: any) => e.detail || e.title || 'Unknown error').join(', ')));
         return;
       }
 
@@ -345,9 +425,9 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
         }
       }
 
-      yield success(removedKeys);
+      yield Result.succeed(removedKeys);
     } catch (error) {
-      yield failure(InvalidData.CODE, [`Network error: ${(error as Error).message}`]);
+      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
   }
 }

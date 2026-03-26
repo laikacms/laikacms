@@ -28,6 +28,7 @@
   "dependencies": {
     "@laikacms/core": "workspace:*",
     "@laikacms/contentbase-settings": "workspace:*",
+    "effect": "catalog:default",
     "zod": "catalog:schema",
     "json-schema": "catalog:schema",
     "superjson": "^2.2.6"

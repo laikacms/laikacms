@@ -47,7 +47,8 @@
   },
   "dependencies": {
     "@laikacms/core": "workspace:^",
-    "@laikacms/crypto": "workspace:^"
+    "@laikacms/crypto": "workspace:^",
+    "effect": "catalog:default"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

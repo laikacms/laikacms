@@ -1,12 +1,6 @@
 import { z } from 'zod';
 import {
   type Asset,
-  type AssetCreate,
-  type AssetUpdate,
-  type AssetVariations,
-  type AssetUrl,
-  type AssetMetadata,
-  type Resource,
   assetZ,
   assetVariationsZ,
   assetUrlZ,
@@ -14,7 +8,7 @@ import {
   assetCreateZ,
   assetUpdateZ,
 } from '@laikacms/assets';
-import { Folder, FolderCreate, folderCreateZ, folderZ } from '@laikacms/storage';
+import { folderCreateZ, folderZ } from '@laikacms/storage';
 import { fromJsonApi, toJsonApi } from '@laikacms/json-api';
 
 // ============================================

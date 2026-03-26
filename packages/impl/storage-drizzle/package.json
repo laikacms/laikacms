@@ -26,7 +26,8 @@
   },
   "dependencies": {
     "@laikacms/core": "workspace:*",
-    "@laikacms/storage": "workspace:*"
+    "@laikacms/storage": "workspace:*",
+    "effect": "catalog:default"
   },
   "peerDependencies": {
     "drizzle-orm": ">=0.36.0"
