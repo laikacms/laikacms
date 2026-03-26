@@ -1,5 +1,5 @@
-import { z } from 'zod';
 import { storageObjectZ, storageObjectContentZ } from '@laikacms/storage';
+import * as S from 'effect/Schema';
 
 /**
  * Asset extends StorageObject with a different type discriminator.
@@ -18,12 +18,11 @@ import { storageObjectZ, storageObjectContentZ } from '@laikacms/storage';
  * 2. Different caching strategies for different data types
  * 3. Lazy loading of expensive-to-compute data
  */
-export const assetZ = storageObjectZ.extend({
-  type: z.literal('asset'),
+export const AssetSchema = storageObjectZ.extend({
+  type: S.Literal('asset'),
 });
 
-export type Asset = z.infer<typeof assetZ>;
+export type Asset = S.Schema.Type<typeof AssetSchema>;
 
 // Re-export content type for convenience
-export { storageObjectContentZ as assetContentZ };
-export type AssetContent = z.infer<typeof storageObjectContentZ>;
+export type AssetContent = S.Schema.Type<typeof storageObjectContentZ>;

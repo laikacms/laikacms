@@ -7,8 +7,7 @@ import {
   toJsonApi,
   fromJsonApi,
 } from '@laikacms/json-api';
-import z from 'zod';
-
+import * as S from 'effect/Schema';
 // Re-export common JSON:API utilities
 export {
   toJsonApi,
@@ -32,15 +31,15 @@ const mediaCollectionUpdateFromJsonApiZ = fromJsonApi(mediaCollectionSettingsZ, 
 const mediaCollectionFromJsonApiZ = fromJsonApi(mediaCollectionSettingsZ, 'media-collection', 'key');
 
 // Union types
-export const collectionInsertZ = z.union([
+export const CollectionInsert = S.Union([
   documentCollectionInsertFromJsonApiZ,
   mediaCollectionInsertFromJsonApiZ,
 ]);
-export const collectionUpdateZ = z.union([
+export const CollectionUpdate = S.Union([
   documentCollectionUpdateFromJsonApiZ,
   mediaCollectionUpdateFromJsonApiZ,
 ]);
-export const collectionZ = z.union([
+export const Collection = S.Union([
   documentCollectionFromJsonApiZ,
   mediaCollectionFromJsonApiZ,
 ]);
@@ -55,20 +54,20 @@ export const mediaCollectionUpdateToJsonApiZ = toJsonApi(mediaCollectionSettings
 export const mediaCollectionToJsonApiZ = toJsonApi(mediaCollectionSettingsZ, 'media-collection', 'key');
 
 // Union types
-export const collectionInsertFromJsonApiZ = z.union([
+export const collectionInsertFromJsonApiZ = S.Union([
   documentCollectionInsertFromJsonApiZ,
   mediaCollectionInsertFromJsonApiZ,
 ]);
-export const collectionUpdateFromJsonApiZ = z.union([
+export const collectionUpdateFromJsonApiZ = S.Union([
   documentCollectionUpdateFromJsonApiZ,
   mediaCollectionUpdateFromJsonApiZ,
 ]);
-export const collectionToJsonApiZ = z.union([
+export const collectionToJsonApiZ = S.Union([
   documentCollectionToJsonApiZ,
   mediaCollectionToJsonApiZ,
 ]);
 
 // Type exports
-export type CollectionInsertJsonApi = z.infer<typeof collectionInsertFromJsonApiZ>;
-export type CollectionUpdateJsonApi = z.infer<typeof collectionUpdateFromJsonApiZ>;
-export type CollectionJsonApi = z.infer<typeof collectionToJsonApiZ>;
+export type CollectionInsertJsonApi = S.Schema.Type<typeof collectionInsertFromJsonApiZ>;
+export type CollectionUpdateJsonApi = S.Schema.Type<typeof collectionUpdateFromJsonApiZ>;
+export type CollectionJsonApi = S.Schema.Type<typeof collectionToJsonApiZ>;

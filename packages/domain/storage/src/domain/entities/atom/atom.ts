@@ -1,10 +1,10 @@
-import { z } from "zod"
+import * as S from 'effect/Schema'
 import { storageObjectZ } from "../object/storage-object.js"
 import { folderZ } from "../folder/folder.js"
 
-export const atomZ = z.union([
+export const AtomSchema = S.Union([
   storageObjectZ,
   folderZ,
 ])
 
-export type Atom = z.infer<typeof atomZ>
+export type Atom = S.Schema.Type<typeof AtomSchema>

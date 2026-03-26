@@ -1,7 +1,7 @@
 import { z } from 'zod';
-import { atomBaseZ } from '../atom/atom-base.js';
+import { AtomBaseSchema } from '../atom/atom-base.js';
 
-export const folderZ = atomBaseZ.extend({
+export const folderZ = AtomBaseSchema.extend({
   type: z.literal('folder'),
 });
 

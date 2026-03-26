@@ -1,5 +1,4 @@
-import { z } from 'zod';
-
+import * as S from 'effect/Schema';
 /**
  * Browser-compatible binary content type.
  * Supports Uint8Array (works in both browser and Node.js),
@@ -7,36 +6,42 @@ import { z } from 'zod';
  */
 export type BinaryContent = Uint8Array | ArrayBuffer | ReadableStream<Uint8Array>;
 
+// Define a string schema with a filter to ensure the string
+// is at least 10 characters long
+
+export const BinaryContentSchema = S.declare<BinaryContent>(
+  (val): val is BinaryContent => val instanceof Uint8Array || val instanceof ArrayBuffer ||
+    (typeof ReadableStream !== 'undefined' && val instanceof ReadableStream),
+  { message: 'Content must be Uint8Array, ArrayBuffer, or ReadableStream<Uint8Array>' }
+)
+
 /**
  * Data required to create a new asset.
  * Used for simple single-request uploads.
  */
-export const assetCreateZ = z.object({
+
+export const AssetCreateSchema = S.Struct({
   /** Key/path for the asset (without extension) */
-  key: z.string().max(1023, "Key cannot be longer than 1023 characters"),
-  
+  key: S.String.pipe(S.check(S.isMaxLength(1023))),
+
   /**
    * The binary content of the asset.
    * Accepts Uint8Array, ArrayBuffer, or ReadableStream<Uint8Array>.
    * Note: Zod validation is relaxed here; runtime type checking is recommended.
    */
-  content: z.custom<BinaryContent>(
-    (val) => val instanceof Uint8Array || val instanceof ArrayBuffer ||
-             (typeof ReadableStream !== 'undefined' && val instanceof ReadableStream),
-    { message: 'Content must be Uint8Array, ArrayBuffer, or ReadableStream<Uint8Array>' }
-  ),
-  
+  content: BinaryContentSchema,
+
   /** MIME type of the asset */
-  mimeType: z.string(),
-  
+  mimeType: S.String,
+
   /** Original filename (optional) */
-  filename: z.string().optional(),
-  
+  filename: S.optional(S.String),
+
   /** Custom metadata to store with the asset */
-  customMetadata: z.record(z.string(), z.string()).optional(),
-  
+  customMetadata: S.optional(S.Record(S.String, S.String)),
+
   /** Cache control header value */
-  cacheControl: z.string().optional(),
+  cacheControl: S.optional(S.String),
 });
 
-export type AssetCreate = z.infer<typeof assetCreateZ>;
+export type AssetCreate = S.Schema.Type<typeof AssetCreateSchema>;

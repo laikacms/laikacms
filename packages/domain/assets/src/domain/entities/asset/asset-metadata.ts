@@ -1,245 +1,254 @@
-import { isoDateWithFallbackZ } from '@laikacms/core';
-import { z } from 'zod';
+import * as S from 'effect/Schema';
 
 /**
  * Base metadata common to all asset types.
  */
-export const baseMetadataZ = z.object({
+export const BaseMetadataSchema = S.Struct({
   /**
    * File size in bytes.
    */
-  size: z.number().int().nonnegative(),
+  size: S.Number.check(S.isGreaterThan(0)),
   
   /**
    * MIME type of the asset.
    */
-  mimeType: z.string(),
+  mimeType: S.String,
   
   /**
    * Original filename (if known).
    */
-  filename: z.string().optional(),
+  filename: S.optional(S.String),
   
   /**
    * File extension (without dot).
    */
-  extension: z.string().optional(),
+  extension: S.optional(S.String),
   
   /**
    * Content hash (e.g., MD5, SHA-256) for integrity verification.
    */
-  hash: z.string().optional(),
+  hash: S.optional(S.String),
   
   /**
    * Hash algorithm used (e.g., 'md5', 'sha256').
    */
-  hashAlgorithm: z.string().optional(),
+  hashAlgorithm: S.optional(S.String),
   
   /**
    * When the asset was created.
    */
-  createdAt: isoDateWithFallbackZ().optional(),
+  createdAt: S.optional(S.DateTimeUtcFromString),
   
   /**
    * When the asset was last modified.
    */
-  modifiedAt: isoDateWithFallbackZ().optional(),
+  modifiedAt: S.optional(S.DateTimeUtcFromString),
 });
 
 /**
  * Image-specific metadata.
  */
-export const imageMetadataZ = baseMetadataZ.extend({
-  kind: z.literal('image'),
+export const ImageMetadata = S.Struct({
+  ...BaseMetadataSchema.fields,
+
+  kind: S.Literal('image'),
   
   /**
    * Image width in pixels.
    */
-  width: z.number().int().positive(),
+  width: S.Number.check(S.isGreaterThan(0)),
   
   /**
    * Image height in pixels.
    */
-  height: z.number().int().positive(),
+  height: S.Number.check(S.isGreaterThan(0)),
   
   /**
    * Color space (e.g., 'sRGB', 'Adobe RGB').
    */
-  colorSpace: z.string().optional(),
+  colorSpace: S.optional(S.String),
   
   /**
    * Bit depth per channel.
    */
-  bitDepth: z.number().int().positive().optional(),
+  bitDepth: S.optional(S.Number.check(S.isGreaterThan(0))),
   
   /**
    * Whether the image has an alpha channel.
    */
-  hasAlpha: z.boolean().optional(),
+  hasAlpha: S.optional(S.Boolean),
   
   /**
    * Whether the image is animated (e.g., GIF, APNG).
    */
-  animated: z.boolean().optional(),
+  animated: S.optional(S.Boolean),
   
   /**
    * EXIF data (if available).
    */
-  exif: z.record(z.string(), z.any()).optional(),
+  exif: S.optional(S.Record(S.String, S.Any)),
 });
 
-export type ImageMetadata = z.infer<typeof imageMetadataZ>;
+export type ImageMetadata = S.Schema.Type<typeof ImageMetadata>;
 
 /**
  * Video-specific metadata.
  */
-export const videoMetadataZ = baseMetadataZ.extend({
-  kind: z.literal('video'),
+export const VideoMetadata = S.Struct({
+  ...BaseMetadataSchema.fields,
+
+  kind: S.Literal('video'),
   
   /**
    * Video width in pixels.
    */
-  width: z.number().int().positive(),
+  width: S.Number.check(S.isGreaterThan(0)),
   
   /**
    * Video height in pixels.
    */
-  height: z.number().int().positive(),
+  height: S.Number.check(S.isGreaterThan(0)),
   
   /**
    * Duration in seconds.
    */
-  duration: z.number().nonnegative(),
+  duration: S.Number.check(S.isGreaterThan(0)),
   
   /**
    * Video codec (e.g., 'h264', 'vp9', 'av1').
    */
-  videoCodec: z.string().optional(),
+  videoCodec: S.optional(S.String),
   
   /**
    * Audio codec (e.g., 'aac', 'opus').
    */
-  audioCodec: z.string().optional(),
+  audioCodec: S.optional(S.String),
   
   /**
    * Frame rate (frames per second).
    */
-  frameRate: z.number().positive().optional(),
+  frameRate: S.optional(S.Number.check(S.isGreaterThan(0))),
   
   /**
    * Video bitrate in bits per second.
    */
-  videoBitrate: z.number().int().positive().optional(),
+  videoBitrate: S.optional(S.Number.check(S.isGreaterThan(0))),
   
   /**
    * Audio bitrate in bits per second.
    */
-  audioBitrate: z.number().int().positive().optional(),
+  audioBitrate: S.optional(S.Number.check(S.isGreaterThan(0))),
   
   /**
    * Number of audio channels.
    */
-  audioChannels: z.number().int().positive().optional(),
+  audioChannels: S.optional(S.Number.check(S.isGreaterThan(0))),
   
   /**
    * Audio sample rate in Hz.
    */
-  audioSampleRate: z.number().int().positive().optional(),
+  audioSampleRate: S.optional(S.Number.check(S.isGreaterThan(0))),
 });
 
-export type VideoMetadata = z.infer<typeof videoMetadataZ>;
+export type VideoMetadata = S.Schema.Type<typeof VideoMetadata>;
 
 /**
  * Audio-specific metadata.
  */
-export const audioMetadataZ = baseMetadataZ.extend({
-  kind: z.literal('audio'),
+export const AudioMetadata = S.Struct({
+  ...BaseMetadataSchema.fields,
+
+  kind: S.Literal('audio'),
   
   /**
    * Duration in seconds.
    */
-  duration: z.number().nonnegative(),
+  duration: S.Number.check(S.isGreaterThan(0)),
   
   /**
    * Audio codec (e.g., 'mp3', 'aac', 'flac', 'opus').
    */
-  codec: z.string().optional(),
+  codec: S.optional(S.String),
   
   /**
    * Bitrate in bits per second.
    */
-  bitrate: z.number().int().positive().optional(),
+  bitrate: S.optional(S.Number.check(S.isGreaterThan(0))),
   
   /**
    * Number of audio channels.
    */
-  channels: z.number().int().positive().optional(),
+  channels: S.optional(S.Number.check(S.isGreaterThan(0))),
   
   /**
    * Sample rate in Hz.
    */
-  sampleRate: z.number().int().positive().optional(),
+  sampleRate: S.optional(S.Number.check(S.isGreaterThan(0))),
   
   /**
    * ID3/metadata tags (title, artist, album, etc.).
    */
-  tags: z.record(z.string(), z.string()).optional(),
+  tags: S.optional(S.Record(S.String, S.String)),
 });
 
-export type AudioMetadata = z.infer<typeof audioMetadataZ>;
+export type AudioMetadata = S.Schema.Type<typeof AudioMetadata>;
 
 /**
  * Document-specific metadata (PDF, Office docs, etc.).
  */
-export const documentMetadataZ = baseMetadataZ.extend({
-  kind: z.literal('document'),
+export const DocumentMetadata = S.Struct({
+  ...BaseMetadataSchema.fields,
+
+  kind: S.Literal('document'),
   
   /**
    * Number of pages (for paginated documents).
    */
-  pageCount: z.number().int().positive().optional(),
+  pageCount: S.optional(S.Number.check(S.isGreaterThan(0))),
   
   /**
    * Document title (from metadata).
    */
-  title: z.string().optional(),
+  title: S.optional(S.String),
   
   /**
    * Document author (from metadata).
    */
-  author: z.string().optional(),
+  author: S.optional(S.String),
   
   /**
    * Document subject (from metadata).
    */
-  subject: z.string().optional(),
+  subject: S.optional(S.String),
   
   /**
    * Keywords (from metadata).
    */
-  keywords: z.array(z.string()).optional(),
+  keywords: S.optional(S.Array(S.String)),
   
   /**
    * Creation date (from document metadata).
    */
-  documentCreatedAt: isoDateWithFallbackZ().optional(),
+  documentCreatedAt: S.optional(S.DateTimeUtcFromString),
   
   /**
    * Modification date (from document metadata).
    */
-  documentModifiedAt: isoDateWithFallbackZ().optional(),
+  documentModifiedAt: S.optional(S.DateTimeUtcFromString),
 });
 
-export type DocumentMetadata = z.infer<typeof documentMetadataZ>;
+export type DocumentMetadata = S.Schema.Type<typeof DocumentMetadata>;
 
 /**
  * Generic binary file metadata (fallback for unknown types).
  */
-export const binaryMetadataZ = baseMetadataZ.extend({
-  kind: z.literal('binary'),
+export const BinaryMetadata = S.Struct({
+  ...BaseMetadataSchema.fields,
+
+  kind: S.Literal('binary'),
 });
 
-export type BinaryMetadata = z.infer<typeof binaryMetadataZ>;
+export type BinaryMetadata = S.Schema.Type<typeof BinaryMetadata>;
 
 /**
  * Discriminated union of all metadata types.
@@ -251,29 +260,29 @@ export type BinaryMetadata = z.infer<typeof binaryMetadataZ>;
  * }
  * ```
  */
-export const assetMetadataContentZ = z.discriminatedUnion('kind', [
-  imageMetadataZ,
-  videoMetadataZ,
-  audioMetadataZ,
-  documentMetadataZ,
-  binaryMetadataZ,
+export const AssetMetadataContentSchema = S.Union([
+  ImageMetadata,
+  VideoMetadata,
+  AudioMetadata,
+  DocumentMetadata,
+  BinaryMetadata,
 ]);
 
-export type AssetMetadataContent = z.infer<typeof assetMetadataContentZ>;
+export type AssetMetadataContent = S.Schema.Type<typeof AssetMetadataContentSchema>;
 
 /**
  * Metadata wrapper with asset key.
  */
-export const assetMetadataZ = z.object({
+export const AssetMetadataSchema = S.Struct({
   /**
    * The asset key this metadata belongs to.
    */
-  key: z.string(),
+  key: S.String,
   
   /**
    * The discriminated metadata content.
    */
-  metadata: assetMetadataContentZ,
+  metadata: AssetMetadataContentSchema,
 });
 
-export type AssetMetadata = z.infer<typeof assetMetadataZ>;
+export type AssetMetadata = S.Schema.Type<typeof AssetMetadataSchema>;

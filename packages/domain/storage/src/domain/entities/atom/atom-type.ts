@@ -1,9 +1,5 @@
-import { z } from "zod";
+import * as S from 'effect/Schema';
 
-export const atomTypeZ = z.union([
-  z.literal('document'),
-  z.literal('media'),
-  z.literal('dir')
-])
+export const AtomTypeSchema = S.Literals(['document', 'media', 'dir']);
 
-export type AtomType = z.infer<typeof atomTypeZ>
+export type AtomType = S.Schema.Type<typeof AtomTypeSchema>;

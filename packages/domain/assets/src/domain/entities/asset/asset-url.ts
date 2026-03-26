@@ -1,5 +1,4 @@
-import { isoDateWithFallbackZ } from '@laikacms/core';
-import { z } from 'zod';
+import * as S from 'effect/Schema';
 
 /**
  * URLs for accessing an asset.
@@ -9,22 +8,22 @@ import { z } from 'zod';
  * - view: Inline viewing (Content-Disposition: inline)
  * - public: Permanent public URL (if asset is public)
  */
-export const assetUrlZ = z.object({
+export const AssetUrlSchema = S.Struct({
   /**
    * The asset key these URLs belong to.
    */
-  key: z.string(),
+  key: S.String,
   
   /** 
    * Direct download URL for the asset.
    */
-  url: z.string().optional(),
+  url: S.optional(S.String),
   
   /**
    * Expiration time for signed URLs (if applicable).
    * ISO 8601 date string.
    */
-  expiresAt: isoDateWithFallbackZ().optional(),
+  expiresAt: S.optional(S.DateTimeUtcFromString),
 });
 
-export type AssetUrl = z.infer<typeof assetUrlZ>;
+export type AssetUrl = S.Schema.Type<typeof AssetUrlSchema>;

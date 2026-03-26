@@ -65,7 +65,6 @@ catalogs:
     "@tanstack/react-devtools": "^0.8.4"
 
   schema:
-    "zod": "^4.1.12"
     "json-schema": "^0.4.0"
     "ajv": "^8.13.0"
 
@@ -82,7 +81,6 @@ catalogs:
   database:
     "drizzle-orm": "^0.44.7"
     "better-sqlite3": "^11.9.1"
-    "drizzle-zod": "^0.8.3"
 
   decap:
     "decap-cms-backend-github": "^3.0.0"

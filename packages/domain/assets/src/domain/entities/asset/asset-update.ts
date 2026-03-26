@@ -1,21 +1,21 @@
-import { z } from 'zod';
+import * as S from 'effect/Schema';
 
 /**
  * Data for updating an existing asset's metadata.
  * Note: To replace the content, use the multipart upload flow.
  */
-export const assetUpdateZ = z.object({
+export const AssetUpdateSchema = S.Struct({
   /** Key/path of the asset to update */
-  key: z.string().max(1023, "Key cannot be longer than 1023 characters"),
+  key: S.String.check(S.isMaxLength(1023)),
   
   /** Updated custom metadata (replaces existing) */
-  customMetadata: z.record(z.string(), z.string()).optional(),
+  customMetadata: S.optional(S.Record(S.String, S.String)),
   
   /** Updated cache control header value */
-  cacheControl: z.string().optional(),
+  cacheControl: S.optional(S.String),
   
   /** Updated MIME type (if content type needs correction) */
-  mimeType: z.string().optional(),
+  mimeType: S.optional(S.String),
 });
 
-export type AssetUpdate = z.infer<typeof assetUpdateZ>;
+export type AssetUpdate = S.Schema.Type<typeof AssetUpdateSchema>;

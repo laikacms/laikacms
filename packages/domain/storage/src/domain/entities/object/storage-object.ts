@@ -1,11 +1,11 @@
 import { z } from 'zod';
-import { atomBaseZ } from '../atom/atom-base.js';
+import { AtomBaseSchema } from '../atom/atom-base.js';
 
 export const storageObjectContentZ = z.record(z.string(), z.any());
 
 export type StorageObjectContent = z.infer<typeof storageObjectContentZ>;
 
-export const storageObjectZ = atomBaseZ.extend({
+export const storageObjectZ = AtomBaseSchema.extend({
   type: z.literal('object'),
   content: storageObjectContentZ,
 });

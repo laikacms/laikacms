@@ -6,12 +6,11 @@ import * as Result from "effect/Result";
 import {
   collectionToJsonApiZ,
   toJsonApi,
-  collectionZ,
+  Collection,
   collectionInsertFromJsonApiZ,
   collectionUpdateFromJsonApiZ,
 } from "./jsonapi.js";
 import { ContentBaseSettingsProvider } from "@laikacms/contentbase-settings";
-import z from "zod";
 
 // JSON:API error response
 function respondError(
@@ -48,10 +47,10 @@ function respondError(
 }
 
 // JSON:API success response for single resource
-function respondResource<T>(
+function respondResource<T, B>(
   c: Context,
   result: LaikaResult<T>,
-  outputSchema: ReturnType<typeof toJsonApi> | z.ZodUnion<any>
+  outputSchema: ReturnType<typeof toJsonApi>
 ) {
   if (Result.isFailure(result)) {
     return respondError(c, result);
@@ -63,7 +62,7 @@ function respondResource<T>(
 function respondCollection<T>(
   c: Context,
   result: LaikaResult<readonly T[]>,
-  outputSchema: ReturnType<typeof toJsonApi> | z.ZodUnion<any>
+  outputSchema: ReturnType<typeof toJsonApi>
 ) {
   if (Result.isFailure(result)) {
     return respondError(c, result);
@@ -110,7 +109,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
       return respondError(c, settings);
     }
     const settingsList = Object.values(settings.success.collections);
-    return respondCollection(c, Result.succeed(settingsList), collectionZ);
+    return respondCollection(c, Result.succeed(settingsList), Collection);
   });
   app.get("/collections/:key", async (c) => {
     // TODO: This should be simplified a lot 

@@ -1,11 +1,10 @@
-import { isoDateWithFallbackZ } from "@laikacms/core"
-import { z } from "zod"
+import * as S from 'effect/Schema';
 
-export const atomBaseZ = z.object({
-  key: z.string().max(1023, "Key cannot be longer than 1023 characters"),
+export const AtomBaseSchema = S.Struct({
+  key: S.String.check(S.isMaxLength(1023)),
 
-  createdAt: isoDateWithFallbackZ().optional(),
-  updatedAt: isoDateWithFallbackZ().optional(),
+  createdAt: S.optional(S.String), // Replace with appropriate schema for isoDateWithFallbackZ
+  updatedAt: S.optional(S.String), // Replace with appropriate schema for isoDateWithFallbackZ
 })
 
-export type AtomBase = z.infer<typeof atomBaseZ>
+export type AtomBase = S.Schema.Type<typeof AtomBaseSchema>

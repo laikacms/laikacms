@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import * as S from 'effect/Schema';
 import {
   type Asset,
   assetZ,
@@ -68,7 +68,7 @@ export const assetToJsonApi = assetZ.transform((asset: Asset): JsonApiResource =
 
 export const folderToJsonApi = toJsonApi(folderZ, 'folder', 'key');
 
-export const resourceToJsonApi = z.union([assetToJsonApi, folderToJsonApi]);
+export const resourceToJsonApi = S.Union([assetToJsonApi, folderToJsonApi]);
 
 export const assetVariationsToJsonApi = toJsonApi(assetVariationsZ, 'asset-variation', 'key');
 
@@ -77,7 +77,7 @@ export const assetUrlToJsonApi = toJsonApi(assetUrlZ, 'asset-url', 'key');
 export const assetMetadataToJsonApi = toJsonApi(assetMetadataZ, 'asset-metadata', 'key');
 
 export const assetCreateWithContentZ = assetCreateZ.extend({
-  content: z.base64(),
+  content: S.isBase64
 });
 
 export const assetCreateFromJsonApiZ = fromJsonApi(assetCreateZ, 'asset', 'key');

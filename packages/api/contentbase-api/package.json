@@ -35,8 +35,7 @@
     "@laikacms/storage": "workspace:*",
     "@laikacms/contentbase-settings": "workspace:*",
     "effect": "catalog:default",
-    "hono": "^4.6.8",
-    "zod": "^4.1.12"
+    "hono": "^4.6.8"
   },
   "devDependencies": {
     "@types/node": "catalog:types",
