@@ -1,0 +1,41 @@
+{
+  "name": "@laikacms/decap-cms-locale-nl",
+  "description": "Icon widget for Decap CMS",
+  "version": "1.0.0",
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": "https://github.com/laikacms/laikacms/issues",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "keywords": [
+    "decap-cms",
+    "widget",
+    "netherlands",
+    "i18n",
+    "nl"
+  ],
+  "engines": {
+    "node": "22.x"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vite-plugin-dts": "catalog:tools"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/decap-cms-locale-nl.mjs",
+      "require": "./dist/decap-cms-locale-nl.umd.js"
+    }
+  }
+}

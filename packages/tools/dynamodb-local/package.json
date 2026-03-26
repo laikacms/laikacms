@@ -1,0 +1,32 @@
+{
+  "name": "@laikacms/dynamodb-local",
+  "version": "0.0.1",
+  "description": "DynamoDB Local development environment for Laika CMS",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "type": "module",
+  "scripts": {
+    "start": "node src/start.js",
+    "stop": "node src/stop.js",
+    "create-tables": "node src/create-tables.js",
+    "reset": "node src/reset.js",
+    "status": "node src/status.js"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "catalog:aws",
+    "@aws-sdk/lib-dynamodb": "catalog:aws"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types"
+  },
+  "keywords": [
+    "dynamodb",
+    "local",
+    "development",
+    "cms"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": "22.x",
+    "pnpm": ">=8 <11"
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "name": "@laikacms/i18n",
+  "version": "1.0.0",
+  "description": "Strongly typed i18n with flat JSON files compatible with i18next",
+  "type": "module",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./en.json": "./dist/translations/en.json",
+    "./nl.json": "./dist/translations/nl.json"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc"
+  },
+  "keywords": [
+    "i18n",
+    "i18next",
+    "internationalization",
+    "typescript",
+    "translations"
+  ],
+  "devDependencies": {
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x",
+    "pnpm": ">=8 <11"
+  }
+}

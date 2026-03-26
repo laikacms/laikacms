@@ -1,0 +1,58 @@
+{
+  "name": "@laikacms/decap-oauth2",
+  "version": "0.1.0",
+  "description": "Fetch-based OAuth2 authentication library with PKCE, passkey, and TOTP support",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./i18n": {
+      "types": "./dist/i18n/index.d.ts",
+      "import": "./dist/i18n/index.js"
+    },
+    "./i18n/en": {
+      "types": "./dist/i18n/translations/en.d.ts",
+      "import": "./dist/i18n/translations/en.js"
+    },
+    "./i18n/nl": {
+      "types": "./dist/i18n/translations/nl.d.ts",
+      "import": "./dist/i18n/translations/nl.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rimraf dist .turbo node_modules"
+  },
+  "keywords": [
+    "oauth2",
+    "pkce",
+    "passkey",
+    "webauthn",
+    "totp",
+    "2fa",
+    "authentication",
+    "fetch"
+  ],
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "@laikacms/core": "workspace:^",
+    "@laikacms/crypto": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0"
+  }
+}

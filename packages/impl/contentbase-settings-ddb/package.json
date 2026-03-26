@@ -1,0 +1,48 @@
+{
+  "name": "@laikacms/contentbase-settings-ddb",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "DynamoDB implementation of the contentbase-settings module for Laika CMS.",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "engines": {
+    "node": "22.x"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@laikacms/core": "workspace:*",
+    "@laikacms/contentbase-settings": "workspace:*",
+    "zod": "catalog:schema",
+    "json-schema": "catalog:schema",
+    "superjson": "^2.2.6"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-dynamodb": "catalog:aws",
+    "@aws-sdk/lib-dynamodb": "catalog:aws"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "@vitest/ui": "catalog:testing",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:testing",
+    "@types/json-schema": "catalog:types",
+    "@aws-sdk/client-dynamodb": "catalog:aws",
+    "@aws-sdk/lib-dynamodb": "catalog:aws"
+  }
+}

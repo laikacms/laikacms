@@ -1,0 +1,48 @@
+{
+  "name": "@laikacms/decap-api",
+  "version": "0.1.0",
+  "description": "Fetch-based API library for Decap CMS",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "type": "module",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format cjs,esm --dts",
+    "dev": "tsup src/index.ts --format cjs,esm --dts --watch",
+    "clean": "rimraf dist"
+  },
+  "keywords": [
+    "decap",
+    "cms",
+    "api",
+    "fetch"
+  ],
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "@laikacms/crypto": "workspace:*",
+    "@laikacms/documents-api": "workspace:*",
+    "@laikacms/storage-api": "workspace:*",
+    "@laikacms/assets-api": "workspace:*",
+    "@laikacms/documents": "workspace:*",
+    "@laikacms/storage": "workspace:*",
+    "@laikacms/assets": "workspace:*",
+    "@laikacms/json-api": "workspace:*",
+    "@laikacms/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.0"
+  }
+}

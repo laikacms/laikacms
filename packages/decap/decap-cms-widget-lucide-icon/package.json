@@ -1,0 +1,45 @@
+{
+  "name": "@laikacms/decap-cms-widget-lucide-icon",
+  "description": "Radix UI Icons widget for Decap CMS",
+  "version": "1.0.0",
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": "https://github.com/laikacms/laikacms/issues",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "keywords": [
+    "decap-cms",
+    "widget",
+    "lucide",
+    "icons"
+  ],
+  "engines": {
+    "node": "22.x"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "lucide-react": "catalog:icons"
+  },
+  "peerDependencies": {
+    "react": "catalog:react",
+    "@emotion/css": "catalog:legacy",
+    "react-dom": "catalog:react",
+    "@emotion/react": "catalog:legacy",
+    "decap-cms-core": "catalog:decap",
+    "decap-cms-ui-default": "catalog:decap"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:types",
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vite-plugin-dts": "catalog:tools"
+  }
+}

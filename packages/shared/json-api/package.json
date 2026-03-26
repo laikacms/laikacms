@@ -1,0 +1,35 @@
+{
+  "name": "@laikacms/json-api",
+  "version": "0.1.0",
+  "description": "JSON:API utilities and schemas for Laika CMS",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "keywords": [
+    "json-api",
+    "jsonapi",
+    "rest",
+    "api",
+    "pagination",
+    "atomic-operations"
+  ],
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "dependencies": {
+    "zod": "catalog:schema",
+    "@laikacms/core": "workspace:*",
+    "@laikacms/i18n": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.2",
+    "hono": "catalog:server"
+  },
+  "engines": {
+    "node": "22.x",
+    "pnpm": ">=8 <11"
+  }
+}

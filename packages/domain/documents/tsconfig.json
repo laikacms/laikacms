@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "rootDir": "src",
+    "sourceMap": true,
+    "outDir": "dist",
+    "paths": {
+      "types/*": ["./types/*"]
+    }
+  },
+  "include": ["src", "types"],
+  "exclude": ["dist", "node_modules"]
+}

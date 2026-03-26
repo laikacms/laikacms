@@ -1,0 +1,31 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "target": "ES2020",
+    "module": "ESNext",
+    "sourceMap": true,
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "rootDir": "./src",
+    "jsx": "react-jsx",
+    "lib": ["ES2020", "DOM"],
+    "paths": {
+      "decap-cms-ui-default": ["../../../types/decap-cms-ui-default/index.d.ts"],
+      "decap-cms-core": ["../../../types/decap-cms-core/index.d.ts"],
+      "decap-cms-core/*": ["../../../types/decap-cms-core/*"],
+       "@/*": ["./src/*"]
+    },
+    "typeRoots": ["../../../types", "node_modules/@types"]
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}

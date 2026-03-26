@@ -1,0 +1,36 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**", "build/**"]
+    },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "passThroughEnv": [
+        "NODE_ENV",
+        "PORT",
+        "FRONTEND_URL",
+        "DYNAMODB_ENDPOINT",
+        "DYNAMODB_TABLE_NAME",
+        "DYNAMODB_CONTENT_TABLE_NAME",
+        "AWS_REGION",
+        "AWS_DEFAULT_REGION",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN"
+      ],
+      "persistent": true
+    },
+    "types": {
+      "outputs": ["worker-configuration.d.ts"]
+    },  
+    "test": {
+      "dependsOn": ["build"]
+    },
+    "lint": {
+      "dependsOn": ["^build"]
+    }
+  }
+}

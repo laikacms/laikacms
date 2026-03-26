@@ -1,0 +1,41 @@
+{
+  "name": "@laikacms/storage-api",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Hono-based JSON:API server for Laika CMS storage domain.",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "engines": {
+    "node": "22.x"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json -w",
+    "dev:server": "node --enable-source-maps dist/server.js",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "start": "node --enable-source-maps dist/server.js"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.8",
+    "@laikacms/core": "workspace:*",
+    "@laikacms/json-api": "workspace:*",
+    "@laikacms/storage": "workspace:*",
+    "hono": "^4.6.8",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools"
+  }
+}

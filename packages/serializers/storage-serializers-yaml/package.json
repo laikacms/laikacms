@@ -1,0 +1,36 @@
+{
+  "name": "@laikacms/storage-serializers-yaml",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "YAML document serializer for Laika CMS storage",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "engines": {
+    "node": "22.x"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json -w",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "js-yaml": "^4.1.0",
+    "@laikacms/storage": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/json-schema": "^7.0.15",
+    "@types/js-yaml": "^4.0.9",
+    "typescript": "catalog:tools"
+  }
+}

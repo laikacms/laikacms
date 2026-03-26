@@ -1,0 +1,39 @@
+{
+  "name": "@laikacms/decap-cms-editor-component-embedded-entry",
+  "version": "1.0.0",
+  "description": "Decap CMS editor component for embedding entries from collections",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "decap-cms",
+    "editor-component",
+    "embedded-entry",
+    "cms"
+  ],
+  "engines": {
+    "node": "22.x"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "decap-cms-core": "catalog:decap"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:types",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vite-plugin-dts": "catalog:tools"
+  },
+  "peerDependencies": {
+    "react": "catalog:react"
+  }
+}

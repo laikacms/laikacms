@@ -1,0 +1,40 @@
+{
+  "name": "@laikacms/file-sanitizer",
+  "version": "0.0.1",
+  "description": "Privacy-focused file metadata sanitizer for streaming contexts",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@laikacms/core": "workspace:*",
+    "@laikacms/sanitizer": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "vitest": "^3.0.5"
+  },
+  "keywords": [
+    "metadata",
+    "exif",
+    "privacy",
+    "sanitizer",
+    "streaming"
+  ],
+  "engines": {
+    "node": "22.x",
+    "pnpm": ">=8 <11"
+  }
+}

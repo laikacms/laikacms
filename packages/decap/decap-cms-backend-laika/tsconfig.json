@@ -1,0 +1,35 @@
+{
+  "compilerOptions": {
+    "outDir": "./dist",
+    "rootDir": "./src",
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "declaration": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "types": ["react"],
+    "jsx": "react-jsx",
+    "typeRoots": ["../../../types", "./types", "./node_modules/@types"],
+    "paths": {
+      "decap-cms-lib-util": ["../../../types/decap-cms-lib-util/index.d.ts"],
+      "decap-cms-lib-util/*": ["../../../types/decap-cms-lib-util/*"],
+      "decap-cms-ui-default": ["../../../types/decap-cms-ui-default/index.d.ts"],
+      "decap-cms-ui-default/*": ["../../../types/decap-cms-ui-default/*"],
+      "decap-cms-ui-auth": ["../../../types/decap-cms-ui-auth/index.d.ts"],
+      "decap-cms-ui-auth/*": ["../../../types/decap-cms-ui-auth/*"],
+      "decap-cms-lib-auth": ["../../../types/decap-cms-lib-auth/index.d.ts"],
+      "decap-cms-lib-auth/*": ["../../../types/decap-cms-lib-auth/*"],
+      "decap-cms-backend-github": ["../../../types/decap-cms-backend-github/index.d.ts"],
+      "decap-cms-backend-github/*": ["../../../types/decap-cms-backend-github/*"],
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules"
+  ]
+}

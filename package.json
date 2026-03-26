@@ -1,0 +1,52 @@
+{
+  "name": "laika-cms",
+  "version": "0.0.1",
+  "description": "The basis for modern content management.",
+  "keywords": ["headless-cms", "content-management", "jamstack", "react", "typescript"],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@esstudio.nl",
+    "url": "https://esstudio.nl"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@esstudio.nl",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "contributors": [],
+  "maintainers": [],
+  "repository": "https://github.com/laikacms/laikacms",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/laikacms/laikacms/sponsors"
+  },
+  "scripts": {
+    "clean": "rimraf --glob '**/node_modules' '**/dist' '**/.turbo' '**/cdk.out' '**/.tanstack/*' '**/.wrangler/*",
+    "build": "turbo run build",
+    "dev": "turbo watch dev",
+    "types": "turbo run types",
+    "test": "turbo run test",
+    "scripts:validate-packages": "tsx scripts/validate-packages.ts",
+    "lint": "eslint --cache --config eslint.config.mjs .",
+    "format": "dprint fmt",
+    "format:check": "dprint check"
+  },
+  "devDependencies": {
+    "@eslint/js": "catalog:lint",
+    "@typescript-eslint/eslint-plugin": "catalog:lint",
+    "@typescript-eslint/parser": "catalog:lint",
+    "@types/node": "catalog:types",
+    "eslint": "catalog:lint",
+    "globals": "catalog:lint",
+    "immutable": "catalog:legacy",
+    "rimraf": "catalog:tools",
+    "turbo": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "packageManager": "pnpm@10.4.1",
+  "engines": {
+    "node": "22.x",
+    "pnpm": ">=8 <11"
+  }
+}

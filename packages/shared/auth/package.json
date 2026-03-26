@@ -1,0 +1,65 @@
+{
+  "name": "@laikacms/auth",
+  "version": "0.1.0",
+  "description": "Framework-agnostic cookie-based OAuth2/OIDC authentication - works with AWS Lambda, Node.js servers, and any JavaScript runtime",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "import": "./dist/types.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "types": [
+        "./dist/types.d.ts"
+      ]
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx scripts/dev-server.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "pnpm run build"
+  },
+  "keywords": [
+    "auth",
+    "authentication",
+    "oauth",
+    "oidc",
+    "jwt",
+    "cookie",
+    "lambda",
+    "aws",
+    "serverless"
+  ],
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "dependencies": {
+    "@panva/hkdf": "^1.2.1",
+    "jose": "^6.1.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "aws-jwt-verify": "catalog:aws",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

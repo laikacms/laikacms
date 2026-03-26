@@ -1,0 +1,51 @@
+{
+  "name": "@laikacms/decap-cms-widget-radix-icon",
+  "description": "Radix UI Icons widget for Decap CMS",
+  "version": "1.0.0",
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": "https://github.com/laikacms/laikacms/issues",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "keywords": [
+    "decap-cms",
+    "widget",
+    "radix",
+    "icons"
+  ],
+  "engines": {
+    "node": "22.x"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@radix-ui/react-icons": "catalog:icons"
+  },
+  "peerDependencies": {
+    "react": "catalog:react",
+    "@emotion/css": "catalog:legacy",
+    "react-dom": "catalog:react",
+    "decap-cms-core": "catalog:decap",
+    "decap-cms-ui-default": "catalog:decap"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:types",
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vite-plugin-dts": "catalog:tools"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  }
+}

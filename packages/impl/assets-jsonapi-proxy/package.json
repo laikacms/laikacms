@@ -1,0 +1,38 @@
+{
+  "name": "@laikacms/assets-jsonapi-proxy",
+  "version": "0.0.1",
+  "type": "module",
+  "description": "JSON:API proxy implementation for assets - enables microservice architecture",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "engines": {
+    "node": "22.x"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@laikacms/core": "workspace:*",
+    "@laikacms/assets": "workspace:*",
+    "@laikacms/storage": "workspace:*",
+    "@laikacms/json-api": "workspace:*",
+    "zod": "catalog:schema"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools"
+  }
+}

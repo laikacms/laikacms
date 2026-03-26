@@ -1,0 +1,35 @@
+{
+  "name": "@laikacms/crypto",
+  "version": "0.1.0",
+  "description": "Cryptographic utilities for Laika CMS with post-quantum security hardening",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "crypto",
+    "security",
+    "bcrypt",
+    "hashing",
+    "constant-time",
+    "post-quantum"
+  ],
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.2"
+  },
+  "devDependencies": {
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x",
+    "pnpm": ">=8 <11"
+  }
+}

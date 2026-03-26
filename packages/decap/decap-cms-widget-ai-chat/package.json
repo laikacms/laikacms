@@ -1,0 +1,69 @@
+{
+  "name": "@laikacms/decap-cms-widget-ai-chat",
+  "description": "AI Chat widget for Decap CMS with document manipulation tools",
+  "version": "1.0.0",
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": "https://github.com/laikacms/laikacms/issues",
+  "module": "dist/index.js",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "keywords": [
+    "decap-cms",
+    "widget",
+    "ai",
+    "chat",
+    "assistant",
+    "llm"
+  ],
+  "engines": {
+    "node": "22.x"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./i18n/types": {
+      "types": "./dist/i18n/types.d.ts",
+      "import": "./dist/i18n/types.js"
+    },
+    "./i18n/en": {
+      "types": "./dist/i18n/en.d.ts",
+      "import": "./dist/i18n/en.js"
+    },
+    "./i18n/nl": {
+      "types": "./dist/i18n/nl.d.ts",
+      "import": "./dist/i18n/nl.js"
+    }
+  },
+  "dependencies": {
+    "@ai-sdk/react": "catalog:ai",
+    "ai": "catalog:ai",
+    "fast-json-patch": "^3.1.1"
+  },
+  "peerDependencies": {
+    "react": "catalog:react",
+    "react-redux": "^7.2.0",
+    "@emotion/css": "catalog:legacy",
+    "react-dom": "catalog:react",
+    "@emotion/react": "catalog:legacy",
+    "decap-cms-ui-default": "catalog:decap"
+  },
+  "devDependencies": {
+    "@types/react-redux": "^7.1.34",
+    "@types/react": "catalog:types",
+    "@types/node": "catalog:types",
+    "@vitejs/plugin-react": "catalog:react",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vite-plugin-dts": "catalog:tools"
+  }
+}

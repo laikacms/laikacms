@@ -1,0 +1,73 @@
+{
+  "name": "@laikacms/decap-cms-backend-laika",
+  "description": "Laika CMS backend for Decap CMS with dependency injection for storage and documents repositories",
+  "version": "0.0.1",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "keywords": [
+    "decap-cms",
+    "backend",
+    "laika-cms",
+    "gateway",
+    "cognito",
+    "aws",
+    "storage",
+    "documents"
+  ],
+  "engines": {
+    "node": "22.x"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsc --watch",
+    "build": "tsc",
+    "type-check": "tsc --noEmit"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "jwt-decode": "^4.0.0",
+    "uuid": "^13.0.0",
+    "aws-jwt-verify": "catalog:aws",
+    "@laikacms/storage": "workspace:*",
+    "@laikacms/storage-jsonapi-proxy": "workspace:*",
+    "@laikacms/documents": "workspace:*",
+    "@laikacms/documents-jsonapi-proxy": "workspace:*",
+    "@laikacms/assets": "workspace:*",
+    "@laikacms/assets-jsonapi-proxy": "workspace:*",
+    "@laikacms/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "decap-cms-backend-github": "catalog:decap",
+    "decap-cms-lib-auth": "catalog:decap",
+    "decap-cms-lib-util": "catalog:decap",
+    "decap-cms-ui-auth": "catalog:decap",
+    "decap-cms-ui-default": "catalog:decap",
+    "@laikacms/storage": "workspace:*",
+    "@laikacms/storage-jsonapi-proxy": "workspace:*",
+    "@laikacms/documents": "workspace:*",
+    "@laikacms/documents-jsonapi-proxy": "workspace:*",
+    "@laikacms/assets": "workspace:*",
+    "@laikacms/assets-jsonapi-proxy": "workspace:*",
+    "@laikacms/core": "workspace:*",
+    "react": "catalog:react",
+    "@octokit/rest": "catalog:octokit"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "vite": "catalog:tools",
+    "vite-plugin-dts": "catalog:tools",
+    "@types/jwt-decode": "^3.1.0",
+    "@types/react": "^19.1.0",
+    "typescript": "catalog:tools"
+  }
+}

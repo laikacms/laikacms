@@ -1,0 +1,61 @@
+{
+  "name": "@laikacms/decap-server-ai",
+  "version": "0.1.0",
+  "type": "module",
+  "description": "AI chat backend for Decap CMS with LLM-agnostic support and document manipulation tools",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./tools": {
+      "types": "./dist/tools/index.d.ts",
+      "import": "./dist/tools/index.js"
+    },
+    "./i18n/types": {
+      "types": "./dist/i18n/types.d.ts",
+      "import": "./dist/i18n/types.js"
+    },
+    "./i18n/en": {
+      "types": "./dist/i18n/en.d.ts",
+      "import": "./dist/i18n/en.js"
+    },
+    "./i18n/nl": {
+      "types": "./dist/i18n/nl.d.ts",
+      "import": "./dist/i18n/nl.js"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "clean": "rimraf dist .turbo node_modules"
+  },
+  "keywords": [
+    "decap-cms",
+    "ai",
+    "chat",
+    "llm",
+    "vercel-ai-sdk",
+    "openai",
+    "anthropic",
+    "cloudflare-workers"
+  ],
+  "author": "Sem Postma <sem@esstudio.nl>",
+  "license": "MIT",
+  "engines": {
+    "node": "22.x"
+  },
+  "dependencies": {
+    "@laikacms/core": "workspace:^",
+    "ai": "catalog:ai",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.7.0"
+  }
+}
