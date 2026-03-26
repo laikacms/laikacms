@@ -1,10 +1,10 @@
-import { atomBaseZ, storageObjectContentZ, storageObjectSummaryZ } from '@laikacms/storage';
-import { z } from 'zod';
+import { AtomBaseSchema } from '@laikacms/storage';
+import * as S from 'effect/Schema';
 
-export const documentSummaryZ = storageObjectSummaryZ.extend({
-  type: z.literal('published-summary'),
-  status: z.literal('published'),
+export const DocumentSummarySchema = S.Struct({
+  ...AtomBaseSchema.fields,
+  type: S.Literal('published-summary'),
+  status: S.Literal('published'),
 });
 
-export type DocumentSummary = z.infer<typeof documentSummaryZ>;
-
+export type DocumentSummary = S.Schema.Type<typeof DocumentSummarySchema>;

@@ -25,7 +25,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "zod": "catalog:schema",
     "effect": "catalog:default",
     "@laikacms/i18n": "workspace:*"
   },

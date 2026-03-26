@@ -4,16 +4,17 @@ export * from './schemas.js';
 // Export transformers
 export * from './transformers.js';
 
-// Export pagination utilities and types (excluding JsonApiLinks which is in types)
+// Export pagination utilities and types
 export {
-  paginationPageBasedZ,
-  paginationBeforeZ,
-  paginationAfterZ,
-  paginationOffsetZ,
-  paginationZ,
+  PaginationPageBasedSchema,
+  PaginationBeforeSchema,
+  PaginationAfterSchema,
+  PaginationOffsetSchema,
+  PaginationSchema,
   buildPaginationLinks,
   parsePaginationQuery,
   type Pagination,
+  type JsonApiLinks,
 } from './pagination.js';
 
 // Export types

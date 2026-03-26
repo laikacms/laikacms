@@ -1,8 +1,9 @@
-import { z } from 'zod';
+import * as S from 'effect/Schema';
 import { AtomBaseSchema } from '../atom/atom-base.js';
 
-export const folderZ = AtomBaseSchema.extend({
-  type: z.literal('folder'),
+export const FolderSchema = S.Struct({
+  ...AtomBaseSchema.fields,
+  type: S.Literal('folder'),
 });
 
-export type Folder = z.infer<typeof folderZ>;
+export type Folder = S.Schema.Type<typeof FolderSchema>;

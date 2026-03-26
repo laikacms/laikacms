@@ -1,11 +1,11 @@
-import { z } from "zod";
-import { documentZ } from "./document.js";
-import { storageObjectUpdateZ } from "@laikacms/storage";
+import * as S from 'effect/Schema';
+import { StorageObjectContentSchema } from '@laikacms/storage';
 
-export const documentUpdateZ = documentZ.omit({
-  createdAt: true,
-  updatedAt: true,
-}).partial().required({ key: true });
+export const DocumentUpdateSchema = S.Struct({
+  key: S.String.pipe(S.check(S.isMaxLength(1023))),
+  type: S.optional(S.Literal('published')),
+  status: S.optional(S.Literal('published')),
+  content: S.optional(StorageObjectContentSchema),
+});
 
-export type DocumentUpdate = z.infer<typeof documentUpdateZ>;
-
+export type DocumentUpdate = S.Schema.Type<typeof DocumentUpdateSchema>;

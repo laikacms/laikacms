@@ -1,8 +1,7 @@
-import { folderSummaryZ } from "@laikacms/storage";
-import { z } from "zod";
-import { documentSummaryZ } from "../document/document-summary.js";
-import { revisionSummaryZ } from "../revision/revision-summary.js";
-import { unpublishedSummaryZ } from "../unpublished/unpublished-summary.js";
+import { FolderSummarySchema } from "@laikacms/storage";
+import * as S from 'effect/Schema';
+import { DocumentSummarySchema } from "../document/document-summary.js";
+import { UnpublishedSummarySchema } from "../unpublished/unpublished-summary.js";
 
 /**
  * Record summary union type
@@ -12,11 +11,10 @@ import { unpublishedSummaryZ } from "../unpublished/unpublished-summary.js";
  * - unpublished: Unpublished content with various statuses (draft, pending_review, archived, trash, etc.)
  * - folder: Directory entries
  */
-export const RecordSummaryZ = z.discriminatedUnion('type', [
-  documentSummaryZ,
-  unpublishedSummaryZ,
-  folderSummaryZ
+export const RecordSummarySchema = S.Union([
+  DocumentSummarySchema,
+  UnpublishedSummarySchema,
+  FolderSummarySchema,
 ]);
 
-export type RecordSummary = z.infer<typeof RecordSummaryZ>;
-
+export type RecordSummary = S.Schema.Type<typeof RecordSummarySchema>;

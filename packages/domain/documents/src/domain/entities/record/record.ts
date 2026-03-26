@@ -1,13 +1,12 @@
-import { z } from 'zod';
-import { documentZ } from '../document/document.js';
-import { unpublishedZ } from '../unpublished/unpublished.js';
-import { revisionZ } from '../revision/revision.js';
-import { folderZ } from '@laikacms/storage';
+import * as S from 'effect/Schema';
+import { DocumentSchema } from '../document/document.js';
+import { UnpublishedSchema } from '../unpublished/unpublished.js';
+import { FolderSchema } from '@laikacms/storage';
 
-export const recordZ = z.discriminatedUnion('type', [
-  documentZ,
-  unpublishedZ,
-  folderZ
+export const RecordSchema = S.Union([
+  DocumentSchema,
+  UnpublishedSchema,
+  FolderSchema,
 ]);
 
-export type Record = z.infer<typeof recordZ>;
+export type Record = S.Schema.Type<typeof RecordSchema>;

@@ -1,11 +1,10 @@
-import z from "zod";
 import * as S from 'effect/Schema';
 
 /**
- * 
- * @param params 
- * @returns 
+ * Effect Schema for ISO date strings.
+ * Uses the built-in DateTimeUtcFromString which handles ISO 8601 format.
+ * For optional date fields, use S.optional(IsoDateWithFallbackSchema).
  */
-export const isoDateWithFallbackZ = (params?: string | z.core.$ZodISODateTimeParams | undefined) => {
-  return z.string().transform(x => new Date(x).toISOString()).pipe(z.iso.datetime(params))
-}
+export const IsoDateWithFallbackSchema = S.DateTimeUtcFromString;
+
+export type IsoDateWithFallback = S.Schema.Type<typeof IsoDateWithFallbackSchema>;

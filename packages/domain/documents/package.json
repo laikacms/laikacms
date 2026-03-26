@@ -29,7 +29,6 @@
     "typescript": "catalog:tools"
   },
   "dependencies": {
-    "zod": "catalog:schema",
     "@laikacms/core": "workspace:*",
     "@laikacms/storage": "workspace:*",
     "effect": "catalog:default"

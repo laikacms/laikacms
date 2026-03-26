@@ -1,121 +1,141 @@
-import { z } from 'zod';
+import * as S from 'effect/Schema';
 
 // JSON:API Error Schema
-export const jsonApiErrorZ = z.object({
-  errors: z.array(
-    z.object({
-      code: z.string(),
-      status: z.string(),
-      title: z.string(),
-      detail: z.string(),
-      source: z.object({
-        pointer: z.string().optional(),
-        parameter: z.string().optional(),
-      }).optional(),
+export const JsonApiErrorSchema = S.Struct({
+  errors: S.Array(
+    S.Struct({
+      code: S.String,
+      status: S.String,
+      title: S.String,
+      detail: S.String,
+      source: S.optional(S.Struct({
+        pointer: S.optional(S.String),
+        parameter: S.optional(S.String),
+      })),
     })
   ),
 });
 
 // JSON:API Delete Operations
-export const jsonApiDeleteZ = z.object({
-  data: z.object({
-    type: z.string(),
-    id: z.string(),
+export const JsonApiDeleteSchema = S.Struct({
+  data: S.Struct({
+    type: S.String,
+    id: S.String,
   }),
 });
 
-export const jsonApiDeleteMultipleZ = z.object({
-  data: z.array(
-    z.object({
-      type: z.string(),
-      id: z.string(),
+export const JsonApiDeleteMultipleSchema = S.Struct({
+  data: S.Array(
+    S.Struct({
+      type: S.String,
+      id: S.String,
     })
   ),
 });
 
 // JSON:API Atomic Operations Extension
 // https://jsonapi.org/ext/atomic/
-export const atomicOperationZ = z.discriminatedUnion('op', [
-  z.object({
-    op: z.literal('add'),
-    data: z.object({
-      type: z.string(),
-      id: z.string().optional(),
-      attributes: z.record(z.string(), z.any()).optional(),
-      relationships: z.record(z.string(), z.any()).optional(),
-    }),
+const AtomicAddOperationSchema = S.Struct({
+  op: S.Literal('add'),
+  data: S.Struct({
+    type: S.String,
+    id: S.optional(S.String),
+    attributes: S.optional(S.Record(S.String, S.Any)),
+    relationships: S.optional(S.Record(S.String, S.Any)),
   }),
-  z.object({
-    op: z.literal('update'),
-    data: z.object({
-      type: z.string(),
-      id: z.string(),
-      attributes: z.record(z.string(), z.any()).optional(),
-      relationships: z.record(z.string(), z.any()).optional(),
-    }),
-  }),
-  z.object({
-    op: z.literal('remove'),
-    ref: z.object({
-      type: z.string(),
-      id: z.string(),
-    }),
-  }),
-]);
-
-export const atomicOperationsRequestZ = z.object({
-  'atomic:operations': z.array(atomicOperationZ),
 });
 
-export const atomicOperationsResponseZ = z.object({
-  'atomic:results': z.array(
-    z.object({
-      data: z.union([
-        z.object({
-          type: z.string(),
-          id: z.string(),
-          attributes: z.record(z.string(), z.any()).optional(),
+const AtomicUpdateOperationSchema = S.Struct({
+  op: S.Literal('update'),
+  data: S.Struct({
+    type: S.String,
+    id: S.String,
+    attributes: S.optional(S.Record(S.String, S.Any)),
+    relationships: S.optional(S.Record(S.String, S.Any)),
+  }),
+});
+
+const AtomicRemoveOperationSchema = S.Struct({
+  op: S.Literal('remove'),
+  ref: S.Struct({
+    type: S.String,
+    id: S.String,
+  }),
+});
+
+export const AtomicOperationSchema = S.Union([
+  AtomicAddOperationSchema,
+  AtomicUpdateOperationSchema,
+  AtomicRemoveOperationSchema,
+]);
+
+export const AtomicOperationsRequestSchema = S.Struct({
+  'atomic:operations': S.Array(AtomicOperationSchema),
+});
+
+export const AtomicOperationsResponseSchema = S.Struct({
+  'atomic:results': S.Array(
+    S.Struct({
+      data: S.Union([
+        S.Struct({
+          type: S.String,
+          id: S.String,
+          attributes: S.optional(S.Record(S.String, S.Any)),
         }),
-        z.null(),
+        S.Null,
       ]),
     })
   ),
 });
 
 // JSON:API Pagination
-export const jsonApiLinksZ = z.object({
-  self: z.string().optional(),
-  first: z.string().optional(),
-  last: z.string().optional(),
-  prev: z.string().optional(),
-  next: z.string().optional(),
+export const JsonApiLinksSchema = S.Struct({
+  self: S.optional(S.String),
+  first: S.optional(S.String),
+  last: S.optional(S.String),
+  prev: S.optional(S.String),
+  next: S.optional(S.String),
 });
 
 // Cursor Pagination Profile
 // https://jsonapi.org/profiles/ethanresnick/cursor-pagination/
-export const cursorPaginationMetaZ = z.object({
-  page: z.object({
-    cursor: z.string().optional(),
-    hasMore: z.boolean().optional(),
-  }).loose().optional(),
+export const CursorPaginationMetaSchema = S.Struct({
+  page: S.optional(S.Struct({
+    cursor: S.optional(S.String),
+    hasMore: S.optional(S.Boolean),
+  })),
 });
 
-export const jsonApiResourceZ = z.object({
-  type: z.string(),
-  id: z.string(),
-  attributes: z.record(z.string(), z.any()),
-  relationships: z.record(z.string(), z.any()).optional(),
+export const JsonApiResourceSchema = S.Struct({
+  type: S.String,
+  id: S.String,
+  attributes: S.Record(S.String, S.Any),
+  relationships: S.optional(S.Record(S.String, S.Any)),
 });
 
-export const jsonApiResponseZ = z.object({
-  data: jsonApiResourceZ,
-  links: jsonApiLinksZ.optional(),
-  meta: z.record(z.string(), z.any()).optional(),
+export const JsonApiResponseSchema = S.Struct({
+  data: JsonApiResourceSchema,
+  links: S.optional(JsonApiLinksSchema),
+  meta: S.optional(S.Record(S.String, S.Any)),
 });
 
-export const jsonApiCollectionResponseZ = z.object({
-  data: z.array(jsonApiResourceZ),
-  links: jsonApiLinksZ.optional(),
-  meta: cursorPaginationMetaZ.optional(),
-  included: z.array(jsonApiResourceZ).optional(),
+export const JsonApiCollectionResponseSchema = S.Struct({
+  data: S.Array(JsonApiResourceSchema),
+  links: S.optional(JsonApiLinksSchema),
+  meta: S.optional(CursorPaginationMetaSchema),
+  included: S.optional(S.Array(JsonApiResourceSchema)),
 });
+
+// Decoders for parsing unknown data
+export const decodeJsonApiError = S.decodeUnknownSync(JsonApiErrorSchema);
+export const decodeJsonApiDelete = S.decodeUnknownSync(JsonApiDeleteSchema);
+export const decodeJsonApiDeleteMultiple = S.decodeUnknownSync(JsonApiDeleteMultipleSchema);
+export const decodeAtomicOperation = S.decodeUnknownSync(AtomicOperationSchema);
+export const decodeAtomicOperationsRequest = S.decodeUnknownSync(AtomicOperationsRequestSchema);
+export const decodeAtomicOperationsResponse = S.decodeUnknownSync(AtomicOperationsResponseSchema);
+export const decodeJsonApiResource = S.decodeUnknownSync(JsonApiResourceSchema);
+export const decodeJsonApiResponse = S.decodeUnknownSync(JsonApiResponseSchema);
+export const decodeJsonApiCollectionResponse = S.decodeUnknownSync(JsonApiCollectionResponseSchema);
+
+// Safe decoder that returns Exit
+export const decodeJsonApiErrorExit = S.decodeUnknownExit(JsonApiErrorSchema);

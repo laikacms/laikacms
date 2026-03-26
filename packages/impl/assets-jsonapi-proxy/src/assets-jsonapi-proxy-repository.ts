@@ -13,7 +13,14 @@ import {
 import { type Folder, type FolderCreate } from '@laikacms/storage';
 import { LaikaResult, LaikaError, InvalidData, InternalError } from '@laikacms/core';
 import { JsonApiCollectionResponse } from '@laikacms/json-api';
-import { assetFromJsonApi, assetMetadataFromJsonApiZ, assetUrlFromJsonApiZ, assetVariantsFromJsonApiZ, folderFromJsonApiZ, resourceFromJsonApiZ } from './jsonapi.js';
+import {
+  parseResource,
+  parseAsset,
+  parseFolder,
+  parseAssetMetadata,
+  parseAssetUrl,
+  parseAssetVariations,
+} from './jsonapi.js';
 import * as Result from 'effect/Result';
 
 export interface AssetsJsonApiProxyRepositoryOptions {
@@ -123,7 +130,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         return;
       }
 
-      const resource = resourceFromJsonApiZ.parse(result.success.data) as Resource;
+      const resource = parseResource(result.success.data) as Resource;
 
       this.storeIncludedResources(result.success.included);
       yield Result.succeed([resource]);
@@ -136,13 +143,13 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     if (!included) return;
     for (const item of included) {
       if (item.type === 'asset-variants') {
-        const variation = assetVariantsFromJsonApiZ.parse(item);
+        const variation = parseAssetVariations(item);
         this.variations.set(variation.key, variation);
       } else if (item.type === 'asset-url') {
-        const url = assetUrlFromJsonApiZ.parse(item);
+        const url = parseAssetUrl(item);
         this.urls.set(url.key, url);
-      } else if (item.type === 'metadata') {
-        const metadata = assetMetadataFromJsonApiZ.parse(item);
+      } else if (item.type === 'metadata' || item.type === 'asset-metadata') {
+        const metadata = parseAssetMetadata(item);
         this.metadata.set(metadata.key, metadata);
       }
     }
@@ -215,7 +222,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         return;
       }
 
-      const resources: Resource[] = json.data.map((item: JsonApiResource) => resourceFromJsonApiZ.parse(item) as Resource);
+      const resources: Resource[] = json.data.map((item: JsonApiResource) => parseResource(item) as Resource);
       this.storeIncludedResources(json.included);
       yield Result.succeed(resources);
     } catch (error) {
@@ -309,7 +316,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         return;
       }
 
-      yield Result.succeed(assetFromJsonApi.parse(result.success.data));
+      yield Result.succeed(parseAsset(result.success.data));
     } catch (error) {
       yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
@@ -342,7 +349,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         return;
       }
 
-      yield Result.succeed(assetFromJsonApi.parse(result.success));
+      yield Result.succeed(parseAsset(result.success.data));
     } catch (error) {
       yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
@@ -530,7 +537,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         return;
       }
 
-      yield Result.succeed(folderFromJsonApiZ.parse(result.success.data) as Folder);
+      yield Result.succeed(parseFolder(result.success.data));
     } catch (error) {
       yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }

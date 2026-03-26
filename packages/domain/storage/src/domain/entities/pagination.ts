@@ -1,30 +1,30 @@
-import z from "zod";
+import * as S from 'effect/Schema';
 
-export const paginationPageBasedZ = z.object({
-  page: z.number().min(1).default(1),
-  perPage: z.number().min(1).optional(),
+export const PaginationPageBasedSchema = S.Struct({
+  page: S.Number.pipe(S.check(S.isGreaterThanOrEqualTo(1))),
+  perPage: S.optional(S.Number.pipe(S.check(S.isGreaterThanOrEqualTo(1)))),
 });
 
-export const paginationBeforeZ = z.object({
-  before: z.string().optional(),
-  perPage: z.number().min(1).optional(),
+export const PaginationBeforeSchema = S.Struct({
+  before: S.optional(S.String),
+  perPage: S.optional(S.Number.pipe(S.check(S.isGreaterThanOrEqualTo(1)))),
 });
 
-export const paginationAfterZ = z.object({
-  after: z.string().optional(),
-  perPage: z.number().min(1).optional(),
+export const PaginationAfterSchema = S.Struct({
+  after: S.optional(S.String),
+  perPage: S.optional(S.Number.pipe(S.check(S.isGreaterThanOrEqualTo(1)))),
 });
 
-export const paginationOffsetZ = z.object({
-  offset: z.number().min(0).default(0),
-  limit: z.number().min(1).optional(),
+export const PaginationOffsetSchema = S.Struct({
+  offset: S.Number.pipe(S.check(S.isGreaterThanOrEqualTo(0))),
+  limit: S.optional(S.Number.pipe(S.check(S.isGreaterThanOrEqualTo(1)))),
 });
 
-export const paginationZ = z.union([
-  paginationPageBasedZ,
-  paginationBeforeZ,
-  paginationAfterZ,
-  paginationOffsetZ,
-])
+export const PaginationSchema = S.Union([
+  PaginationPageBasedSchema,
+  PaginationBeforeSchema,
+  PaginationAfterSchema,
+  PaginationOffsetSchema,
+]);
 
-export type Pagination = z.infer<typeof paginationZ>;
+export type Pagination = S.Schema.Type<typeof PaginationSchema>;

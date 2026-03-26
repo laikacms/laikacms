@@ -1,5 +1,6 @@
 import { LaikaResult, LaikaError, ErrorStatus, errorStatus, BadRequestError } from '@laikacms/core';
-import { AssetsRepository, FetchHints } from '@laikacms/assets';
+import { AssetsRepository, FetchHints, Asset, AssetCreate, AssetUpdate } from '@laikacms/assets';
+import { Folder, FolderCreate } from '@laikacms/storage';
 import {
   JsonApiResource,
   JsonApiResponse,
@@ -9,16 +10,19 @@ import {
   folderToJsonApi,
   assetVariationsToJsonApi,
   assetMetadataToJsonApi,
-  assetCreateFromJsonApiZ,
-  assetUpdateFromJsonApiZ,
-  folderCreateFromJsonApiZ,
+  assetCreateFromJsonApi,
+  assetUpdateFromJsonApi,
+  folderCreateFromJsonApi,
   parseIncludeQuery,
   parsePaginationQuery,
   buildPaginationLinks,
   assetUrlToJsonApi,
-  assetCreateWithContentZ,
+  type JsonApiAssetCreate,
+  type JsonApiFolderCreate,
+  type JsonApiAssetUpdate,
 } from './jsonapi.js';
 import * as Result from 'effect/Result';
+import * as S from 'effect/Schema';
 
 // ============================================
 // Types
@@ -108,11 +112,54 @@ function respondCollection(
 }
 
 // ============================================
+// Effect Schema Definitions for JSON:API Request Validation
+// ============================================
+
+const JsonApiAssetCreateSchema = S.Struct({
+  type: S.Literal('asset'),
+  id: S.String,
+  attributes: S.Struct({
+    mimeType: S.optional(S.String),
+    filename: S.optional(S.String),
+    cacheControl: S.optional(S.String),
+    customMetadata: S.optional(S.Record(S.String, S.String)),
+    content: S.optional(S.String), // base64 encoded content
+  }),
+});
+
+const JsonApiAssetUpdateSchema = S.Struct({
+  type: S.Literal('asset'),
+  id: S.String,
+  attributes: S.Struct({
+    mimeType: S.optional(S.String),
+    cacheControl: S.optional(S.String),
+    customMetadata: S.optional(S.Record(S.String, S.String)),
+  }),
+});
+
+const JsonApiFolderCreateSchema = S.Struct({
+  type: S.Literal('folder'),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.optional(S.Literal('folder')),
+  }),
+});
+
+type JsonApiAssetCreateData = S.Schema.Type<typeof JsonApiAssetCreateSchema>;
+type JsonApiAssetUpdateData = S.Schema.Type<typeof JsonApiAssetUpdateSchema>;
+type JsonApiFolderCreateData = S.Schema.Type<typeof JsonApiFolderCreateSchema>;
+
+// ============================================
 // Server Builder
 // ============================================
 
 export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
   const { repository, basePath = '/api/assets' } = options;
+
+  // Create decoders
+  const decodeAssetCreate = S.decodeUnknownSync(JsonApiAssetCreateSchema);
+  const decodeAssetUpdate = S.decodeUnknownSync(JsonApiAssetUpdateSchema);
+  const decodeFolderCreate = S.decodeUnknownSync(JsonApiFolderCreateSchema);
 
   return {
     async fetch(request: Request): Promise<Response> {
@@ -164,14 +211,14 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             return respondError(batch.failure, errorStatus.BAD_REQUEST);
           }
 
-          resources.push(...batch.success.map(resource => resourceToJsonApi.parse(resource)));
+          resources.push(...batch.success.map(resource => resourceToJsonApi(resource)));
 
-          const assets = batch.success.filter(r => r.type === 'asset');
+          const assets = batch.success.filter((r): r is Asset => r.type === 'asset');
 
           for await (const metadataResult of repository.getMetadata(assets)) {
             if (Result.isSuccess(metadataResult)) {
               for (const metadata of metadataResult.success) {
-                included.push(assetMetadataToJsonApi.parse(metadata));
+                included.push(assetMetadataToJsonApi(metadata));
               }
             }
           }
@@ -179,7 +226,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           for await (const urlsResult of repository.getUrls(assets)) {
             if (Result.isSuccess(urlsResult)) {
               for (const urls of urlsResult.success) {
-                included.push(assetUrlToJsonApi.parse(urls));
+                included.push(assetUrlToJsonApi(urls));
               }
             }
           }
@@ -187,7 +234,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           for await (const variationsResult of repository.getVariations(assets)) {
             if (Result.isSuccess(variationsResult)) {
               for (const variations of variationsResult.success) {
-                included.push(assetVariationsToJsonApi.parse(variations));
+                included.push(assetVariationsToJsonApi(variations));
               }
             }
           }
@@ -225,7 +272,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
           }
 
-          const resource = resourceToJsonApi.parse(resourceData);
+          const resource = resourceToJsonApi(resourceData);
           const included: JsonApiResource[] = [];
 
           // Fetch included data for assets
@@ -233,21 +280,21 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             if (hints.metadata) {
               for await (const metadataResult of repository.getMetadata([resourceData])) {
                 if (Result.isSuccess(metadataResult)) {
-                  included.push(assetMetadataToJsonApi.parse(metadataResult.success[0]));
+                  included.push(assetMetadataToJsonApi(metadataResult.success[0]));
                 }
               }
             }
             if (hints.urls) {
               for await (const urlsResult of repository.getUrls([resourceData])) {
                 if (Result.isSuccess(urlsResult)) {
-                  included.push(assetUrlToJsonApi.parse(urlsResult.success[0]));
+                  included.push(assetUrlToJsonApi(urlsResult.success[0]));
                 }
               }
             }
             if (hints.variations) {
               for await (const variationsResult of repository.getVariations([resourceData])) {
                 if (Result.isSuccess(variationsResult)) {
-                  included.push(assetVariationsToJsonApi.parse(variationsResult.success[0]));
+                  included.push(assetVariationsToJsonApi(variationsResult.success[0]));
                 }
               }
             }
@@ -324,7 +371,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             if (Result.isFailure(result)) {
               return respondError(result.failure, errorStatus.BAD_REQUEST);
             }
-            return respondResource(assetToJsonApi.parse(result.success));
+            return respondResource(assetToJsonApi(result.success));
           }
         }
 
@@ -334,35 +381,42 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           const data = body.data as { type?: string };
 
           if (data.type === 'folder') {
-            const parsed = folderCreateFromJsonApiZ.safeParse(data);
-            if (!parsed.success) {
+            let parsed: JsonApiFolderCreateData;
+            try {
+              parsed = decodeFolderCreate(data);
+            } catch {
               return respondValidationError(
-                parsed.error.issues.map(e => ({ message: e.message })),
+                [{ message: 'Invalid folder create data' }],
                 errorStatus.BAD_REQUEST
               );
             }
 
-            const folderCreate = folderCreateFromJsonApiZ.parse(data);
+            const folderCreate: FolderCreate = {
+              key: parsed.id,
+              type: 'folder',
+            };
             for await (const result of repository.createFolder(folderCreate)) {
               if (Result.isFailure(result)) {
                 return respondError(result.failure, errorStatus.BAD_REQUEST);
               }
-              return respondResource(folderToJsonApi.parse(result.success));
+              return respondResource(folderToJsonApi(result.success));
             }
           }
 
           // Asset creation via JSON (content must be base64 encoded)
           if (data.type === 'asset') {
-            const parsed = assetCreateWithContentZ.safeParse(data);
-            if (!parsed.success) {
+            let parsed: JsonApiAssetCreateData;
+            try {
+              parsed = decodeAssetCreate(data);
+            } catch {
               return respondValidationError(
-                parsed.error.issues.map(e => ({ message: e.message })),
+                [{ message: 'Invalid asset create data' }],
                 errorStatus.BAD_REQUEST
               );
             }
 
             // Get base64 content from attributes
-            const base64Content = parsed.data.content;
+            const base64Content = parsed.attributes.content;
             if (!base64Content) {
               return respondError(
                 new BadRequestError('Missing content in asset creation. Use multipart/form-data for binary uploads.'),
@@ -377,14 +431,20 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
               bytes[i] = binaryString.charCodeAt(i);
             }
 
-            for await (const result of repository.createAsset({
-              ...parsed.data,
+            const assetCreate: AssetCreate = {
+              key: parsed.id,
+              mimeType: parsed.attributes.mimeType || 'application/octet-stream',
+              filename: parsed.attributes.filename,
+              cacheControl: parsed.attributes.cacheControl,
+              customMetadata: parsed.attributes.customMetadata,
               content: bytes.buffer,
-            })) {
+            };
+
+            for await (const result of repository.createAsset(assetCreate)) {
               if (Result.isFailure(result)) {
                 return respondError(result.failure, errorStatus.BAD_REQUEST);
               }
-              return respondResource(assetToJsonApi.parse(result.success));
+              return respondResource(assetToJsonApi(result.success));
             }
           }
 
@@ -408,19 +468,28 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         
         // Add the key as id for validation
         const dataWithId = { ...body.data, id: key };
-        const parsed = assetUpdateFromJsonApiZ.safeParse(dataWithId);
-        if (!parsed.success) {
+        let parsed: JsonApiAssetUpdateData;
+        try {
+          parsed = decodeAssetUpdate(dataWithId);
+        } catch {
           return respondValidationError(
-            parsed.error.issues.map(e => ({ message: e.message })),
+            [{ message: 'Invalid asset update data' }],
             errorStatus.BAD_REQUEST
           );
         }
 
-        for await (const result of repository.updateAsset(parsed.data)) {
+        const assetUpdate: AssetUpdate = {
+          key: parsed.id,
+          mimeType: parsed.attributes.mimeType,
+          cacheControl: parsed.attributes.cacheControl,
+          customMetadata: parsed.attributes.customMetadata,
+        };
+
+        for await (const result of repository.updateAsset(assetUpdate)) {
           if (Result.isFailure(result)) {
             return respondError(result.failure, errorStatus.BAD_REQUEST);
           }
-          return respondResource(assetToJsonApi.parse(result.success));
+          return respondResource(assetToJsonApi(result.success));
         }
       }
 

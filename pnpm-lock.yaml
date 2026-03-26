@@ -103,9 +103,6 @@ catalogs:
     json-schema:
       specifier: ^0.4.0
       version: 0.4.0
-    zod:
-      specifier: ^4.1.12
-      version: 4.3.6
   server:
     hono:
       specifier: ^4.6.14
@@ -205,9 +202,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -242,9 +236,6 @@ importers:
       hono:
         specifier: ^4.6.8
         version: 4.12.9
-      zod:
-        specifier: ^4.1.12
-        version: 4.3.6
     devDependencies:
       '@laikacms/contentbase-settings-default':
         specifier: workspace:*
@@ -273,9 +264,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: ^4.1.12
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -304,9 +292,6 @@ importers:
       hono:
         specifier: ^4.6.8
         version: 4.12.9
-      zod:
-        specifier: ^4.1.12
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -636,8 +621,11 @@ importers:
       ai:
         specifier: catalog:ai
         version: 6.0.138(zod@3.25.76)
+      effect:
+        specifier: catalog:default
+        version: 4.0.0-beta.40
       zod:
-        specifier: ^3.23.8
+        specifier: ^3.25.76
         version: 3.25.76
     devDependencies:
       '@types/node':
@@ -658,9 +646,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       typescript:
         specifier: catalog:tools
@@ -677,9 +662,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/json-schema':
         specifier: ^7.0.15
@@ -699,9 +681,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/json-schema':
         specifier: ^7.0.15
@@ -718,9 +697,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/json-schema':
         specifier: ^7.0.15
@@ -746,9 +722,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -774,9 +747,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -805,9 +775,6 @@ importers:
       superjson:
         specifier: ^2.2.6
         version: 2.2.6
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@aws-sdk/client-dynamodb':
         specifier: catalog:aws
@@ -857,9 +824,6 @@ importers:
       lodash:
         specifier: catalog:lodash
         version: 4.17.23
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/json-schema':
         specifier: catalog:types
@@ -897,9 +861,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -959,9 +920,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -1012,9 +970,6 @@ importers:
       trash:
         specifier: ^9.0.0
         version: 9.0.0
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -1037,9 +992,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -1065,9 +1017,6 @@ importers:
       minimatch:
         specifier: ^10.0.3
         version: 10.2.4
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250109.0
@@ -1173,9 +1122,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       typescript:
         specifier: catalog:tools
@@ -1227,9 +1173,6 @@ importers:
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
-      zod:
-        specifier: catalog:schema
-        version: 4.3.6
     devDependencies:
       hono:
         specifier: catalog:server

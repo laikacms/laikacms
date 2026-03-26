@@ -1,9 +1,11 @@
-import { z } from "zod";
-import { revisionZ } from "./revision.js";
+import * as S from 'effect/Schema';
+import { StorageObjectContentSchema } from '@laikacms/storage';
 
-export const revisionUpdateZ = revisionZ.omit({
-  createdAt: true,
-  updatedAt: true,
-}).partial().required({ key: true });
+export const RevisionUpdateSchema = S.Struct({
+  key: S.String.pipe(S.check(S.isMaxLength(1023))),
+  type: S.optional(S.Literal('revision')),
+  content: S.optional(StorageObjectContentSchema),
+  revision: S.optional(S.String),
+});
 
-export type RevisionUpdate = z.infer<typeof revisionUpdateZ>;
+export type RevisionUpdate = S.Schema.Type<typeof RevisionUpdateSchema>;

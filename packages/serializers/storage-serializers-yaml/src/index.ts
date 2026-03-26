@@ -1,16 +1,13 @@
 import {
   StorageSerializer,
-  StorageProvider,
   StorageObjectContent,
-  storageProviderZ,
   StorageFormat,
-  storageFormatZ,
 } from "@laikacms/storage";
 import { JSONSchema7 } from "json-schema";
 import yaml from "js-yaml";
 
 export const yamlSerializer: StorageSerializer<StorageFormat> = {
-  format: storageFormatZ.parse('yaml'),
+  format: 'yaml' as StorageFormat,
   async serializeDocumentFileContents(
     content: StorageObjectContent,
     _schema: JSONSchema7

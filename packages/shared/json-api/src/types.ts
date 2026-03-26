@@ -1,24 +1,22 @@
-import { z } from 'zod';
+import * as S from 'effect/Schema';
 import {
-  jsonApiErrorZ,
-  atomicOperationZ,
-  atomicOperationsRequestZ,
-  atomicOperationsResponseZ,
-  jsonApiLinksZ,
-  cursorPaginationMetaZ,
-  jsonApiCollectionResponseZ,
-  jsonApiResponseZ,
-  jsonApiResourceZ,
+  JsonApiErrorSchema,
+  AtomicOperationSchema,
+  AtomicOperationsRequestSchema,
+  AtomicOperationsResponseSchema,
+  JsonApiLinksSchema,
+  CursorPaginationMetaSchema,
+  JsonApiCollectionResponseSchema,
+  JsonApiResponseSchema,
+  JsonApiResourceSchema,
 } from './schemas.js';
 
-export type JsonApiError = z.infer<typeof jsonApiErrorZ>;
-export type AtomicOperation = z.infer<typeof atomicOperationZ>;
-export type AtomicOperationsRequest = z.infer<typeof atomicOperationsRequestZ>;
-export type AtomicOperationsResponse = z.infer<typeof atomicOperationsResponseZ>;
-export type JsonApiLinks = z.infer<typeof jsonApiLinksZ>;
-export type CursorPaginationMeta = z.infer<typeof cursorPaginationMetaZ>;
-export type JsonApiCollectionResponse = z.infer<typeof jsonApiCollectionResponseZ>;
-export type JsonApiResponse = z.infer<typeof jsonApiResponseZ>;
-export type JsonApiResource = z.infer<typeof jsonApiResourceZ>;
-
-
+export type JsonApiError = S.Schema.Type<typeof JsonApiErrorSchema>;
+export type AtomicOperation = S.Schema.Type<typeof AtomicOperationSchema>;
+export type AtomicOperationsRequest = S.Schema.Type<typeof AtomicOperationsRequestSchema>;
+export type AtomicOperationsResponse = S.Schema.Type<typeof AtomicOperationsResponseSchema>;
+export type JsonApiLinks = S.Schema.Type<typeof JsonApiLinksSchema>;
+export type CursorPaginationMeta = S.Schema.Type<typeof CursorPaginationMetaSchema>;
+export type JsonApiCollectionResponse = S.Schema.Type<typeof JsonApiCollectionResponseSchema>;
+export type JsonApiResponse = S.Schema.Type<typeof JsonApiResponseSchema>;
+export type JsonApiResource = S.Schema.Type<typeof JsonApiResourceSchema>;

@@ -29,8 +29,7 @@
     "@laikacms/assets": "workspace:*",
     "@laikacms/storage": "workspace:*",
     "@laikacms/json-api": "workspace:*",
-    "effect": "catalog:default",
-    "zod": "catalog:schema"
+    "effect": "catalog:default"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

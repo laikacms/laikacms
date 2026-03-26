@@ -1,13 +1,14 @@
-import { z } from 'zod';
+import * as S from 'effect/Schema';
 import { AtomBaseSchema } from '../atom/atom-base.js';
 
-export const storageObjectContentZ = z.record(z.string(), z.any());
+export const StorageObjectContentSchema = S.Record(S.String, S.Any);
 
-export type StorageObjectContent = z.infer<typeof storageObjectContentZ>;
+export type StorageObjectContent = S.Schema.Type<typeof StorageObjectContentSchema>;
 
-export const storageObjectZ = AtomBaseSchema.extend({
-  type: z.literal('object'),
-  content: storageObjectContentZ,
+export const StorageObjectSchema = S.Struct({
+  ...AtomBaseSchema.fields,
+  type: S.Literal('object'),
+  content: StorageObjectContentSchema,
 });
 
-export type StorageObject = z.infer<typeof storageObjectZ>;
+export type StorageObject = S.Schema.Type<typeof StorageObjectSchema>;

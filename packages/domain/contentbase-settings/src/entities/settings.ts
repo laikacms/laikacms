@@ -1,19 +1,19 @@
-import { storageFormatZ } from '@laikacms/storage';
+import { StorageFormatSchema } from '@laikacms/storage';
 import { JSONSchema7 } from 'json-schema';
-import { z } from 'zod';
+import * as S from 'effect/Schema';
 
 /**
  * Configuration for an unpublished status
  * Each status maps to a directory where unpublished documents with that status are stored
  */
-export const unpublishedStatusConfigZ = z.object({
+export const UnpublishedStatusConfigSchema = S.Struct({
   /** Directory where documents with this status are stored (relative to .contentbase/[collection]/) */
-  directory: z.string(),
+  directory: S.String,
   /** Human-readable name for this status */
-  name: z.string(),
+  name: S.String,
 });
 
-export type UnpublishedStatusConfig = z.infer<typeof unpublishedStatusConfigZ>;
+export type UnpublishedStatusConfig = S.Schema.Type<typeof UnpublishedStatusConfigSchema>;
 
 /**
  * Default unpublished statuses that replace the old draft/archive/trash system
@@ -26,62 +26,62 @@ export const defaultUnpublishedStatuses: Record<string, UnpublishedStatusConfig>
   trash: { directory: 'trash', name: 'Trash' },
 };
 
-export const documentCollectionSettingsZ = z.object({
-  type: z.literal('document'),
-  key: z.string(),
-  name: z.string().default('New Document Collection'),
-  directory: z.string().default('content'),
-  recursive: z.boolean().default(true),
-  format: storageFormatZ.optional(),
-  documentTitleKey: z.string().default('title').optional(),
-  documentDescriptionKey: z.string().default('description').optional(),
-  documentStatusKey: z.string().default('status').optional(),
+export const DocumentCollectionSettingsSchema = S.Struct({
+  type: S.Literal('document'),
+  key: S.String,
+  name: S.optional(S.String),
+  directory: S.optional(S.String),
+  recursive: S.optional(S.Boolean),
+  format: S.optional(StorageFormatSchema),
+  documentTitleKey: S.optional(S.String),
+  documentDescriptionKey: S.optional(S.String),
+  documentStatusKey: S.optional(S.String),
   /**
    * Map of unpublished status values to their configuration
    * The key is the status value stored in the 'unpublished' document type's 'status' field
    * Documents with these statuses are stored in .contentbase/[collection]/[status.directory]
    */
-  unpublishedStatuses: z.record(z.string(), unpublishedStatusConfigZ).default(defaultUnpublishedStatuses).optional(),
+  unpublishedStatuses: S.optional(S.Record(S.String, UnpublishedStatusConfigSchema)),
   /**
    * Directory for storing revisions (version history)
    */
-  revisionDirectory: z.string().default('.contentbase/revisions').optional(),
+  revisionDirectory: S.optional(S.String),
   // Legacy fields - kept for backwards compatibility but deprecated
   /** @deprecated Use unpublishedStatuses instead */
-  draftDirectory: z.string().default('.contentbase/drafts').optional(),
+  draftDirectory: S.optional(S.String),
   /** @deprecated Use unpublishedStatuses instead */
-  archiveDirectory: z.string().default('.contentbase/archive').optional(),
+  archiveDirectory: S.optional(S.String),
   /** @deprecated Use unpublishedStatuses instead */
-  trashDirectory: z.string().default('.contentbase/trash').optional(),
-})
+  trashDirectory: S.optional(S.String),
+});
 
-export type DocumentCollectionSettings = z.infer<typeof documentCollectionSettingsZ>
+export type DocumentCollectionSettings = S.Schema.Type<typeof DocumentCollectionSettingsSchema>;
 
-export const mediaCollectionSettingsZ = z.object({
-  type: z.literal('media'),
-  key: z.string(),
-  name: z.string().default('New Media Collection'),
-  directory: z.string().default('media'),
-  recursive: z.boolean().default(true),
-  accept: z.array(z.string()).default(['image/*']),
+export const MediaCollectionSettingsSchema = S.Struct({
+  type: S.Literal('media'),
+  key: S.String,
+  name: S.optional(S.String),
+  directory: S.optional(S.String),
+  recursive: S.optional(S.Boolean),
+  accept: S.optional(S.Array(S.String)),
   /*
     Example: 'https://example.com/_uploads/{filename}'
   */
-  url: z.string().optional(),
-  pathFormat: z.string().default('{filename}').optional()
-})
+  url: S.optional(S.String),
+  pathFormat: S.optional(S.String),
+});
 
-export type MediaCollectionSettings = z.infer<typeof mediaCollectionSettingsZ>
+export type MediaCollectionSettings = S.Schema.Type<typeof MediaCollectionSettingsSchema>;
 
-export const collectionSettingsZ = z.discriminatedUnion('type', [
-  documentCollectionSettingsZ,
-  mediaCollectionSettingsZ
-])
+export const CollectionSettingsSchema = S.Union([
+  DocumentCollectionSettingsSchema,
+  MediaCollectionSettingsSchema,
+]);
 
-export type CollectionSettings = z.infer<typeof collectionSettingsZ>
+export type CollectionSettings = S.Schema.Type<typeof CollectionSettingsSchema>;
 
-export const contentBaseSettingsZ = z.object({
-  collections: z.record(z.string(), collectionSettingsZ).default({})
-})
+export const ContentBaseSettingsSchema = S.Struct({
+  collections: S.optional(S.Record(S.String, CollectionSettingsSchema)),
+});
 
-export type ContentBaseSettings = z.infer<typeof contentBaseSettingsZ>
+export type ContentBaseSettings = S.Schema.Type<typeof ContentBaseSettingsSchema>;

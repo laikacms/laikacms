@@ -1,4 +1,4 @@
-import z, { ZodError } from "zod";
+import * as S from 'effect/Schema';
 import * as errors from "@laikacms/core"
 import {
   ErrorCodeToStatusMap,
@@ -8,8 +8,18 @@ import {
   ValidationError,
 } from "@laikacms/core";
 import { JsonApiError } from "./types.js";
-import { jsonApiErrorZ } from "./schemas.js";
+import { JsonApiErrorSchema, decodeJsonApiErrorExit } from "./schemas.js";
 import * as Result from 'effect/Result';
+import * as Exit from 'effect/Exit';
+
+// Type for Effect Schema parse errors
+interface SchemaParseError {
+  readonly _tag: 'ParseError';
+  readonly issues: ReadonlyArray<{
+    readonly path: ReadonlyArray<string | number>;
+    readonly message: string;
+  }>;
+}
 
 export const errorToJsonApiMapper = (
   err: unknown
@@ -18,9 +28,17 @@ export const errorToJsonApiMapper = (
 
   const errorObj = typeof err === 'string' ? new errors.UnknownError() /* explicitly do not show a message since we dont know if the message is internal or not */ : err
 
-  if (err instanceof ZodError) {
+  // Handle Effect Schema parse errors
+  if (typeof err === 'object' && err !== null && '_tag' in err && (err as SchemaParseError)._tag === 'ParseError') {
+    const parseError = err as SchemaParseError;
     return {
-      errors: err.issues.map(zodIssueFormatter),
+      errors: parseError.issues.map(issue => ({
+        status: '400',
+        title: 'Validation Error',
+        code: 'validation_error',
+        detail: issue.message,
+        source: issue.path.length > 0 ? { pointer: '/' + issue.path.join('/') } : undefined,
+      })),
       status: ValidationError.STATUS,
     };
   }
@@ -74,23 +92,22 @@ export const errorToJsonApiMapper = (
 };
 
 /**
- * Convert a Zod error to a JSON:API error response
+ * Convert a schema parse error issue to a JSON:API error response
  *
- * @param error - The Zod error to convert
- * @param status - HTTP status code (default: '400')
+ * @param issue - The parse error issue to convert
  * @returns JSON:API error object
  */
-export function zodIssueFormatter(
-  issue: z.core.$ZodIssue,
+export function schemaIssueFormatter(
+  issue: { path: ReadonlyArray<string | number>; message: string },
 ): JsonApiError['errors'][number] {
   const pointer = issue.path.length > 0
-    ? '/' + issue.path.map(p => String(p)).join('/')
+    ? '/' + issue.path.map((p: string | number) => String(p)).join('/')
     : undefined;
 
   return {
     status: '400',
     title: 'Validation Error',
-    code: 'validation_' + issue.code,
+    code: 'validation_error',
     detail: issue.message,
     source: pointer ? { pointer } : undefined,
   };
@@ -108,9 +125,10 @@ export const errorFromResponse = async (response: Response) => {
   if (isJson) {
     try {
       const json = await response.json();
-      const parseResult = jsonApiErrorZ.safeParse(json);
-      if (parseResult.success) error = parseResult.data.errors[0];
-      else {
+      const parseResult = decodeJsonApiErrorExit(json);
+      if (Exit.isSuccess(parseResult)) {
+        error = parseResult.value.errors[0];
+      } else {
         isJson = false;
         if (typeof json.error === 'string') detail = json.error;
         if (typeof json.message === 'string') detail = json.message;

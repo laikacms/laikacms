@@ -20,7 +20,6 @@
   "author": "Sem Postma <sem@esstudio.nl>",
   "license": "MIT",
   "dependencies": {
-    "zod": "catalog:schema",
     "@laikacms/core": "workspace:*",
     "@laikacms/i18n": "workspace:*",
     "effect": "catalog:default"

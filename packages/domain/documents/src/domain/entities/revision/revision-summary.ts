@@ -1,8 +1,10 @@
-import { atomBaseZ, storageObjectSummaryZ } from "@laikacms/storage";
-import { z } from "zod";
+import { AtomBaseSchema } from "@laikacms/storage";
+import * as S from 'effect/Schema';
 
-export const revisionSummaryZ = storageObjectSummaryZ.extend({
-  type: z.literal('revision-summary'),
-  revision: z.string(),
-})
-export type RevisionSummary = z.infer<typeof revisionSummaryZ>
+export const RevisionSummarySchema = S.Struct({
+  ...AtomBaseSchema.fields,
+  type: S.Literal('revision-summary'),
+  revision: S.String,
+});
+
+export type RevisionSummary = S.Schema.Type<typeof RevisionSummarySchema>;

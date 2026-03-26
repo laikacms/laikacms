@@ -1,9 +1,10 @@
-import { z } from "zod";
-import { storageObjectZ } from "./storage-object.js";
+import * as S from 'effect/Schema';
+import { StorageObjectContentSchema } from './storage-object.js';
 
-export const storageObjectUpdateZ = storageObjectZ.omit({
-  createdAt: true,
-  updatedAt: true,
-}).partial().required({ key: true });
+export const StorageObjectUpdateSchema = S.Struct({
+  key: S.String.pipe(S.check(S.isMaxLength(1023))),
+  type: S.optional(S.Literal('object')),
+  content: S.optional(StorageObjectContentSchema),
+});
 
-export type StorageObjectUpdate = z.infer<typeof storageObjectUpdateZ>;
+export type StorageObjectUpdate = S.Schema.Type<typeof StorageObjectUpdateSchema>;

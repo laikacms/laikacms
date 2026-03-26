@@ -31,8 +31,7 @@
     "@laikacms/json-api": "workspace:*",
     "@laikacms/storage": "workspace:*",
     "@laikacms/documents": "workspace:*",
-    "effect": "catalog:default",
-    "zod": "^4.1.12"
+    "effect": "catalog:default"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

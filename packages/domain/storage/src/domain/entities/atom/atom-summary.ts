@@ -1,10 +1,10 @@
-import * as S from 'effect/Schema'
-import { storageObjectSummaryZ } from '../object/storage-object-summary.js';
-import { folderSummaryZ } from '../folder/folder-summary.js';
+import * as S from 'effect/Schema';
+import { StorageObjectSummarySchema } from '../object/storage-object-summary.js';
+import { FolderSummarySchema } from '../folder/folder-summary.js';
 
 export const AtomSummarySchema = S.Union([
-  storageObjectSummaryZ,
-  folderSummaryZ,
-])
+  StorageObjectSummarySchema,
+  FolderSummarySchema,
+]);
 
-export type AtomSummary = S.Schema.Type<typeof AtomSummarySchema>
+export type AtomSummary = S.Schema.Type<typeof AtomSummarySchema>;

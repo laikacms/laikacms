@@ -1,4 +1,3 @@
-import { z } from "zod";
 import * as S from 'effect/Schema';
 
 const extNames = [
@@ -103,11 +102,14 @@ const extNames = [
   ".exe",
   ".bin",
   ".iso",
-];
+] as const;
 
-const extNamesZ = z.enum(extNames);
+export type ExtName = typeof extNames[number];
 
-export type ExtName = z.infer<typeof extNamesZ>;
+const extNameSet = new Set<string>(extNames);
 
-export const ExtNameSchema = S.Literals(extNames);
+const isExtName = S.makeFilter<string>((s) => 
+  extNameSet.has(s) ? undefined : `Expected one of: ${extNames.join(', ')}`
+);
 
+export const ExtNameSchema = S.String.pipe(S.check(isExtName));

@@ -1,36 +1,66 @@
-import { z } from 'zod';
-import { jsonApiLinksZ } from './schemas.js';
+import * as S from 'effect/Schema';
+import { JsonApiLinksSchema } from './schemas.js';
 
-// Pagination types (should be imported from storage package in real usage)
-export const paginationPageBasedZ = z.object({
-  page: z.number().min(1).default(1),
-  perPage: z.number().min(1).optional(),
+// Filters for number validation
+const isAtLeast1 = S.makeFilter<number>((n) => n >= 1 ? undefined : 'Must be at least 1');
+const isAtLeast0 = S.makeFilter<number>((n) => n >= 0 ? undefined : 'Must be at least 0');
+
+// Pagination types
+export const PaginationPageBasedSchema = S.Struct({
+  page: S.Number.pipe(S.check(isAtLeast1)),
+  perPage: S.optional(S.Number.pipe(S.check(isAtLeast1))),
 });
 
-export const paginationBeforeZ = z.object({
-  before: z.string().optional(),
-  perPage: z.number().min(1).optional(),
+export const PaginationBeforeSchema = S.Struct({
+  before: S.optional(S.String),
+  perPage: S.optional(S.Number.pipe(S.check(isAtLeast1))),
 });
 
-export const paginationAfterZ = z.object({
-  after: z.string().optional(),
-  perPage: z.number().min(1).optional(),
+export const PaginationAfterSchema = S.Struct({
+  after: S.optional(S.String),
+  perPage: S.optional(S.Number.pipe(S.check(isAtLeast1))),
 });
 
-export const paginationOffsetZ = z.object({
-  offset: z.number().min(0).default(0),
-  limit: z.number().min(1).optional(),
+export const PaginationOffsetSchema = S.Struct({
+  offset: S.Number.pipe(S.check(isAtLeast0)),
+  limit: S.optional(S.Number.pipe(S.check(isAtLeast1))),
 });
 
-export const paginationZ = z.union([
-  paginationPageBasedZ,
-  paginationBeforeZ,
-  paginationAfterZ,
-  paginationOffsetZ,
+export const PaginationSchema = S.Union([
+  PaginationPageBasedSchema,
+  PaginationBeforeSchema,
+  PaginationAfterSchema,
+  PaginationOffsetSchema,
 ]);
 
-export type Pagination = z.infer<typeof paginationZ>;
-export type JsonApiLinks = z.infer<typeof jsonApiLinksZ>;
+export type Pagination = S.Schema.Type<typeof PaginationSchema>;
+export type JsonApiLinks = S.Schema.Type<typeof JsonApiLinksSchema>;
+
+// Mutable version for building links
+interface MutableJsonApiLinks {
+  self?: string;
+  first?: string;
+  last?: string;
+  prev?: string;
+  next?: string;
+}
+
+// Type guards for pagination types
+function isPageBased(p: Pagination): p is { page: number; perPage?: number } {
+  return 'page' in p && typeof p.page === 'number';
+}
+
+function isOffsetBased(p: Pagination): p is { offset: number; limit?: number } {
+  return 'offset' in p && typeof p.offset === 'number';
+}
+
+function isAfterBased(p: Pagination): p is { after?: string; perPage?: number } {
+  return 'after' in p;
+}
+
+function isBeforeBased(p: Pagination): p is { before?: string; perPage?: number } {
+  return 'before' in p && !('after' in p);
+}
 
 /**
  * Builds pagination links for JSON:API responses
@@ -47,11 +77,11 @@ export function buildPaginationLinks(
   firstCursor?: string,
   lastCursor?: string
 ): JsonApiLinks {
-  const links: JsonApiLinks = {
+  const links: MutableJsonApiLinks = {
     self: baseUrl,
   };
 
-  if ('after' in pagination) {
+  if (isAfterBased(pagination)) {
     // Cursor-based pagination (forward)
     const perPage = pagination.perPage;
     
@@ -70,7 +100,7 @@ export function buildPaginationLinks(
         links.next += `&page[size]=${perPage}`;
       }
     }
-  } else if ('before' in pagination) {
+  } else if (isBeforeBased(pagination)) {
     // Cursor-based pagination (backward)
     const perPage = pagination.perPage;
     
@@ -89,7 +119,7 @@ export function buildPaginationLinks(
         links.next += `&page[size]=${perPage}`;
       }
     }
-  } else if ('page' in pagination) {
+  } else if (isPageBased(pagination)) {
     // Page-based pagination
     const page = pagination.page;
     const perPage = pagination.perPage || 10;
@@ -103,7 +133,7 @@ export function buildPaginationLinks(
     if (hasMore) {
       links.next = `${baseUrl}?page[number]=${page + 1}&page[size]=${perPage}`;
     }
-  } else if ('offset' in pagination) {
+  } else if (isOffsetBased(pagination)) {
     // Offset-based pagination
     const offset = pagination.offset;
     const limit = pagination.limit || 10;
@@ -123,12 +153,19 @@ export function buildPaginationLinks(
   return links;
 }
 
+// Type for parsed pagination that allows undefined perPage
+type ParsedPagination = 
+  | { after: string | undefined; perPage: number | undefined }
+  | { before: string | undefined; perPage: number | undefined }
+  | { page: number; perPage: number | undefined }
+  | { offset: number; limit: number | undefined };
+
 /**
  * Parses pagination parameters from query string
  * @param query - Record of query parameters
  * @returns Pagination object (cursor, page-based, or offset-based)
  */
-export function parsePaginationQuery(query: Record<string, string | string[] | undefined>): Pagination {
+export function parsePaginationQuery(query: Record<string, string | string[] | undefined>): ParsedPagination {
   const pageAfter = query['page[after]'];
   const pageBefore = query['page[before]'];
   const pageNumber = query['page[number]'];

@@ -1,5 +1,3 @@
-import z from "zod";
-
 export const pathToSegments = (path: string) => {
   const segments = path
     .split('/')

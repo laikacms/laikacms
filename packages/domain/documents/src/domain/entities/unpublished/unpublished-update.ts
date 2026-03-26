@@ -1,17 +1,14 @@
-import { z } from "zod";
-import { unpublishedZ } from "./unpublished.js";
+import * as S from 'effect/Schema';
+import { StorageObjectContentSchema } from '@laikacms/storage';
 
 /**
  * Schema for updating an unpublished document
- * Only key and content are required, status can be changed to transition between states
+ * Only key is required, content and status can be changed to transition between states
  */
-export const unpublishedUpdateZ = unpublishedZ.pick({
-  key: true,
-  content: true,
-  status: true,
-}).partial({
-  content: true,
-  status: true,
+export const UnpublishedUpdateSchema = S.Struct({
+  key: S.String.pipe(S.check(S.isMaxLength(1023))),
+  content: S.optional(StorageObjectContentSchema),
+  status: S.optional(S.String),
 });
 
-export type UnpublishedUpdate = z.infer<typeof unpublishedUpdateZ>;
+export type UnpublishedUpdate = S.Schema.Type<typeof UnpublishedUpdateSchema>;

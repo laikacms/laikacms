@@ -1,118 +1,281 @@
 import {
-  storageObjectUpdateZ,
-  storageObjectZ,
-  folderCreateZ,
-  folderZ,
-  storageObjectSummaryZ,
-  folderSummaryZ,
-  storageObjectCreateZ,
+  StorageObjectUpdateSchema,
+  StorageObjectSchema,
+  FolderCreateSchema,
+  FolderSchema,
+  StorageObjectSummarySchema,
+  FolderSummarySchema,
+  StorageObjectCreateSchema,
+  type StorageObject,
+  type StorageObjectCreate,
+  type StorageObjectUpdate,
+  type StorageObjectSummary,
+  type Folder,
+  type FolderCreate,
+  type FolderSummary,
 } from '@laikacms/storage';
 import {
-  documentZ,
-  documentCreateZ,
-  documentUpdateZ,
-  documentSummaryZ,
-  revisionZ,
-  revisionCreateZ,
-  revisionSummaryZ,
-  unpublishedZ,
-  unpublishedCreateZ,
-  unpublishedUpdateZ,
-  unpublishedSummaryZ,
+  DocumentSchema,
+  DocumentCreateSchema,
+  DocumentUpdateSchema,
+  DocumentSummarySchema,
+  RevisionSchema,
+  RevisionCreateSchema,
+  RevisionSummarySchema,
+  UnpublishedSchema,
+  UnpublishedCreateSchema,
+  UnpublishedUpdateSchema,
+  UnpublishedSummarySchema,
+  type Document,
+  type DocumentCreate,
+  type DocumentUpdate,
+  type DocumentSummary,
+  type Revision,
+  type RevisionCreate,
+  type RevisionSummary,
+  type Unpublished,
+  type UnpublishedCreate,
+  type UnpublishedUpdate,
+  type UnpublishedSummary,
 } from '@laikacms/documents'
 import {
   toJsonApi,
   fromJsonApi,
+  type JsonApiError,
+  type JsonApiCollectionResponse,
 } from '@laikacms/json-api';
-import z from 'zod';
 
 // Re-export common JSON:API utilities
 export {
   toJsonApi,
   fromJsonApi,
-  jsonApiDeleteZ,
-  jsonApiDeleteMultipleZ,
-  jsonApiErrorZ,
   type JsonApiError,
   type JsonApiCollectionResponse,
 } from '@laikacms/json-api';
 
-// ===== STORAGE OBJECTS =====
-// From schemas
-export const storageObjectUpdateFromJsonApiZ = fromJsonApi(storageObjectUpdateZ, 'object', 'key');
-export const storageObjectFromJsonApiZ = fromJsonApi(storageObjectZ, 'object', 'key');
-export const storageObjectSummaryFromJsonApiZ = fromJsonApi(storageObjectSummaryZ, 'object-summary', 'key');
+// ===== JSON:API RESOURCE TYPES =====
 
-// To schemas
-export const storageObjectCreateToJsonApiZ = toJsonApi(storageObjectCreateZ, 'object', 'key');
-export const storageObjectUpdateToJsonApiZ = toJsonApi(storageObjectUpdateZ, 'object', 'key');
-export const storageObjectToJsonApiZ = toJsonApi(storageObjectZ, 'object', 'key');
-export const storageObjectSummaryToJsonApiZ = toJsonApi(storageObjectSummaryZ, 'object-summary', 'key');
+// Storage Object JSON:API types
+export interface StorageObjectJsonApi {
+  type: 'object';
+  id: string;
+  attributes: Omit<StorageObject, 'key'>;
+}
 
-// ===== DOCUMENTS (PUBLISHED) =====
-// From schemas
-export const documentFromJsonApiZ = fromJsonApi(documentZ, 'published', 'key');
-export const documentCreateFromJsonApiZ = fromJsonApi(documentCreateZ, 'published', 'key');
-export const documentUpdateFromJsonApiZ = fromJsonApi(documentUpdateZ, 'published', 'key');
-export const documentSummaryFromJsonApiZ = fromJsonApi(documentSummaryZ, 'published-summary', 'key');
+export interface StorageObjectCreateJsonApi {
+  type: 'object';
+  id: string;
+  attributes: Omit<StorageObjectCreate, 'key'>;
+}
 
-// To schemas
-export const documentToJsonApiZ = toJsonApi(documentZ, 'published', 'key');
-export const documentCreateToJsonApiZ = toJsonApi(documentCreateZ, 'published', 'key');
-export const documentUpdateToJsonApiZ = toJsonApi(documentUpdateZ, 'published', 'key');
-export const documentSummaryToJsonApiZ = toJsonApi(documentSummaryZ, 'published-summary', 'key');
+export interface StorageObjectUpdateJsonApi {
+  type: 'object';
+  id: string;
+  attributes: Omit<StorageObjectUpdate, 'key'>;
+}
 
-// ===== UNPUBLISHED =====
-// From schemas
-export const unpublishedFromJsonApiZ = fromJsonApi(unpublishedZ, 'unpublished', 'key');
-export const unpublishedCreateFromJsonApiZ = fromJsonApi(unpublishedCreateZ, 'unpublished', 'key');
-export const unpublishedUpdateFromJsonApiZ = fromJsonApi(unpublishedUpdateZ, 'unpublished', 'key');
-export const unpublishedSummaryFromJsonApiZ = fromJsonApi(unpublishedSummaryZ, 'unpublished-summary', 'key');
+export interface StorageObjectSummaryJsonApi {
+  type: 'object-summary';
+  id: string;
+  attributes: Omit<StorageObjectSummary, 'key'>;
+}
 
-// To schemas
-export const unpublishedToJsonApiZ = toJsonApi(unpublishedZ, 'unpublished', 'key');
-export const unpublishedCreateToJsonApiZ = toJsonApi(unpublishedCreateZ, 'unpublished', 'key');
-export const unpublishedUpdateToJsonApiZ = toJsonApi(unpublishedUpdateZ, 'unpublished', 'key');
-export const unpublishedSummaryToJsonApiZ = toJsonApi(unpublishedSummaryZ, 'unpublished-summary', 'key');
+// Document JSON:API types
+export interface DocumentJsonApi {
+  type: 'published';
+  id: string;
+  attributes: Omit<Document, 'key'>;
+}
 
-// ===== FOLDERS =====
-// From schemas
-export const folderCreateFromJsonApiZ = fromJsonApi(folderCreateZ, 'folder', 'key');
-export const folderFromJsonApiZ = fromJsonApi(folderZ, 'folder', 'key');
-export const folderSummaryFromJsonApiZ = fromJsonApi(folderSummaryZ, 'folder-summary', 'key');
+export interface DocumentCreateJsonApi {
+  type: 'published';
+  id: string;
+  attributes: Omit<DocumentCreate, 'key'>;
+}
 
-// To schemas
-export const folderCreateToJsonApiZ = toJsonApi(folderCreateZ, 'folder', 'key');
-export const folderToJsonApiZ = toJsonApi(folderZ, 'folder', 'key');
-export const folderSummaryToJsonApiZ = toJsonApi(folderSummaryZ, 'folder-summary', 'key');
+export interface DocumentUpdateJsonApi {
+  type: 'published';
+  id: string;
+  attributes: Omit<DocumentUpdate, 'key'>;
+}
 
-// ===== REVISIONS =====
-// From schemas
-export const revisionFromJsonApiZ = fromJsonApi(revisionZ, 'revision', 'key');
-export const revisionCreateFromJsonApiZ = fromJsonApi(revisionCreateZ, 'revision', 'key');
-export const revisionSummaryFromJsonApiZ = fromJsonApi(revisionSummaryZ, 'revision-summary', 'key');
+export interface DocumentSummaryJsonApi {
+  type: 'published-summary';
+  id: string;
+  attributes: Omit<DocumentSummary, 'key'>;
+}
 
-// To schemas
-export const revisionToJsonApiZ = toJsonApi(revisionZ, 'revision', 'key');
-export const revisionCreateToJsonApiZ = toJsonApi(revisionCreateZ, 'revision', 'key');
-export const revisionSummaryToJsonApiZ = toJsonApi(revisionSummaryZ, 'revision-summary', 'key');
+// Unpublished JSON:API types
+export interface UnpublishedJsonApi {
+  type: 'unpublished';
+  id: string;
+  attributes: Omit<Unpublished, 'key'>;
+}
 
-// ===== TYPE EXPORTS =====
-export type StorageObjectUpdateJsonApi = z.infer<typeof storageObjectUpdateToJsonApiZ>;
-export type StorageObjectJsonApi = z.infer<typeof storageObjectToJsonApiZ>;
+export interface UnpublishedCreateJsonApi {
+  type: 'unpublished';
+  id: string;
+  attributes: Omit<UnpublishedCreate, 'key'>;
+}
 
-export type DocumentJsonApi = z.infer<typeof documentToJsonApiZ>;
-export type DocumentCreateJsonApi = z.infer<typeof documentCreateToJsonApiZ>;
-export type DocumentSummaryJsonApi = z.infer<typeof documentSummaryToJsonApiZ>;
+export interface UnpublishedUpdateJsonApi {
+  type: 'unpublished';
+  id: string;
+  attributes: Omit<UnpublishedUpdate, 'key'>;
+}
 
-export type UnpublishedJsonApi = z.infer<typeof unpublishedToJsonApiZ>;
-export type UnpublishedCreateJsonApi = z.infer<typeof unpublishedCreateToJsonApiZ>;
-export type UnpublishedUpdateJsonApi = z.infer<typeof unpublishedUpdateToJsonApiZ>;
-export type UnpublishedSummaryJsonApi = z.infer<typeof unpublishedSummaryToJsonApiZ>;
+export interface UnpublishedSummaryJsonApi {
+  type: 'unpublished-summary';
+  id: string;
+  attributes: Omit<UnpublishedSummary, 'key'>;
+}
 
-export type FolderCreateJsonApi = z.infer<typeof folderCreateToJsonApiZ>;
-export type FolderJsonApi = z.infer<typeof folderToJsonApiZ>;
-export type FolderSummaryJsonApi = z.infer<typeof folderSummaryToJsonApiZ>;
-export type RevisionJsonApi = z.infer<typeof revisionToJsonApiZ>;
-export type RevisionCreateJsonApi = z.infer<typeof revisionCreateToJsonApiZ>;
-export type RevisionSummaryJsonApi = z.infer<typeof revisionSummaryToJsonApiZ>;
+// Folder JSON:API types
+export interface FolderJsonApi {
+  type: 'folder';
+  id: string;
+  attributes: Omit<Folder, 'key'>;
+}
+
+export interface FolderCreateJsonApi {
+  type: 'folder';
+  id: string;
+  attributes: Omit<FolderCreate, 'key'>;
+}
+
+export interface FolderSummaryJsonApi {
+  type: 'folder-summary';
+  id: string;
+  attributes: Omit<FolderSummary, 'key'>;
+}
+
+// Revision JSON:API types
+export interface RevisionJsonApi {
+  type: 'revision';
+  id: string;
+  attributes: Omit<Revision, 'key'>;
+}
+
+export interface RevisionCreateJsonApi {
+  type: 'revision';
+  id: string;
+  attributes: Omit<RevisionCreate, 'key'>;
+}
+
+export interface RevisionSummaryJsonApi {
+  type: 'revision-summary';
+  id: string;
+  attributes: Omit<RevisionSummary, 'key'>;
+}
+
+// ===== TRANSFORMER FUNCTIONS =====
+
+// Storage Object transformers
+export const storageObjectToJsonApi = (obj: StorageObject): StorageObjectJsonApi =>
+  toJsonApi(obj, 'object', 'key');
+
+export const storageObjectFromJsonApi = (jsonApi: StorageObjectJsonApi): StorageObject =>
+  fromJsonApi(jsonApi, 'object', 'key');
+
+export const storageObjectCreateToJsonApi = (obj: StorageObjectCreate): StorageObjectCreateJsonApi =>
+  toJsonApi(obj, 'object', 'key');
+
+export const storageObjectUpdateToJsonApi = (obj: StorageObjectUpdate): StorageObjectUpdateJsonApi =>
+  toJsonApi(obj, 'object', 'key');
+
+export const storageObjectUpdateFromJsonApi = (jsonApi: StorageObjectUpdateJsonApi): StorageObjectUpdate =>
+  fromJsonApi(jsonApi, 'object', 'key');
+
+export const storageObjectSummaryToJsonApi = (obj: StorageObjectSummary): StorageObjectSummaryJsonApi =>
+  toJsonApi(obj, 'object-summary', 'key');
+
+export const storageObjectSummaryFromJsonApi = (jsonApi: StorageObjectSummaryJsonApi): StorageObjectSummary =>
+  fromJsonApi(jsonApi, 'object-summary', 'key');
+
+// Document transformers
+export const documentToJsonApi = (doc: Document): DocumentJsonApi =>
+  toJsonApi(doc, 'published', 'key');
+
+export const documentFromJsonApi = (jsonApi: DocumentJsonApi): Document =>
+  fromJsonApi(jsonApi, 'published', 'key');
+
+export const documentCreateToJsonApi = (doc: DocumentCreate): DocumentCreateJsonApi =>
+  toJsonApi(doc, 'published', 'key');
+
+export const documentCreateFromJsonApi = (jsonApi: DocumentCreateJsonApi): DocumentCreate =>
+  fromJsonApi(jsonApi, 'published', 'key');
+
+export const documentUpdateToJsonApi = (doc: DocumentUpdate): DocumentUpdateJsonApi =>
+  toJsonApi(doc, 'published', 'key');
+
+export const documentUpdateFromJsonApi = (jsonApi: DocumentUpdateJsonApi): DocumentUpdate =>
+  fromJsonApi(jsonApi, 'published', 'key');
+
+export const documentSummaryToJsonApi = (doc: DocumentSummary): DocumentSummaryJsonApi =>
+  toJsonApi(doc, 'published-summary', 'key');
+
+export const documentSummaryFromJsonApi = (jsonApi: DocumentSummaryJsonApi): DocumentSummary =>
+  fromJsonApi(jsonApi, 'published-summary', 'key');
+
+// Unpublished transformers
+export const unpublishedToJsonApi = (doc: Unpublished): UnpublishedJsonApi =>
+  toJsonApi(doc, 'unpublished', 'key');
+
+export const unpublishedFromJsonApi = (jsonApi: UnpublishedJsonApi): Unpublished =>
+  fromJsonApi(jsonApi, 'unpublished', 'key');
+
+export const unpublishedCreateToJsonApi = (doc: UnpublishedCreate): UnpublishedCreateJsonApi =>
+  toJsonApi(doc, 'unpublished', 'key');
+
+export const unpublishedCreateFromJsonApi = (jsonApi: UnpublishedCreateJsonApi): UnpublishedCreate =>
+  fromJsonApi(jsonApi, 'unpublished', 'key');
+
+export const unpublishedUpdateToJsonApi = (doc: UnpublishedUpdate): UnpublishedUpdateJsonApi =>
+  toJsonApi(doc, 'unpublished', 'key');
+
+export const unpublishedUpdateFromJsonApi = (jsonApi: UnpublishedUpdateJsonApi): UnpublishedUpdate =>
+  fromJsonApi(jsonApi, 'unpublished', 'key');
+
+export const unpublishedSummaryToJsonApi = (doc: UnpublishedSummary): UnpublishedSummaryJsonApi =>
+  toJsonApi(doc, 'unpublished-summary', 'key');
+
+export const unpublishedSummaryFromJsonApi = (jsonApi: UnpublishedSummaryJsonApi): UnpublishedSummary =>
+  fromJsonApi(jsonApi, 'unpublished-summary', 'key');
+
+// Folder transformers
+export const folderToJsonApi = (folder: Folder): FolderJsonApi =>
+  toJsonApi(folder, 'folder', 'key');
+
+export const folderFromJsonApi = (jsonApi: FolderJsonApi): Folder =>
+  fromJsonApi(jsonApi, 'folder', 'key');
+
+export const folderCreateToJsonApi = (folder: FolderCreate): FolderCreateJsonApi =>
+  toJsonApi(folder, 'folder', 'key');
+
+export const folderCreateFromJsonApi = (jsonApi: FolderCreateJsonApi): FolderCreate =>
+  fromJsonApi(jsonApi, 'folder', 'key');
+
+export const folderSummaryToJsonApi = (folder: FolderSummary): FolderSummaryJsonApi =>
+  toJsonApi(folder, 'folder-summary', 'key');
+
+export const folderSummaryFromJsonApi = (jsonApi: FolderSummaryJsonApi): FolderSummary =>
+  fromJsonApi(jsonApi, 'folder-summary', 'key');
+
+// Revision transformers
+export const revisionToJsonApi = (rev: Revision): RevisionJsonApi =>
+  toJsonApi(rev, 'revision', 'key');
+
+export const revisionFromJsonApi = (jsonApi: RevisionJsonApi): Revision =>
+  fromJsonApi(jsonApi, 'revision', 'key');
+
+export const revisionCreateToJsonApi = (rev: RevisionCreate): RevisionCreateJsonApi =>
+  toJsonApi(rev, 'revision', 'key');
+
+export const revisionCreateFromJsonApi = (jsonApi: RevisionCreateJsonApi): RevisionCreate =>
+  fromJsonApi(jsonApi, 'revision', 'key');
+
+export const revisionSummaryToJsonApi = (rev: RevisionSummary): RevisionSummaryJsonApi =>
+  toJsonApi(rev, 'revision-summary', 'key');
+
+export const revisionSummaryFromJsonApi = (jsonApi: RevisionSummaryJsonApi): RevisionSummary =>
+  fromJsonApi(jsonApi, 'revision-summary', 'key');

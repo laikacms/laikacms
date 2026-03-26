@@ -1,8 +1,8 @@
-import { StorageSerializer, StorageProvider, StorageObjectContent, storageProviderZ, StorageFormat, storageFormatZ } from '@laikacms/storage';
+import { StorageSerializer, StorageObjectContent, StorageFormat } from '@laikacms/storage';
 import { JSONSchema7 } from 'json-schema';
 
-export const markdownSerializer: StorageSerializer<StorageFormat> = {
-  format: storageFormatZ.parse('raw'),
+export const rawSerializer: StorageSerializer<StorageFormat> = {
+  format: 'raw' as StorageFormat,
   async serializeDocumentFileContents(
     content: StorageObjectContent,
     _schema: JSONSchema7
@@ -17,4 +17,4 @@ export const markdownSerializer: StorageSerializer<StorageFormat> = {
   }
 };
 
-export default markdownSerializer;
+export default rawSerializer;

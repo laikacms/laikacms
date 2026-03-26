@@ -1,12 +1,14 @@
-import { z } from "zod";
-import { unpublishedZ } from "./unpublished.js";
+import * as S from 'effect/Schema';
+import { StorageObjectContentSchema } from '@laikacms/storage';
 
 /**
  * Schema for creating a new unpublished document
  */
-export const unpublishedCreateZ = unpublishedZ.omit({
-  createdAt: true,
-  updatedAt: true,
+export const UnpublishedCreateSchema = S.Struct({
+  key: S.String.pipe(S.check(S.isMaxLength(1023))),
+  type: S.Literal('unpublished'),
+  status: S.String,
+  content: StorageObjectContentSchema,
 });
 
-export type UnpublishedCreate = z.infer<typeof unpublishedCreateZ>;
+export type UnpublishedCreate = S.Schema.Type<typeof UnpublishedCreateSchema>;

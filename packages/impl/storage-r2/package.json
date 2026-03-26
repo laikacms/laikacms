@@ -29,8 +29,7 @@
     "@laikacms/storage": "workspace:*",
     "@types/json-schema": "^7.0.15",
     "effect": "catalog:default",
-    "minimatch": "^10.0.3",
-    "zod": "catalog:schema"
+    "minimatch": "^10.0.3"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250109.0",

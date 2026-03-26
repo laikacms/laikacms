@@ -1,8 +1,5 @@
-import { storageProviderZ } from "@laikacms/storage";
-import z from "zod";
+import { StorageProvider } from "@laikacms/storage";
 
-export const filesystemStorageProviderZ = storageProviderZ.refine((val) => val === 'filesystem');
+export type FileSystemStorageProvider = StorageProvider & 'filesystem';
 
-export type FileSystemStorageProvider = z.infer<typeof filesystemStorageProviderZ>;
-
-export const fileSystemStorageProvider: FileSystemStorageProvider = filesystemStorageProviderZ.parse('filesystem');
+export const fileSystemStorageProvider: FileSystemStorageProvider = 'filesystem' as FileSystemStorageProvider;

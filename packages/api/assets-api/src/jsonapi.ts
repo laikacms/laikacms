@@ -1,15 +1,12 @@
-import * as S from 'effect/Schema';
 import {
   type Asset,
-  assetZ,
-  assetVariationsZ,
-  assetUrlZ,
-  assetMetadataZ,
-  assetCreateZ,
-  assetUpdateZ,
+  type AssetVariations,
+  type AssetUrl,
+  type AssetMetadata,
+  type AssetCreate,
+  type AssetUpdate,
 } from '@laikacms/assets';
-import { folderCreateZ, folderZ } from '@laikacms/storage';
-import { fromJsonApi, toJsonApi } from '@laikacms/json-api';
+import { type Folder, type FolderCreate } from '@laikacms/storage';
 
 // ============================================
 // JSON:API Resource Types
@@ -38,53 +35,130 @@ export interface JsonApiCollectionResponse {
 }
 
 // ============================================
-// Asset to JSON:API Transformers
+// JSON:API Type Definitions
 // ============================================
 
-/**
- * Transform Asset to JSON:API resource
- * Includes relationships to asset-metadata, asset-url, asset-variation
- * The relationships only contain type and id (where id = asset key)
- */
+export interface JsonApiAsset {
+  type: 'asset';
+  id: string;
+  attributes: Omit<Asset, 'key'>;
+  relationships?: {
+    metadata?: { data: { type: 'asset-metadata'; id: string } };
+    urls?: { data: { type: 'asset-url'; id: string } };
+    variations?: { data: { type: 'asset-variation'; id: string } };
+  };
+}
 
-const assetToJsonApiInternal = toJsonApi(assetZ, 'asset', 'key');
+export interface JsonApiFolder {
+  type: 'folder';
+  id: string;
+  attributes: Omit<Folder, 'key'>;
+}
 
-export const assetToJsonApi = assetZ.transform((asset: Asset): JsonApiResource => {
+export interface JsonApiFolderCreate {
+  type: 'folder';
+  id: string;
+  attributes: Omit<FolderCreate, 'key'>;
+}
+
+export interface JsonApiAssetCreate {
+  type: 'asset';
+  id: string;
+  attributes: Omit<AssetCreate, 'key'>;
+}
+
+export interface JsonApiAssetUpdate {
+  type: 'asset';
+  id: string;
+  attributes: Omit<AssetUpdate, 'key'>;
+}
+
+export interface JsonApiAssetVariations {
+  type: 'asset-variation';
+  id: string;
+  attributes: Omit<AssetVariations, 'key'>;
+}
+
+export interface JsonApiAssetUrl {
+  type: 'asset-url';
+  id: string;
+  attributes: Omit<AssetUrl, 'key'>;
+}
+
+export interface JsonApiAssetMetadata {
+  type: 'asset-metadata';
+  id: string;
+  attributes: Omit<AssetMetadata, 'key'>;
+}
+
+// ============================================
+// Asset to JSON:API Converters
+// ============================================
+
+export function assetToJsonApi(asset: Asset): JsonApiAsset {
+  const { key, ...attributes } = asset;
   return {
-    ...assetToJsonApiInternal.parse(asset),
+    type: 'asset',
+    id: key,
+    attributes,
     relationships: {
-      metadata: {
-        data: { type: 'asset-metadata', id: asset.key },
-      },
-      urls: {
-        data: { type: 'asset-url', id: asset.key },
-      },
-      variations: {
-        data: { type: 'asset-variation', id: asset.key },
-      },
+      metadata: { data: { type: 'asset-metadata', id: key } },
+      urls: { data: { type: 'asset-url', id: key } },
+      variations: { data: { type: 'asset-variation', id: key } },
     },
   };
-});
+}
 
-export const folderToJsonApi = toJsonApi(folderZ, 'folder', 'key');
+export function folderToJsonApi(folder: Folder): JsonApiFolder {
+  const { key, ...attributes } = folder;
+  return { type: 'folder', id: key, attributes };
+}
 
-export const resourceToJsonApi = S.Union([assetToJsonApi, folderToJsonApi]);
+export function resourceToJsonApi(resource: Asset | Folder): JsonApiAsset | JsonApiFolder {
+  if (resource.type === 'asset') {
+    return assetToJsonApi(resource);
+  }
+  return folderToJsonApi(resource);
+}
 
-export const assetVariationsToJsonApi = toJsonApi(assetVariationsZ, 'asset-variation', 'key');
+export function assetVariationsToJsonApi(variations: AssetVariations): JsonApiAssetVariations {
+  const { key, ...attributes } = variations;
+  return { type: 'asset-variation', id: key, attributes };
+}
 
-export const assetUrlToJsonApi = toJsonApi(assetUrlZ, 'asset-url', 'key');
+export function assetUrlToJsonApi(url: AssetUrl): JsonApiAssetUrl {
+  const { key, ...attributes } = url;
+  return { type: 'asset-url', id: key, attributes };
+}
 
-export const assetMetadataToJsonApi = toJsonApi(assetMetadataZ, 'asset-metadata', 'key');
+export function assetMetadataToJsonApi(metadata: AssetMetadata): JsonApiAssetMetadata {
+  const { key, ...attributes } = metadata;
+  return { type: 'asset-metadata', id: key, attributes };
+}
 
-export const assetCreateWithContentZ = assetCreateZ.extend({
-  content: S.isBase64
-});
+// ============================================
+// JSON:API to Domain Converters
+// ============================================
 
-export const assetCreateFromJsonApiZ = fromJsonApi(assetCreateZ, 'asset', 'key');
+export function assetCreateFromJsonApi(jsonApi: JsonApiAssetCreate): AssetCreate {
+  return { key: jsonApi.id, ...jsonApi.attributes } as AssetCreate;
+}
 
-export const assetUpdateFromJsonApiZ = fromJsonApi(assetUpdateZ, 'asset', 'key');
+export function assetUpdateFromJsonApi(jsonApi: JsonApiAssetUpdate): AssetUpdate {
+  return { key: jsonApi.id, ...jsonApi.attributes } as AssetUpdate;
+}
 
-export const folderCreateFromJsonApiZ = fromJsonApi(folderCreateZ, 'folder', 'key');
+export function folderCreateFromJsonApi(jsonApi: JsonApiFolderCreate): FolderCreate {
+  return { key: jsonApi.id, ...jsonApi.attributes } as FolderCreate;
+}
+
+export function folderFromJsonApi(jsonApi: JsonApiFolder): Folder {
+  return { key: jsonApi.id, ...jsonApi.attributes } as Folder;
+}
+
+// ============================================
+// Query Parsing
+// ============================================
 
 export type IncludeType = 'asset-metadata' | 'asset-url' | 'asset-variation';
 

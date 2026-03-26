@@ -1,12 +1,12 @@
-import { isoDateWithFallbackZ } from '@laikacms/core';
-import { atomBaseZ, storageObjectContentZ, storageObjectZ } from '@laikacms/storage';
-import { z } from 'zod';
+import { AtomBaseSchema, StorageObjectContentSchema } from '@laikacms/storage';
+import * as S from 'effect/Schema';
 
-export const revisionZ = storageObjectZ.extend({
-  type: z.literal('revision'),
-  content: storageObjectContentZ,
-  revision: z.string(),
-  createdAt: isoDateWithFallbackZ(),
+export const RevisionSchema = S.Struct({
+  ...AtomBaseSchema.fields,
+  type: S.Literal('revision'),
+  content: StorageObjectContentSchema,
+  revision: S.String,
+  createdAt: S.DateTimeUtcFromString,
 });
 
-export type Revision = z.infer<typeof revisionZ>;
+export type Revision = S.Schema.Type<typeof RevisionSchema>;

@@ -1,5 +1,9 @@
-import z from "zod";
+import * as S from 'effect/Schema';
 
-export const storageProviderZ = z.string().brand<'StorageProvider'>();
+/**
+ * Effect Schema for storage provider.
+ * A branded string type representing the storage provider (e.g., 'r2', 'fs', 's3').
+ */
+export const StorageProviderSchema = S.String.pipe(S.brand('StorageProvider'));
 
-export type StorageProvider = z.infer<typeof storageProviderZ>;
+export type StorageProvider = S.Schema.Type<typeof StorageProviderSchema>;

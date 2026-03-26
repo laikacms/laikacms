@@ -1,4 +1,4 @@
-import { Atom, AtomSummary, StorageRepository } from "@laikacms/storage";
+import { Atom, AtomSummary, StorageRepository, StorageObject, Folder, StorageObjectCreate, StorageObjectUpdate, FolderCreate } from "@laikacms/storage";
 import {
   ErrorCodeToStatusMap,
   ErrorStatus,
@@ -9,28 +9,32 @@ import {
   NotFoundError,
 } from "@laikacms/core";
 import * as Result from "effect/Result";
+import * as S from "effect/Schema";
 import {
-  folderToJsonApiZ,
-  storageObjectFromJsonApiZ,
-  storageObjectToJsonApiZ,
-  toJsonApi,
+  storageObjectToJsonApi,
+  folderToJsonApi,
+  storageObjectCreateFromJsonApi,
+  storageObjectUpdateFromJsonApi,
+  folderCreateFromJsonApi,
+  atomToJsonApi,
+  atomSummaryToJsonApi,
   parsePaginationQuery,
   buildPaginationLinks,
   type JsonApiCollectionResponse,
   type JsonApiResource,
-  storageObjectCreateFromJsonApiZ,
-  storageObjectUpdateFromJsonApiZ,
-  folderCreateFromJsonApiZ,
-  atomSummaryToJsonApiZ,
-  atomToJsonApiZ,
+  type JsonApiStorageObject,
+  type JsonApiStorageObjectCreate,
+  type JsonApiStorageObjectUpdate,
+  type JsonApiFolder,
+  type JsonApiFolderCreate,
+  type JsonApiAtom,
+  type JsonApiAtomSummary,
 } from "./jsonapi.js";
 import {
   errorToJsonApiMapper,
   JsonApiError,
   JsonApiResponse,
-  zodIssueFormatter,
 } from "@laikacms/json-api";
-import z, { ZodType, ZodError } from "zod";
 
 type AllJsonApiResponses = JsonApiResponse | JsonApiCollectionResponse | JsonApiError;
 
@@ -53,34 +57,33 @@ const json = <
 };
 
 // JSON:API error response
-function respondError(result: LaikaResult<any>, status: ErrorStatus = 400) {
+function respondError(result: LaikaResult<unknown>, status: ErrorStatus = 400) {
   if (Result.isSuccess(result))
     throw new InternalError("respondError called with success result");
   return json(errorToJsonApiMapper(result), status);
 }
 
 // JSON:API success response for single resource
-function respondResource<T>(
+function respondResourceWithConverter<T, R extends JsonApiResource>(
   result: LaikaResult<T>,
-  outputSchema: ReturnType<typeof toJsonApi>,
+  converter: (data: T) => R,
 ) {
   if (Result.isFailure(result)) {
     return respondError(result);
   }
-  return json({ data: outputSchema.parse(result.success) });
+  return json({ data: converter(result.success) });
 }
 
 // JSON:API success response for resource collection with pagination
-async function respondCollection<T>(
+async function respondCollectionWithConverter<T, R extends JsonApiResource>(
   request: Request,
   items: readonly T[],
-  outputSchema: ZodType<JsonApiResource>,
+  converter: (item: T) => R,
   baseUrl: string,
 ) {
   const url = new URL(request.url);
   const queryParams = Object.fromEntries(url.searchParams.entries());
   const pagination = parsePaginationQuery(queryParams);
-  const results: T[] = [];
   let hasMore = false;
   let firstCursor: string | undefined;
   let lastCursor: string | undefined;
@@ -88,8 +91,8 @@ async function respondCollection<T>(
   // For cursor-based pagination, extract cursors from items if available
   if (items.length > 0) {
     // Assuming items have an 'id' or 'key' property that can be used as cursor
-    const firstItem = items[0] as any;
-    const lastItem = items[items.length - 1] as any;
+    const firstItem = items[0] as { id?: string; key?: string };
+    const lastItem = items[items.length - 1] as { id?: string; key?: string };
     firstCursor = firstItem.id || firstItem.key;
     lastCursor = lastItem.id || lastItem.key;
   }
@@ -104,7 +107,7 @@ async function respondCollection<T>(
   );
 
   const response: JsonApiCollectionResponse = {
-    data: items.map((item) => outputSchema.parse(item)),
+    data: items.map((item) => converter(item)),
     links,
     meta: {
       page: {
@@ -126,6 +129,72 @@ async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<Laik
   return value;
 }
 
+// Effect Schema definitions for JSON:API request validation
+const JsonApiStorageObjectCreateSchema = S.Struct({
+  type: S.Literal('object'),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.optional(S.Literal('object')),
+    content: S.optional(S.Record(S.String, S.Any)),
+  }),
+});
+
+const JsonApiStorageObjectUpdateSchema = S.Struct({
+  type: S.Literal('object'),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.optional(S.Literal('object')),
+    content: S.optional(S.Record(S.String, S.Any)),
+  }),
+});
+
+const JsonApiFolderCreateSchema = S.Struct({
+  type: S.Literal('folder'),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.optional(S.Literal('folder')),
+  }),
+});
+
+// Request body wrappers for JSON:API format
+const StorageObjectCreateBodySchema = S.Struct({
+  data: JsonApiStorageObjectCreateSchema,
+});
+
+const StorageObjectUpdateBodySchema = S.Struct({
+  data: JsonApiStorageObjectUpdateSchema,
+});
+
+// Atomic operations schemas
+const RemoveOperationSchema = S.Struct({
+  op: S.Literal("remove"),
+  ref: S.Struct({
+    type: S.Union([S.Literal("object"), S.Literal("folder"), S.Literal("atom")]),
+    id: S.String,
+  }),
+});
+
+const AddOperationSchema = S.Struct({
+  op: S.Literal("add"),
+  data: S.Union([JsonApiStorageObjectCreateSchema, JsonApiFolderCreateSchema]),
+});
+
+const UpdateOperationSchema = S.Struct({
+  op: S.Literal("update"),
+  data: JsonApiStorageObjectUpdateSchema,
+});
+
+const AtomicOperationSchema = S.Union([RemoveOperationSchema, AddOperationSchema, UpdateOperationSchema]);
+
+const AtomicOperationsRequestSchema = S.Struct({
+  "atomic:operations": S.Array(AtomicOperationSchema),
+});
+
+type StorageObjectCreateBody = S.Schema.Type<typeof StorageObjectCreateBodySchema>;
+type StorageObjectUpdateBody = S.Schema.Type<typeof StorageObjectUpdateBodySchema>;
+type AtomicOperation = S.Schema.Type<typeof AtomicOperationSchema>;
+type AtomicOperationsRequest = S.Schema.Type<typeof AtomicOperationsRequestSchema>;
+
 interface StorageApiOptions {
   repo: StorageRepository;
   basePath?: string | undefined;
@@ -135,14 +204,11 @@ interface StorageApiOptions {
 
 export function buildJsonApi(options: StorageApiOptions) {
   const { repo, onError, basePath = "" } = options;
-  // Request body wrappers for JSON:API format
-  const storageObjectCreateBodyZ = z.object({
-    data: storageObjectCreateFromJsonApiZ,
-  });
 
-  const storageObjectUpdateBodyZ = z.object({
-    data: storageObjectUpdateFromJsonApiZ,
-  });
+  // Create decoders
+  const decodeStorageObjectCreateBody = S.decodeUnknownSync(StorageObjectCreateBodySchema);
+  const decodeStorageObjectUpdateBody = S.decodeUnknownSync(StorageObjectUpdateBodySchema);
+  const decodeAtomicOperationsRequest = S.decodeUnknownSync(AtomicOperationsRequestSchema);
 
   return {
     async fetch(request: Request): Promise<Response> {
@@ -191,7 +257,7 @@ export function buildJsonApi(options: StorageApiOptions) {
           }
           results = results.concat([...listOfAtoms.success]);
         }
-        return respondCollection(request, results, atomToJsonApiZ, request.url);
+        return respondCollectionWithConverter(request, results, atomToJsonApi, request.url);
       }
 
       const listAtomSummaries = async () => {
@@ -213,74 +279,82 @@ export function buildJsonApi(options: StorageApiOptions) {
           }
           results = results.concat([...listOfAtoms.success]);
         }
-        return respondCollection(request, results, atomSummaryToJsonApiZ, request.url);
+        return respondCollectionWithConverter(request, results, atomSummaryToJsonApi, request.url);
       }
 
       if (resource === "atoms" && request.method === "GET") return listFullAtoms();
       else if (resource === "atom-summaries" && request.method === "GET") return listAtomSummaries();
 
       else if (resource === "objects" && request.method === "POST") {
-        const { data } = storageObjectCreateBodyZ.parse(await request.json());
+        let body: StorageObjectCreateBody;
+        try {
+          const rawBody = await request.json();
+          body = decodeStorageObjectCreateBody(rawBody);
+        } catch {
+          return respondError(
+            Result.fail(new InvalidData("Invalid request body")),
+            400,
+          );
+        }
+        const data: StorageObjectCreate = {
+          key: body.data.id,
+          type: 'object',
+          content: body.data.attributes.content || {},
+        };
         const result = await firstResult(repo.createObject(data));
-        return respondResource(
+        return respondResourceWithConverter(
           result,
-          storageObjectToJsonApiZ,
+          storageObjectToJsonApi,
         );
       }
 
       if (path.startsWith("objects") && request.method === "PATCH") {
         const [_, pathKey] = path.split("/");
-        const { data } = storageObjectUpdateBodyZ.parse(await request.json());
-        if (data.key !== pathKey) {
+        let body: StorageObjectUpdateBody;
+        try {
+          const rawBody = await request.json();
+          body = decodeStorageObjectUpdateBody(rawBody);
+        } catch {
+          return respondError(
+            Result.fail(new InvalidData("Invalid request body")),
+            400,
+          );
+        }
+        if (body.data.id !== pathKey) {
           return respondError(
             Result.fail(new InvalidData("Key in URL does not match key in body")),
             ErrorCodeToStatusMap[InvalidData.CODE],
           );
         }
+        const data: StorageObjectUpdate = {
+          key: body.data.id,
+          type: 'object',
+          content: body.data.attributes.content,
+        };
         const result = await firstResult(repo.updateObject(data));
-        return respondResource(
+        return respondResourceWithConverter(
           result,
-          storageObjectToJsonApiZ,
+          storageObjectToJsonApi,
         );
       }
 
       else if (path === "operations" && request.method === "POST") {
-        const operationsZ = z.object({
-          "atomic:operations": z.array(
-            z.discriminatedUnion("op", [
-              z.object({
-                op: z.literal("remove"),
-                ref: z.object({
-                  type: z.union([
-                    z.literal("object"),
-                    z.literal("folder"),
-                    z.literal("atom"),
-                  ]),
-                  id: z.string(),
-                }),
-              }),
-              z.object({
-                op: z.literal("add"),
-                data: z.union([
-                  storageObjectCreateFromJsonApiZ,
-                  folderCreateFromJsonApiZ,
-                ]),
-              }),
-              z.object({
-                op: z.literal("update"),
-                data: z.union([storageObjectUpdateFromJsonApiZ]),
-              }),
-            ]),
-          ),
-        });
-
-        const body = operationsZ.parse(await request.json());
+        let body: AtomicOperationsRequest;
+        try {
+          const rawBody = await request.json();
+          body = decodeAtomicOperationsRequest(rawBody);
+        } catch {
+          return respondError(
+            Result.fail(new InvalidData("Invalid atomic operations request")),
+            400,
+          );
+        }
 
         type Ref = { key: string; type: string };
         const removeOperations: [
           string,
           (ref: LaikaResult<Ref>) => void,
-          Function,
+          (err: unknown) => void,
         ][] = [];
 
         const remove = (key: string): Promise<LaikaResult<Ref>> =>
@@ -289,37 +363,47 @@ export function buildJsonApi(options: StorageApiOptions) {
           );
 
         const atomicOperations = body["atomic:operations"]
-          .map(async (operation) => {
+          .map((operation: AtomicOperation) => {
             switch (operation.op) {
               case "add":
                 if (operation.data.type === "object") {
-                  const result = await firstResult(repo.createObject(operation.data));
-                  return { op: result, operation };
+                  const createData: StorageObjectCreate = {
+                    key: operation.data.id,
+                    type: 'object',
+                    content: operation.data.attributes.content || {},
+                  };
+                  return firstResult(repo.createObject(createData)).then(result => ({ op: result, operation }));
                 } else if (operation.data.type === "folder") {
-                  const result = await firstResult(repo.createFolder(operation.data));
-                  return { op: result, operation };
+                  const createData: FolderCreate = {
+                    key: operation.data.id,
+                    type: 'folder',
+                  };
+                  return firstResult(repo.createFolder(createData)).then(result => ({ op: result, operation }));
                 }
-                break;
+                return Promise.resolve({
+                  op: Result.fail(new InvalidData(`Unsupported add type`)),
+                  operation,
+                });
               case "update":
                 if (operation.data.type === "object") {
-                  const result = await firstResult(repo.updateObject(operation.data));
-                  return { op: result, operation };
+                  const updateData: StorageObjectUpdate = {
+                    key: operation.data.id,
+                    type: 'object',
+                    content: operation.data.attributes.content,
+                  };
+                  return firstResult(repo.updateObject(updateData)).then(result => ({ op: result, operation }));
                 }
-                break;
+                return Promise.resolve({
+                  op: Result.fail(new InvalidData(`Unsupported update type`)),
+                  operation,
+                });
               case "remove":
                 return remove(operation.ref.id).then((op) => ({
                   op,
                   operation,
                 }));
             }
-            return Promise.resolve({
-              op: Result.fail(new InvalidData(
-                `Unsupported operation ${operation.op} for ${(operation as any).data?.type}`,
-              )),
-              operation,
-            });
-          })
-          .filter((x) => x !== null);
+          });
 
         for await (const atoms of repo.removeAtoms(
           removeOperations.map(([key]) => key),
@@ -327,34 +411,38 @@ export function buildJsonApi(options: StorageApiOptions) {
           if (Result.isFailure(atoms)) return respondError(atoms);
           const removedAtoms = atoms.success;
           for (const atom of removedAtoms) {
-            const [, resolve] = removeOperations.find(([key]) => key === atom)!;
-            resolve(Result.succeed({ type: "atom", key: atom }));
+            const found = removeOperations.find(([key]) => key === atom);
+            if (found) {
+              const [, resolve] = found;
+              resolve(Result.succeed({ type: "atom", key: atom }));
+            }
           }
         }
 
         const atomicsSettled = await Promise.allSettled(atomicOperations);
 
-        const atomicResults = atomicsSettled
-          .map((promiseResult) => {
-            if (promiseResult.status === "rejected")
-              return errorToJsonApiMapper(promiseResult);
-            if (Result.isSuccess(promiseResult.value.op)) {
-              if (
-                promiseResult.value.operation.op === "add" ||
-                promiseResult.value.operation.op === "update"
-              ) {
-                const data = promiseResult.value.op.success;
-                const outputSchema =
-                  data.type === "object"
-                    ? storageObjectToJsonApiZ
-                    : folderToJsonApiZ;
-                return { data: outputSchema.parse(data) };
-              } else if (promiseResult.value.operation.op === "remove") {
-                return undefined;
+        const atomicResults: Array<{ data: JsonApiResource }> = [];
+        for (const promiseResult of atomicsSettled) {
+          if (promiseResult.status === "rejected") {
+            // Skip rejected promises for now
+            continue;
+          }
+          const value = promiseResult.value;
+          if (Result.isSuccess(value.op)) {
+            if (value.operation.op === "add" || value.operation.op === "update") {
+              const data = value.op.success;
+              if (typeof data === 'object' && data !== null && 'type' in data) {
+                const typedData = data as { type: string };
+                if (typedData.type === "object") {
+                  atomicResults.push({ data: storageObjectToJsonApi(data as StorageObject) });
+                } else {
+                  atomicResults.push({ data: folderToJsonApi(data as Folder) });
+                }
               }
             }
-          })
-          .filter((x) => x !== undefined);
+            // For "remove" operations, we don't add anything to results
+          }
+        }
 
         return json({
           "atomic:results": atomicResults,

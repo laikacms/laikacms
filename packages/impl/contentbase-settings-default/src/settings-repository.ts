@@ -43,7 +43,8 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
   async getCollectionSettings(collection: string): Promise<LaikaResult<CollectionSettings>> {
     const settings = await this.getSettings();
     if (Result.isFailure(settings)) return failAs<CollectionSettings>(settings.failure);
-    const collectionSettings = settings.success.collections[collection];
+    const collections = settings.success.collections ?? {};
+    const collectionSettings = collections[collection];
     if (!collectionSettings) return Result.succeed({
       key: collection,
       type: 'document',
@@ -85,8 +86,14 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
       return failAs<void>(currentSettingsResult.failure);
     }
     const currentSettings = currentSettingsResult.success;
-    currentSettings.collections[collection] = settings;
-    const result = await this.putSettings(currentSettings);
+    const updatedSettings = {
+      ...currentSettings,
+      collections: {
+        ...(currentSettings.collections ?? {}),
+        [collection]: settings,
+      },
+    };
+    const result = await this.putSettings(updatedSettings);
     if (Result.isFailure(result)) {
       return failAs<void>(result.failure);
     }

@@ -1,26 +1,11 @@
-import { storageObjectContentZ, storageObjectZ } from '@laikacms/storage';
-import { z } from 'zod';
+import { StorageObjectContentSchema, AtomBaseSchema } from '@laikacms/storage';
+import * as S from 'effect/Schema';
 
-export const documentZ = storageObjectZ.extend({
-  type: z.literal('published'),
-  status: z.literal('published'),
-  content: storageObjectContentZ,
+export const DocumentSchema = S.Struct({
+  ...AtomBaseSchema.fields,
+  type: S.Literal('published'),
+  status: S.Literal('published'),
+  content: StorageObjectContentSchema,
 });
 
-export type Document = z.infer<typeof documentZ>;
-
-export const documentCodecZ = z.codec(
-  storageObjectZ,
-  documentZ,
-  {
-    encode: (data) => ({
-      ...data,
-      type: 'object' as const
-    }),
-    decode: (data) => ({
-      ...data,
-      type: 'published' as const,
-      status: 'published' as const,
-    }),
-  }
-);
+export type Document = S.Schema.Type<typeof DocumentSchema>;

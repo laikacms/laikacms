@@ -1,5 +1,9 @@
-import z from "zod";
+import * as S from 'effect/Schema';
 
-export const storageFormatZ = z.string().brand<'StorageFormat'>();
+/**
+ * Effect Schema for storage format.
+ * A branded string type representing the storage format (e.g., 'json', 'yaml', 'markdown').
+ */
+export const StorageFormatSchema = S.String.pipe(S.brand('StorageFormat'));
 
-export type StorageFormat = z.infer<typeof storageFormatZ>;
+export type StorageFormat = S.Schema.Type<typeof StorageFormatSchema>;

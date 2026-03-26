@@ -1,13 +1,12 @@
-import { isoDateWithFallbackZ } from "@laikacms/core";
-import { z } from "zod";
+import * as S from 'effect/Schema';
 
-export const storageObjectSummaryZ = z.object({
-  type: z.literal('object-summary'),
+export const StorageObjectSummarySchema = S.Struct({
+  type: S.Literal('object-summary'),
 
-  key: z.string().max(1023, 'Key cannot be longer than 1023 characters'),
+  key: S.String.pipe(S.check(S.isMaxLength(1023))),
 
-  createdAt: isoDateWithFallbackZ().optional(),
-  updatedAt: isoDateWithFallbackZ().optional(),
-})
+  createdAt: S.optional(S.DateTimeUtcFromString),
+  updatedAt: S.optional(S.DateTimeUtcFromString),
+});
 
-export type StorageObjectSummary = z.infer<typeof storageObjectSummaryZ>;
+export type StorageObjectSummary = S.Schema.Type<typeof StorageObjectSummarySchema>;

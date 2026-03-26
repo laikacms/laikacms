@@ -52,7 +52,8 @@
   "dependencies": {
     "@laikacms/core": "workspace:^",
     "ai": "catalog:ai",
-    "zod": "^3.23.8"
+    "effect": "catalog:default",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

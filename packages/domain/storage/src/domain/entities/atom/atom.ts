@@ -1,10 +1,10 @@
-import * as S from 'effect/Schema'
-import { storageObjectZ } from "../object/storage-object.js"
-import { folderZ } from "../folder/folder.js"
+import * as S from 'effect/Schema';
+import { StorageObjectSchema } from "../object/storage-object.js";
+import { FolderSchema } from "../folder/folder.js";
 
 export const AtomSchema = S.Union([
-  storageObjectZ,
-  folderZ,
-])
+  StorageObjectSchema,
+  FolderSchema,
+]);
 
-export type Atom = S.Schema.Type<typeof AtomSchema>
+export type Atom = S.Schema.Type<typeof AtomSchema>;

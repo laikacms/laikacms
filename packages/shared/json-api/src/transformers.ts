@@ -1,20 +1,28 @@
-import { z } from "zod";
+/**
+ * JSON:API transformers
+ * 
+ * These are plain functions that transform between domain objects and JSON:API format.
+ * They don't use schemas since the transformation is just object restructuring.
+ */
 
+/**
+ * Transforms a domain object to JSON:API resource format (without id)
+ * @param data - The domain object
+ * @param type - JSON:API resource type
+ */
 export function toJsonApiNoId<T extends string, O extends Record<string, unknown>>(
-  dataSchema: z.ZodType<O>,
+  data: O,
   type: T
-) {
-  return dataSchema.transform((data) => {
-    return {
-      type,
-      attributes: data,
-    };
-  });
+): { type: T; attributes: O } {
+  return {
+    type,
+    attributes: data,
+  };
 }
 
 /**
  * Transforms a domain object to JSON:API resource format
- * @param dataSchema - Zod schema for the domain object
+ * @param data - The domain object
  * @param type - JSON:API resource type
  * @param idField - Name of the ID field in the domain object
  */
@@ -22,57 +30,42 @@ export function toJsonApi<
   T extends string,
   O extends Record<string, unknown>,
   I extends keyof O
->(dataSchema: z.ZodType<O>, type: T, idField: I) {
-  return dataSchema.transform((data) => {
-    const { [idField]: id, ...attributes } = data;
+>(data: O, type: T, idField: I): { type: T; id: string; attributes: Omit<O, I> } {
+  const { [idField]: id, ...attributes } = data;
 
-    return {
-      type,
-      id: id as string,
-      attributes,
-    };
-  });
+  return {
+    type,
+    id: id as string,
+    attributes: attributes as Omit<O, I>,
+  };
 }
 
 /**
  * Transforms a JSON:API resource to domain object format
- * @param dataSchema - Zod schema for the domain object
- * @param type - JSON:API resource type
+ * @param data - The JSON:API resource
+ * @param _type - JSON:API resource type (for type checking, not used at runtime)
  * @param idField - Name of the ID field in the domain object
  */
 export function fromJsonApi<
   T extends string,
   I extends string,
   O extends Record<string, unknown>
->(dataSchema: z.ZodType<O> & (z.ZodObject<any>), type: T, idField: I) {
-  const attributesZ = dataSchema.omit({ [idField]: true });
-  return z
-    .object({
-      type: z.literal(type),
-      id: z.string(),
-      attributes: attributesZ,
-    })
-    .transform((data) => {
-      return {
-        [idField]: data.id,
-        ...data.attributes,
-      } as O;
-    });
+>(data: { type: T; id: string; attributes: Omit<O, I> }, _type: T, idField: I): O {
+  return {
+    [idField]: data.id,
+    ...data.attributes,
+  } as O;
 }
 
+/**
+ * Transforms a JSON:API resource to domain object format (without id)
+ * @param data - The JSON:API resource
+ */
 export function fromJsonApiNoId<
   T extends string,
   O extends Record<string, unknown>
->(dataSchema: z.ZodType<O>, type: T) {
-  const attributesZ = dataSchema;
-  return z
-    .object({
-      type: z.literal(type),
-      attributes: attributesZ,
-    })
-    .transform((data) => {
-      return {
-        ...data.attributes,
-      } as O;
-    });
+>(data: { type: T; attributes: O }): O {
+  return {
+    ...data.attributes,
+  };
 }

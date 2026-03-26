@@ -1,94 +1,90 @@
-import { z } from "zod";
+import * as S from 'effect/Schema';
 import { ExtName } from "./ext-name.js";
 
-export const mimeTypeZ = z.union([
-  z.literal("text/html"),
-  z.literal("application/xhtml+xml"),
+/**
+ * All supported MIME types as a const array for Effect Schema.
+ */
+const mimeTypes = [
+  "text/html",
+  "application/xhtml+xml",
+  "text/markdown",
+  "text/plain",
+  "text/csv",
+  "text/tab-separated-values",
+  "application/json",
+  "application/x-yaml",
+  "application/xml",
+  "application/toml",
+  "application/javascript",
+  "application/typescript",
+  "text/jsx",
+  "text/tsx",
+  "text/css",
+  "text/x-scss",
+  "text/x-sass",
+  "text/x-clojure",
+  "application/edn",
+  "text/x-lua",
+  "text/x-perl",
+  "text/x-r",
+  "application/x-sh",
+  "application/x-fish",
+  "application/x-awk",
+  "application/x-powershell",
+  "application/x-msdos-program",
+  "text/vbscript",
+  "text/x-python",
+  "text/x-ruby",
+  "text/x-java-source",
+  "text/x-c",
+  "text/x-c++src",
+  "text/x-c++hdr",
+  "text/x-csharp",
+  "text/x-go",
+  "text/rust",
+  "text/x-swift",
+  "text/x-kotlin",
+  "application/x-httpd-php",
+  "audio/mpeg",
+  "audio/wav",
+  "audio/ogg",
+  "audio/flac",
+  "audio/aac",
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/bmp",
+  "image/webp",
+  "image/svg+xml",
+  "image/tiff",
+  "video/mp4",
+  "video/quicktime",
+  "video/x-msvideo",
+  "video/x-matroska",
+  "video/webm",
+  "video/x-flv",
+  "video/x-ms-wmv",
+  "application/zip",
+  "application/vnd.rar",
+  "application/x-7z-compressed",
+  "application/pdf",
+  "application/vnd.microsoft.portable-executable",
+  "application/octet-stream",
+  "application/x-iso9660-image",
+] as const;
 
-  // Markdown MIME types
-  z.literal("text/markdown"),
+export type MimeType = typeof mimeTypes[number];
 
-  // Text MIME types
-  z.literal("text/plain"),
-  z.literal("text/csv"),
-  z.literal("text/tab-separated-values"),
+const mimeTypeSet = new Set<string>(mimeTypes);
 
-  // Plain text storage MIME types
-  z.literal("application/json"),
-  z.literal("application/x-yaml"),
-  z.literal("application/xml"),
-  z.literal("application/toml"),
+const isMimeType = S.makeFilter<string>((s) => 
+  mimeTypeSet.has(s) ? undefined : `Expected one of: ${mimeTypes.join(', ')}`
+);
 
-  // Code MIME types
-  z.literal("application/javascript"),
-  z.literal("application/typescript"),
-  z.literal("text/jsx"),
-  z.literal("text/tsx"),
-  z.literal("text/css"),
-  z.literal("text/x-scss"),
-  z.literal("text/x-sass"),
-  z.literal("text/x-clojure"),
-  z.literal("application/edn"),
-  z.literal("text/x-lua"),
-  z.literal("text/x-perl"),
-  z.literal("text/x-r"),
-  z.literal("application/x-sh"),
-  z.literal("application/x-fish"),
-  z.literal("application/x-awk"),
-  z.literal("application/x-powershell"),
-  z.literal("application/x-msdos-program"),
-  z.literal("text/vbscript"),
-  z.literal("text/x-python"),
-  z.literal("text/x-ruby"),
-  z.literal("text/x-java-source"),
-  z.literal("text/x-c"),
-  z.literal("text/x-c++src"),
-  z.literal("text/x-c++hdr"),
-  z.literal("text/x-csharp"),
-  z.literal("text/x-go"),
-  z.literal("text/rust"),
-  z.literal("text/x-swift"),
-  z.literal("text/x-kotlin"),
-  z.literal("application/x-httpd-php"),
-
-  // Audio MIME types
-  z.literal("audio/mpeg"),
-  z.literal("audio/wav"),
-  z.literal("audio/ogg"),
-  z.literal("audio/flac"),
-  z.literal("audio/aac"),
-
-  // Image MIME types
-  z.literal("image/jpeg"),
-  z.literal("image/png"),
-  z.literal("image/gif"),
-  z.literal("image/bmp"),
-  z.literal("image/webp"),
-  z.literal("image/svg+xml"),
-  z.literal("image/tiff"),
-
-  // Video MIME types
-  z.literal("video/mp4"),
-  z.literal("video/quicktime"),
-  z.literal("video/x-msvideo"),
-  z.literal("video/x-matroska"),
-  z.literal("video/webm"),
-  z.literal("video/x-flv"),
-  z.literal("video/x-ms-wmv"),
-
-  // Compressed types
-  z.literal("application/zip"),
-  z.literal("application/vnd.rar"),
-  z.literal("application/x-7z-compressed"),
-
-  // Other binary types
-  z.literal("application/pdf"),
-  z.literal("application/vnd.microsoft.portable-executable"),
-  z.literal("application/octet-stream"),
-  z.literal("application/x-iso9660-image"),
-]);
-
-export type MimeType = z.infer<typeof mimeTypeZ>;
+/**
+ * Effect Schema for MIME types.
+ */
+export const MimeTypeSchema = S.String.pipe(S.check(isMimeType));
 
 export const extNameToMimeType = (extName: ExtName | string): MimeType => {
   if (extName in mimeTypeMapper) {

@@ -1,6 +1,6 @@
-import { z } from 'zod';
-import { folderZ } from '@laikacms/storage';
-import { assetZ } from '../asset/asset.js';
+import * as S from 'effect/Schema';
+import { FolderSchema } from '@laikacms/storage';
+import { AssetSchema } from '../asset/asset.js';
 
 /**
  * Resource is the union type for the assets abstraction.
@@ -10,9 +10,9 @@ import { assetZ } from '../asset/asset.js';
  * - Atom (StorageObject | Folder) in the storage abstraction
  * - Record (Document | Unpublished | Folder) in the documents abstraction
  */
-export const resourceZ = z.discriminatedUnion('type', [
-  assetZ,
-  folderZ,
+export const ResourceSchema = S.Union([
+  AssetSchema,
+  FolderSchema,
 ]);
 
-export type Resource = z.infer<typeof resourceZ>;
+export type Resource = S.Schema.Type<typeof ResourceSchema>;

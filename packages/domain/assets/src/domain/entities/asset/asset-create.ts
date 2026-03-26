@@ -27,7 +27,6 @@ export const AssetCreateSchema = S.Struct({
   /**
    * The binary content of the asset.
    * Accepts Uint8Array, ArrayBuffer, or ReadableStream<Uint8Array>.
-   * Note: Zod validation is relaxed here; runtime type checking is recommended.
    */
   content: BinaryContentSchema,
 

@@ -1,12 +1,11 @@
-import { isoDateWithFallbackZ } from "@laikacms/core";
-import { z } from "zod";
+import * as S from 'effect/Schema';
 
-export const folderSummaryZ = z.object({
-  type: z.literal('folder-summary'),
-  key: z.string().max(1023, 'Key cannot be longer than 1023 characters'),
+export const FolderSummarySchema = S.Struct({
+  type: S.Literal('folder-summary'),
+  key: S.String.pipe(S.check(S.isMaxLength(1023))),
 
-  createdAt: isoDateWithFallbackZ().optional(),
-  updatedAt: isoDateWithFallbackZ().optional(),
-})
+  createdAt: S.optional(S.DateTimeUtcFromString),
+  updatedAt: S.optional(S.DateTimeUtcFromString),
+});
 
-export type FolderSummary = z.infer<typeof folderSummaryZ>
+export type FolderSummary = S.Schema.Type<typeof FolderSummarySchema>;
