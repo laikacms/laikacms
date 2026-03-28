@@ -10,4 +10,6 @@ export const UnpublishedSummarySchema = S.Struct({
   status: S.String,
 });
 
+export const UnpublishedSummarySchemaStandardV1 = S.toStandardSchemaV1(UnpublishedSummarySchema);
+
 export type UnpublishedSummary = S.Schema.Type<typeof UnpublishedSummarySchema>;

@@ -7,4 +7,6 @@ export const AtomSchema = S.Union([
   FolderSchema,
 ]);
 
+export const AtomSchemaStandardV1 = S.toStandardSchemaV1(AtomSchema);
+
 export type Atom = S.Schema.Type<typeof AtomSchema>;

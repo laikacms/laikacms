@@ -97,6 +97,9 @@ catalogs:
       specifier: ^19.1.1
       version: 19.2.4
   schema:
+    '@standard-schema/spec':
+      specifier: ^1.1.0
+      version: 1.1.0
     ajv:
       specifier: ^8.13.0
       version: 8.18.0
@@ -647,6 +650,9 @@ importers:
         specifier: catalog:default
         version: 4.0.0-beta.40
     devDependencies:
+      '@standard-schema/spec':
+        specifier: catalog:schema
+        version: 1.1.0
       typescript:
         specifier: catalog:tools
         version: 5.9.3
@@ -663,6 +669,9 @@ importers:
         specifier: catalog:default
         version: 4.0.0-beta.40
     devDependencies:
+      '@standard-schema/spec':
+        specifier: catalog:schema
+        version: 1.1.0
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
@@ -682,6 +691,9 @@ importers:
         specifier: catalog:default
         version: 4.0.0-beta.40
     devDependencies:
+      '@standard-schema/spec':
+        specifier: catalog:schema
+        version: 1.1.0
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
@@ -698,6 +710,9 @@ importers:
         specifier: catalog:default
         version: 4.0.0-beta.40
     devDependencies:
+      '@standard-schema/spec':
+        specifier: catalog:schema
+        version: 1.1.0
       '@types/json-schema':
         specifier: ^7.0.15
         version: 7.0.15
@@ -886,9 +901,6 @@ importers:
       '@laikacms/storage':
         specifier: workspace:*
         version: link:../../domain/storage
-      drizzle-orm:
-        specifier: '>=0.36.0'
-        version: 0.45.1(@cloudflare/workers-types@4.20260317.1)(@opentelemetry/api@1.9.0)
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
@@ -936,9 +948,6 @@ importers:
       '@laikacms/storage':
         specifier: workspace:*
         version: link:../../domain/storage
-      drizzle-orm:
-        specifier: '>=0.36.0'
-        version: 0.45.1(@cloudflare/workers-types@4.20260317.1)(@opentelemetry/api@1.9.0)
       effect:
         specifier: catalog:default
         version: 4.0.0-beta.40
@@ -3484,98 +3493,6 @@ packages:
 
   dom-helpers@5.2.1:
     resolution: {integrity: sha512-nRCa7CK3VTrM2NmGkIy4cbK7IZlgBE/PYMn55rrXefr5xXDP0LdtfPnblFDoVdcAfslJ7or6iqAUnx0CCGIWQA==}
-
-  drizzle-orm@0.45.1:
-    resolution: {integrity: sha512-Te0FOdKIistGNPMq2jscdqngBRfBpC8uMFVwqjf6gtTVJHIQ/dosgV/CLBU2N4ZJBsXL5savCba9b0YJskKdcA==}
-    peerDependencies:
-      '@aws-sdk/client-rds-data': '>=3'
-      '@cloudflare/workers-types': '>=4'
-      '@electric-sql/pglite': '>=0.2.0'
-      '@libsql/client': '>=0.10.0'
-      '@libsql/client-wasm': '>=0.10.0'
-      '@neondatabase/serverless': '>=0.10.0'
-      '@op-engineering/op-sqlite': '>=2'
-      '@opentelemetry/api': ^1.4.1
-      '@planetscale/database': '>=1.13'
-      '@prisma/client': '*'
-      '@tidbcloud/serverless': '*'
-      '@types/better-sqlite3': '*'
-      '@types/pg': '*'
-      '@types/sql.js': '*'
-      '@upstash/redis': '>=1.34.7'
-      '@vercel/postgres': '>=0.8.0'
-      '@xata.io/client': '*'
-      better-sqlite3: '>=7'
-      bun-types: '*'
-      expo-sqlite: '>=14.0.0'
-      gel: '>=2'
-      knex: '*'
-      kysely: '*'
-      mysql2: '>=2'
-      pg: '>=8'
-      postgres: '>=3'
-      prisma: '*'
-      sql.js: '>=1'
-      sqlite3: '>=5'
-    peerDependenciesMeta:
-      '@aws-sdk/client-rds-data':
-        optional: true
-      '@cloudflare/workers-types':
-        optional: true
-      '@electric-sql/pglite':
-        optional: true
-      '@libsql/client':
-        optional: true
-      '@libsql/client-wasm':
-        optional: true
-      '@neondatabase/serverless':
-        optional: true
-      '@op-engineering/op-sqlite':
-        optional: true
-      '@opentelemetry/api':
-        optional: true
-      '@planetscale/database':
-        optional: true
-      '@prisma/client':
-        optional: true
-      '@tidbcloud/serverless':
-        optional: true
-      '@types/better-sqlite3':
-        optional: true
-      '@types/pg':
-        optional: true
-      '@types/sql.js':
-        optional: true
-      '@upstash/redis':
-        optional: true
-      '@vercel/postgres':
-        optional: true
-      '@xata.io/client':
-        optional: true
-      better-sqlite3:
-        optional: true
-      bun-types:
-        optional: true
-      expo-sqlite:
-        optional: true
-      gel:
-        optional: true
-      knex:
-        optional: true
-      kysely:
-        optional: true
-      mysql2:
-        optional: true
-      pg:
-        optional: true
-      postgres:
-        optional: true
-      prisma:
-        optional: true
-      sql.js:
-        optional: true
-      sqlite3:
-        optional: true
 
   dunder-proto@1.0.1:
     resolution: {integrity: sha512-KIN/nDJBQRcXw0MLVhZE9iQHmG68qAVIBg9CqmUYjmQIhgij9U5MFvrqkUL5FbtyyzZuOeOt0zdeRe4UY7ct+A==}
@@ -8080,11 +7997,6 @@ snapshots:
     dependencies:
       '@babel/runtime': 7.29.2
       csstype: 3.2.3
-
-  drizzle-orm@0.45.1(@cloudflare/workers-types@4.20260317.1)(@opentelemetry/api@1.9.0):
-    optionalDependencies:
-      '@cloudflare/workers-types': 4.20260317.1
-      '@opentelemetry/api': 1.9.0
 
   dunder-proto@1.0.1:
     dependencies:

@@ -7,4 +7,6 @@ export const DocumentSummarySchema = S.Struct({
   status: S.Literal('published'),
 });
 
+export const DocumentSummarySchemaStandardV1 = S.toStandardSchemaV1(DocumentSummarySchema);
+
 export type DocumentSummary = S.Schema.Type<typeof DocumentSummarySchema>;

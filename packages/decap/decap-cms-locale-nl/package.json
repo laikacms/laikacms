@@ -34,8 +34,8 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/decap-cms-locale-nl.mjs",
-      "require": "./dist/decap-cms-locale-nl.umd.js"
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
     }
   }
 }

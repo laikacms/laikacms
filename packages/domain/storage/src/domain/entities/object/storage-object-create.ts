@@ -7,4 +7,6 @@ export const StorageObjectCreateSchema = S.Struct({
   content: StorageObjectContentSchema,
 });
 
+export const StorageObjectCreateSchemaStandardV1 = S.toStandardSchemaV1(StorageObjectCreateSchema);
+
 export type StorageObjectCreate = S.Schema.Type<typeof StorageObjectCreateSchema>;

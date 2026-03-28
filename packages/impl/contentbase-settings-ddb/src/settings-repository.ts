@@ -78,8 +78,8 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
       if (!result.Item) {
         // Settings don't exist, create default
         const defaultSettings = createDefaultSettingsFile();
-        const settingsObj = {
-          collections: defaultSettings.collections,
+        const settingsObj: SettingsDocument = {
+          collections: defaultSettings.collections ?? {},
           schemas: {} as Record<string, JSONSchema7>,
         };
 
@@ -153,7 +153,7 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
     }
 
     // Update collections while preserving schemas
-    document.success.collections = settings.collections;
+    document.success.collections = settings.collections ?? {};
 
     return this.putSettingsDocument(document.success);
   }
@@ -164,7 +164,8 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
       return failAs<CollectionSettings>(settings.failure);
     }
 
-    const collectionSettings = settings.success.collections[collection];
+    const collections = settings.success.collections ?? {};
+    const collectionSettings = collections[collection];
     if (!collectionSettings) {
       return Result.fail(new NotFoundError(`Collection '${collection}' not found in settings`));
     }

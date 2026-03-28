@@ -23,6 +23,7 @@
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
+    
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

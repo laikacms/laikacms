@@ -19,6 +19,7 @@
     }
   },
   "scripts": {
+    
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json -w",
     "clean": "rimraf dist",
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@types/json-schema": "^7.0.15",
-    "typescript": "catalog:tools"
+    "typescript": "catalog:tools",
+    "@standard-schema/spec": "catalog:schema"
   }
 }

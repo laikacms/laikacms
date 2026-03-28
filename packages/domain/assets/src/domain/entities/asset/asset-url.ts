@@ -26,4 +26,6 @@ export const AssetUrlSchema = S.Struct({
   expiresAt: S.optional(S.DateTimeUtcFromString),
 });
 
+export const AssetUrlSchemaStandardV1 = S.toStandardSchemaV1(AssetUrlSchema);
+
 export type AssetUrl = S.Schema.Type<typeof AssetUrlSchema>;

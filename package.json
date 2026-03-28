@@ -1,5 +1,5 @@
 {
-  "name": "laika-cms",
+  "name": "laikacms",
   "version": "0.0.1",
   "description": "The basis for modern content management.",
   "keywords": ["headless-cms", "content-management", "jamstack", "react", "typescript"],
@@ -22,11 +22,12 @@
     "url": "https://github.com/laikacms/laikacms/sponsors"
   },
   "scripts": {
-    "clean": "rimraf --glob '**/node_modules' '**/dist' '**/.turbo' '**/cdk.out' '**/.tanstack/*' '**/.wrangler/*",
+    "clean": "rimraf --glob '**/node_modules' '**/dist' '**/.turbo' '**/cdk.out' '**/.tanstack/*' '**/.wrangler/*'",
     "build": "turbo run build",
     "dev": "turbo watch dev",
     "types": "turbo run types",
     "test": "turbo run test",
+    "link:global": "turbo run link",
     "scripts:validate-packages": "tsx scripts/validate-packages.ts",
     "lint": "eslint --cache --config eslint.config.mjs .",
     "format": "dprint fmt",

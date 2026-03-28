@@ -33,6 +33,7 @@
     "dev": "tsx scripts/dev-server.ts",
     "test": "vitest run",
     "test:watch": "vitest",
+    
     "prepublishOnly": "pnpm run build"
   },
   "keywords": [

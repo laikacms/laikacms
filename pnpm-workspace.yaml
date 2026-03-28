@@ -39,7 +39,6 @@ catalogs:
     "@types/react": "^19.1.9"
     "@types/react-dom": "^19.1.7"
     "@types/json-schema": "^7.0.15"
-    "@types/better-sqlite3": "^7.6.12"
     "@types/lodash": "^4.17.20"
     "@types/aws-lambda": "^8.10.145"
 
@@ -67,6 +66,7 @@ catalogs:
   schema:
     "json-schema": "^0.4.0"
     "ajv": "^8.13.0"
+    "@standard-schema/spec": "^1.1.0"
 
   build:
     "webpack": "^5.95.0"
@@ -77,10 +77,6 @@ catalogs:
 
   lodash:
     "lodash": "^4.17.21"
-
-  database:
-    "drizzle-orm": "^0.44.7"
-    "better-sqlite3": "^11.9.1"
 
   decap:
     "decap-cms-backend-github": "^3.0.0"

@@ -5,4 +5,6 @@ export const FolderCreateSchema = S.Struct({
   type: S.Literal('folder'),
 });
 
+export const FolderCreateSchemaStandardV1 = S.toStandardSchemaV1(FolderCreateSchema);
+
 export type FolderCreate = S.Schema.Type<typeof FolderCreateSchema>;

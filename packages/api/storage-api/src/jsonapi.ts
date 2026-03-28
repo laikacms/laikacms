@@ -1,3 +1,4 @@
+import * as S from 'effect/Schema';
 import {
   StorageObjectUpdate,
   StorageObject,
@@ -6,19 +7,21 @@ import {
   StorageObjectCreate,
   StorageObjectSummary,
   FolderSummary,
+  Atom,
+  AtomSummary,
 } from '@laikacms/storage';
 
 // Re-export common JSON:API utilities
 export {
-  jsonApiDeleteZ,
-  jsonApiDeleteMultipleZ,
-  atomicOperationZ,
-  atomicOperationsRequestZ,
-  atomicOperationsResponseZ,
-  jsonApiLinksZ,
-  cursorPaginationMetaZ,
-  jsonApiCollectionResponseZ,
-  jsonApiErrorZ,
+  JsonApiDeleteSchema,
+  JsonApiDeleteMultipleSchema,
+  AtomicOperationSchema,
+  AtomicOperationsRequestSchema,
+  AtomicOperationsResponseSchema,
+  JsonApiLinksSchema,
+  CursorPaginationMetaSchema,
+  JsonApiCollectionResponseSchema,
+  JsonApiErrorSchema,
   parsePaginationQuery,
   buildPaginationLinks,
   type JsonApiError,
@@ -157,3 +160,72 @@ export function atomSummaryToJsonApi(atom: StorageObjectSummary | FolderSummary)
   }
   return folderSummaryToJsonApi(atom);
 }
+
+export function atomFromJsonApi(jsonApi: JsonApiAtom): Atom {
+  if (jsonApi.type === 'object') {
+    return storageObjectFromJsonApi(jsonApi);
+  }
+  return folderFromJsonApi(jsonApi);
+}
+
+export function atomSummaryFromJsonApi(jsonApi: JsonApiAtomSummary): AtomSummary {
+  if (jsonApi.type === 'object-summary') {
+    return storageObjectSummaryFromJsonApi(jsonApi);
+  }
+  return folderSummaryFromJsonApi(jsonApi);
+}
+
+// Effect Schema definitions for JSON:API resources
+export const JsonApiStorageObjectSchema = S.Struct({
+  type: S.Literal('object'),
+  id: S.String,
+  attributes: S.Record(S.String, S.Unknown),
+});
+
+export const JsonApiStorageObjectCreateSchema = S.Struct({
+  type: S.Literal('object'),
+  id: S.String,
+  attributes: S.Record(S.String, S.Unknown),
+});
+
+export const JsonApiStorageObjectUpdateSchema = S.Struct({
+  type: S.Literal('object'),
+  id: S.String,
+  attributes: S.Record(S.String, S.Unknown),
+});
+
+export const JsonApiFolderSchema = S.Struct({
+  type: S.Literal('folder'),
+  id: S.String,
+  attributes: S.Record(S.String, S.Unknown),
+});
+
+export const JsonApiFolderCreateSchema = S.Struct({
+  type: S.Literal('folder'),
+  id: S.String,
+  attributes: S.Record(S.String, S.Unknown),
+});
+
+export const JsonApiStorageObjectSummarySchema = S.Struct({
+  type: S.Literal('object-summary'),
+  id: S.String,
+  attributes: S.Record(S.String, S.Unknown),
+});
+
+export const JsonApiFolderSummarySchema = S.Struct({
+  type: S.Literal('folder-summary'),
+  id: S.String,
+  attributes: S.Record(S.String, S.Unknown),
+});
+
+export const JsonApiAtomSchema = S.Union([JsonApiStorageObjectSchema, JsonApiFolderSchema]);
+export const JsonApiAtomSummarySchema = S.Union([JsonApiStorageObjectSummarySchema, JsonApiFolderSummarySchema]);
+
+// Decoders for validation
+export const decodeJsonApiStorageObject = S.decodeUnknownSync(JsonApiStorageObjectSchema);
+export const decodeJsonApiStorageObjectCreate = S.decodeUnknownSync(JsonApiStorageObjectCreateSchema);
+export const decodeJsonApiStorageObjectUpdate = S.decodeUnknownSync(JsonApiStorageObjectUpdateSchema);
+export const decodeJsonApiFolder = S.decodeUnknownSync(JsonApiFolderSchema);
+export const decodeJsonApiFolderCreate = S.decodeUnknownSync(JsonApiFolderCreateSchema);
+export const decodeJsonApiAtom = S.decodeUnknownSync(JsonApiAtomSchema);
+export const decodeJsonApiAtomSummary = S.decodeUnknownSync(JsonApiAtomSummarySchema);

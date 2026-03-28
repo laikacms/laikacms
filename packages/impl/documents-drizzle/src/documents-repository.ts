@@ -1,16 +1,4 @@
 import {
-  eq,
-  and,
-  inArray,
-  ne,
-  Column,
-  InferModelFromColumns,
-  ColumnBaseConfig,
-  SQL,
-  like,
-  lte,
-} from "drizzle-orm";
-import {
   LaikaError,
   LaikaResult,
   NotFoundError,
@@ -38,118 +26,90 @@ import * as Result from 'effect/Result';
 
 const PUBLISHED_STATUS = "published";
 
-/**
- * Helper to convert a failure result to a different type while preserving the error
- */
 function failAs<T>(error: LaikaError): LaikaResult<T> {
   return Result.fail(error);
 }
 
-type DocumentColumnOptions = {
-  key: Column<ColumnBaseConfig<"string", string>>;
-  depth: Column<ColumnBaseConfig<"number", string>>;
-  status: Column<ColumnBaseConfig<"string", string>>;
-  content: Column<ColumnBaseConfig<"string", string>>;
-  createdAt: Column<ColumnBaseConfig<"string", string>>;
-  updatedAt: Column<ColumnBaseConfig<"string", string>>;
+export type DocumentModel = {
+  key: string;
+  depth: number;
+  status: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
-type RevisionColumnOptions = {
-  key: Column<ColumnBaseConfig<"string", string>>;
-  depth: Column<ColumnBaseConfig<"number", string>>;
-  revision: Column<ColumnBaseConfig<"string", string>>;
-  content: Column<ColumnBaseConfig<"string", string>>;
-  createdAt: Column<ColumnBaseConfig<"string", string>>;
-  updatedAt: Column<ColumnBaseConfig<"string", string>>;
+export type RevisionModel = {
+  key: string;
+  depth: number;
+  revision: string;
+  content: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
-export type DrizzleDocumentCallbacks<Model> = {
-  insert: (query: {
-    where: SQL | undefined;
-    values: Model;
-  }) => Promise<Model[]>;
-  update: (query: {
-    where: SQL | undefined;
-    values: Partial<Model>;
-  }) => Promise<Model[]>;
-  delete: (query: { where: SQL | undefined }) => Promise<Model[]>;
-  select: (query: {
-    where: SQL | undefined;
-    excludeContent?: boolean;
-    limit?: number;
-    offset?: number;
-  }) => Promise<Model[]>;
-};
-
-export type DrizzleRevisionCallbacks<Model> = {
-  insert: (query: {
-    where: SQL | undefined;
-    values: Model;
-  }) => Promise<Model[]>;
-  update: (query: {
-    where: SQL | undefined;
-    values: Partial<Model>;
-  }) => Promise<Model[]>;
-  delete: (query: { where: SQL | undefined }) => Promise<Model[]>;
-  select: (query: {
-    where: SQL | undefined;
-    limit?: number;
-    excludeContent?: boolean;
-  }) => Promise<Model[]>;
-};
-
-export type DrizzleDocumentsCallbacks<DocModel, RevModel> = {
-  documents: DrizzleDocumentCallbacks<DocModel>;
-  revisions: DrizzleRevisionCallbacks<RevModel>;
-};
-
-export interface DrizzleDocumentsRepositoryOptions<
-  DocColumns,
-  DocModel,
-  RevColumns,
-  RevModel,
-> {
-  logger?: Console;
-  documentColumns: DocColumns;
-  revisionColumns: RevColumns;
-  callbacks: DrizzleDocumentsCallbacks<DocModel, RevModel>;
+export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA> {
+  logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
+  documentQueryBuilders: {
+    keyEquals: (value: string) => CKE;
+    keyStartsWith: (prefix: string) => CKSW;
+    statusEquals: (value: string) => CSE;
+    statusNotEquals: (value: string) => CSNE;
+    statusIn: (values: string[]) => CSI;
+    depthLte: (value: number) => CDLTE;
+    and: (...conditions: (CKE | CKSW | CSE | CSNE | CSI | CDLTE | CA)[]) => CA;
+  };
+  revisionQueryBuilders: {
+    keyEquals: (value: string) => RKE;
+    revisionEquals: (value: string) => RE;
+    and: (...conditions: (RKE | RE | RA)[]) => RA;
+  };
+  callbacks: {
+    documents: {
+      insert: (query: {
+        values: DocumentModel;
+      }) => Promise<DocumentModel[]>;
+      update: (query: {
+        where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA;
+        values: Partial<DocumentModel>;
+      }) => Promise<DocumentModel[]>;
+      delete: (query: { where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA }) => Promise<DocumentModel[]>;
+      select: (query: {
+        where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA;
+        excludeContent?: boolean;
+        limit?: number;
+        offset?: number;
+      }) => Promise<DocumentModel[]>;
+    },
+    revisions: {
+      insert: (query: {
+        values: RevisionModel;
+      }) => Promise<RevisionModel[]>;
+      update: (query: {
+        where: RKE | RE | RA;
+        values: Partial<RevisionModel>;
+      }) => Promise<RevisionModel[]>;
+      delete: (query: { where: RKE | RE | RA }) => Promise<RevisionModel[]>;
+      select: (query: {
+        where: RKE | RE | RA;
+        limit?: number;
+        excludeContent?: boolean;
+      }) => Promise<RevisionModel[]>;
+    }
+  };
 }
 
-export class DrizzleDocumentsRepository<
-  DocColumns extends DocumentColumnOptions,
-  DocModel extends InferModelFromColumns<DocColumns, "select">,
-  RevColumns extends RevisionColumnOptions,
-  RevModel extends InferModelFromColumns<RevColumns, "select">,
-> extends DocumentsRepository {
+export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /* Revisions */ RKE, RE, RA> extends DocumentsRepository {
   constructor(
-    private options: DrizzleDocumentsRepositoryOptions<
-      DocColumns,
-      DocModel,
-      RevColumns,
-      RevModel
-    >,
+    private options: DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA>,
   ) {
     super();
   }
 
-  private getDocValue<
-    K extends keyof DocColumns &
-      ("key" | "status" | "content" | "createdAt" | "updatedAt"),
-  >(row: DocModel, key: K): DocModel[K] {
-    return row[key];
-  }
-
-  private getRevValue<
-    K extends keyof RevColumns &
-      ("key" | "revision" | "content" | "createdAt" | "updatedAt"),
-  >(row: RevModel, key: K): RevModel[K] {
-    return row[key];
-  }
-
   async *getDocument(key: string): AsyncGenerator<LaikaResult<Document>> {
-    const cols = this.options.documentColumns;
+    const qb = this.options.documentQueryBuilders;
     const rows = await this.options.callbacks.documents.select({
-      where: and(eq(cols.key, key), eq(cols.status, PUBLISHED_STATUS)),
+      where: qb.and(qb.keyEquals(key), qb.statusEquals(PUBLISHED_STATUS)),
       limit: 1,
     });
     if (rows.length === 0) {
@@ -158,16 +118,14 @@ export class DrizzleDocumentsRepository<
     }
     const row = rows[0];
     try {
-      const content = JSON.parse(
-        String(this.getDocValue(row, "content")),
-      ) as StorageObjectContent;
+      const content = JSON.parse(row.content) as StorageObjectContent;
       yield Result.succeed({
         type: "published" as const,
-        key: String(this.getDocValue(row, "key")),
+        key: row.key,
         status: "published" as const,
         content,
-        createdAt: String(this.getDocValue(row, "createdAt")),
-        updatedAt: String(this.getDocValue(row, "updatedAt")),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
       });
     } catch (error) {
       yield Result.fail(new InvalidData(
@@ -177,49 +135,45 @@ export class DrizzleDocumentsRepository<
   }
 
   async *createDocument(create: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
-    const cols = this.options.documentColumns;
     const now = new Date().toISOString();
-    const values = {
-      key: create.key,
-      depth: pathToSegments(create.key).length,
-      status: PUBLISHED_STATUS,
-      content: JSON.stringify(create.content),
-      createdAt: now,
-      updatedAt: now,
-    } as DocModel;
     await this.options.callbacks.documents.insert({
-      where: eq(cols.key, create.key),
-      values,
+      values: {
+        key: create.key,
+        depth: pathToSegments(create.key).length,
+        status: PUBLISHED_STATUS,
+        content: JSON.stringify(create.content),
+        createdAt: now,
+        updatedAt: now,
+      },
     });
     yield* this.getDocument(create.key);
   }
 
   async *updateDocument(update: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
-    const cols = this.options.documentColumns;
+    const qb = this.options.documentQueryBuilders;
     const now = new Date().toISOString();
-    const values: Partial<DocModel> = {
-      updatedAt: now,
-      content: JSON.stringify(update.content),
-    } as Partial<DocModel>;
     await this.options.callbacks.documents.update({
-      where: and(eq(cols.key, update.key), eq(cols.status, PUBLISHED_STATUS)),
-      values,
+      where: qb.and(qb.keyEquals(update.key), qb.statusEquals(PUBLISHED_STATUS)),
+      values: {
+        updatedAt: now,
+        content: JSON.stringify(update.content),
+      },
     });
     yield* this.getDocument(update.key);
   }
 
   async *deleteDocument(key: string): AsyncGenerator<LaikaResult<void>> {
-    const cols = this.options.documentColumns;
+    const qb = this.options.documentQueryBuilders;
     await this.options.callbacks.documents.delete({
-      where: and(eq(cols.key, key)),
+      where: qb.keyEquals(key),
     });
     yield Result.succeed(undefined);
   }
 
   async *getUnpublished(key: string): AsyncGenerator<LaikaResult<Unpublished>> {
-    const cols = this.options.documentColumns;
+    const qb = this.options.documentQueryBuilders;
     const rows = await this.options.callbacks.documents.select({
-      where: and(eq(cols.key, key), ne(cols.status, PUBLISHED_STATUS)),
+      where: qb.and(qb.keyEquals(key), qb.statusNotEquals(PUBLISHED_STATUS)),
       limit: 1,
     });
     if (rows.length === 0) {
@@ -228,16 +182,14 @@ export class DrizzleDocumentsRepository<
     }
     const row = rows[0];
     try {
-      const content = JSON.parse(
-        String(this.getDocValue(row, "content")),
-      ) as StorageObjectContent;
+      const content = JSON.parse(row.content) as StorageObjectContent;
       yield Result.succeed({
         type: "unpublished" as const,
-        key: String(this.getDocValue(row, "key")),
-        status: String(this.getDocValue(row, "status")),
+        key: row.key,
+        status: row.status,
         content,
-        createdAt: String(this.getDocValue(row, "createdAt")),
-        updatedAt: String(this.getDocValue(row, "updatedAt")),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
       });
     } catch (error) {
       yield Result.fail(new InvalidData(
@@ -249,19 +201,16 @@ export class DrizzleDocumentsRepository<
   async *createUnpublished(
     create: UnpublishedCreate,
   ): AsyncGenerator<LaikaResult<Unpublished>> {
-    const cols = this.options.documentColumns;
     const now = new Date().toISOString();
-    const values = {
-      key: create.key,
-      depth: pathToSegments(create.key).length,
-      status: create.status,
-      content: JSON.stringify(create.content),
-      createdAt: now,
-      updatedAt: now,
-    } as DocModel;
     await this.options.callbacks.documents.insert({
-      where: eq(cols.key, create.key),
-      values,
+      values: {
+        key: create.key,
+        depth: pathToSegments(create.key).length,
+        status: create.status,
+        content: JSON.stringify(create.content),
+        createdAt: now,
+        updatedAt: now,
+      },
     });
     yield* this.getUnpublished(create.key);
   }
@@ -269,32 +218,24 @@ export class DrizzleDocumentsRepository<
   async *updateUnpublished(
     update: UnpublishedUpdate,
   ): AsyncGenerator<LaikaResult<Unpublished>> {
-    const cols = this.options.documentColumns;
+    const qb = this.options.documentQueryBuilders;
     const now = new Date().toISOString();
-    const values: Partial<DocModel> = {
+    const values: Partial<DocumentModel> = {
       updatedAt: now,
-    } as Partial<DocModel>;
-    if (update.status)
-      (values as Record<string, unknown>).status = update.status;
-    if (update.content)
-      (values as Record<string, unknown>).content = JSON.stringify(
-        update.content,
-      );
+    };
+    if (update.status) values.status = update.status;
+    if (update.content) values.content = JSON.stringify(update.content);
     await this.options.callbacks.documents.update({
-      where: and(eq(cols.key, update.key), ne(cols.status, PUBLISHED_STATUS)),
+      where: qb.and(qb.keyEquals(update.key), qb.statusNotEquals(PUBLISHED_STATUS)),
       values,
     });
     yield* this.getUnpublished(update.key);
   }
 
   async *deleteUnpublished(key: string): AsyncGenerator<LaikaResult<void>> {
-    const cols = this.options.documentColumns;
+    const qb = this.options.documentQueryBuilders;
     await this.options.callbacks.documents.delete({
-      where: and(
-        eq(cols.key, key),
-        eq(cols.key, key),
-        ne(cols.status, PUBLISHED_STATUS),
-      ),
+      where: qb.and(qb.keyEquals(key), qb.statusNotEquals(PUBLISHED_STATUS)),
     });
     yield Result.succeed(undefined);
   }
@@ -314,15 +255,14 @@ export class DrizzleDocumentsRepository<
       return;
     }
 
-    const cols = this.options.documentColumns;
+    const qb = this.options.documentQueryBuilders;
     const now = new Date().toISOString();
-    const values = {
-      status: PUBLISHED_STATUS,
-      updatedAt: now,
-    } as Partial<DocModel>;
     await this.options.callbacks.documents.update({
-      where: eq(cols.key, key),
-      values,
+      where: qb.keyEquals(key),
+      values: {
+        status: PUBLISHED_STATUS,
+        updatedAt: now,
+      },
     });
     yield* this.getDocument(key);
   }
@@ -342,15 +282,14 @@ export class DrizzleDocumentsRepository<
       return;
     }
 
-    const cols = this.options.documentColumns;
+    const qb = this.options.documentQueryBuilders;
     const now = new Date().toISOString();
-    const values = {
-      status,
-      updatedAt: now,
-    } as Partial<DocModel>;
     await this.options.callbacks.documents.update({
-      where: eq(cols.key, key),
-      values,
+      where: qb.keyEquals(key),
+      values: {
+        status,
+        updatedAt: now,
+      },
     });
     yield* this.getUnpublished(key);
   }
@@ -362,20 +301,18 @@ export class DrizzleDocumentsRepository<
     options: SummaryOnly extends true ? ListRecordsOptions : ListRecordsOptions,
     summaryOnly: SummaryOnly,
   ): AsyncGenerator<LaikaResult<readonly T[]>> {
-    const cols = this.options.documentColumns;
+    const qb = this.options.documentQueryBuilders;
     const records: T[] = [];
 
     const rows = await this.options.callbacks.documents.select({
       excludeContent: summaryOnly,
-      where: and(
-        options.type === "published" ? eq(cols.status, PUBLISHED_STATUS) : undefined,
-        options.type === "unpublished" ? ne(cols.status, PUBLISHED_STATUS) : undefined,
-        options.statuses
-          ? inArray(cols.status, options.statuses)
-          : undefined,
-        options.folder ? like(cols.key, options.folder + "/%") : undefined,
-        options.folder ? lte(cols.depth, pathToSegments(options.folder).length + options.depth) : undefined,
-      ),
+      where: qb.and(...[
+        options.type === "published" ? qb.statusEquals(PUBLISHED_STATUS) : undefined,
+        options.type === "unpublished" ? qb.statusNotEquals(PUBLISHED_STATUS) : undefined,
+        options.statuses ? qb.statusIn(options.statuses) : undefined,
+        options.folder ? qb.keyStartsWith(options.folder + "/") : undefined,
+        options.folder ? qb.depthLte(pathToSegments(options.folder).length + options.depth) : undefined,
+      ].filter(x => x !== undefined)),
       offset: 'offset' in options.pagination ? options.pagination.offset : 0,
       limit: 'limit' in options.pagination ? options.pagination.limit : 100,
     });
@@ -383,22 +320,15 @@ export class DrizzleDocumentsRepository<
       try {
         records.push({
           type: options.type === "published" ? "published" : options.type === "unpublished" ? "unpublished" : "record",
-          key: String(this.getDocValue(row, "key")),
+          key: row.key,
           status: PUBLISHED_STATUS,
-          createdAt: String(this.getDocValue(row, "createdAt")),
-          updatedAt: String(this.getDocValue(row, "updatedAt")),
-
-          ...(summaryOnly
-            ? {}
-            : {
-                content: JSON.parse(
-                  String(this.getDocValue(row, "content")),
-                ) as StorageObjectContent,
-              }),
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          ...(summaryOnly ? {} : { content: JSON.parse(row.content) as StorageObjectContent }),
         } as T);
       } catch (error) {
         yield Result.fail(new InvalidData(
-          `Invalid JSON content format for document key "${String(this.getDocValue(row, "key"))}": ${error instanceof Error ? error.message : "Unknown error"}`
+          `Invalid JSON content format for document key "${row.key}": ${error instanceof Error ? error.message : "Unknown error"}`
         ));
         return;
       }
@@ -419,9 +349,9 @@ export class DrizzleDocumentsRepository<
   }
 
   async *getRevision(key: string, revision: string): AsyncGenerator<LaikaResult<Revision>> {
-    const cols = this.options.revisionColumns;
+    const qb = this.options.revisionQueryBuilders;
     const rows = await this.options.callbacks.revisions.select({
-      where: and(eq(cols.key, key), eq(cols.revision, revision)),
+      where: qb.and(qb.keyEquals(key), qb.revisionEquals(revision)),
       limit: 1,
     });
     if (rows.length === 0) {
@@ -430,16 +360,14 @@ export class DrizzleDocumentsRepository<
     }
     const row = rows[0];
     try {
-      const content = JSON.parse(
-        String(this.getRevValue(row, "content")),
-      ) as StorageObjectContent;
+      const content = JSON.parse(row.content) as StorageObjectContent;
       yield Result.succeed({
         type: "revision" as const,
-        key: String(this.getRevValue(row, "key")),
-        revision: String(this.getRevValue(row, "revision")),
+        key: row.key,
+        revision: row.revision,
         content,
-        createdAt: String(this.getRevValue(row, "createdAt")),
-        updatedAt: String(this.getRevValue(row, "updatedAt")),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
       });
     } catch (error) {
       yield Result.fail(new InvalidData(
@@ -449,19 +377,16 @@ export class DrizzleDocumentsRepository<
   }
 
   async *createRevision(create: RevisionCreate): AsyncGenerator<LaikaResult<Revision>> {
-    const cols = this.options.revisionColumns;
     const now = new Date().toISOString();
-    const values = {
-      key: create.key,
-      depth: pathToSegments(create.key).length,
-      revision: create.revision,
-      content: JSON.stringify(create.content),
-      createdAt: now,
-      updatedAt: now,
-    } as RevModel;
     await this.options.callbacks.revisions.insert({
-      where: and(eq(cols.key, create.key), eq(cols.revision, create.revision)),
-      values,
+      values: {
+        key: create.key,
+        depth: pathToSegments(create.key).length,
+        revision: create.revision,
+        content: JSON.stringify(create.content),
+        createdAt: now,
+        updatedAt: now,
+      },
     });
     yield* this.getRevision(create.key, create.revision);
   }
@@ -470,16 +395,16 @@ export class DrizzleDocumentsRepository<
     key: string,
     _options: ListRevisionsOptions,
   ): AsyncGenerator<LaikaResult<readonly RevisionSummary[]>> {
-    const cols = this.options.revisionColumns;
+    const qb = this.options.revisionQueryBuilders;
     const rows = await this.options.callbacks.revisions.select({
-      where: eq(cols.key, key),
+      where: qb.keyEquals(key),
     });
     const summaries: RevisionSummary[] = rows.map((row) => ({
       type: "revision-summary" as const,
       key,
-      revision: String(this.getRevValue(row, "revision")),
-      createdAt: String(this.getRevValue(row, "createdAt")),
-      updatedAt: String(this.getRevValue(row, "updatedAt")),
+      revision: row.revision,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     }));
     yield Result.succeed(summaries);
   }

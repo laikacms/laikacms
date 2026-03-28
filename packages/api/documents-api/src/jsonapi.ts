@@ -1,3 +1,4 @@
+import * as S from 'effect/Schema';
 import {
   StorageObjectUpdateSchema,
   StorageObjectSchema,
@@ -279,3 +280,86 @@ export const revisionSummaryToJsonApi = (rev: RevisionSummary): RevisionSummaryJ
 
 export const revisionSummaryFromJsonApi = (jsonApi: RevisionSummaryJsonApi): RevisionSummary =>
   fromJsonApi(jsonApi, 'revision-summary', 'key');
+
+// ===== JSON:API SCHEMAS FOR VALIDATION =====
+
+// Document JSON:API Schemas
+export const DocumentJsonApiSchema = S.Struct({
+  type: S.Literal('published'),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.Literal('published'),
+    status: S.Literal('published'),
+    content: S.Record(S.String, S.Unknown),
+    createdAt: S.optional(S.String),
+    updatedAt: S.optional(S.String),
+  }),
+});
+
+export const DocumentSummaryJsonApiSchema = S.Struct({
+  type: S.Union([S.Literal('published'), S.Literal('published-summary')]),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.Union([S.Literal('published-summary'), S.Literal('published')]),
+    status: S.Literal('published'),
+    createdAt: S.optional(S.String),
+    updatedAt: S.optional(S.String),
+  }),
+});
+
+// Unpublished JSON:API Schemas
+export const UnpublishedJsonApiSchema = S.Struct({
+  type: S.Literal('unpublished'),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.Literal('unpublished'),
+    status: S.String,
+    content: S.Record(S.String, S.Unknown),
+    createdAt: S.optional(S.String),
+    updatedAt: S.optional(S.String),
+  }),
+});
+
+export const UnpublishedSummaryJsonApiSchema = S.Struct({
+  type: S.Union([S.Literal('unpublished'), S.Literal('unpublished-summary')]),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.Union([S.Literal('unpublished-summary'), S.Literal('unpublished')]),
+    status: S.String,
+    createdAt: S.optional(S.String),
+    updatedAt: S.optional(S.String),
+  }),
+});
+
+// Revision JSON:API Schemas
+export const RevisionJsonApiSchema = S.Struct({
+  type: S.Literal('revision'),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.Literal('revision'),
+    revision: S.String,
+    content: S.Record(S.String, S.Unknown),
+    createdAt: S.String,
+    updatedAt: S.optional(S.String),
+  }),
+});
+
+export const RevisionSummaryJsonApiSchema = S.Struct({
+  type: S.Union([S.Literal('revision'), S.Literal('revision-summary')]),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.Union([S.Literal('revision-summary'), S.Literal('revision')]),
+    revision: S.String,
+    createdAt: S.String,
+    updatedAt: S.optional(S.String),
+  }),
+});
+
+// ===== DECODERS =====
+
+export const decodeDocumentJsonApi = S.decodeUnknownSync(DocumentJsonApiSchema);
+export const decodeDocumentSummaryJsonApi = S.decodeUnknownSync(DocumentSummaryJsonApiSchema);
+export const decodeUnpublishedJsonApi = S.decodeUnknownSync(UnpublishedJsonApiSchema);
+export const decodeUnpublishedSummaryJsonApi = S.decodeUnknownSync(UnpublishedSummaryJsonApiSchema);
+export const decodeRevisionJsonApi = S.decodeUnknownSync(RevisionJsonApiSchema);
+export const decodeRevisionSummaryJsonApi = S.decodeUnknownSync(RevisionSummaryJsonApiSchema);

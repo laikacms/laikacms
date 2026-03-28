@@ -26,7 +26,8 @@
   },
   "devDependencies": {
     "@types/json-schema": "^7.0.15",
-    "typescript": "catalog:tools"
+    "typescript": "catalog:tools",
+    "@standard-schema/spec": "catalog:schema"
   },
   "dependencies": {
     "@laikacms/core": "workspace:*",

@@ -5,14 +5,9 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "declaration": true,
-    "emitDeclarationOnly": true,
-    "skipLibCheck": true,
     "strict": true,
-    "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true,
     "rootDir": "./src",
-    "lib": ["ES2020"],
-    "typeRoots": ["../../types", "./node_modules/@types"]
+    "lib": ["ES2020"]
   },
   "include": [
     "src/**/*"

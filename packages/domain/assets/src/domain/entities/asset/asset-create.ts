@@ -1,4 +1,5 @@
 import * as S from 'effect/Schema';
+import { StandardSchemaV1 } from '@standard-schema/spec';
 /**
  * Browser-compatible binary content type.
  * Supports Uint8Array (works in both browser and Node.js),
@@ -42,5 +43,7 @@ export const AssetCreateSchema = S.Struct({
   /** Cache control header value */
   cacheControl: S.optional(S.String),
 });
+
+export const AssetCreateSchemaStandardV1 = S.toStandardSchemaV1(AssetCreateSchema);
 
 export type AssetCreate = S.Schema.Type<typeof AssetCreateSchema>;

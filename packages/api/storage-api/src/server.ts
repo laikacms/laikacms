@@ -199,7 +199,7 @@ interface StorageApiOptions {
   repo: StorageRepository;
   basePath?: string | undefined;
   onError?(error: unknown): void;
-  logger?: Console | undefined;
+  logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
 }
 
 export function buildJsonApi(options: StorageApiOptions) {

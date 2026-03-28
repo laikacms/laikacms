@@ -1,3 +1,4 @@
+import { InvalidData, LaikaError, LaikaResult } from '@laikacms/core';
 import {
   StorageRepository,
   type Atom,
@@ -5,25 +6,29 @@ import {
   type Folder,
   type FolderCreate,
   type ListAtomsOptions,
-  type Pagination,
   type StorageObject,
   type StorageObjectCreate,
-  type StorageObjectUpdate,
+  type StorageObjectUpdate
 } from '@laikacms/storage';
-import { LaikaResult, LaikaError, InvalidData } from '@laikacms/core';
-import * as Result from 'effect/Result';
 import {
-  storageObjectToJsonApiZ,
-  storageObjectFromJsonApiZ,
-  storageObjectCreateToJsonApiZ,
-  storageObjectUpdateToJsonApiZ,
-  folderToJsonApiZ,
-  folderFromJsonApiZ,
-  folderCreateToJsonApiZ,
-  atomSummaryFromJsonApiZ,
+  atomFromJsonApi,
+  atomSummaryFromJsonApi,
+  decodeJsonApiAtom,
+  decodeJsonApiAtomSummary,
+  decodeJsonApiFolder,
+  decodeJsonApiStorageObject,
+  folderCreateToJsonApi,
+  folderFromJsonApi,
+  storageObjectCreateToJsonApi,
+  storageObjectFromJsonApi,
+  storageObjectUpdateToJsonApi,
+  type JsonApiAtom,
+  type JsonApiAtomSummary,
   type JsonApiCollectionResponse,
-  atomFromJsonApiZ,
+  type JsonApiFolder,
+  type JsonApiStorageObject
 } from '@laikacms/storage-api';
+import * as Result from 'effect/Result';
 import { paginationCodec } from './pagination-codec.js';
 
 function failAs<T>(error: LaikaError): LaikaResult<T> {
@@ -85,11 +90,11 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
     if (!response.ok) {
       const errors = json.errors || [{ detail: 'Unknown error' }];
-      return Result.fail(new InvalidData(errors.map((e: any) => e.detail || e.title || 'Unknown error').join(', ')));
+      return Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
     }
 
     if (json.errors) {
-      return Result.fail(new InvalidData(json.errors.map((e: any) => e.detail || e.title || 'Unknown error').join(', ')));
+      return Result.fail(new InvalidData(json.errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
     }
 
     return Result.succeed(json.data as T);
@@ -103,7 +108,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
         headers,
       });
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<JsonApiStorageObject>(response);
       if (Result.isFailure(result)) {
         yield failAs<StorageObject>(result.failure);
         return;
@@ -111,17 +116,18 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       console.log('getObject - result.success (JSON:API resource):', JSON.stringify(result.success, null, 2));
 
-      // Parse from JSON:API format to domain format
-      const parsed = storageObjectFromJsonApiZ.safeParse(result.success);
-      console.log('getObject - parsed:', parsed);
-      if (!parsed.success) {
-        console.error('getObject - parsing errors:', parsed.error.issues);
-        yield Result.fail(new InvalidData(parsed.error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ')));
+      // Validate and parse from JSON:API format to domain format
+      try {
+        const validated = decodeJsonApiStorageObject(result.success);
+        const domainObject = storageObjectFromJsonApi(validated as JsonApiStorageObject);
+        console.log('getObject - parsed (domain object):', JSON.stringify(domainObject, null, 2));
+        yield Result.succeed(domainObject);
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        console.error('getObject - parsing errors:', error);
+        yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
         return;
       }
-
-      console.log('getObject - parsed.data (domain object):', JSON.stringify(parsed.data, null, 2));
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
@@ -130,7 +136,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   async *updateObject(update: StorageObjectUpdate): AsyncGenerator<LaikaResult<StorageObject>> {
     try {
       // Transform to JSON:API format
-      const jsonApiData = storageObjectUpdateToJsonApiZ.parse(update);
+      const jsonApiData = storageObjectUpdateToJsonApi(update);
       const headers = await this.getHeaders();
 
       const response = await fetch(`${this.baseUrl}/objects/${encodeURIComponent(update.key)}`, {
@@ -139,20 +145,21 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
         body: JSON.stringify({ data: jsonApiData }),
       });
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<JsonApiStorageObject>(response);
       if (Result.isFailure(result)) {
         yield failAs<StorageObject>(result.failure);
         return;
       }
 
-      // Parse from JSON:API format to domain format
-      const parsed = storageObjectFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+      // Validate and parse from JSON:API format to domain format
+      try {
+        const validated = decodeJsonApiStorageObject(result.success);
+        yield Result.succeed(storageObjectFromJsonApi(validated as JsonApiStorageObject));
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
         return;
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
@@ -161,7 +168,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   async *createObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
     try {
       // Transform to JSON:API format
-      const jsonApiData = storageObjectCreateToJsonApiZ.parse(create);
+      const jsonApiData = storageObjectCreateToJsonApi(create);
       const headers = await this.getHeaders();
 
       const response = await fetch(`${this.baseUrl}/atoms`, {
@@ -170,20 +177,21 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
         body: JSON.stringify({ data: jsonApiData }),
       });
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<JsonApiStorageObject>(response);
       if (Result.isFailure(result)) {
         yield failAs<StorageObject>(result.failure);
         return;
       }
 
-      // Parse from JSON:API format to domain format
-      const parsed = storageObjectFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+      // Validate and parse from JSON:API format to domain format
+      try {
+        const validated = decodeJsonApiStorageObject(result.success);
+        yield Result.succeed(storageObjectFromJsonApi(validated as JsonApiStorageObject));
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
         return;
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
@@ -213,20 +221,21 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
         headers,
       });
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<JsonApiFolder>(response);
       if (Result.isFailure(result)) {
         yield failAs<Folder>(result.failure);
         return;
       }
 
-      // Parse from JSON:API format to domain format
-      const parsed = folderFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+      // Validate and parse from JSON:API format to domain format
+      try {
+        const validated = decodeJsonApiFolder(result.success);
+        yield Result.succeed(folderFromJsonApi(validated as JsonApiFolder));
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
         return;
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
@@ -266,18 +275,18 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       if (!response.ok || 'errors' in json) {
         const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
-        yield Result.fail(new InvalidData(errors.map((e: any) => e.detail || e.title || 'Unknown error').join(', ')));
+        yield Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
         return;
       }
 
       const items: Atom[] = [];
       for (const item of json.data) {
-        const parsed = atomFromJsonApiZ.safeParse(item);
-
-        if (parsed.success) {
-          items.push(parsed.data);
-        } else {
-          yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+        try {
+          const validated = decodeJsonApiAtom(item);
+          items.push(atomFromJsonApi(validated as JsonApiAtom));
+        } catch (e: unknown) {
+          const error = e as { message?: string };
+          yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
           return;
         }
       }
@@ -314,18 +323,18 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       if (!response.ok || 'errors' in json) {
         const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
-        yield Result.fail(new InvalidData(errors.map((e: any) => e.detail || e.title || 'Unknown error').join(', ')));
+        yield Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
         return;
       }
 
       const items: AtomSummary[] = [];
       for (const item of json.data) {
-        const parsed = atomSummaryFromJsonApiZ.safeParse(item);
-
-        if (parsed.success) {
-          items.push(parsed.data);
-        } else {
-          yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+        try {
+          const validated = decodeJsonApiAtomSummary(item);
+          items.push(atomSummaryFromJsonApi(validated as JsonApiAtomSummary));
+        } catch (e: unknown) {
+          const error = e as { message?: string };
+          yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
           return;
         }
       }
@@ -339,7 +348,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
     try {
       // Transform to JSON:API format
-      const jsonApiData = folderCreateToJsonApiZ.parse(folderCreate);
+      const jsonApiData = folderCreateToJsonApi(folderCreate);
       const headers = await this.getHeaders();
 
       const response = await fetch(`${this.baseUrl}/atoms`, {
@@ -348,20 +357,21 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
         body: JSON.stringify({ data: jsonApiData }),
       });
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<JsonApiFolder>(response);
       if (Result.isFailure(result)) {
         yield failAs<Folder>(result.failure);
         return;
       }
 
-      // Parse from JSON:API format to domain format
-      const parsed = folderFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(parsed.error.issues.map(e => e.message).join(', ')));
+      // Validate and parse from JSON:API format to domain format
+      try {
+        const validated = decodeJsonApiFolder(result.success);
+        yield Result.succeed(folderFromJsonApi(validated as JsonApiFolder));
+      } catch (e: unknown) {
+        const error = e as { message?: string };
+        yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
         return;
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
     }
@@ -410,7 +420,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       if (!response.ok) {
         const errors = json.errors || [{ detail: 'Unknown error' }];
-        yield Result.fail(new InvalidData(errors.map((e: any) => e.detail || e.title || 'Unknown error').join(', ')));
+        yield Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
         return;
       }
 

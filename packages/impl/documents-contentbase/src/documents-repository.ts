@@ -60,7 +60,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     if (Result.isFailure(settings)) {
       return failAs<string>(settings.failure);
     }
-    return Result.succeed(pathCombine(settings.success.directory, key));
+    const directory = settings.success.directory ?? this.collection;
+    return Result.succeed(pathCombine(directory, key));
   }
 
   /**
@@ -545,7 +546,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
     // List documents if requested
     if (options.type === 'published' || options.type === undefined) {
-      const directory = settings.success.directory;
+      const directory = settings.success.directory ?? this.collection;
       const folderPath = options.folder ? pathCombine(directory, options.folder) : directory;
 
       const listOptions = {

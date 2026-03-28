@@ -18,4 +18,6 @@ export const AssetUpdateSchema = S.Struct({
   mimeType: S.optional(S.String),
 });
 
+export const AssetUpdateSchemaStandardV1 = S.toStandardSchemaV1(AssetUpdateSchema);
+
 export type AssetUpdate = S.Schema.Type<typeof AssetUpdateSchema>;

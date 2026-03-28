@@ -8,4 +8,6 @@ export const RevisionCreateSchema = S.Struct({
   revision: S.String,
 });
 
+export const RevisionCreateSchemaStandardV1 = S.toStandardSchemaV1(RevisionCreateSchema);
+
 export type RevisionCreate = S.Schema.Type<typeof RevisionCreateSchema>;

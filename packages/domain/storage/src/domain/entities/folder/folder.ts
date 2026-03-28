@@ -6,4 +6,6 @@ export const FolderSchema = S.Struct({
   type: S.Literal('folder'),
 });
 
+export const FolderSchemaStandardV1 = S.toStandardSchemaV1(FolderSchema);
+
 export type Folder = S.Schema.Type<typeof FolderSchema>;

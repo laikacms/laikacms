@@ -9,4 +9,6 @@ export const RecordSchema = S.Union([
   FolderSchema,
 ]);
 
+export const RecordSchemaStandardV1 = S.toStandardSchemaV1(RecordSchema);
+
 export type Record = S.Schema.Type<typeof RecordSchema>;

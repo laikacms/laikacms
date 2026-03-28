@@ -41,6 +41,8 @@ export const AssetVariationSchema = S.Struct({
   size: S.optional(S.Number.check(S.isInt()).check(S.isGreaterThan(0))),
 });
 
+export const AssetVariationSchemaStandardV1 = S.toStandardSchemaV1(AssetVariationSchema);
+
 export type AssetVariation = S.Schema.Type<typeof AssetVariationSchema>;
 
 /**
@@ -57,5 +59,7 @@ export const AssetVariationsSchema = S.Struct({
    */
   variations: S.Record(S.String, AssetVariationSchema),
 });
+
+export const AssetVariationsSchemaStandardV1 = S.toStandardSchemaV1(AssetVariationsSchema);
 
 export type AssetVariations = S.Schema.Type<typeof AssetVariationsSchema>;

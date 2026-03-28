@@ -8,4 +8,6 @@ export const RevisionUpdateSchema = S.Struct({
   revision: S.optional(S.String),
 });
 
+export const RevisionUpdateSchemaStandardV1 = S.toStandardSchemaV1(RevisionUpdateSchema);
+
 export type RevisionUpdate = S.Schema.Type<typeof RevisionUpdateSchema>;

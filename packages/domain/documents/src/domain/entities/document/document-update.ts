@@ -8,4 +8,6 @@ export const DocumentUpdateSchema = S.Struct({
   content: S.optional(StorageObjectContentSchema),
 });
 
+export const DocumentUpdateSchemaStandardV1 = S.toStandardSchemaV1(DocumentUpdateSchema);
+
 export type DocumentUpdate = S.Schema.Type<typeof DocumentUpdateSchema>;

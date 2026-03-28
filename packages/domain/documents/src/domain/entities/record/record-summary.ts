@@ -17,4 +17,6 @@ export const RecordSummarySchema = S.Union([
   FolderSummarySchema,
 ]);
 
+export const RecordSummarySchemaStandardV1 = S.toStandardSchemaV1(RecordSummarySchema);
+
 export type RecordSummary = S.Schema.Type<typeof RecordSummarySchema>;

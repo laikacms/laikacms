@@ -24,7 +24,11 @@ export const AssetSchema = S.Struct({
   content: StorageObjectContentSchema,
 });
 
+export const AssetSchemaStandardV1 = S.toStandardSchemaV1(AssetSchema);
+
 export type Asset = S.Schema.Type<typeof AssetSchema>;
+
+export const AssetContentSchemaStandardV1 = S.toStandardSchemaV1(StorageObjectContentSchema);
 
 // Re-export content type for convenience
 export type AssetContent = S.Schema.Type<typeof StorageObjectContentSchema>;

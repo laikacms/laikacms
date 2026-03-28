@@ -63,7 +63,7 @@ export interface DecapOptions {
    * API keys can be passed via X-API-Key header or Authorization: ApiKey <key>
    */
   authenticateApiToken?: (token: string) => Promise<User>;
-  logger?: Console | undefined;
+  logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
 }
 
 export interface DecapApi {

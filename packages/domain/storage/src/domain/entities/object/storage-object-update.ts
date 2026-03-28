@@ -7,4 +7,6 @@ export const StorageObjectUpdateSchema = S.Struct({
   content: S.optional(StorageObjectContentSchema),
 });
 
+export const StorageObjectUpdateSchemaStandardV1 = S.toStandardSchemaV1(StorageObjectUpdateSchema);
+
 export type StorageObjectUpdate = S.Schema.Type<typeof StorageObjectUpdateSchema>;

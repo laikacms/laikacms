@@ -45,6 +45,10 @@ export const BaseMetadataSchema = S.Struct({
   modifiedAt: S.optional(S.DateTimeUtcFromString),
 });
 
+export const BaseMetadataSchemaStandardV1 = S.toStandardSchemaV1(BaseMetadataSchema);
+
+export type BaseMetadata = S.Schema.Type<typeof BaseMetadataSchema>;
+
 /**
  * Image-specific metadata.
  */
@@ -88,6 +92,8 @@ export const ImageMetadata = S.Struct({
    */
   exif: S.optional(S.Record(S.String, S.Any)),
 });
+
+export const ImageMetadataSchemaStandardV1 = S.toStandardSchemaV1(ImageMetadata);
 
 export type ImageMetadata = S.Schema.Type<typeof ImageMetadata>;
 
@@ -150,6 +156,8 @@ export const VideoMetadata = S.Struct({
   audioSampleRate: S.optional(S.Number.check(S.isGreaterThan(0))),
 });
 
+export const VideoMetadataSchemaStandardV1 = S.toStandardSchemaV1(VideoMetadata);
+
 export type VideoMetadata = S.Schema.Type<typeof VideoMetadata>;
 
 /**
@@ -190,6 +198,8 @@ export const AudioMetadata = S.Struct({
    */
   tags: S.optional(S.Record(S.String, S.String)),
 });
+
+export const AudioMetadataSchemaStandardV1 = S.toStandardSchemaV1(AudioMetadata);
 
 export type AudioMetadata = S.Schema.Type<typeof AudioMetadata>;
 
@@ -237,6 +247,8 @@ export const DocumentMetadata = S.Struct({
   documentModifiedAt: S.optional(S.DateTimeUtcFromString),
 });
 
+export const DocumentMetadataSchemaStandardV1 = S.toStandardSchemaV1(DocumentMetadata);
+
 export type DocumentMetadata = S.Schema.Type<typeof DocumentMetadata>;
 
 /**
@@ -247,6 +259,8 @@ export const BinaryMetadata = S.Struct({
 
   kind: S.Literal('binary'),
 });
+
+export const BinaryMetadataSchemaStandardV1 = S.toStandardSchemaV1(BinaryMetadata);
 
 export type BinaryMetadata = S.Schema.Type<typeof BinaryMetadata>;
 
@@ -268,6 +282,8 @@ export const AssetMetadataContentSchema = S.Union([
   BinaryMetadata,
 ]);
 
+export const AssetMetadataContentSchemaStandardV1 = S.toStandardSchemaV1(AssetMetadataContentSchema);
+
 export type AssetMetadataContent = S.Schema.Type<typeof AssetMetadataContentSchema>;
 
 /**
@@ -284,5 +300,7 @@ export const AssetMetadataSchema = S.Struct({
    */
   metadata: AssetMetadataContentSchema,
 });
+
+export const AssetMetadataSchemaStandardV1 = S.toStandardSchemaV1(AssetMetadataSchema);
 
 export type AssetMetadata = S.Schema.Type<typeof AssetMetadataSchema>;

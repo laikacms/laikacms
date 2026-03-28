@@ -6,7 +6,7 @@ export const RevisionSchema = S.Struct({
   type: S.Literal('revision'),
   content: StorageObjectContentSchema,
   revision: S.String,
-  createdAt: S.DateTimeUtcFromString,
+  createdAt: S.String,
 });
 
 export type Revision = S.Schema.Type<typeof RevisionSchema>;

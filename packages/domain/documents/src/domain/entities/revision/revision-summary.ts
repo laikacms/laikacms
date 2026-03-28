@@ -7,4 +7,6 @@ export const RevisionSummarySchema = S.Struct({
   revision: S.String,
 });
 
+export const RevisionSummarySchemaStandardV1 = S.toStandardSchemaV1(RevisionSummarySchema);
+
 export type RevisionSummary = S.Schema.Type<typeof RevisionSummarySchema>;

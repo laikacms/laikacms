@@ -1,6 +1,6 @@
 import { StorageFormatSchema } from '@laikacms/storage';
-import { JSONSchema7 } from 'json-schema';
 import * as S from 'effect/Schema';
+import { StandardSchemaV1 } from '@standard-schema/spec'
 
 /**
  * Configuration for an unpublished status
@@ -13,6 +13,7 @@ export const UnpublishedStatusConfigSchema = S.Struct({
   name: S.String,
 });
 
+export const UnpublishedStatusConfigSchemaStandardV1 = S.toStandardSchemaV1(UnpublishedStatusConfigSchema);
 export type UnpublishedStatusConfig = S.Schema.Type<typeof UnpublishedStatusConfigSchema>;
 
 /**
@@ -55,6 +56,8 @@ export const DocumentCollectionSettingsSchema = S.Struct({
   trashDirectory: S.optional(S.String),
 });
 
+export const DocumentCollectionSettingsSchemaStandardV1 = S.toStandardSchemaV1(DocumentCollectionSettingsSchema);
+
 export type DocumentCollectionSettings = S.Schema.Type<typeof DocumentCollectionSettingsSchema>;
 
 export const MediaCollectionSettingsSchema = S.Struct({
@@ -71,6 +74,8 @@ export const MediaCollectionSettingsSchema = S.Struct({
   pathFormat: S.optional(S.String),
 });
 
+export const MediaCollectionSettingsSchemaStandardV1 = S.toStandardSchemaV1(MediaCollectionSettingsSchema);
+
 export type MediaCollectionSettings = S.Schema.Type<typeof MediaCollectionSettingsSchema>;
 
 export const CollectionSettingsSchema = S.Union([
@@ -78,10 +83,14 @@ export const CollectionSettingsSchema = S.Union([
   MediaCollectionSettingsSchema,
 ]);
 
+export const CollectionSettingsSchemaStandardV1 = S.toStandardSchemaV1(CollectionSettingsSchema);
+
 export type CollectionSettings = S.Schema.Type<typeof CollectionSettingsSchema>;
 
 export const ContentBaseSettingsSchema = S.Struct({
   collections: S.optional(S.Record(S.String, CollectionSettingsSchema)),
 });
+
+export const ContentBaseSettingsSchemaStandardV1 = S.toStandardSchemaV1(ContentBaseSettingsSchema);
 
 export type ContentBaseSettings = S.Schema.Type<typeof ContentBaseSettingsSchema>;

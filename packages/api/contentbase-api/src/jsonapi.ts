@@ -1,73 +1,130 @@
 import {
-  collectionSettingsZ,
-  mediaCollectionSettingsZ,
-  documentCollectionSettingsZ
+  CollectionSettingsSchema,
+  MediaCollectionSettingsSchema,
+  DocumentCollectionSettingsSchema,
+  type CollectionSettings,
+  type MediaCollectionSettings,
+  type DocumentCollectionSettings,
 } from '@laikacms/contentbase-settings'
 import {
   toJsonApi,
   fromJsonApi,
+  JsonApiDeleteSchema,
+  JsonApiDeleteMultipleSchema,
+  JsonApiErrorSchema,
+  type JsonApiError,
 } from '@laikacms/json-api';
 import * as S from 'effect/Schema';
+
 // Re-export common JSON:API utilities
 export {
   toJsonApi,
   fromJsonApi,
-  jsonApiDeleteZ,
-  jsonApiDeleteMultipleZ,
-  jsonApiErrorZ,
+  JsonApiDeleteSchema,
+  JsonApiDeleteMultipleSchema,
+  JsonApiErrorSchema,
   type JsonApiError,
 } from '@laikacms/json-api';
 
-// Collection schemas with key field for JSON:API
-// These extend the base collection settings with a key identifier
+// ===== JSON:API RESOURCE TYPES =====
 
-// From JSON:API to domain
-const documentCollectionInsertFromJsonApiZ = fromJsonApi(documentCollectionSettingsZ, 'document-collection', 'key');
-const documentCollectionUpdateFromJsonApiZ = fromJsonApi(documentCollectionSettingsZ, 'document-collection', 'key');
-const documentCollectionFromJsonApiZ = fromJsonApi(documentCollectionSettingsZ, 'document-collection', 'key');
+export interface DocumentCollectionJsonApi {
+  type: 'document-collection';
+  id: string;
+  attributes: Omit<DocumentCollectionSettings, 'key'>;
+}
 
-const mediaCollectionInsertFromJsonApiZ = fromJsonApi(mediaCollectionSettingsZ, 'media-collection', 'key');
-const mediaCollectionUpdateFromJsonApiZ = fromJsonApi(mediaCollectionSettingsZ, 'media-collection', 'key');
-const mediaCollectionFromJsonApiZ = fromJsonApi(mediaCollectionSettingsZ, 'media-collection', 'key');
+export interface MediaCollectionJsonApi {
+  type: 'media-collection';
+  id: string;
+  attributes: Omit<MediaCollectionSettings, 'key'>;
+}
 
-// Union types
-export const CollectionInsert = S.Union([
-  documentCollectionInsertFromJsonApiZ,
-  mediaCollectionInsertFromJsonApiZ,
-]);
-export const CollectionUpdate = S.Union([
-  documentCollectionUpdateFromJsonApiZ,
-  mediaCollectionUpdateFromJsonApiZ,
-]);
-export const Collection = S.Union([
-  documentCollectionFromJsonApiZ,
-  mediaCollectionFromJsonApiZ,
+export type CollectionJsonApi = DocumentCollectionJsonApi | MediaCollectionJsonApi;
+
+// ===== TRANSFORMER FUNCTIONS =====
+
+// Document Collection transformers
+export const documentCollectionToJsonApi = (collection: DocumentCollectionSettings): DocumentCollectionJsonApi =>
+  toJsonApi(collection, 'document-collection', 'key');
+
+export const documentCollectionFromJsonApi = (jsonApi: DocumentCollectionJsonApi): DocumentCollectionSettings =>
+  fromJsonApi(jsonApi, 'document-collection', 'key');
+
+// Media Collection transformers
+export const mediaCollectionToJsonApi = (collection: MediaCollectionSettings): MediaCollectionJsonApi =>
+  toJsonApi(collection, 'media-collection', 'key');
+
+export const mediaCollectionFromJsonApi = (jsonApi: MediaCollectionJsonApi): MediaCollectionSettings =>
+  fromJsonApi(jsonApi, 'media-collection', 'key');
+
+// Generic Collection transformers
+export const collectionToJsonApi = (collection: CollectionSettings): CollectionJsonApi => {
+  if (collection.type === 'document') {
+    return documentCollectionToJsonApi(collection);
+  } else {
+    return mediaCollectionToJsonApi(collection);
+  }
+};
+
+export const collectionFromJsonApi = (jsonApi: CollectionJsonApi): CollectionSettings => {
+  if (jsonApi.type === 'document-collection') {
+    return documentCollectionFromJsonApi(jsonApi as DocumentCollectionJsonApi);
+  } else {
+    return mediaCollectionFromJsonApi(jsonApi as MediaCollectionJsonApi);
+  }
+};
+
+// ===== JSON:API SCHEMAS FOR VALIDATION =====
+
+export const DocumentCollectionJsonApiSchema = S.Struct({
+  type: S.Literal('document-collection'),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.Literal('document'),
+    name: S.optional(S.String),
+    directory: S.optional(S.String),
+    recursive: S.optional(S.Boolean),
+    format: S.optional(S.String),
+    documentTitleKey: S.optional(S.String),
+    documentDescriptionKey: S.optional(S.String),
+    documentStatusKey: S.optional(S.String),
+    unpublishedStatuses: S.optional(S.Record(S.String, S.Struct({
+      directory: S.String,
+      name: S.String,
+    }))),
+    revisionDirectory: S.optional(S.String),
+    draftDirectory: S.optional(S.String),
+    archiveDirectory: S.optional(S.String),
+    trashDirectory: S.optional(S.String),
+  }),
+});
+
+export const MediaCollectionJsonApiSchema = S.Struct({
+  type: S.Literal('media-collection'),
+  id: S.String,
+  attributes: S.Struct({
+    type: S.Literal('media'),
+    name: S.optional(S.String),
+    directory: S.optional(S.String),
+    recursive: S.optional(S.Boolean),
+    accept: S.optional(S.Array(S.String)),
+    url: S.optional(S.String),
+    pathFormat: S.optional(S.String),
+  }),
+});
+
+export const CollectionJsonApiSchema = S.Union([
+  DocumentCollectionJsonApiSchema,
+  MediaCollectionJsonApiSchema,
 ]);
 
-// To JSON:API from domain
-export const documentCollectionInsertToJsonApiZ = toJsonApi(documentCollectionSettingsZ, 'document-collection', 'key');
-export const documentCollectionUpdateToJsonApiZ = toJsonApi(documentCollectionSettingsZ, 'document-collection', 'key');
-export const documentCollectionToJsonApiZ = toJsonApi(documentCollectionSettingsZ, 'document-collection', 'key');
+// ===== DECODERS =====
 
-export const mediaCollectionInsertToJsonApiZ = toJsonApi(mediaCollectionSettingsZ, 'media-collection', 'key');
-export const mediaCollectionUpdateToJsonApiZ = toJsonApi(mediaCollectionSettingsZ, 'media-collection', 'key');
-export const mediaCollectionToJsonApiZ = toJsonApi(mediaCollectionSettingsZ, 'media-collection', 'key');
-
-// Union types
-export const collectionInsertFromJsonApiZ = S.Union([
-  documentCollectionInsertFromJsonApiZ,
-  mediaCollectionInsertFromJsonApiZ,
-]);
-export const collectionUpdateFromJsonApiZ = S.Union([
-  documentCollectionUpdateFromJsonApiZ,
-  mediaCollectionUpdateFromJsonApiZ,
-]);
-export const collectionToJsonApiZ = S.Union([
-  documentCollectionToJsonApiZ,
-  mediaCollectionToJsonApiZ,
-]);
+export const decodeDocumentCollectionJsonApi = S.decodeUnknownSync(DocumentCollectionJsonApiSchema);
+export const decodeMediaCollectionJsonApi = S.decodeUnknownSync(MediaCollectionJsonApiSchema);
+export const decodeCollectionJsonApi = S.decodeUnknownSync(CollectionJsonApiSchema);
 
 // Type exports
-export type CollectionInsertJsonApi = S.Schema.Type<typeof collectionInsertFromJsonApiZ>;
-export type CollectionUpdateJsonApi = S.Schema.Type<typeof collectionUpdateFromJsonApiZ>;
-export type CollectionJsonApi = S.Schema.Type<typeof collectionToJsonApiZ>;
+export type CollectionInsertJsonApi = CollectionJsonApi;
+export type CollectionUpdateJsonApi = CollectionJsonApi;

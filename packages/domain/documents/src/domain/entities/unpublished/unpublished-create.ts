@@ -11,4 +11,6 @@ export const UnpublishedCreateSchema = S.Struct({
   content: StorageObjectContentSchema,
 });
 
+export const UnpublishedCreateSchemaStandardV1 = S.toStandardSchemaV1(UnpublishedCreateSchema);
+
 export type UnpublishedCreate = S.Schema.Type<typeof UnpublishedCreateSchema>;

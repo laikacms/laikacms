@@ -23,18 +23,24 @@ import {
   type UnpublishedUpdate,
 } from "@laikacms/documents";
 import {
-  documentCreateToJsonApiZ,
-  documentUpdateToJsonApiZ,
-  documentFromJsonApiZ,
-  documentSummaryFromJsonApiZ,
-  revisionCreateToJsonApiZ,
-  revisionFromJsonApiZ,
-  revisionSummaryFromJsonApiZ,
-  unpublishedCreateToJsonApiZ,
-  unpublishedFromJsonApiZ,
-  unpublishedSummaryFromJsonApiZ,
-  unpublishedUpdateToJsonApiZ,
+  documentCreateToJsonApi,
+  documentUpdateToJsonApi,
+  documentFromJsonApi,
+  documentSummaryFromJsonApi,
+  revisionCreateToJsonApi,
+  revisionFromJsonApi,
+  revisionSummaryFromJsonApi,
+  unpublishedCreateToJsonApi,
+  unpublishedFromJsonApi,
+  unpublishedSummaryFromJsonApi,
+  unpublishedUpdateToJsonApi,
   type JsonApiCollectionResponse,
+  type DocumentJsonApi,
+  type DocumentSummaryJsonApi,
+  type UnpublishedJsonApi,
+  type UnpublishedSummaryJsonApi,
+  type RevisionJsonApi,
+  type RevisionSummaryJsonApi,
 } from "@laikacms/documents-api";
 import { paginationCodec } from "./pagination-codec.js";
 import { errorFromResponse } from "@laikacms/json-api";
@@ -108,7 +114,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
     if ("errors" in json && Array.isArray(json.errors)) {
       return Result.fail(new InvalidData(
-        json.errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+        json.errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
       ));
     }
 
@@ -133,13 +139,13 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
           ? json.errors
           : [{ detail: "Unknown error" }];
       return Result.fail(new InvalidData(
-        errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+        errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
       ));
     }
 
     if ("errors" in json && Array.isArray(json.errors)) {
       return Result.fail(new InvalidData(
-        json.errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+        json.errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
       ));
     }
 
@@ -200,7 +206,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
             ? json.errors
             : [{ detail: "Unknown error" }];
         yield Result.fail(new InvalidData(
-          errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+          errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
         ));
         return;
       }
@@ -208,29 +214,26 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       // Parse each item based on its type
       const items: Record[] = [];
       for (const item of json.data) {
-        let parsed;
-        switch (item.type) {
-          case "published":
-            parsed = documentFromJsonApiZ.safeParse(item);
-            break;
-          case "unpublished":
-            parsed = unpublishedFromJsonApiZ.safeParse(item);
-            break;
-          case "revision":
-            parsed = revisionFromJsonApiZ.safeParse(item);
-            break;
-          case "folder":
-            continue;
-          default:
-            throw new IllegalStateException("Unknown record type: " + item.type);
-        }
-
-        if (parsed.success) {
-          items.push(parsed.data as Record);
-        } else {
-          yield Result.fail(new InvalidData(
-            parsed.error.issues.map((e) => e.message).join(", "),
-          ));
+        try {
+          let record: Record;
+          switch (item.type) {
+            case "published":
+              record = documentFromJsonApi(item as DocumentJsonApi) as Record;
+              break;
+            case "unpublished":
+              record = unpublishedFromJsonApi(item as UnpublishedJsonApi) as Record;
+              break;
+            case "revision":
+              record = revisionFromJsonApi(item as RevisionJsonApi) as unknown as Record;
+              break;
+            case "folder":
+              continue;
+            default:
+              throw new IllegalStateException("Unknown record type: " + item.type);
+          }
+          items.push(record);
+        } catch (error) {
+          yield Result.fail(new InvalidData((error as Error).message));
           return;
         }
       }
@@ -275,7 +278,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
             ? json.errors
             : [{ detail: "Unknown error" }];
         yield Result.fail(new InvalidData(
-          errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+          errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
         ));
         return;
       }
@@ -283,32 +286,29 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       // Parse each item based on its type
       const items: RecordSummary[] = [];
       for (const item of json.data) {
-        let parsed;
-        switch (item.type) {
-          case "published":
-          case "published-summary":
-            parsed = documentSummaryFromJsonApiZ.safeParse(item);
-            break;
-          case "unpublished":
-          case "unpublished-summary":
-            parsed = unpublishedSummaryFromJsonApiZ.safeParse(item);
-            break;
-          case "revision":
-          case "revision-summary":
-            parsed = revisionSummaryFromJsonApiZ.safeParse(item);
-            break;
-          case "folder":
-            continue;
-          default:
-            throw new IllegalStateException("Unknown record type: " + item.type);
-        }
-
-        if (parsed.success) {
-          items.push(parsed.data as RecordSummary);
-        } else {
-          yield Result.fail(new InvalidData(
-            parsed.error.issues.map((e) => e.message).join(", "),
-          ));
+        try {
+          let summary: RecordSummary;
+          switch (item.type) {
+            case "published":
+            case "published-summary":
+              summary = documentSummaryFromJsonApi(item as DocumentSummaryJsonApi) as RecordSummary;
+              break;
+            case "unpublished":
+            case "unpublished-summary":
+              summary = unpublishedSummaryFromJsonApi(item as UnpublishedSummaryJsonApi) as RecordSummary;
+              break;
+            case "revision":
+            case "revision-summary":
+              summary = revisionSummaryFromJsonApi(item as RevisionSummaryJsonApi) as unknown as RecordSummary;
+              break;
+            case "folder":
+              continue;
+            default:
+              throw new IllegalStateException("Unknown record type: " + item.type);
+          }
+          items.push(summary);
+        } catch (error) {
+          yield Result.fail(new InvalidData((error as Error).message));
           return;
         }
       }
@@ -328,21 +328,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         { method: "GET", headers },
       );
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<DocumentJsonApi>(response);
       if (Result.isFailure(result)) {
         yield failAs<Document>(result.failure);
         return;
       }
 
-      const parsed = documentFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(
-          parsed.error.issues.map((e: any) => e.message).join(", "),
-        ));
-        return;
+      try {
+        const document = documentFromJsonApi(result.success);
+        yield Result.succeed(document);
+      } catch (error) {
+        yield Result.fail(new InvalidData((error as Error).message));
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
     }
@@ -350,7 +347,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
   async *createDocument(create: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
     try {
-      const jsonApiData = documentCreateToJsonApiZ.parse(create);
+      const jsonApiData = documentCreateToJsonApi(create);
       console.log("Creating document with JSON:API data:", jsonApiData);
       const headers = await this.getHeaders();
 
@@ -360,21 +357,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         body: JSON.stringify({ data: jsonApiData }),
       });
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<DocumentJsonApi>(response);
       if (Result.isFailure(result)) {
         yield failAs<Document>(result.failure);
         return;
       }
 
-      const parsed = documentFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(
-          parsed.error.issues.map((e: any) => e.message).join(", "),
-        ));
-        return;
+      try {
+        const document = documentFromJsonApi(result.success);
+        yield Result.succeed(document);
+      } catch (error) {
+        yield Result.fail(new InvalidData((error as Error).message));
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
     }
@@ -382,7 +376,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
   async *updateDocument(update: DocumentUpdate): AsyncGenerator<LaikaResult<Document>> {
     try {
-      const jsonApiData = documentUpdateToJsonApiZ.parse(update);
+      const jsonApiData = documentUpdateToJsonApi(update);
       const headers = await this.getHeaders();
 
       const response = await fetch(
@@ -394,21 +388,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         },
       );
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<DocumentJsonApi>(response);
       if (Result.isFailure(result)) {
         yield failAs<Document>(result.failure);
         return;
       }
 
-      const parsed = documentFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(
-          parsed.error.issues.map((e: any) => e.message).join(", "),
-        ));
-        return;
+      try {
+        const document = documentFromJsonApi(result.success);
+        yield Result.succeed(document);
+      } catch (error) {
+        yield Result.fail(new InvalidData((error as Error).message));
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
     }
@@ -437,21 +428,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         { method: "GET", headers },
       );
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<UnpublishedJsonApi>(response);
       if (Result.isFailure(result)) {
         yield failAs<Unpublished>(result.failure);
         return;
       }
 
-      const parsed = unpublishedFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(
-          parsed.error.issues.map((e: any) => e.message).join(", "),
-        ));
-        return;
+      try {
+        const unpublished = unpublishedFromJsonApi(result.success);
+        yield Result.succeed(unpublished);
+      } catch (error) {
+        yield Result.fail(new InvalidData((error as Error).message));
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
     }
@@ -461,7 +449,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
     create: UnpublishedCreate,
   ): AsyncGenerator<LaikaResult<Unpublished>> {
     try {
-      const jsonApiData = unpublishedCreateToJsonApiZ.parse(create);
+      const jsonApiData = unpublishedCreateToJsonApi(create);
       const headers = await this.getHeaders();
 
       const response = await fetch(`${this.baseUrl}/unpublished`, {
@@ -470,21 +458,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         body: JSON.stringify({ data: jsonApiData }),
       });
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<UnpublishedJsonApi>(response);
       if (Result.isFailure(result)) {
         yield failAs<Unpublished>(result.failure);
         return;
       }
 
-      const parsed = unpublishedFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(
-          parsed.error.issues.map((e: any) => e.message).join(", "),
-        ));
-        return;
+      try {
+        const unpublished = unpublishedFromJsonApi(result.success);
+        yield Result.succeed(unpublished);
+      } catch (error) {
+        yield Result.fail(new InvalidData((error as Error).message));
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
     }
@@ -494,7 +479,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
     update: UnpublishedUpdate,
   ): AsyncGenerator<LaikaResult<Unpublished>> {
     try {
-      const jsonApiData = unpublishedUpdateToJsonApiZ.parse(update);
+      const jsonApiData = unpublishedUpdateToJsonApi(update);
       const headers = await this.getHeaders();
 
       const response = await fetch(
@@ -506,21 +491,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         },
       );
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<UnpublishedJsonApi>(response);
       if (Result.isFailure(result)) {
         yield failAs<Unpublished>(result.failure);
         return;
       }
 
-      const parsed = unpublishedFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(
-          parsed.error.issues.map((e: any) => e.message).join(", "),
-        ));
-        return;
+      try {
+        const unpublished = unpublishedFromJsonApi(result.success);
+        yield Result.succeed(unpublished);
+      } catch (error) {
+        yield Result.fail(new InvalidData((error as Error).message));
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
     }
@@ -548,21 +530,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         { method: "POST", headers },
       );
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<DocumentJsonApi>(response);
       if (Result.isFailure(result)) {
         yield failAs<Document>(result.failure);
         return;
       }
 
-      const parsed = documentFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(
-          parsed.error.issues.map((e: any) => e.message).join(", "),
-        ));
-        return;
+      try {
+        const document = documentFromJsonApi(result.success);
+        yield Result.succeed(document);
+      } catch (error) {
+        yield Result.fail(new InvalidData((error as Error).message));
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
     }
@@ -585,21 +564,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         },
       );
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<UnpublishedJsonApi>(response);
       if (Result.isFailure(result)) {
         yield failAs<Unpublished>(result.failure);
         return;
       }
 
-      const parsed = unpublishedFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(
-          parsed.error.issues.map((e: any) => e.message).join(", "),
-        ));
-        return;
+      try {
+        const unpublished = unpublishedFromJsonApi(result.success);
+        yield Result.succeed(unpublished);
+      } catch (error) {
+        yield Result.fail(new InvalidData((error as Error).message));
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
     }
@@ -614,21 +590,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         { method: "GET", headers },
       );
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<RevisionJsonApi>(response);
       if (Result.isFailure(result)) {
         yield failAs<Revision>(result.failure);
         return;
       }
 
-      const parsed = revisionFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(
-          parsed.error.issues.map((e: any) => e.message).join(", "),
-        ));
-        return;
+      try {
+        const rev = revisionFromJsonApi(result.success);
+        yield Result.succeed(rev);
+      } catch (error) {
+        yield Result.fail(new InvalidData((error as Error).message));
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
     }
@@ -636,7 +609,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
   async *createRevision(create: RevisionCreate): AsyncGenerator<LaikaResult<Revision>> {
     try {
-      const jsonApiData = revisionCreateToJsonApiZ.parse(create);
+      const jsonApiData = revisionCreateToJsonApi(create);
       const headers = await this.getHeaders();
 
       const response = await fetch(`${this.baseUrl}/revisions`, {
@@ -645,21 +618,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         body: JSON.stringify({ data: jsonApiData }),
       });
 
-      const result = await this.handleResponse<any>(response);
+      const result = await this.handleResponse<RevisionJsonApi>(response);
       if (Result.isFailure(result)) {
         yield failAs<Revision>(result.failure);
         return;
       }
 
-      const parsed = revisionFromJsonApiZ.safeParse(result.success);
-      if (!parsed.success) {
-        yield Result.fail(new InvalidData(
-          parsed.error.issues.map((e: any) => e.message).join(", "),
-        ));
-        return;
+      try {
+        const rev = revisionFromJsonApi(result.success);
+        yield Result.succeed(rev);
+      } catch (error) {
+        yield Result.fail(new InvalidData((error as Error).message));
       }
-
-      yield Result.succeed(parsed.data);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
     }
@@ -695,16 +665,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
             ? json.errors
             : [{ detail: "Unknown error" }];
         yield Result.fail(new InvalidData(
-          errors.map((e: any) => e.detail || e.title || "Unknown error").join(", "),
+          errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
         ));
         return;
       }
 
       const items: RevisionSummary[] = [];
       for (const item of json.data) {
-        const parsed = revisionSummaryFromJsonApiZ.safeParse(item);
-        if (parsed.success) {
-          items.push(parsed.data);
+        try {
+          const summary = revisionSummaryFromJsonApi(item as RevisionSummaryJsonApi);
+          items.push(summary);
+        } catch {
+          // Skip invalid items
         }
       }
 

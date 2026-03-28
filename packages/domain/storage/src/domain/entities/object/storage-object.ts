@@ -11,4 +11,6 @@ export const StorageObjectSchema = S.Struct({
   content: StorageObjectContentSchema,
 });
 
+export const StorageObjectSchemaStandardV1 = S.toStandardSchemaV1(StorageObjectSchema);
+
 export type StorageObject = S.Schema.Type<typeof StorageObjectSchema>;

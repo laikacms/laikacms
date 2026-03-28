@@ -11,4 +11,6 @@ export const UnpublishedUpdateSchema = S.Struct({
   status: S.optional(S.String),
 });
 
+export const UnpublishedUpdateSchemaStandardV1 = S.toStandardSchemaV1(UnpublishedUpdateSchema);
+
 export type UnpublishedUpdate = S.Schema.Type<typeof UnpublishedUpdateSchema>;

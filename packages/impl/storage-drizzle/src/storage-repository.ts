@@ -18,16 +18,6 @@ import {
   StorageObjectUpdate,
   StorageRepository
 } from "@laikacms/storage";
-import {
-  and,
-  Column,
-  ColumnBaseConfig,
-  eq,
-  InferModelFromColumns,
-  like,
-  lte,
-  SQL,
-} from "drizzle-orm";
 import * as Result from 'effect/Result';
 
 /**
@@ -37,53 +27,59 @@ function failAs<T>(error: LaikaError): LaikaResult<T> {
   return Result.fail(error);
 }
 
-type ColumnOptions = {
-  key: Column<ColumnBaseConfig<"string", any>>;
-  type: Column<ColumnBaseConfig<"string", any>>;
-  content: Column<ColumnBaseConfig<"string", any>>;
-  depth: Column<ColumnBaseConfig<"number", any>>;
-  createdAt: Column<ColumnBaseConfig<"string", any>>;
-  updatedAt: Column<ColumnBaseConfig<"string", any>>;
+/**
+ * Model type for storage objects - defines the shape of database rows
+ */
+export type StorageModel = {
+  key: string;
+  type: string;
+  content: string;
+  depth: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
-export type DrizzleStorageCallbacks<Model> = {
+/**
+ * Query conditions that the repository needs to build
+ * The consumer provides functions that create the actual SQL conditions
+ */
+export type DrizzleStorageQueryBuilders = {
+  /** Build a condition for key equals value */
+  keyEquals: (value: string) => unknown;
+  /** Build a condition for key starts with prefix (LIKE 'prefix%') */
+  keyStartsWith: (prefix: string) => unknown;
+  /** Build a condition for depth less than or equal to value */
+  depthLte: (value: number) => unknown;
+  /** Combine multiple conditions with AND */
+  and: (...conditions: unknown[]) => unknown;
+};
+
+export type DrizzleStorageCallbacks = {
   insert: (query: {
-    where: SQL | undefined;
-    values: Model;
-  }) => Promise<Model[]>;
+    values: StorageModel;
+  }) => Promise<StorageModel[]>;
   update: (query: {
-    where: SQL | undefined;
-    values: Partial<Model>;
-  }) => Promise<Model[]>;
-  delete: (query: { where: SQL | undefined }) => Promise<Model[]>;
+    where: unknown;
+    values: Partial<StorageModel>;
+  }) => Promise<StorageModel[]>;
+  delete: (query: { where: unknown }) => Promise<StorageModel[]>;
   select: (query: {
-    where: SQL | undefined;
+    where: unknown;
     limit?: number;
-  }) => Promise<Model[]>;
+  }) => Promise<StorageModel[]>;
 };
 
-export interface DrizzleStorageRepositoryOptions<Columns, Model> {
-  logger?: Console | undefined;
-  columns: Columns;
-  callbacks: DrizzleStorageCallbacks<Model>;
+export interface DrizzleStorageRepositoryOptions {
+  logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
+  queryBuilders: DrizzleStorageQueryBuilders;
+  callbacks: DrizzleStorageCallbacks;
 }
 
-export class DrizzleStorageRepository<
-  Columns extends ColumnOptions,
-  Model extends InferModelFromColumns<Columns, "select">,
-> extends StorageRepository {
+export class DrizzleStorageRepository extends StorageRepository {
   constructor(
-    private options: DrizzleStorageRepositoryOptions<Columns, Model>,
+    private options: DrizzleStorageRepositoryOptions,
   ) {
     super();
-  }
-
-  getValue<K extends keyof Columns & ("key" | "type" | "content" | "depth" | "createdAt" | "updatedAt")>(
-    row: Model,
-    key: K,
-  ): Model[K] {
-    // Access using the TypeScript property name (key), not the database column name
-    return row[key];
   }
 
   private calculateDepth(key: string): number {
@@ -95,7 +91,7 @@ export class DrizzleStorageRepository<
   ): AsyncGenerator<LaikaResult<readonly string[]>> {
     for (const key of keys) {
       await this.options.callbacks.delete({
-        where: eq(this.options.columns.key, key),
+        where: this.options.queryBuilders.keyEquals(key),
       });
     }
     yield Result.succeed([...keys]);
@@ -103,7 +99,7 @@ export class DrizzleStorageRepository<
 
   async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
     const objects = await this.options.callbacks.select({
-      where: like(this.options.columns.key, `${key}/%`),
+      where: this.options.queryBuilders.keyStartsWith(`${key}/`),
       limit: 1,
     });
     if (objects.length === 0) {
@@ -116,13 +112,11 @@ export class DrizzleStorageRepository<
 
   async *getAtom(key: string): AsyncGenerator<LaikaResult<Atom>> {
     // Try to get as object first
-    let foundObject = false;
     for await (const objectResult of this.getObject(key)) {
       if (Result.isSuccess(objectResult)) {
         yield objectResult;
         return;
       }
-      foundObject = true;
     }
     // If not found as object, try as folder
     yield* this.getFolder(key);
@@ -130,7 +124,7 @@ export class DrizzleStorageRepository<
 
   async *getObject(key: string): AsyncGenerator<LaikaResult<StorageObject>> {
     const rows = await this.options.callbacks.select({
-      where: eq(this.options.columns.key, key),
+      where: this.options.queryBuilders.keyEquals(key),
       limit: 1,
     });
     if (rows.length === 0) {
@@ -138,15 +132,14 @@ export class DrizzleStorageRepository<
       return;
     }
     const row = rows[0];
-    const contentRaw = this.getValue(row, "content");
 
     try {
-      const content = JSON.parse(String(contentRaw));
+      const content = JSON.parse(row.content);
       yield Result.succeed({
         type: "object" as const,
-        key: String(this.getValue(row, "key")),
-        createdAt: String(this.getValue(row, "createdAt")),
-        updatedAt: String(this.getValue(row, "updatedAt")),
+        key: row.key,
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt,
         content,
       });
     } catch (error) {
@@ -161,13 +154,12 @@ export class DrizzleStorageRepository<
   ): AsyncGenerator<LaikaResult<StorageObject>> {
     const now = new Date().toISOString();
     if (update.content !== undefined) {
-      const model = {
-        content: JSON.stringify(update.content),
-        updatedAt: now,
-      } as Partial<Model>;
       await this.options.callbacks.update({
-        where: eq(this.options.columns.key, update.key),
-        values: model,
+        where: this.options.queryBuilders.keyEquals(update.key),
+        values: {
+          content: JSON.stringify(update.content),
+          updatedAt: now,
+        },
       });
     }
     yield* this.getObject(update.key);
@@ -181,24 +173,22 @@ export class DrizzleStorageRepository<
       return;
     }
     const exists = await this.options.callbacks.select({
-      where: eq(this.options.columns.key, create.key),
+      where: this.options.queryBuilders.keyEquals(create.key),
     });
     if (exists.length > 0 && exists[0]) {
       yield Result.fail(new EntryAlreadyExistsError(`An object with key "${create.key}" already exists`));
       return;
     }
     const now = new Date().toISOString();
-    const values = {
-      key: create.key,
-      type: create.type,
-      content: JSON.stringify(create.content),
-      depth: this.calculateDepth(create.key),
-      createdAt: now,
-      updatedAt: now,
-    } as Model;
     await this.options.callbacks.insert({
-      where: eq(this.options.columns.key, create.key),
-      values,
+      values: {
+        key: create.key,
+        type: create.type,
+        content: JSON.stringify(create.content),
+        depth: this.calculateDepth(create.key),
+        createdAt: now,
+        updatedAt: now,
+      },
     });
     yield* this.getObject(create.key);
   }
@@ -211,7 +201,7 @@ export class DrizzleStorageRepository<
       return;
     }
     const exists = await this.options.callbacks.select({
-      where: eq(this.options.columns.key, create.key),
+      where: this.options.queryBuilders.keyEquals(create.key),
     });
     if (exists.length > 0) {
       yield* this.updateObject({ key: create.key, content: create.content });
@@ -223,17 +213,15 @@ export class DrizzleStorageRepository<
   async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
     const keepKey = pathCombine(folderCreate.key, ".keep");
     const now = new Date().toISOString();
-    const values = {
-      key: keepKey,
-      type: "keep-file",
-      content: "",
-      depth: this.calculateDepth(keepKey),
-      createdAt: now,
-      updatedAt: now,
-    } as Model;
     await this.options.callbacks.insert({
-      where: eq(this.options.columns.key, keepKey),
-      values,
+      values: {
+        key: keepKey,
+        type: "keep-file",
+        content: "",
+        depth: this.calculateDepth(keepKey),
+        createdAt: now,
+        updatedAt: now,
+      },
     });
     yield* this.getFolder(folderCreate.key);
   }
@@ -259,34 +247,32 @@ export class DrizzleStorageRepository<
     folderKey: string,
     options: ListAtomsOptions,
   ): AsyncGenerator<LaikaResult<readonly Atom[]>> {
-    const pattern = folderKey ? `${folderKey}/%` : "%";
+    const pattern = folderKey ? `${folderKey}/` : "";
     const baseDepth = folderKey ? this.calculateDepth(folderKey) : 0;
     const maxDepth = baseDepth + options.depth;
 
     const limit = "limit" in options.pagination ? options.pagination.limit : 20;
     const objects = await this.options.callbacks.select({
-      where: and(
-        like(this.options.columns.key, pattern),
-        lte(this.options.columns.depth, maxDepth),
+      where: this.options.queryBuilders.and(
+        this.options.queryBuilders.keyStartsWith(pattern),
+        this.options.queryBuilders.depthLte(maxDepth),
       ),
       limit: limit,
     });
     const atoms: Atom[] = [];
     for (const obj of objects) {
-      const key = String(this.getValue(obj, "key"));
       try {
-        const contentRaw = this.getValue(obj, "content");
-        const content = JSON.parse(String(contentRaw)) as StorageObjectContent;
+        const content = JSON.parse(obj.content) as StorageObjectContent;
         atoms.push({
           type: "object",
-          key,
-          createdAt: String(this.getValue(obj, "createdAt")),
-          updatedAt: String(this.getValue(obj, "updatedAt")),
+          key: obj.key,
+          createdAt: obj.createdAt,
+          updatedAt: obj.updatedAt,
           content,
         });
       } catch (error) {
         yield Result.fail(new InvalidData(
-          `Invalid JSON content format for key "${key}": ${error instanceof Error ? error.message : "Unknown error"}`
+          `Invalid JSON content format for key "${obj.key}": ${error instanceof Error ? error.message : "Unknown error"}`
         ));
         return;
       }

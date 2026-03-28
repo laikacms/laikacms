@@ -10,4 +10,6 @@ export const DocumentCreateSchema = S.Struct({
   content: StorageObjectContentSchema,
 });
 
+export const DocumentCreateSchemaStandardV1 = S.toStandardSchemaV1(DocumentCreateSchema);
+
 export type DocumentCreate = S.Schema.Type<typeof DocumentCreateSchema>;

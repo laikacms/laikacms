@@ -135,7 +135,7 @@ interface DocumentsApiOptions {
   repo: DocumentsRepository;
   basePath?: string;
   onError?(error: unknown): void;
-  logger?: Console | undefined;
+  logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
 }
 
 // Schema definitions using Effect Schema
