@@ -794,7 +794,6 @@ function selectUnpublishedEntry(state: EditorialWorkflow, collection: string, sl
 }
 
 function mapStateToProps(state: State, ownProps: AiChatControlProps) {
-  const { collections, entryDraft, auth, config, entries, globalUI } = state;
   const slug = ownProps.entry.get('slug');
   const collection = ownProps.collection;
   const collectionName = collection.get('name');

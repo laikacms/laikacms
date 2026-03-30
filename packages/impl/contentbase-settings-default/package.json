@@ -27,7 +27,6 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "lodash": "catalog:lodash",
     "@laikacms/core": "workspace:*",
     "@laikacms/storage": "workspace:*",
     "@laikacms/documents": "workspace:*",
@@ -37,7 +36,6 @@
     "json-schema": "catalog:schema"
   },
   "devDependencies": {
-    "@types/lodash": "catalog:types",
     "@types/node": "catalog:types",
     "@vitest/ui": "catalog:testing",
     "typescript": "catalog:tools",
