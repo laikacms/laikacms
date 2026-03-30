@@ -6,7 +6,7 @@ import * as S from 'effect/Schema';
  * Variations are typically resized/optimized versions of the original asset
  * for display purposes (thumbnails, responsive images, etc.).
  */
-export const AssetVariationSchema = S.Struct({
+export const AssetVariationSchema = S.toStandardSchemaV1(S.Struct({
   /**
    * Unique identifier for this variation.
    * Examples: 'thumbnail', 'small', 'medium', 'large', '100x100', 'webp'
@@ -39,16 +39,14 @@ export const AssetVariationSchema = S.Struct({
    * Size in bytes (if known).
    */
   size: S.optional(S.Number.check(S.isInt()).check(S.isGreaterThan(0))),
-});
-
-export const AssetVariationSchemaStandardV1 = S.toStandardSchemaV1(AssetVariationSchema);
+}));
 
 export type AssetVariation = S.Schema.Type<typeof AssetVariationSchema>;
 
 /**
  * Collection of variations for an asset.
  */
-export const AssetVariationsSchema = S.Struct({
+export const AssetVariationsSchema = S.toStandardSchemaV1(S.Struct({
   /**
    * The asset key these variations belong to.
    */
@@ -58,8 +56,6 @@ export const AssetVariationsSchema = S.Struct({
    * Available variations.
    */
   variations: S.Record(S.String, AssetVariationSchema),
-});
-
-export const AssetVariationsSchemaStandardV1 = S.toStandardSchemaV1(AssetVariationsSchema);
+}));
 
 export type AssetVariations = S.Schema.Type<typeof AssetVariationsSchema>;

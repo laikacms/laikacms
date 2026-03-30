@@ -15,7 +15,7 @@ export abstract class LaikaError<C extends ErrorCode = any, S extends number = a
     public code: C; // PUBLIC
     public title: string; // PUBLIC
 
-    constructor(message? /* PUBLIC */: string, options?: { translation?: { title?: TranslationKey | undefined, message?: TranslationKey | undefined } | undefined, jsonApiSource?: ErrorSource | undefined, cause?: Cause.Cause<any> /* PRIVATE */ }) {
+    constructor(message? /* PUBLIC */: string, options?: { translation?: { title?: TranslationKey | undefined, message?: TranslationKey | undefined } | undefined, jsonApiSource?: ErrorSource | undefined, cause?: Cause.Cause<any> | unknown /* PRIVATE */ }) {
         super(message, options);
         this.status = new.target.STATUS as S; // PUBLIC
         this.jsonApiSource = options?.jsonApiSource; // PUBLIC

@@ -6,14 +6,13 @@ import { StandardSchemaV1 } from '@standard-schema/spec'
  * Configuration for an unpublished status
  * Each status maps to a directory where unpublished documents with that status are stored
  */
-export const UnpublishedStatusConfigSchema = S.Struct({
+export const UnpublishedStatusConfigSchema = S.toStandardSchemaV1(S.Struct({
   /** Directory where documents with this status are stored (relative to .contentbase/[collection]/) */
   directory: S.String,
   /** Human-readable name for this status */
   name: S.String,
-});
+}));
 
-export const UnpublishedStatusConfigSchemaStandardV1 = S.toStandardSchemaV1(UnpublishedStatusConfigSchema);
 export type UnpublishedStatusConfig = S.Schema.Type<typeof UnpublishedStatusConfigSchema>;
 
 /**
@@ -27,7 +26,7 @@ export const defaultUnpublishedStatuses: Record<string, UnpublishedStatusConfig>
   trash: { directory: 'trash', name: 'Trash' },
 };
 
-export const DocumentCollectionSettingsSchema = S.Struct({
+export const DocumentCollectionSettingsSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('document'),
   key: S.String,
   name: S.optional(S.String),
@@ -54,13 +53,11 @@ export const DocumentCollectionSettingsSchema = S.Struct({
   archiveDirectory: S.optional(S.String),
   /** @deprecated Use unpublishedStatuses instead */
   trashDirectory: S.optional(S.String),
-});
-
-export const DocumentCollectionSettingsSchemaStandardV1 = S.toStandardSchemaV1(DocumentCollectionSettingsSchema);
+}));
 
 export type DocumentCollectionSettings = S.Schema.Type<typeof DocumentCollectionSettingsSchema>;
 
-export const MediaCollectionSettingsSchema = S.Struct({
+export const MediaCollectionSettingsSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('media'),
   key: S.String,
   name: S.optional(S.String),
@@ -72,9 +69,7 @@ export const MediaCollectionSettingsSchema = S.Struct({
   */
   url: S.optional(S.String),
   pathFormat: S.optional(S.String),
-});
-
-export const MediaCollectionSettingsSchemaStandardV1 = S.toStandardSchemaV1(MediaCollectionSettingsSchema);
+}));
 
 export type MediaCollectionSettings = S.Schema.Type<typeof MediaCollectionSettingsSchema>;
 
@@ -83,14 +78,10 @@ export const CollectionSettingsSchema = S.Union([
   MediaCollectionSettingsSchema,
 ]);
 
-export const CollectionSettingsSchemaStandardV1 = S.toStandardSchemaV1(CollectionSettingsSchema);
-
 export type CollectionSettings = S.Schema.Type<typeof CollectionSettingsSchema>;
 
-export const ContentBaseSettingsSchema = S.Struct({
+export const ContentBaseSettingsSchema = S.toStandardSchemaV1(S.Struct({
   collections: S.optional(S.Record(S.String, CollectionSettingsSchema)),
-});
-
-export const ContentBaseSettingsSchemaStandardV1 = S.toStandardSchemaV1(ContentBaseSettingsSchema);
+}));
 
 export type ContentBaseSettings = S.Schema.Type<typeof ContentBaseSettingsSchema>;

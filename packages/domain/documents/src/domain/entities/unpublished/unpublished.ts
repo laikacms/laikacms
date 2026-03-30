@@ -8,7 +8,7 @@ import * as S from 'effect/Schema';
  * The status field determines the current state of the unpublished document.
  * Documents are stored in .contentbase/[collection]/[status]/ directories.
  */
-export const UnpublishedSchema = S.Struct({
+export const UnpublishedSchema = S.toStandardSchemaV1(S.Struct({
   ...AtomBaseSchema.fields,
   type: S.Literal('unpublished'),
   /**
@@ -18,8 +18,6 @@ export const UnpublishedSchema = S.Struct({
    */
   status: S.String,
   content: StorageObjectContentSchema,
-});
-
-export const UnpublishedSchemaStandardV1 = S.toStandardSchemaV1(UnpublishedSchema);
+}));
 
 export type Unpublished = S.Schema.Type<typeof UnpublishedSchema>;

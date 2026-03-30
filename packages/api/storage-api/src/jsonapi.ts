@@ -176,47 +176,47 @@ export function atomSummaryFromJsonApi(jsonApi: JsonApiAtomSummary): AtomSummary
 }
 
 // Effect Schema definitions for JSON:API resources
-export const JsonApiStorageObjectSchema = S.Struct({
+export const JsonApiStorageObjectSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('object'),
   id: S.String,
   attributes: S.Record(S.String, S.Unknown),
-});
+}));
 
-export const JsonApiStorageObjectCreateSchema = S.Struct({
+export const JsonApiStorageObjectCreateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('object'),
   id: S.String,
   attributes: S.Record(S.String, S.Unknown),
-});
+}));
 
-export const JsonApiStorageObjectUpdateSchema = S.Struct({
+export const JsonApiStorageObjectUpdateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('object'),
   id: S.String,
   attributes: S.Record(S.String, S.Unknown),
-});
+}));
 
-export const JsonApiFolderSchema = S.Struct({
+export const JsonApiFolderSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('folder'),
   id: S.String,
   attributes: S.Record(S.String, S.Unknown),
-});
+}));
 
-export const JsonApiFolderCreateSchema = S.Struct({
+export const JsonApiFolderCreateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('folder'),
   id: S.String,
   attributes: S.Record(S.String, S.Unknown),
-});
+}));
 
-export const JsonApiStorageObjectSummarySchema = S.Struct({
+export const JsonApiStorageObjectSummarySchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('object-summary'),
   id: S.String,
   attributes: S.Record(S.String, S.Unknown),
-});
+}));
 
-export const JsonApiFolderSummarySchema = S.Struct({
+export const JsonApiFolderSummarySchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('folder-summary'),
   id: S.String,
   attributes: S.Record(S.String, S.Unknown),
-});
+}));
 
 export const JsonApiAtomSchema = S.Union([JsonApiStorageObjectSchema, JsonApiFolderSchema]);
 export const JsonApiAtomSummarySchema = S.Union([JsonApiStorageObjectSummarySchema, JsonApiFolderSummarySchema]);

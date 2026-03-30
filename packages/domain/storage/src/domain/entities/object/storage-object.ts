@@ -5,12 +5,10 @@ export const StorageObjectContentSchema = S.Record(S.String, S.Any);
 
 export type StorageObjectContent = S.Schema.Type<typeof StorageObjectContentSchema>;
 
-export const StorageObjectSchema = S.Struct({
+export const StorageObjectSchema = S.toStandardSchemaV1(S.Struct({
   ...AtomBaseSchema.fields,
   type: S.Literal('object'),
   content: StorageObjectContentSchema,
-});
-
-export const StorageObjectSchemaStandardV1 = S.toStandardSchemaV1(StorageObjectSchema);
+}));
 
 export type StorageObject = S.Schema.Type<typeof StorageObjectSchema>;

@@ -1,37 +1,38 @@
 import * as S from 'effect/Schema';
 import { JsonApiLinksSchema } from './schemas.js';
+import { StandardSchemaV1 } from '@standard-schema/spec'
 
 // Filters for number validation
 const isAtLeast1 = S.makeFilter<number>((n) => n >= 1 ? undefined : 'Must be at least 1');
 const isAtLeast0 = S.makeFilter<number>((n) => n >= 0 ? undefined : 'Must be at least 0');
 
 // Pagination types
-export const PaginationPageBasedSchema = S.Struct({
+export const PaginationPageBasedSchema = S.toStandardSchemaV1(S.Struct({
   page: S.Number.pipe(S.check(isAtLeast1)),
   perPage: S.optional(S.Number.pipe(S.check(isAtLeast1))),
-});
+}));
 
-export const PaginationBeforeSchema = S.Struct({
+export const PaginationBeforeSchema = S.toStandardSchemaV1(S.Struct({
   before: S.optional(S.String),
   perPage: S.optional(S.Number.pipe(S.check(isAtLeast1))),
-});
+}));
 
-export const PaginationAfterSchema = S.Struct({
+export const PaginationAfterSchema = S.toStandardSchemaV1(S.Struct({
   after: S.optional(S.String),
   perPage: S.optional(S.Number.pipe(S.check(isAtLeast1))),
-});
+}));
 
-export const PaginationOffsetSchema = S.Struct({
+export const PaginationOffsetSchema = S.toStandardSchemaV1(S.Struct({
   offset: S.Number.pipe(S.check(isAtLeast0)),
   limit: S.optional(S.Number.pipe(S.check(isAtLeast1))),
-});
+}));
 
-export const PaginationSchema = S.Union([
+export const PaginationSchema = S.toStandardSchemaV1(S.Union([
   PaginationPageBasedSchema,
   PaginationBeforeSchema,
   PaginationAfterSchema,
   PaginationOffsetSchema,
-]);
+]));
 
 export type Pagination = S.Schema.Type<typeof PaginationSchema>;
 export type JsonApiLinks = S.Schema.Type<typeof JsonApiLinksSchema>;

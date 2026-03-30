@@ -115,7 +115,7 @@ function respondCollection(
 // Effect Schema Definitions for JSON:API Request Validation
 // ============================================
 
-const JsonApiAssetCreateSchema = S.Struct({
+const JsonApiAssetCreateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('asset'),
   id: S.String,
   attributes: S.Struct({
@@ -125,9 +125,9 @@ const JsonApiAssetCreateSchema = S.Struct({
     customMetadata: S.optional(S.Record(S.String, S.String)),
     content: S.optional(S.String), // base64 encoded content
   }),
-});
+}));
 
-const JsonApiAssetUpdateSchema = S.Struct({
+const JsonApiAssetUpdateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('asset'),
   id: S.String,
   attributes: S.Struct({
@@ -135,15 +135,15 @@ const JsonApiAssetUpdateSchema = S.Struct({
     cacheControl: S.optional(S.String),
     customMetadata: S.optional(S.Record(S.String, S.String)),
   }),
-});
+}));
 
-const JsonApiFolderCreateSchema = S.Struct({
+const JsonApiFolderCreateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('folder'),
   id: S.String,
   attributes: S.Struct({
     type: S.optional(S.Literal('folder')),
   }),
-});
+}));
 
 type JsonApiAssetCreateData = S.Schema.Type<typeof JsonApiAssetCreateSchema>;
 type JsonApiAssetUpdateData = S.Schema.Type<typeof JsonApiAssetUpdateSchema>;

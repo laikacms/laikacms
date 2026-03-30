@@ -15,6 +15,4 @@ export const ResourceSchema = S.Union([
   FolderSchema,
 ]);
 
-export const ResourceSchemaStandardV1 = S.toStandardSchemaV1(ResourceSchema);
-
 export type Resource = S.Schema.Type<typeof ResourceSchema>;

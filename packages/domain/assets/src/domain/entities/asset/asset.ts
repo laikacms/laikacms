@@ -18,17 +18,13 @@ import * as S from 'effect/Schema';
  * 2. Different caching strategies for different data types
  * 3. Lazy loading of expensive-to-compute data
  */
-export const AssetSchema = S.Struct({
+export const AssetSchema = S.toStandardSchemaV1(S.Struct({
   ...AtomBaseSchema.fields,
   type: S.Literal('asset'),
   content: StorageObjectContentSchema,
-});
-
-export const AssetSchemaStandardV1 = S.toStandardSchemaV1(AssetSchema);
+}));
 
 export type Asset = S.Schema.Type<typeof AssetSchema>;
-
-export const AssetContentSchemaStandardV1 = S.toStandardSchemaV1(StorageObjectContentSchema);
 
 // Re-export content type for convenience
 export type AssetContent = S.Schema.Type<typeof StorageObjectContentSchema>;

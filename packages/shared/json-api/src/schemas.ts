@@ -1,7 +1,8 @@
 import * as S from 'effect/Schema';
+import { StandardSchemaV1 } from '@standard-schema/spec'
 
 // JSON:API Error Schema
-export const JsonApiErrorSchema = S.Struct({
+export const JsonApiErrorSchema = S.toStandardSchemaV1(S.Struct({
   errors: S.Array(
     S.Struct({
       code: S.String,
@@ -14,28 +15,28 @@ export const JsonApiErrorSchema = S.Struct({
       })),
     })
   ),
-});
+}));
 
 // JSON:API Delete Operations
-export const JsonApiDeleteSchema = S.Struct({
+export const JsonApiDeleteSchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
     type: S.String,
     id: S.String,
   }),
-});
+}));
 
-export const JsonApiDeleteMultipleSchema = S.Struct({
+export const JsonApiDeleteMultipleSchema = S.toStandardSchemaV1(S.Struct({
   data: S.Array(
     S.Struct({
       type: S.String,
       id: S.String,
     })
   ),
-});
+}));
 
 // JSON:API Atomic Operations Extension
 // https://jsonapi.org/ext/atomic/
-const AtomicAddOperationSchema = S.Struct({
+const AtomicAddOperationSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal('add'),
   data: S.Struct({
     type: S.String,
@@ -43,9 +44,9 @@ const AtomicAddOperationSchema = S.Struct({
     attributes: S.optional(S.Record(S.String, S.Any)),
     relationships: S.optional(S.Record(S.String, S.Any)),
   }),
-});
+}));
 
-const AtomicUpdateOperationSchema = S.Struct({
+const AtomicUpdateOperationSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal('update'),
   data: S.Struct({
     type: S.String,
@@ -53,27 +54,27 @@ const AtomicUpdateOperationSchema = S.Struct({
     attributes: S.optional(S.Record(S.String, S.Any)),
     relationships: S.optional(S.Record(S.String, S.Any)),
   }),
-});
+}));
 
-const AtomicRemoveOperationSchema = S.Struct({
+const AtomicRemoveOperationSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal('remove'),
   ref: S.Struct({
     type: S.String,
     id: S.String,
   }),
-});
+}));
 
-export const AtomicOperationSchema = S.Union([
+export const AtomicOperationSchema = S.toStandardSchemaV1(S.Union([
   AtomicAddOperationSchema,
   AtomicUpdateOperationSchema,
   AtomicRemoveOperationSchema,
-]);
+]));
 
-export const AtomicOperationsRequestSchema = S.Struct({
+export const AtomicOperationsRequestSchema = S.toStandardSchemaV1(S.Struct({
   'atomic:operations': S.Array(AtomicOperationSchema),
-});
+}));
 
-export const AtomicOperationsResponseSchema = S.Struct({
+export const AtomicOperationsResponseSchema = S.toStandardSchemaV1(S.Struct({
   'atomic:results': S.Array(
     S.Struct({
       data: S.Union([
@@ -86,45 +87,45 @@ export const AtomicOperationsResponseSchema = S.Struct({
       ]),
     })
   ),
-});
+}));
 
 // JSON:API Pagination
-export const JsonApiLinksSchema = S.Struct({
+export const JsonApiLinksSchema = S.toStandardSchemaV1(S.Struct({
   self: S.optional(S.String),
   first: S.optional(S.String),
   last: S.optional(S.String),
   prev: S.optional(S.String),
   next: S.optional(S.String),
-});
+}));
 
 // Cursor Pagination Profile
 // https://jsonapi.org/profiles/ethanresnick/cursor-pagination/
-export const CursorPaginationMetaSchema = S.Struct({
+export const CursorPaginationMetaSchema = S.toStandardSchemaV1(S.Struct({
   page: S.optional(S.Struct({
     cursor: S.optional(S.String),
     hasMore: S.optional(S.Boolean),
   })),
-});
+}));
 
-export const JsonApiResourceSchema = S.Struct({
+export const JsonApiResourceSchema = S.toStandardSchemaV1(S.Struct({
   type: S.String,
   id: S.String,
   attributes: S.Record(S.String, S.Any),
   relationships: S.optional(S.Record(S.String, S.Any)),
-});
+}));
 
-export const JsonApiResponseSchema = S.Struct({
+export const JsonApiResponseSchema = S.toStandardSchemaV1(S.Struct({
   data: JsonApiResourceSchema,
   links: S.optional(JsonApiLinksSchema),
   meta: S.optional(S.Record(S.String, S.Any)),
-});
+}));
 
-export const JsonApiCollectionResponseSchema = S.Struct({
+export const JsonApiCollectionResponseSchema = S.toStandardSchemaV1(S.Struct({
   data: S.Array(JsonApiResourceSchema),
   links: S.optional(JsonApiLinksSchema),
   meta: S.optional(CursorPaginationMetaSchema),
   included: S.optional(S.Array(JsonApiResourceSchema)),
-});
+}));
 
 // Decoders for parsing unknown data
 export const decodeJsonApiError = S.decodeUnknownSync(JsonApiErrorSchema);

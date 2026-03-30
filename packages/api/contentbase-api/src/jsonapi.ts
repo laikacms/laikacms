@@ -77,7 +77,7 @@ export const collectionFromJsonApi = (jsonApi: CollectionJsonApi): CollectionSet
 
 // ===== JSON:API SCHEMAS FOR VALIDATION =====
 
-export const DocumentCollectionJsonApiSchema = S.Struct({
+export const DocumentCollectionJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('document-collection'),
   id: S.String,
   attributes: S.Struct({
@@ -98,9 +98,9 @@ export const DocumentCollectionJsonApiSchema = S.Struct({
     archiveDirectory: S.optional(S.String),
     trashDirectory: S.optional(S.String),
   }),
-});
+}));
 
-export const MediaCollectionJsonApiSchema = S.Struct({
+export const MediaCollectionJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('media-collection'),
   id: S.String,
   attributes: S.Struct({
@@ -112,7 +112,7 @@ export const MediaCollectionJsonApiSchema = S.Struct({
     url: S.optional(S.String),
     pathFormat: S.optional(S.String),
   }),
-});
+}));
 
 export const CollectionJsonApiSchema = S.Union([
   DocumentCollectionJsonApiSchema,

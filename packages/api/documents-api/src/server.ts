@@ -145,7 +145,7 @@ const FolderFilterSchema = S.String.pipe(
   ))
 );
 
-const RecordsQuerySchema = S.Struct({
+const RecordsQuerySchema = S.toStandardSchemaV1(S.Struct({
   "filter[type]": S.optional(S.Union([
     S.Literal("published"),
     S.Literal("unpublished"),
@@ -155,84 +155,84 @@ const RecordsQuerySchema = S.Struct({
   "filter[depth]": S.optional(S.NumberFromString.pipe(
     S.check(S.makeFilter<number>((n) => n >= 1 ? undefined : 'Depth must be at least 1'))
   )),
-});
+}));
 
-const UnpublishedQuerySchema = S.Struct({
+const UnpublishedQuerySchema = S.toStandardSchemaV1(S.Struct({
   "filter[status]": S.optional(S.String),
   "filter[folder]": S.optional(S.String),
-});
+}));
 
 // JSON:API request body schemas
-const DocumentCreateBodySchema = S.Struct({
+const DocumentCreateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
     type: S.Literal("published"),
     id: S.optional(S.String),
     attributes: S.Record(S.String, S.Any),
   }),
-});
+}));
 
-const UnpublishedCreateBodySchema = S.Struct({
+const UnpublishedCreateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
     type: S.Literal("unpublished"),
     id: S.optional(S.String),
     attributes: S.Record(S.String, S.Any),
   }),
-});
+}));
 
-const UnpublishedUpdateBodySchema = S.Struct({
+const UnpublishedUpdateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
     type: S.Literal("unpublished"),
     id: S.String,
     attributes: S.Record(S.String, S.Any),
   }),
-});
+}));
 
-const UnpublishBodySchema = S.Struct({
+const UnpublishBodySchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
     type: S.Literal("unpublished"),
     attributes: S.Struct({
       status: S.String,
     }),
   }),
-});
+}));
 
-const RevisionCreateBodySchema = S.Struct({
+const RevisionCreateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
     type: S.Literal("revision"),
     id: S.optional(S.String),
     attributes: S.Record(S.String, S.Any),
   }),
-});
+}));
 
-const RefSchema = S.Struct({
+const RefSchema = S.toStandardSchemaV1(S.Struct({
   id: S.String,
   type: S.Union([
     S.Literal("document"),
     S.Literal("unpublished"),
     S.Literal("revision"),
   ]),
-});
+}));
 
 // Atomic operation schemas
-const AddUnpublishedOpSchema = S.Struct({
+const AddUnpublishedOpSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal("add"),
   data: S.Struct({
     type: S.Literal("unpublished"),
     id: S.optional(S.String),
     attributes: S.Record(S.String, S.Any),
   }),
-});
+}));
 
-const AddDocumentOpSchema = S.Struct({
+const AddDocumentOpSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal("add"),
   data: S.Struct({
     type: S.Literal("published"),
     id: S.optional(S.String),
     attributes: S.Record(S.String, S.Any),
   }),
-});
+}));
 
-const StateTransitionOpSchema = S.Struct({
+const StateTransitionOpSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal("update"),
   href: S.Union([S.Literal("/publish"), S.Literal("/unpublish")]),
   ref: RefSchema,
@@ -242,21 +242,21 @@ const StateTransitionOpSchema = S.Struct({
       status: S.String,
     }),
   })),
-});
+}));
 
-const UpdateUnpublishedOpSchema = S.Struct({
+const UpdateUnpublishedOpSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal("update"),
   data: S.Struct({
     type: S.Literal("unpublished"),
     id: S.String,
     attributes: S.Record(S.String, S.Any),
   }),
-});
+}));
 
-const RemoveOpSchema = S.Struct({
+const RemoveOpSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal("remove"),
   ref: RefSchema,
-});
+}));
 
 const AtomicOperationSchema = S.Union([
   AddUnpublishedOpSchema,
@@ -266,9 +266,9 @@ const AtomicOperationSchema = S.Union([
   RemoveOpSchema,
 ]);
 
-const OperationsSchema = S.Struct({
+const OperationsSchema = S.toStandardSchemaV1(S.Struct({
   "atomic:operations": S.Array(AtomicOperationSchema),
-});
+}));
 
 // Decoders
 const decodeRecordsQuery = S.decodeUnknownSync(RecordsQuerySchema);

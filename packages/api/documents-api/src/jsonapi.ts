@@ -284,7 +284,7 @@ export const revisionSummaryFromJsonApi = (jsonApi: RevisionSummaryJsonApi): Rev
 // ===== JSON:API SCHEMAS FOR VALIDATION =====
 
 // Document JSON:API Schemas
-export const DocumentJsonApiSchema = S.Struct({
+export const DocumentJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('published'),
   id: S.String,
   attributes: S.Struct({
@@ -294,9 +294,9 @@ export const DocumentJsonApiSchema = S.Struct({
     createdAt: S.optional(S.String),
     updatedAt: S.optional(S.String),
   }),
-});
+}));
 
-export const DocumentSummaryJsonApiSchema = S.Struct({
+export const DocumentSummaryJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Union([S.Literal('published'), S.Literal('published-summary')]),
   id: S.String,
   attributes: S.Struct({
@@ -305,10 +305,10 @@ export const DocumentSummaryJsonApiSchema = S.Struct({
     createdAt: S.optional(S.String),
     updatedAt: S.optional(S.String),
   }),
-});
+}));
 
 // Unpublished JSON:API Schemas
-export const UnpublishedJsonApiSchema = S.Struct({
+export const UnpublishedJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('unpublished'),
   id: S.String,
   attributes: S.Struct({
@@ -318,9 +318,9 @@ export const UnpublishedJsonApiSchema = S.Struct({
     createdAt: S.optional(S.String),
     updatedAt: S.optional(S.String),
   }),
-});
+}));
 
-export const UnpublishedSummaryJsonApiSchema = S.Struct({
+export const UnpublishedSummaryJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Union([S.Literal('unpublished'), S.Literal('unpublished-summary')]),
   id: S.String,
   attributes: S.Struct({
@@ -329,10 +329,10 @@ export const UnpublishedSummaryJsonApiSchema = S.Struct({
     createdAt: S.optional(S.String),
     updatedAt: S.optional(S.String),
   }),
-});
+}));
 
 // Revision JSON:API Schemas
-export const RevisionJsonApiSchema = S.Struct({
+export const RevisionJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('revision'),
   id: S.String,
   attributes: S.Struct({
@@ -342,9 +342,9 @@ export const RevisionJsonApiSchema = S.Struct({
     createdAt: S.String,
     updatedAt: S.optional(S.String),
   }),
-});
+}));
 
-export const RevisionSummaryJsonApiSchema = S.Struct({
+export const RevisionSummaryJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Union([S.Literal('revision'), S.Literal('revision-summary')]),
   id: S.String,
   attributes: S.Struct({
@@ -353,7 +353,7 @@ export const RevisionSummaryJsonApiSchema = S.Struct({
     createdAt: S.String,
     updatedAt: S.optional(S.String),
   }),
-});
+}));
 
 // ===== DECODERS =====
 

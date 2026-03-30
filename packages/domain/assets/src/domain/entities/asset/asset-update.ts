@@ -4,7 +4,7 @@ import * as S from 'effect/Schema';
  * Data for updating an existing asset's metadata.
  * Note: To replace the content, use the multipart upload flow.
  */
-export const AssetUpdateSchema = S.Struct({
+export const AssetUpdateSchema = S.toStandardSchemaV1(S.Struct({
   /** Key/path of the asset to update */
   key: S.String.check(S.isMaxLength(1023)),
   
@@ -16,8 +16,6 @@ export const AssetUpdateSchema = S.Struct({
   
   /** Updated MIME type (if content type needs correction) */
   mimeType: S.optional(S.String),
-});
-
-export const AssetUpdateSchemaStandardV1 = S.toStandardSchemaV1(AssetUpdateSchema);
+}));
 
 export type AssetUpdate = S.Schema.Type<typeof AssetUpdateSchema>;

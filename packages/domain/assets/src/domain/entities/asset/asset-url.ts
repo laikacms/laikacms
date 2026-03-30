@@ -8,7 +8,7 @@ import * as S from 'effect/Schema';
  * - view: Inline viewing (Content-Disposition: inline)
  * - public: Permanent public URL (if asset is public)
  */
-export const AssetUrlSchema = S.Struct({
+export const AssetUrlSchema = S.toStandardSchemaV1(S.Struct({
   /**
    * The asset key these URLs belong to.
    */
@@ -24,8 +24,6 @@ export const AssetUrlSchema = S.Struct({
    * ISO 8601 date string.
    */
   expiresAt: S.optional(S.DateTimeUtcFromString),
-});
-
-export const AssetUrlSchemaStandardV1 = S.toStandardSchemaV1(AssetUrlSchema);
+}));
 
 export type AssetUrl = S.Schema.Type<typeof AssetUrlSchema>;

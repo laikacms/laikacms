@@ -3,7 +3,7 @@ import * as S from 'effect/Schema';
 /**
  * Base metadata common to all asset types.
  */
-export const BaseMetadataSchema = S.Struct({
+export const BaseMetadataSchema = S.toStandardSchemaV1(S.Struct({
   /**
    * File size in bytes.
    */
@@ -43,16 +43,14 @@ export const BaseMetadataSchema = S.Struct({
    * When the asset was last modified.
    */
   modifiedAt: S.optional(S.DateTimeUtcFromString),
-});
-
-export const BaseMetadataSchemaStandardV1 = S.toStandardSchemaV1(BaseMetadataSchema);
+}));
 
 export type BaseMetadata = S.Schema.Type<typeof BaseMetadataSchema>;
 
 /**
  * Image-specific metadata.
  */
-export const ImageMetadata = S.Struct({
+export const ImageMetadata = S.toStandardSchemaV1(S.Struct({
   ...BaseMetadataSchema.fields,
 
   kind: S.Literal('image'),
@@ -91,16 +89,14 @@ export const ImageMetadata = S.Struct({
    * EXIF data (if available).
    */
   exif: S.optional(S.Record(S.String, S.Any)),
-});
-
-export const ImageMetadataSchemaStandardV1 = S.toStandardSchemaV1(ImageMetadata);
+}));
 
 export type ImageMetadata = S.Schema.Type<typeof ImageMetadata>;
 
 /**
  * Video-specific metadata.
  */
-export const VideoMetadata = S.Struct({
+export const VideoMetadata = S.toStandardSchemaV1(S.Struct({
   ...BaseMetadataSchema.fields,
 
   kind: S.Literal('video'),
@@ -154,16 +150,14 @@ export const VideoMetadata = S.Struct({
    * Audio sample rate in Hz.
    */
   audioSampleRate: S.optional(S.Number.check(S.isGreaterThan(0))),
-});
-
-export const VideoMetadataSchemaStandardV1 = S.toStandardSchemaV1(VideoMetadata);
+}));
 
 export type VideoMetadata = S.Schema.Type<typeof VideoMetadata>;
 
 /**
  * Audio-specific metadata.
  */
-export const AudioMetadata = S.Struct({
+export const AudioMetadata = S.toStandardSchemaV1(S.Struct({
   ...BaseMetadataSchema.fields,
 
   kind: S.Literal('audio'),
@@ -197,16 +191,14 @@ export const AudioMetadata = S.Struct({
    * ID3/metadata tags (title, artist, album, etc.).
    */
   tags: S.optional(S.Record(S.String, S.String)),
-});
-
-export const AudioMetadataSchemaStandardV1 = S.toStandardSchemaV1(AudioMetadata);
+}));
 
 export type AudioMetadata = S.Schema.Type<typeof AudioMetadata>;
 
 /**
  * Document-specific metadata (PDF, Office docs, etc.).
  */
-export const DocumentMetadata = S.Struct({
+export const DocumentMetadata = S.toStandardSchemaV1(S.Struct({
   ...BaseMetadataSchema.fields,
 
   kind: S.Literal('document'),
@@ -245,22 +237,18 @@ export const DocumentMetadata = S.Struct({
    * Modification date (from document metadata).
    */
   documentModifiedAt: S.optional(S.DateTimeUtcFromString),
-});
-
-export const DocumentMetadataSchemaStandardV1 = S.toStandardSchemaV1(DocumentMetadata);
+}));
 
 export type DocumentMetadata = S.Schema.Type<typeof DocumentMetadata>;
 
 /**
  * Generic binary file metadata (fallback for unknown types).
  */
-export const BinaryMetadata = S.Struct({
+export const BinaryMetadata = S.toStandardSchemaV1(S.Struct({
   ...BaseMetadataSchema.fields,
 
   kind: S.Literal('binary'),
-});
-
-export const BinaryMetadataSchemaStandardV1 = S.toStandardSchemaV1(BinaryMetadata);
+}));
 
 export type BinaryMetadata = S.Schema.Type<typeof BinaryMetadata>;
 
@@ -282,14 +270,12 @@ export const AssetMetadataContentSchema = S.Union([
   BinaryMetadata,
 ]);
 
-export const AssetMetadataContentSchemaStandardV1 = S.toStandardSchemaV1(AssetMetadataContentSchema);
-
 export type AssetMetadataContent = S.Schema.Type<typeof AssetMetadataContentSchema>;
 
 /**
  * Metadata wrapper with asset key.
  */
-export const AssetMetadataSchema = S.Struct({
+export const AssetMetadataSchema = S.toStandardSchemaV1(S.Struct({
   /**
    * The asset key this metadata belongs to.
    */
@@ -299,8 +285,6 @@ export const AssetMetadataSchema = S.Struct({
    * The discriminated metadata content.
    */
   metadata: AssetMetadataContentSchema,
-});
-
-export const AssetMetadataSchemaStandardV1 = S.toStandardSchemaV1(AssetMetadataSchema);
+}));
 
 export type AssetMetadata = S.Schema.Type<typeof AssetMetadataSchema>;

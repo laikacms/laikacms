@@ -21,7 +21,7 @@ export const BinaryContentSchema = S.declare<BinaryContent>(
  * Used for simple single-request uploads.
  */
 
-export const AssetCreateSchema = S.Struct({
+export const AssetCreateSchema = S.toStandardSchemaV1(S.Struct({
   /** Key/path for the asset (without extension) */
   key: S.String.pipe(S.check(S.isMaxLength(1023))),
 
@@ -42,8 +42,6 @@ export const AssetCreateSchema = S.Struct({
 
   /** Cache control header value */
   cacheControl: S.optional(S.String),
-});
-
-export const AssetCreateSchemaStandardV1 = S.toStandardSchemaV1(AssetCreateSchema);
+}));
 
 export type AssetCreate = S.Schema.Type<typeof AssetCreateSchema>;

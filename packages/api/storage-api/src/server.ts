@@ -130,65 +130,65 @@ async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<Laik
 }
 
 // Effect Schema definitions for JSON:API request validation
-const JsonApiStorageObjectCreateSchema = S.Struct({
+const JsonApiStorageObjectCreateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('object'),
   id: S.String,
   attributes: S.Struct({
     type: S.optional(S.Literal('object')),
     content: S.optional(S.Record(S.String, S.Any)),
   }),
-});
+}));
 
-const JsonApiStorageObjectUpdateSchema = S.Struct({
+const JsonApiStorageObjectUpdateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('object'),
   id: S.String,
   attributes: S.Struct({
     type: S.optional(S.Literal('object')),
     content: S.optional(S.Record(S.String, S.Any)),
   }),
-});
+}));
 
-const JsonApiFolderCreateSchema = S.Struct({
+const JsonApiFolderCreateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('folder'),
   id: S.String,
   attributes: S.Struct({
     type: S.optional(S.Literal('folder')),
   }),
-});
+}));
 
 // Request body wrappers for JSON:API format
-const StorageObjectCreateBodySchema = S.Struct({
+const StorageObjectCreateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: JsonApiStorageObjectCreateSchema,
-});
+}));
 
-const StorageObjectUpdateBodySchema = S.Struct({
+const StorageObjectUpdateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: JsonApiStorageObjectUpdateSchema,
-});
+}));
 
 // Atomic operations schemas
-const RemoveOperationSchema = S.Struct({
+const RemoveOperationSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal("remove"),
   ref: S.Struct({
     type: S.Union([S.Literal("object"), S.Literal("folder"), S.Literal("atom")]),
     id: S.String,
   }),
-});
+}));
 
-const AddOperationSchema = S.Struct({
+const AddOperationSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal("add"),
   data: S.Union([JsonApiStorageObjectCreateSchema, JsonApiFolderCreateSchema]),
-});
+}));
 
-const UpdateOperationSchema = S.Struct({
+const UpdateOperationSchema = S.toStandardSchemaV1(S.Struct({
   op: S.Literal("update"),
   data: JsonApiStorageObjectUpdateSchema,
-});
+}));
 
 const AtomicOperationSchema = S.Union([RemoveOperationSchema, AddOperationSchema, UpdateOperationSchema]);
 
-const AtomicOperationsRequestSchema = S.Struct({
+const AtomicOperationsRequestSchema = S.toStandardSchemaV1(S.Struct({
   "atomic:operations": S.Array(AtomicOperationSchema),
-});
+}));
 
 type StorageObjectCreateBody = S.Schema.Type<typeof StorageObjectCreateBodySchema>;
 type StorageObjectUpdateBody = S.Schema.Type<typeof StorageObjectUpdateBodySchema>;

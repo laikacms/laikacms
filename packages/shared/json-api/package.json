@@ -27,7 +27,8 @@
   },
   "devDependencies": {
     "typescript": "^5.7.2",
-    "hono": "catalog:server"
+    "hono": "catalog:server",
+    "@standard-schema/spec": "catalog:schema"
   },
   "engines": {
     "node": "22.x",

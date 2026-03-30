@@ -15,7 +15,6 @@ import {
   parseSettings,
 } from "@laikacms/contentbase-settings";
 import type { JSONSchema7 } from 'json-schema'
-import lodash from "lodash";
 import * as Result from 'effect/Result';
 
 /**
@@ -35,6 +34,8 @@ async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<Laik
   return Result.fail(new NotFoundError('No result from generator'));
 }
 
+const startCase = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
+
 export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvider {
   constructor(private readonly storage: StorageRepository) {
     super();
@@ -48,7 +49,7 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
     if (!collectionSettings) return Result.succeed({
       key: collection,
       type: 'document',
-      name: lodash.startCase(collection),
+      name: startCase(collection),
       directory: collection,
       trashDirectory: `.contentbase/trash/${collection}`,
       draftDirectory: `.contentbase/drafts/${collection}`,
