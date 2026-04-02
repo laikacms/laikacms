@@ -59,5 +59,5 @@ export declare function clearRequests(): {
     readonly type: "CLEAR_REQUESTS";
 };
 export declare function searchEntries(searchTerm: string, searchCollections: string[], page?: number): (dispatch: ThunkDispatch<State, undefined, AnyAction>, getState: () => State) => Promise<any>;
-export declare function query(namespace: string, collectionName: string, searchFields: string[], searchTerm: string, file?: string, limit?: number): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
+export declare function query(namespace: string, collectionName: string, searchFields: string[], searchTerm: string, file?: string, limit?: number): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
 export type SearchAction = ReturnType<typeof searchingEntries | typeof searchSuccess | typeof searchFailure | typeof querying | typeof querySuccess | typeof queryFailure | typeof clearSearch | typeof clearRequests>;

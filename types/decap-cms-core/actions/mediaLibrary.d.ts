@@ -40,8 +40,8 @@ export declare function createMediaLibrary(instance: MediaLibraryInstance): {
         enableStandalone: () => any;
     };
 };
-export declare function clearMediaControl(id: string): (_dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => void;
-export declare function removeMediaControl(id: string): (_dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => void;
+export declare function clearMediaControl(id: string): (_dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => void;
+export declare function removeMediaControl(id: string): (_dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => void;
 export declare function openMediaLibrary(payload?: {
     controlID?: string;
     forImage?: boolean;
@@ -50,9 +50,9 @@ export declare function openMediaLibrary(payload?: {
     allowMultiple?: boolean;
     config?: Map<string, unknown>;
     field?: EntryField;
-}): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => void;
-export declare function closeMediaLibrary(): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => void;
-export declare function insertMedia(mediaPath: string | string[], field: EntryField | undefined): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => void;
+}): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => void;
+export declare function closeMediaLibrary(): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => void;
+export declare function insertMedia(mediaPath: string | string[], field: EntryField | undefined): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => void;
 export declare function removeInsertedMedia(controlID: string): {
     readonly type: "MEDIA_REMOVE_INSERTED";
     readonly payload: {
@@ -64,13 +64,13 @@ export declare function loadMedia(opts?: {
     query?: string;
     page?: number;
     privateUpload?: boolean;
-}): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
-export declare function persistMedia(file: File, opts?: MediaOptions): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
-export declare function deleteMedia(file: MediaFile, opts?: MediaOptions): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
+}): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
+export declare function persistMedia(file: File, opts?: MediaOptions): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
+export declare function deleteMedia(file: MediaFile, opts?: MediaOptions): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
 export declare function getMediaFile(state: State, path: string): Promise<{
     url: any;
 }>;
-export declare function loadMediaDisplayURL(file: MediaFile): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
+export declare function loadMediaDisplayURL(file: MediaFile): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
 declare function mediaLibraryOpened(payload: {
     controlID?: string;
     forImage?: boolean;
@@ -186,7 +186,7 @@ export declare function mediaDisplayURLFailure(key: string, err: Error): {
         readonly err: Error;
     };
 };
-export declare function waitForMediaLibraryToLoad(dispatch: ThunkDispatch<State, {}, AnyAction>, state: State): Promise<void>;
-export declare function getMediaDisplayURL(dispatch: ThunkDispatch<State, {}, AnyAction>, state: State, file: MediaFile): Promise<string>;
+export declare function waitForMediaLibraryToLoad(dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, state: State): Promise<void>;
+export declare function getMediaDisplayURL(dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, state: State, file: MediaFile): Promise<string>;
 export type MediaLibraryAction = ReturnType<typeof createMediaLibrary | typeof mediaLibraryOpened | typeof mediaLibraryClosed | typeof mediaInserted | typeof removeInsertedMedia | typeof mediaLoading | typeof mediaLoaded | typeof mediaLoadFailed | typeof mediaPersisting | typeof mediaPersisted | typeof mediaPersistFailed | typeof mediaDeleting | typeof mediaDeleted | typeof mediaDeleteFailed | typeof mediaDisplayURLRequest | typeof mediaDisplayURLSuccess | typeof mediaDisplayURLFailure>;
 export {};

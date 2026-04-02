@@ -35,5 +35,5 @@ export declare function statusFailure(error: Error): {
         readonly error: Error;
     };
 };
-export declare function checkBackendStatus(): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
+export declare function checkBackendStatus(): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
 export type StatusAction = ReturnType<typeof statusRequest | typeof statusSuccess | typeof statusFailure>;

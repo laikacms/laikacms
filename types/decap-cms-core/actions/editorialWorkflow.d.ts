@@ -20,10 +20,10 @@ export declare const UNPUBLISHED_ENTRY_PUBLISH_FAILURE = "UNPUBLISHED_ENTRY_PUBL
 export declare const UNPUBLISHED_ENTRY_DELETE_REQUEST = "UNPUBLISHED_ENTRY_DELETE_REQUEST";
 export declare const UNPUBLISHED_ENTRY_DELETE_SUCCESS = "UNPUBLISHED_ENTRY_DELETE_SUCCESS";
 export declare const UNPUBLISHED_ENTRY_DELETE_FAILURE = "UNPUBLISHED_ENTRY_DELETE_FAILURE";
-export declare function loadUnpublishedEntry(collection: Collection, slug: string): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<void>;
-export declare function loadUnpublishedEntries(collections: Collections): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => void;
-export declare function persistUnpublishedEntry(collection: Collection, existingUnpublishedEntry: boolean): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
-export declare function updateUnpublishedEntryStatus(collection: string, slug: string, oldStatus: Status, newStatus: Status): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => void;
-export declare function deleteUnpublishedEntry(collection: string, slug: string): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => any;
-export declare function publishUnpublishedEntry(collectionName: string, slug: string): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
-export declare function unpublishPublishedEntry(collection: Collection, slug: string): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<void>;
+export declare function loadUnpublishedEntry(collection: Collection, slug: string): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<void>;
+export declare function loadUnpublishedEntries(collections: Collections): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => void;
+export declare function persistUnpublishedEntry(collection: Collection, existingUnpublishedEntry: boolean): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
+export declare function updateUnpublishedEntryStatus(collection: string, slug: string, oldStatus: Status, newStatus: Status): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => void;
+export declare function deleteUnpublishedEntry(collection: string, slug: string): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => any;
+export declare function publishUnpublishedEntry(collectionName: string, slug: string): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
+export declare function unpublishPublishedEntry(collection: Collection, slug: string): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<void>;

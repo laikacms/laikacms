@@ -7,4 +7,4 @@ export declare function waitUntil({ predicate, run }: WaitActionArgs): {
     predicate: (action: AnyAction) => boolean;
     run: (dispatch: ThunkDispatch, getState: () => State, action: AnyAction) => void;
 };
-export declare function waitUntilWithTimeout<T>(dispatch: ThunkDispatch<State, {}, AnyAction>, waitActionArgs: (resolve: (value?: T) => void) => WaitActionArgs, timeout?: number): Promise<T | null | void>;
+export declare function waitUntilWithTimeout<T>(dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, waitActionArgs: (resolve: (value?: T) => void) => WaitActionArgs, timeout?: number): Promise<T | null | void>;

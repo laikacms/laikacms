@@ -85,9 +85,9 @@ export declare function entriesFailed(collection: Collection, error: Error): {
     };
 };
 export declare function getAllEntries(state: State, collection: Collection): Promise<any>;
-export declare function sortByField(collection: Collection, key: string, direction?: SortDirection): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<void>;
-export declare function filterByField(collection: Collection, filter: ViewFilter): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<void>;
-export declare function groupByField(collection: Collection, group: ViewGroup): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<void>;
+export declare function sortByField(collection: Collection, key: string, direction?: SortDirection): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<void>;
+export declare function filterByField(collection: Collection, filter: ViewFilter): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<void>;
+export declare function groupByField(collection: Collection, group: ViewGroup): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<void>;
 export declare function changeViewStyle(viewStyle: string): {
     type: string;
     payload: {
@@ -226,22 +226,22 @@ export declare function removeDraftEntryMediaFile({ id }: {
         id: string;
     };
 };
-export declare function persistLocalBackup(entry: EntryMap, collection: Collection): (_dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
-export declare function createDraftDuplicateFromEntry(entry: EntryMap): (dispatch: ThunkDispatch<State, {}, AnyAction>) => void;
-export declare function retrieveLocalBackup(collection: Collection, slug: string): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
-export declare function deleteLocalBackup(collection: Collection, slug: string): (_dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
-export declare function loadEntry(collection: Collection, slug: string): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<void>;
+export declare function persistLocalBackup(entry: EntryMap, collection: Collection): (_dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
+export declare function createDraftDuplicateFromEntry(entry: EntryMap): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>) => void;
+export declare function retrieveLocalBackup(collection: Collection, slug: string): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
+export declare function deleteLocalBackup(collection: Collection, slug: string): (_dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
+export declare function loadEntry(collection: Collection, slug: string): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<void>;
 export declare function tryLoadEntry(state: State, collection: Collection, slug: string): Promise<EntryValue>;
-export declare function loadEntries(collection: Collection, page?: number): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
-export declare function traverseCollectionCursor(collection: Collection, action: string): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
-export declare function createEmptyDraft(collection: Collection, search: string): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<void>;
+export declare function loadEntries(collection: Collection, page?: number): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
+export declare function traverseCollectionCursor(collection: Collection, action: string): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
+export declare function createEmptyDraft(collection: Collection, search: string): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<void>;
 export declare function createEmptyDraftData(fields: EntryFields, skipField?: (field: EntryField) => boolean): any;
 export declare function getMediaAssets({ entry }: {
     entry: EntryMap;
 }): any;
 export declare function getSerializedEntry(collection: Collection, entry: Entry): import("../types/immutable").StaticallyTypedRecord<import("../types/redux").EntryObject> & import("../types/redux").EntryObject;
-export declare function persistEntry(collection: Collection): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
-export declare function deleteEntry(collection: Collection, slug: string): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<any>;
+export declare function persistEntry(collection: Collection): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
+export declare function deleteEntry(collection: Collection, slug: string): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<any>;
 export declare function validateMetaField(state: State, collection: Collection, field: EntryField, value: string | undefined, t: (key: string, args: Record<string, unknown>) => string): {
     error: {
         type: any;

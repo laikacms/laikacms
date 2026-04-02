@@ -66,5 +66,5 @@ export declare function handleLocalBackend(originalConfig: CmsConfig): Promise<a
 export declare function loadConfig(manualConfig: Partial<CmsConfig>, onLoad: () => unknown): {
     readonly type: "CONFIG_SUCCESS";
     readonly payload: CmsConfig;
-} | ((dispatch: ThunkDispatch<State, {}, AnyAction>) => Promise<void>);
+} | ((dispatch: ThunkDispatch<State, ThunkContext, AnyAction>) => Promise<void>);
 export type ConfigAction = ReturnType<typeof configLoading | typeof configLoaded | typeof configFailed>;

@@ -39,14 +39,14 @@ export declare function loadAssetFailure(path: string, error: Error): {
         readonly error: Error;
     };
 };
-export declare function loadAsset(resolvedPath: string): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => Promise<void>;
+export declare function loadAsset(resolvedPath: string): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => Promise<void>;
 interface GetAssetArgs {
     collection: Collection;
     entry: EntryMap;
     path: string;
     field?: EntryField;
 }
-export declare function boundGetAsset(dispatch: ThunkDispatch<State, {}, AnyAction>, collection: Collection, entry: EntryMap): (path: string, field: EntryField) => any;
-export declare function getAsset({ collection, entry, path, field }: GetAssetArgs): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => AssetProxy;
+export declare function boundGetAsset(dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, collection: Collection, entry: EntryMap): (path: string, field: EntryField) => any;
+export declare function getAsset({ collection, entry, path, field }: GetAssetArgs): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => AssetProxy;
 export type MediasAction = ReturnType<typeof addAssets | typeof addAsset | typeof removeAsset | typeof loadAssetRequest | typeof loadAssetSuccess | typeof loadAssetFailure>;
 export {};

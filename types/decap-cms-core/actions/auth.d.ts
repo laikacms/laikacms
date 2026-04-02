@@ -29,7 +29,7 @@ export declare function useOpenAuthoring(): {
 export declare function logout(): {
     readonly type: "LOGOUT";
 };
-export declare function authenticateUser(): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => any;
-export declare function loginUser(credentials: Credentials): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => any;
-export declare function logoutUser(): (dispatch: ThunkDispatch<State, {}, AnyAction>, getState: () => State) => void;
+export declare function authenticateUser(): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => any;
+export declare function loginUser(credentials: Credentials): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => any;
+export declare function logoutUser(): (dispatch: ThunkDispatch<State, ThunkContext, AnyAction>, getState: () => State) => void;
 export type AuthAction = ReturnType<typeof authenticating | typeof authenticate | typeof authError | typeof doneAuthenticating | typeof logout>;
