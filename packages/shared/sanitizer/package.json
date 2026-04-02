@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "author": "Sem Postma <sem@esstudio.nl>",
+  "author": "Sem Postma <sem@laikacms.com>",
   "license": "MIT",
   "exports": {
     ".": {

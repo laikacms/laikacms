@@ -23,7 +23,7 @@
     "api",
     "fetch"
   ],
-  "author": "Sem Postma <sem@esstudio.nl>",
+  "author": "Sem Postma <sem@laikacms.com>",
   "license": "MIT",
   "engines": {
     "node": "22.x"

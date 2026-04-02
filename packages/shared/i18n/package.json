@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Strongly typed i18n with flat JSON files compatible with i18next",
   "type": "module",
-  "author": "Sem Postma <sem@esstudio.nl>",
+  "author": "Sem Postma <sem@laikacms.com>",
   "license": "MIT",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

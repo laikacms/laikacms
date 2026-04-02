@@ -8,7 +8,7 @@
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "type": "module",
-  "author": "Sem Postma <sem@esstudio.nl>",
+  "author": "Sem Postma <sem@laikacms.com>",
   "license": "MIT",
   "keywords": [
     "decap-cms",

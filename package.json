@@ -5,12 +5,12 @@
   "keywords": ["headless-cms", "content-management", "jamstack", "react", "typescript"],
   "author": {
     "name": "Sem Postma",
-    "email": "sem@esstudio.nl",
-    "url": "https://esstudio.nl"
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
   },
   "homepage": "https://github.com/laikacms/laikacms",
   "bugs": {
-    "email": "sem@esstudio.nl",
+    "email": "sem@laikacms.com",
     "url": "https://github.com/laikacms/laikacms/issues"
   },
   "license": "MIT",
@@ -31,7 +31,11 @@
     "scripts:validate-packages": "tsx scripts/validate-packages.ts",
     "lint": "eslint --cache --config eslint.config.mjs .",
     "format": "dprint fmt",
-    "format:check": "dprint check"
+    "format:check": "dprint check",
+    "publish:packages": "pnpm build && pnpm -r publish --access public",
+    "publish:dry": "pnpm build && pnpm -r publish --access public --dry-run",
+    "version:bump": "pnpm -r exec -- npm version",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@eslint/js": "catalog:lint",
@@ -40,10 +44,12 @@
     "@types/node": "catalog:types",
     "eslint": "catalog:lint",
     "globals": "catalog:lint",
+    "husky": "^9.1.7",
     "immutable": "catalog:legacy",
     "rimraf": "catalog:tools",
     "turbo": "catalog:tools",
-    "typescript": "catalog:tools"
+    "typescript": "catalog:tools",
+    "typescript-eslint": "catalog:lint"
   },
   "packageManager": "pnpm@10.4.1",
   "engines": {
