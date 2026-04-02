@@ -28,6 +28,8 @@ export default tseslint.config(
       '**/.wrangler/**',
       '**/tmp/**',
       '**/coverage/**',
+      '**/build/**',
+      'types/**',
     ],
   },
 )

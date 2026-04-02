@@ -30,6 +30,7 @@
     "link:global": "turbo run link",
     "scripts:validate-packages": "tsx scripts/validate-packages.ts",
     "lint": "eslint --cache --config eslint.config.mjs .",
+    "lint:fix": "eslint --fix --cache --config eslint.config.mjs .",
     "format": "dprint fmt",
     "format:check": "dprint check",
     "publish:packages": "pnpm build && pnpm -r publish --access public",

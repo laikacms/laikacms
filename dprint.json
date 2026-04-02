@@ -5,7 +5,7 @@
   "useTabs": false,
   "newLineKind": "lf",
   "typescript": {
-    "semiColons": "asi",
+    "semiColons": "always",
     "quoteStyle": "preferSingle",
     "trailingCommas": "always",
     "useBraces": "whenNotSingleLine",
@@ -43,6 +43,7 @@
     "**/.tanstack",
     "**/coverage",
     "**/tmp",
+    "types/**",
     "pnpm-lock.yaml"
   ],
   "plugins": [
