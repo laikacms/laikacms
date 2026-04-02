@@ -268,7 +268,7 @@ const nl = {
       onFailToAuth: '%{details}',
       onLoggedOut: 'Je bent uitgelogd, back-up alstublieft uw data log daarna in',
       onBackendDown:
-        'De backend-service ondervindt een storing. Zie% {details} voor meer informatie',
+        'De backend-service ondervindt een storing. Zie %{details} voor meer informatie',
     },
   },
   workflow: {
