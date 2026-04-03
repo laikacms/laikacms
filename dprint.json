@@ -7,7 +7,7 @@
   "typescript": {
     "semiColons": "always",
     "quoteStyle": "preferSingle",
-    "trailingCommas": "always",
+    "trailingCommas": "onlyMultiLine",
     "useBraces": "whenNotSingleLine",
     "bracePosition": "sameLineUnlessHanging",
     "singleBodyPosition": "sameLine",
