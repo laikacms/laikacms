@@ -2,11 +2,7 @@ import type { ErrorStatus, LaikaError, LaikaResult } from '@laikacms/core';
 import { BadRequestError, NotFoundError } from '@laikacms/core';
 import type { DocumentsRepository } from '@laikacms/documents';
 import type { JsonApiCollectionResponse, JsonApiError, JsonApiResource, JsonApiResponse } from '@laikacms/json-api';
-import {
-  buildPaginationLinks,
-  errorToJsonApiMapper,
-  parsePaginationQuery,
-} from '@laikacms/json-api';
+import { buildPaginationLinks, errorToJsonApiMapper, parsePaginationQuery } from '@laikacms/json-api';
 import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
 import {

@@ -700,7 +700,7 @@ function decodeCBOR(data: Uint8Array): Record<string, unknown> {
       }
       case 1: { // Negative integer
         return -1 - readUint(additionalInfo);
-      } 
+      }
       case 2: { // Byte string
         const byteLength = readUint(additionalInfo);
         return readBytes(byteLength);

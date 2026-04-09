@@ -3,13 +3,13 @@ import { DirInsteadOfFile, FileInsteadOfDir, ForbiddenError, InternalError, NotF
 import { pathCombine, pathToSegments } from '@laikacms/storage';
 import { exec } from 'child_process';
 import * as Result from 'effect/Result';
+import type { Stats } from 'fs';
 import fs from 'fs/promises';
 import os from 'os';
 import path from 'path';
 import posixPath from 'path/posix';
 import trash from 'trash';
 import type { DirSub, FileOrDir } from '../../domain/entities/file.js';
-import type { Stats } from 'fs';
 
 const ALLOW_RECURSIVE = false;
 
@@ -22,7 +22,7 @@ export class FileSystemDataSource {
   constructor(
     private readonly availableExtensions: string[] = [],
     private readonly defaultFileExtension: string = '',
-  ) { }
+  ) {}
 
   /**
    * Strip any extension from the path if it matches one of the available extensions.
@@ -102,26 +102,34 @@ export class FileSystemDataSource {
           case 'ENOENT':
             return Result.fail(new NotFoundError(`The file at ${fullPath} does not exist`, { cause: error }));
           case 'EPERM':
-            return Result.fail(new ForbiddenError(
-              `The file at ${fullPath} could not be deleted because you don't have the necessary permissions`,
-              { cause: error }
-            ));
+            return Result.fail(
+              new ForbiddenError(
+                `The file at ${fullPath} could not be deleted because you don't have the necessary permissions`,
+                { cause: error },
+              ),
+            );
           case 'EACCES':
-            return Result.fail(new ForbiddenError(
-              `The file at ${fullPath} could not be deleted because you don't have access to it`,
-              { cause: error }
-            ));
+            return Result.fail(
+              new ForbiddenError(
+                `The file at ${fullPath} could not be deleted because you don't have access to it`,
+                { cause: error },
+              ),
+            );
           case 'ENOTEMPTY':
-            return Result.fail(new ForbiddenError(
-              `The directory at ${fullPath} could not be deleted because it is not empty`,
-              { cause: error }
-            ));
+            return Result.fail(
+              new ForbiddenError(
+                `The directory at ${fullPath} could not be deleted because it is not empty`,
+                { cause: error },
+              ),
+            );
           case 'EISDIR':
             return Result.fail(new DirInsteadOfFile(`The path ${fullPath} is a directory`, { cause: error }));
           case 'EEXIST':
             return Result.fail(new FileInsteadOfDir(`The path ${fullPath} is a file`, { cause: error }));
           default:
-            return Result.fail(new InternalError('An unexpected error occurred while trying to delete the file', { cause: error }));
+            return Result.fail(
+              new InternalError('An unexpected error occurred while trying to delete the file', { cause: error }),
+            );
         }
       } else {
         return Result.fail(new InternalError('Unexpected error during fs.stat', { cause: error }));
@@ -161,7 +169,7 @@ export class FileSystemDataSource {
     }
     await trash(successful.map(entry => path.join(basePath, entry.path)));
     yield Result.succeed(successful);
-  };
+  }
 
   getFileContents = async (
     basePath: string,

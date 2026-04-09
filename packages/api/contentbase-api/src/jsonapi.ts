@@ -3,10 +3,7 @@ import {
   type DocumentCollectionSettings,
   type MediaCollectionSettings,
 } from '@laikacms/contentbase-settings';
-import {
-  fromJsonApi,
-  toJsonApi,
-} from '@laikacms/json-api';
+import { fromJsonApi, toJsonApi } from '@laikacms/json-api';
 import * as S from 'effect/Schema';
 
 // Re-export common JSON:API utilities
