@@ -1,5 +1,5 @@
 import type { LaikaError, LaikaResult } from '@laikacms/core';
-import { BadRequestError, EntryAlreadyExistsError, InvalidData } from '@laikacms/core';
+import { AsyncGenerator, BadRequestError, EntryAlreadyExistsError, InvalidData } from '@laikacms/core';
 import type {
   Atom,
   AtomSummary,
@@ -13,6 +13,7 @@ import type {
   StorageSerializerRegistry,
 } from '@laikacms/storage';
 import { pathCombine, StorageRepository } from '@laikacms/storage';
+import { result } from 'effect/Match';
 import * as Result from 'effect/Result';
 import * as minimatch from 'minimatch';
 import { FileSystemDataSource } from '../datasources/filesystem-datasource.js';
@@ -106,18 +107,19 @@ export class FileSystemStorageRepository extends StorageRepository {
   ): AsyncGenerator<LaikaResult<readonly string[]>> {
     const dirSubToAtomMapping = new Map<string, string>();
 
-    const result = await this.fileSystemDataSource.deleteEntries(
+    const generator = await AsyncGenerator.toArray(this.fileSystemDataSource.deleteEntries(
       this.rootDirectory,
       keys.map(path => ({ path, type: 'file' as const })),
-    );
+    ));
 
-    if (Result.isSuccess(result)) {
-      const resultAtoms = result.success
-        .map(dirSub => dirSubToAtomMapping.get(dirSub.path))
-        .filter(Boolean) as string[];
-      yield Result.succeed(resultAtoms as readonly string[]);
-    } else {
-      yield failAs<readonly string[]>(result.failure);
+    for (const dirSub of generator) {
+      if (Result.isFailure(dirSub)) yield failAs<readonly string[]>(dirSub.failure);
+      else {
+        const resultAtoms = dirSub.success
+          .map(dirSub => dirSubToAtomMapping.get(dirSub.path))
+          .filter(Boolean) as string[];
+        yield Result.succeed(resultAtoms as readonly string[]);
+      }
     }
   }
 

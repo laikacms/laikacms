@@ -1,3 +1,4 @@
+import '@standard-schema/spec';
 import * as S from 'effect/Schema';
 
 /**
