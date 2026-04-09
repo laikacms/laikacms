@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "effect": "catalog:default",
-    "@laikacms/i18n": "workspace:*"
+    "@laikacms/i18n": "workspace:^"
   },
   "devDependencies": {
     "typescript": "catalog:tools"

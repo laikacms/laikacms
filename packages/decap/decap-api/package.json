@@ -29,15 +29,15 @@
     "node": "22.x"
   },
   "dependencies": {
-    "@laikacms/crypto": "workspace:*",
-    "@laikacms/documents-api": "workspace:*",
-    "@laikacms/storage-api": "workspace:*",
-    "@laikacms/assets-api": "workspace:*",
-    "@laikacms/documents": "workspace:*",
-    "@laikacms/storage": "workspace:*",
-    "@laikacms/assets": "workspace:*",
-    "@laikacms/json-api": "workspace:*",
-    "@laikacms/core": "workspace:*"
+    "@laikacms/crypto": "workspace:^",
+    "@laikacms/documents-api": "workspace:^",
+    "@laikacms/storage-api": "workspace:^",
+    "@laikacms/assets-api": "workspace:^",
+    "@laikacms/documents": "workspace:^",
+    "@laikacms/storage": "workspace:^",
+    "@laikacms/assets": "workspace:^",
+    "@laikacms/json-api": "workspace:^",
+    "@laikacms/core": "workspace:^"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

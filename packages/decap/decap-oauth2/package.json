@@ -46,8 +46,8 @@
     "node": "22.x"
   },
   "dependencies": {
-    "@laikacms/core": "workspace:*",
-    "@laikacms/crypto": "workspace:*",
+    "@laikacms/core": "workspace:^",
+    "@laikacms/crypto": "workspace:^",
     "effect": "catalog:default"
   },
   "devDependencies": {

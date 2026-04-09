@@ -29,17 +29,17 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",
-    "@laikacms/core": "workspace:*",
-    "@laikacms/json-api": "workspace:*",
-    "@laikacms/documents": "workspace:*",
-    "@laikacms/storage": "workspace:*",
-    "@laikacms/contentbase-settings": "workspace:*",
+    "@laikacms/core": "workspace:^",
+    "@laikacms/json-api": "workspace:^",
+    "@laikacms/documents": "workspace:^",
+    "@laikacms/storage": "workspace:^",
+    "@laikacms/contentbase-settings": "workspace:^",
     "effect": "catalog:default",
     "hono": "^4.6.8"
   },
   "devDependencies": {
     "@types/node": "catalog:types",
     "typescript": "catalog:tools",
-    "@laikacms/contentbase-settings-default": "workspace:*"
+    "@laikacms/contentbase-settings-default": "workspace:^"
   }
 }

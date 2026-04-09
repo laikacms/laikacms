@@ -19,10 +19,10 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@laikacms/core": "workspace:*",
-    "@laikacms/storage": "workspace:*",
-    "@laikacms/documents": "workspace:*",
-    "@laikacms/contentbase-settings": "workspace:*",
+    "@laikacms/core": "workspace:^",
+    "@laikacms/storage": "workspace:^",
+    "@laikacms/documents": "workspace:^",
+    "@laikacms/contentbase-settings": "workspace:^",
     "effect": "catalog:default"
   },
   "devDependencies": {

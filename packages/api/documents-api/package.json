@@ -27,10 +27,10 @@
     "start": "node --enable-source-maps dist/server.js"
   },
   "dependencies": {
-    "@laikacms/core": "workspace:*",
-    "@laikacms/json-api": "workspace:*",
-    "@laikacms/storage": "workspace:*",
-    "@laikacms/documents": "workspace:*",
+    "@laikacms/core": "workspace:^",
+    "@laikacms/json-api": "workspace:^",
+    "@laikacms/storage": "workspace:^",
+    "@laikacms/documents": "workspace:^",
     "effect": "catalog:default"
   },
   "devDependencies": {

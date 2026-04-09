@@ -27,7 +27,7 @@
   },
   "dependencies": {
     "js-yaml": "^4.1.0",
-    "@laikacms/storage": "workspace:*"
+    "@laikacms/storage": "workspace:^"
   },
   "devDependencies": {
     "@types/json-schema": "^7.0.15",

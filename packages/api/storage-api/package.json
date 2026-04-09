@@ -28,9 +28,9 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.8",
-    "@laikacms/core": "workspace:*",
-    "@laikacms/json-api": "workspace:*",
-    "@laikacms/storage": "workspace:*",
+    "@laikacms/core": "workspace:^",
+    "@laikacms/json-api": "workspace:^",
+    "@laikacms/storage": "workspace:^",
     "effect": "catalog:default",
     "hono": "^4.6.8"
   },

@@ -20,8 +20,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@laikacms/core": "workspace:*",
-    "@laikacms/sanitizer": "workspace:*"
+    "@laikacms/core": "workspace:^",
+    "@laikacms/sanitizer": "workspace:^"
   },
   "devDependencies": {
     "typescript": "^5.8.2",

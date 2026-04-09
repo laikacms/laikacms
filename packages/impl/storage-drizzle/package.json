@@ -26,8 +26,8 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@laikacms/core": "workspace:*",
-    "@laikacms/storage": "workspace:*",
+    "@laikacms/core": "workspace:^",
+    "@laikacms/storage": "workspace:^",
     "effect": "catalog:default"
   },
   "devDependencies": {

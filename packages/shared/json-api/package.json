@@ -21,8 +21,8 @@
   "author": "Sem Postma <sem@laikacms.com>",
   "license": "MIT",
   "dependencies": {
-    "@laikacms/core": "workspace:*",
-    "@laikacms/i18n": "workspace:*",
+    "@laikacms/core": "workspace:^",
+    "@laikacms/i18n": "workspace:^",
     "effect": "catalog:default"
   },
   "devDependencies": {

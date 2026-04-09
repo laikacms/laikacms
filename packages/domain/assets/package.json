@@ -29,8 +29,8 @@
     "@standard-schema/spec": "catalog:schema"
   },
   "dependencies": {
-    "@laikacms/core": "workspace:*",
-    "@laikacms/storage": "workspace:*",
+    "@laikacms/core": "workspace:^",
+    "@laikacms/storage": "workspace:^",
     "effect": "catalog:default"
   }
 }

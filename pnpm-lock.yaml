@@ -196,16 +196,16 @@ importers:
   packages/api/assets-api:
     dependencies:
       '@laikacms/assets':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/assets
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/json-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/json-api
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       effect:
         specifier: catalog:default
@@ -224,19 +224,19 @@ importers:
         specifier: ^1.13.8
         version: 1.19.11(hono@4.12.9)
       '@laikacms/contentbase-settings':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/contentbase-settings
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/documents':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/documents
       '@laikacms/json-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/json-api
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       effect:
         specifier: catalog:default
@@ -246,7 +246,7 @@ importers:
         version: 4.12.9
     devDependencies:
       '@laikacms/contentbase-settings-default':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../impl/contentbase-settings-default
       '@types/node':
         specifier: catalog:types
@@ -258,16 +258,16 @@ importers:
   packages/api/documents-api:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/documents':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/documents
       '@laikacms/json-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/json-api
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       effect:
         specifier: catalog:default
@@ -286,13 +286,13 @@ importers:
         specifier: ^1.13.8
         version: 1.19.11(hono@4.12.9)
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/json-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/json-api
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       effect:
         specifier: catalog:default
@@ -311,7 +311,7 @@ importers:
   packages/decap/decap-ai:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       ai:
         specifier: catalog:ai
@@ -333,31 +333,31 @@ importers:
   packages/decap/decap-api:
     dependencies:
       '@laikacms/assets':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/assets
       '@laikacms/assets-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../api/assets-api
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/crypto':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/crypto
       '@laikacms/documents':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/documents
       '@laikacms/documents-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../api/documents-api
       '@laikacms/json-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/json-api
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       '@laikacms/storage-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../api/storage-api
     devDependencies:
       '@types/bcryptjs':
@@ -376,25 +376,25 @@ importers:
   packages/decap/decap-cms-backend-laika:
     dependencies:
       '@laikacms/assets':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/assets
       '@laikacms/assets-jsonapi-proxy':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../impl/assets-jsonapi-proxy
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/documents':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/documents
       '@laikacms/documents-jsonapi-proxy':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../impl/documents-jsonapi-proxy
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       '@laikacms/storage-jsonapi-proxy':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../impl/storage-jsonapi-proxy
       '@octokit/rest':
         specifier: catalog:octokit
@@ -621,10 +621,10 @@ importers:
   packages/decap/decap-oauth2:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/crypto':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/crypto
       effect:
         specifier: catalog:default
@@ -646,10 +646,10 @@ importers:
   packages/domain/assets:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../storage
       effect:
         specifier: catalog:default
@@ -665,10 +665,10 @@ importers:
   packages/domain/contentbase-settings:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../storage
       effect:
         specifier: catalog:default
@@ -687,10 +687,10 @@ importers:
   packages/domain/documents:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../storage
       effect:
         specifier: catalog:default
@@ -709,7 +709,7 @@ importers:
   packages/domain/storage:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       effect:
         specifier: catalog:default
@@ -728,16 +728,16 @@ importers:
   packages/impl/assets-jsonapi-proxy:
     dependencies:
       '@laikacms/assets':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/assets
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/json-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/json-api
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       effect:
         specifier: catalog:default
@@ -753,16 +753,16 @@ importers:
   packages/impl/assets-r2:
     dependencies:
       '@laikacms/assets':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/assets
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/sanitizer':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/sanitizer
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       effect:
         specifier: catalog:default
@@ -781,10 +781,10 @@ importers:
   packages/impl/contentbase-settings-ddb:
     dependencies:
       '@laikacms/contentbase-settings':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/contentbase-settings
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       effect:
         specifier: catalog:default
@@ -821,16 +821,16 @@ importers:
   packages/impl/contentbase-settings-default:
     dependencies:
       '@laikacms/contentbase-settings':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/contentbase-settings
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/documents':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/documents
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       ajv:
         specifier: catalog:schema
@@ -861,16 +861,16 @@ importers:
   packages/impl/documents-contentbase:
     dependencies:
       '@laikacms/contentbase-settings':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/contentbase-settings
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/documents':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/documents
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       effect:
         specifier: catalog:default
@@ -892,13 +892,13 @@ importers:
   packages/impl/documents-drizzle:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/documents':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/documents
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       effect:
         specifier: catalog:default
@@ -914,19 +914,19 @@ importers:
   packages/impl/documents-jsonapi-proxy:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/documents':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/documents
       '@laikacms/documents-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../api/documents-api
       '@laikacms/json-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/json-api
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       effect:
         specifier: catalog:default
@@ -942,10 +942,10 @@ importers:
   packages/impl/storage-drizzle:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       effect:
         specifier: catalog:default
@@ -961,10 +961,10 @@ importers:
   packages/impl/storage-fs:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       '@types/json-schema':
         specifier: ^7.0.15
@@ -989,13 +989,13 @@ importers:
   packages/impl/storage-jsonapi-proxy:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       '@laikacms/storage-api':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../api/storage-api
       effect:
         specifier: catalog:default
@@ -1011,10 +1011,10 @@ importers:
   packages/impl/storage-r2:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../shared/core
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       '@types/json-schema':
         specifier: ^7.0.15
@@ -1039,7 +1039,7 @@ importers:
   packages/serializers/storage-serializers-json:
     dependencies:
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
     devDependencies:
       '@types/json-schema':
@@ -1052,7 +1052,7 @@ importers:
   packages/serializers/storage-serializers-markdown:
     dependencies:
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       gray-matter:
         specifier: ^4.0.3
@@ -1068,7 +1068,7 @@ importers:
   packages/serializers/storage-serializers-raw:
     dependencies:
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
     devDependencies:
       '@types/json-schema':
@@ -1081,7 +1081,7 @@ importers:
   packages/serializers/storage-serializers-yaml:
     dependencies:
       '@laikacms/storage':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../../domain/storage
       js-yaml:
         specifier: ^4.1.0
@@ -1100,7 +1100,7 @@ importers:
   packages/shared/core:
     dependencies:
       '@laikacms/i18n':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../i18n
       effect:
         specifier: catalog:default
@@ -1126,10 +1126,10 @@ importers:
   packages/shared/file-sanitizer:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@laikacms/sanitizer':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../sanitizer
     devDependencies:
       typescript:
@@ -1148,10 +1148,10 @@ importers:
   packages/shared/json-api:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@laikacms/i18n':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../i18n
       effect:
         specifier: catalog:default
