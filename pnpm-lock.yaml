@@ -618,7 +618,7 @@ importers:
         specifier: ^5.7.0
         version: 5.9.3
 
-  packages/decap/decap-server-ai:
+  packages/decap/decap-ai:
     dependencies:
       '@laikacms/core':
         specifier: workspace:^
