@@ -1,5 +1,5 @@
 import { ErrorClasses } from '@laikacms/core';
-import { JsonApiError } from './types.js';
+import type { JsonApiError } from './types.js';
 import { errorToJsonApiMapper } from './utilities.js';
 
 export const JsonApiErrors = Object.entries(ErrorClasses).reduce(

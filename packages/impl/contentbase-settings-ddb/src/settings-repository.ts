@@ -1,14 +1,16 @@
 import { type DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
-import {
+import type {
   CollectionSettings,
   ContentBaseSettings,
+  DocumentCollectionSettings,
+  MediaCollectionSettings} from '@laikacms/contentbase-settings';
+import {
   ContentBaseSettingsProvider,
   createDefaultSettingsFile,
-  DocumentCollectionSettings,
-  MediaCollectionSettings,
   parseSettings,
 } from '@laikacms/contentbase-settings';
-import { InternalError, InvalidData, LaikaError, LaikaResult, NotFoundError } from '@laikacms/core';
+import type { LaikaError, LaikaResult} from '@laikacms/core';
+import { InternalError, InvalidData, NotFoundError } from '@laikacms/core';
 import * as Result from 'effect/Result';
 import type { JSONSchema7 } from 'json-schema';
 import superjson from 'superjson';

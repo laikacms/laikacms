@@ -1,14 +1,16 @@
+import type {
+  ErrorStatus,
+  LaikaResult} from '@laikacms/core';
 import {
   ErrorCodeToStatusMap,
-  ErrorStatus,
   InternalError,
   InvalidData,
   LaikaError,
-  LaikaResult,
   NotFoundError,
 } from '@laikacms/core';
-import { errorToJsonApiMapper, JsonApiError, JsonApiResponse } from '@laikacms/json-api';
-import {
+import type { JsonApiError, JsonApiResponse } from '@laikacms/json-api';
+import { errorToJsonApiMapper } from '@laikacms/json-api';
+import type {
   Atom,
   AtomSummary,
   Folder,
@@ -88,7 +90,7 @@ async function respondCollectionWithConverter<T, R extends JsonApiResource>(
   const url = new URL(request.url);
   const queryParams = Object.fromEntries(url.searchParams.entries());
   const pagination = parsePaginationQuery(queryParams);
-  let hasMore = false;
+  const hasMore = false;
   let firstCursor: string | undefined;
   let lastCursor: string | undefined;
 

@@ -1,9 +1,10 @@
+import type {
+  LaikaResult} from '@laikacms/core';
 import {
   DirInsteadOfFile,
   FileInsteadOfDir,
   ForbiddenError,
   InternalError,
-  LaikaResult,
   NotFoundError,
 } from '@laikacms/core';
 import { pathCombine, pathToSegments } from '@laikacms/storage';
@@ -14,7 +15,7 @@ import os from 'os';
 import path from 'path';
 import posixPath from 'path/posix';
 import trash from 'trash';
-import { DirSub, FileOrDir } from '../../domain/entities/file.js';
+import type { DirSub, FileOrDir } from '../../domain/entities/file.js';
 
 const ALLOW_RECURSIVE = false;
 

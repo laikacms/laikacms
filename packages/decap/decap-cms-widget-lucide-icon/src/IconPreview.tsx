@@ -1,4 +1,4 @@
-import { CmsWidgetPreviewProps } from 'decap-cms-core';
+import type { CmsWidgetPreviewProps } from 'decap-cms-core';
 import * as lucideReact from 'lucide-react';
 import React from 'react';
 

@@ -1,6 +1,6 @@
-import { StorageFormat, StorageObjectContent, StorageSerializer } from '@laikacms/storage';
+import type { StorageFormat, StorageObjectContent, StorageSerializer } from '@laikacms/storage';
 import yaml from 'js-yaml';
-import { JSONSchema7 } from 'json-schema';
+import type { JSONSchema7 } from 'json-schema';
 
 export const yamlSerializer: StorageSerializer<StorageFormat> = {
   format: 'yaml' as StorageFormat,

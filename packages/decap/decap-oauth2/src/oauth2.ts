@@ -12,14 +12,16 @@ import { type PasswordResetConfig, requestPasswordReset, resetPassword } from '.
 import { type OAuthMessages } from './i18n/index.js';
 import { type OAuthTotpConfig, setupOAuthTOTP, verifyOAuthTOTPSetup, verifyTOTP } from './totp/totp.js';
 
+import type {
+  PasskeyConfig} from './passkey/passkey.js';
 import {
   generateAuthenticationOptions,
   generateRegistrationOptions,
-  PasskeyConfig,
   verifyAuthentication,
   verifyRegistration,
 } from './passkey/passkey.js';
-import { AuthorizationPageOptions, getAuthorizationPageHTML } from './templates/authorization-page.js';
+import type { AuthorizationPageOptions} from './templates/authorization-page.js';
+import { getAuthorizationPageHTML } from './templates/authorization-page.js';
 import { renderErrorPage } from './templates/error.js';
 import { renderLogoutAllSuccessPage, renderLogoutSuccessPage } from './templates/logout-page.js';
 import { renderPasskeySetupPage } from './templates/passkey-setup-page.js';

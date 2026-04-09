@@ -1,19 +1,21 @@
+import type {
+  ErrorStatus,
+  LaikaError,
+  LaikaResult} from '@laikacms/core';
 import {
   BadRequestError,
   ErrorCodeToStatusMap,
-  ErrorStatus,
-  LaikaError,
-  LaikaResult,
   NotFoundError,
 } from '@laikacms/core';
-import { DocumentsRepository } from '@laikacms/documents';
-import {
-  buildPaginationLinks,
-  errorToJsonApiMapper,
+import type { DocumentsRepository } from '@laikacms/documents';
+import type {
   JsonApiCollectionResponse,
   JsonApiError,
   JsonApiResource,
-  JsonApiResponse,
+  JsonApiResponse} from '@laikacms/json-api';
+import {
+  buildPaginationLinks,
+  errorToJsonApiMapper,
   parsePaginationQuery,
   schemaIssueFormatter,
 } from '@laikacms/json-api';
@@ -101,7 +103,7 @@ async function respondCollection<T, R extends JsonApiResource>(
   const url = new URL(request.url);
   const queryParams = Object.fromEntries(url.searchParams.entries());
   const pagination = parsePaginationQuery(queryParams);
-  let hasMore = false;
+  const hasMore = false;
   let lastCursor: string | undefined;
 
   const links = buildPaginationLinks(baseUrl, pagination, hasMore, lastCursor);

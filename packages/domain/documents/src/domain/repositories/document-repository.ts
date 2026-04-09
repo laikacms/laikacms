@@ -1,5 +1,6 @@
-import { LaikaError, LaikaResult } from '@laikacms/core';
-import { Key, Pagination } from '@laikacms/storage';
+import type { LaikaResult } from '@laikacms/core';
+import { LaikaError } from '@laikacms/core';
+import type { Key, Pagination } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 import type {
   Document,
@@ -16,7 +17,7 @@ import type {
   UnpublishedSummary,
   UnpublishedUpdate,
 } from '../entities/index.js';
-import { RecordSummary } from '../entities/record/record-summary.js';
+import type { RecordSummary } from '../entities/record/record-summary.js';
 
 export interface ListRevisionsOptions {
   pagination: Pagination;

@@ -1,4 +1,4 @@
-import { LaikaResult } from '@laikacms/core';
+import type { LaikaResult } from '@laikacms/core';
 
 import type {
   Atom,
@@ -10,8 +10,8 @@ import type {
   StorageObjectCreate,
   StorageObjectUpdate,
 } from '../entities/index.js';
-import { AsyncCache } from '../types/cache.js';
-import { Key } from '../types/key.js';
+import type { AsyncCache } from '../types/cache.js';
+import type { Key } from '../types/key.js';
 
 export interface ListAtomsOptions {
   depth: number;

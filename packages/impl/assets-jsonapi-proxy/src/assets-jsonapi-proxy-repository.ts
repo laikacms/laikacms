@@ -10,8 +10,9 @@ import {
   type ListResourcesOptions,
   type Resource,
 } from '@laikacms/assets';
-import { InternalError, InvalidData, LaikaError, LaikaResult } from '@laikacms/core';
-import { JsonApiCollectionResponse } from '@laikacms/json-api';
+import type { LaikaError, LaikaResult } from '@laikacms/core';
+import { InternalError, InvalidData } from '@laikacms/core';
+import type { JsonApiCollectionResponse } from '@laikacms/json-api';
 import { type Folder, type FolderCreate } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 import {

@@ -16,7 +16,8 @@ import {
   logoStyles,
   totpStyles,
 } from './decap-styles.js';
-import { html, HtmlTemplate, messages, processCustomLogo, TemplateVariables } from './html.js';
+import type { HtmlTemplate, TemplateVariables } from './html.js';
+import { html, messages, processCustomLogo } from './html.js';
 
 // Template tag for CSS (enables intellisense)
 const css = String.raw;

@@ -1,5 +1,5 @@
-import * as S from 'effect/Schema';
-import {
+import type * as S from 'effect/Schema';
+import type {
   AtomicOperationSchema,
   AtomicOperationsRequestSchema,
   AtomicOperationsResponseSchema,

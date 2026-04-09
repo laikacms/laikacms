@@ -1,5 +1,5 @@
 import { serve } from '@hono/node-server';
-import { StorageRepository } from '@laikacms/storage';
+import type { StorageRepository } from '@laikacms/storage';
 import { buildJsonApi } from '../src/index';
 
 type JsonApiDeps = StorageRepository; // TODO: Add more deps

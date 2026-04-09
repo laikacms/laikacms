@@ -1,5 +1,5 @@
 import { serve } from '@hono/node-server';
-import { DefaultContentBaseSettingsProvider } from '@laikacms/contentbase-settings-default';
+import type { DefaultContentBaseSettingsProvider } from '@laikacms/contentbase-settings-default';
 import { buildJsonApi } from '../src/index';
 
 type JsonApiDeps = DefaultContentBaseSettingsProvider; // TODO: Add more deps

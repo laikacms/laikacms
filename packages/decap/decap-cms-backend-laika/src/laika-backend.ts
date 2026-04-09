@@ -20,20 +20,21 @@ import type {
 
 import type { AssetCreate, AssetsRepository } from '@laikacms/assets';
 import { AssetsJsonApiProxyRepository } from '@laikacms/assets-jsonapi-proxy';
+import type {
+  ErrorCode,
+  LaikaError,
+  LaikaResult} from '@laikacms/core';
 import {
   AsyncGenerator,
-  ErrorCode,
   errorCode,
   ErrorCodeToStatusMap,
   IllegalStateException,
-  LaikaError,
-  LaikaResult,
   TemplateLiteral as TL,
   Url,
 } from '@laikacms/core';
 import type { DocumentsRepository } from '@laikacms/documents';
 import { DocumentsJsonApiProxyRepository } from '@laikacms/documents-jsonapi-proxy';
-import { Pagination } from '@laikacms/storage';
+import type { Pagination } from '@laikacms/storage';
 import * as Effect from 'effect/Effect';
 import * as f from 'effect/Function';
 import * as Result from 'effect/Result';
@@ -579,7 +580,7 @@ export default function createLaikaBackend(
         return this.entryCache.getOrFetch(key, async () => {
           const repo = this.getDocumentsRepo();
 
-          let failedResults: LaikaError[] = [];
+          const failedResults: LaikaError[] = [];
 
           const result = await AsyncGenerator.accumulateFirst(
             repo.getDocument(key),

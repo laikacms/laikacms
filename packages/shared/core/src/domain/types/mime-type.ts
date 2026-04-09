@@ -1,5 +1,5 @@
 import * as S from 'effect/Schema';
-import { ExtName } from './ext-name.js';
+import type { ExtName } from './ext-name.js';
 
 /**
  * All supported MIME types as a const array for Effect Schema.

@@ -1,5 +1,6 @@
 import * as Result from 'effect/Result';
-import { LaikaError, LaikaResult, NotFoundError } from './domain';
+import type { LaikaError, LaikaResult} from './domain';
+import { NotFoundError } from './domain';
 
 export const lazy = <T>(func: () => T) => {
   let instance: T | null = null;
@@ -106,7 +107,7 @@ export const TemplateLiteral = {
   url: (strings: TemplateStringsArray, ...values: any[]) => {
     const raw = strings.reduce((acc, str, i) => {
       if (i === values.length) return Url.join(acc, str);
-      let segment = String(values[i]);
+      const segment = String(values[i]);
 
       return Url.combine(acc, str, segment);
     }, '');

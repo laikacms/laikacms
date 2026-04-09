@@ -1,7 +1,7 @@
-import { LaikaError } from '@laikacms/core';
-import { Result } from 'effect/Result';
-import { JSONSchema7 } from 'json-schema';
-import { ContentBaseSettings, DocumentCollectionSettings, MediaCollectionSettings } from '../entities/settings.js';
+import type { LaikaError } from '@laikacms/core';
+import type { Result } from 'effect/Result';
+import type { JSONSchema7 } from 'json-schema';
+import type { ContentBaseSettings, DocumentCollectionSettings, MediaCollectionSettings } from '../entities/settings.js';
 
 export abstract class ContentBaseSettingsProvider {
   abstract getSettings(): Promise<Result<ContentBaseSettings, LaikaError>>;

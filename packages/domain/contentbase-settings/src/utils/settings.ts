@@ -1,8 +1,10 @@
-import { LaikaResult, ValidationError } from '@laikacms/core';
+import type { LaikaResult} from '@laikacms/core';
+import { ValidationError } from '@laikacms/core';
 import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
-import { JSONSchema7 } from 'json-schema';
-import { ContentBaseSettings, ContentBaseSettingsSchema } from '../entities/settings.js';
+import type { JSONSchema7 } from 'json-schema';
+import type { ContentBaseSettings} from '../entities/settings.js';
+import { ContentBaseSettingsSchema } from '../entities/settings.js';
 
 export const createDefaultSchema = (): JSONSchema7 => ({
   type: 'object',
@@ -18,7 +20,7 @@ export const parseSettingsJSON = <T>(json: string): LaikaResult<ContentBaseSetti
   let data: unknown;
   try {
     data = JSON.parse(json);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+     
   } catch (error) {
     console.error(error);
     return Result.fail(

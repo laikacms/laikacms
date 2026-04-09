@@ -1,12 +1,13 @@
 import type { AuthTranslation, OAuthMessages } from '../i18n/index.js';
 import { decapLogo, loginPageStyles, passkeyIcon } from './decap-styles.js';
+import type {
+  HtmlTemplate} from './html.js';
 import {
   authorizeUrl,
   captchaScript,
   captchaWidget,
   forgotPasswordSection,
   html,
-  HtmlTemplate,
   logoHtml,
   passkeyScript,
   passkeySection,

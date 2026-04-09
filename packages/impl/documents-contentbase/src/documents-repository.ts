@@ -1,23 +1,26 @@
-import { ContentBaseSettingsProvider } from '@laikacms/contentbase-settings';
-import { BadRequestError, InvalidData, LaikaError, LaikaResult, NotFoundError } from '@laikacms/core';
+import type { ContentBaseSettingsProvider } from '@laikacms/contentbase-settings';
+import type { LaikaError, LaikaResult} from '@laikacms/core';
+import { BadRequestError, InvalidData, NotFoundError } from '@laikacms/core';
+import type {
+  ListRecordsOptions,
+  ListRecordSummaries,
+  ListRevisionsOptions,
+  RecordSummary,
+  RevisionSummary} from '@laikacms/documents';
 import {
   type Document,
   type DocumentCreate,
   DocumentsRepository,
   type DocumentUpdate,
-  ListRecordsOptions,
-  ListRecordSummaries,
-  ListRevisionsOptions,
   type Record,
-  RecordSummary,
   type Revision,
   type RevisionCreate,
-  RevisionSummary,
   type Unpublished,
   type UnpublishedCreate,
   type UnpublishedUpdate,
 } from '@laikacms/documents';
-import { AtomSummary, basename, pathCombine, pathToSegments, StorageRepository } from '@laikacms/storage';
+import type { StorageRepository } from '@laikacms/storage';
+import { AtomSummary, basename, pathCombine, pathToSegments } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 /**

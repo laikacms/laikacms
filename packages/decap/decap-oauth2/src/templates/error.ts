@@ -7,7 +7,8 @@
 
 import { defaultMessages, type OAuthMessages } from '../i18n/index.js';
 import { baseStyles, colors, lengths, logoStyles, shadows } from './decap-styles.js';
-import { buildCspWithLogo, html, HtmlTemplate, messages, processCustomLogo, TemplateVariables } from './html.js';
+import type { HtmlTemplate, TemplateVariables } from './html.js';
+import { buildCspWithLogo, html, messages, processCustomLogo } from './html.js';
 
 // Template tag for CSS (enables intellisense)
 const css = String.raw;

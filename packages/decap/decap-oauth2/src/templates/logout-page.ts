@@ -10,7 +10,8 @@
 
 import { defaultMessages, type OAuthMessages } from '../i18n/index.js';
 import { colors, loginPageStyles } from './decap-styles.js';
-import { getMessages, html, HtmlTemplate, messages, processCustomLogo, TemplateVariables } from './html.js';
+import type { HtmlTemplate, TemplateVariables } from './html.js';
+import { getMessages, html, messages, processCustomLogo } from './html.js';
 
 // Additional styles for logout pages
 const logoutStyles = `

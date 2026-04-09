@@ -1,6 +1,6 @@
-import { JSONSchema7 } from 'json-schema';
-import { StorageObjectContent } from '../entities/index.js';
-import { StorageFormat } from './storage-format.js';
+import type { JSONSchema7 } from 'json-schema';
+import type { StorageObjectContent } from '../entities/index.js';
+import type { StorageFormat } from './storage-format.js';
 
 export interface StorageSerializerRegistry {
   [key: string]: StorageSerializer<StorageFormat>;

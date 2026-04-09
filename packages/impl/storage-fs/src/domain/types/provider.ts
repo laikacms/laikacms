@@ -1,4 +1,4 @@
-import { StorageProvider } from '@laikacms/storage';
+import type { StorageProvider } from '@laikacms/storage';
 
 export type FileSystemStorageProvider = StorageProvider & 'filesystem';
 

@@ -1,4 +1,5 @@
-import { InvalidData, LaikaError, LaikaResult } from '@laikacms/core';
+import type { LaikaError, LaikaResult } from '@laikacms/core';
+import { InvalidData } from '@laikacms/core';
 import {
   type Atom,
   type AtomSummary,

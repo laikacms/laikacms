@@ -1,6 +1,7 @@
-import { Folder, FolderCreate, Key, Pagination } from '@laikacms/storage';
+import type { Folder, FolderCreate, Key, Pagination } from '@laikacms/storage';
 
-import { LaikaError, LaikaResult } from '@laikacms/core';
+import type { LaikaResult } from '@laikacms/core';
+import { LaikaError } from '@laikacms/core';
 import type {
   Asset,
   AssetCreate,

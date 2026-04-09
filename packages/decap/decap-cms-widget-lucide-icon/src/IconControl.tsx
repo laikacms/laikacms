@@ -1,5 +1,5 @@
 import { css } from '@emotion/css';
-import { CmsWidgetControlProps } from 'decap-cms-core';
+import type { CmsWidgetControlProps } from 'decap-cms-core';
 import { colors, shadows } from 'decap-cms-ui-default';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import * as lucideReact from 'lucide-react';

@@ -1,5 +1,5 @@
 import type { DRAFT_CHANGE_FIELD } from 'decap-cms-core/actions/entries';
-import { List, Map } from 'immutable';
+import type { List, Map } from 'immutable';
 
 export function changeDraftField({
   field,

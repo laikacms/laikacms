@@ -1,5 +1,6 @@
 import * as errors from './errors.js';
-import { errorCode, ErrorKey, errorStatus } from './errors.js';
+import type { ErrorKey} from './errors.js';
+import { errorCode, errorStatus } from './errors.js';
 
 type ReverseMap<T extends Record<PropertyKey, any>> = {
   [K in keyof T as T[K]]: K;

@@ -1,4 +1,5 @@
-import { BadRequestError, ConflictError, InternalError, LaikaResult, NotFoundError } from '@laikacms/core';
+import type { LaikaResult} from '@laikacms/core';
+import { BadRequestError, ConflictError, InternalError, NotFoundError } from '@laikacms/core';
 import * as Cause from 'effect/Cause';
 import * as Result from 'effect/Result';
 

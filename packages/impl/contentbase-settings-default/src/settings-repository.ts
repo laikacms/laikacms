@@ -1,14 +1,16 @@
-import {
+import type {
   CollectionSettings,
   ContentBaseSettings,
+  DocumentCollectionSettings,
+  MediaCollectionSettings} from '@laikacms/contentbase-settings';
+import {
   ContentBaseSettingsProvider,
   createDefaultSettingsFile,
-  DocumentCollectionSettings,
-  MediaCollectionSettings,
   parseSettings,
 } from '@laikacms/contentbase-settings';
-import { InvalidData, LaikaError, LaikaResult, NotFoundError } from '@laikacms/core';
-import { StorageRepository } from '@laikacms/storage';
+import type { LaikaError, LaikaResult} from '@laikacms/core';
+import { InvalidData, NotFoundError } from '@laikacms/core';
+import type { StorageRepository } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 import type { JSONSchema7 } from 'json-schema';
 

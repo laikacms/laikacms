@@ -1,4 +1,5 @@
-import { IllegalStateException, InternalError, InvalidData, LaikaError, LaikaResult } from '@laikacms/core';
+import type { LaikaError, LaikaResult } from '@laikacms/core';
+import { IllegalStateException, InternalError, InvalidData } from '@laikacms/core';
 import {
   type Document,
   type DocumentCreate,

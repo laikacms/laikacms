@@ -1,5 +1,5 @@
 import type { TranslationKey } from '@laikacms/i18n';
-import * as Cause from 'effect/Cause';
+import type * as Cause from 'effect/Cause';
 import * as Result from 'effect/Result';
 
 type ErrorSource = { pointer: string } | { parameter: string };

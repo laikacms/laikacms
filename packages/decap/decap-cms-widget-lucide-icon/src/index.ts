@@ -1,6 +1,6 @@
 import { IconControl } from './IconControl';
 import { IconPreview } from './IconPreview';
-import { IconWidgetOptions } from './types';
+import type { IconWidgetOptions } from './types';
 
 function Widget(opts: IconWidgetOptions = {}) {
   return {

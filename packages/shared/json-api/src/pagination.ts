@@ -1,6 +1,6 @@
 import { StandardSchemaV1 } from '@standard-schema/spec';
 import * as S from 'effect/Schema';
-import { JsonApiLinksSchema } from './schemas.js';
+import type { JsonApiLinksSchema } from './schemas.js';
 
 // Filters for number validation
 const isAtLeast1 = S.makeFilter<number>(n => n >= 1 ? undefined : 'Must be at least 1');

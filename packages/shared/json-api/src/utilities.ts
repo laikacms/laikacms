@@ -10,7 +10,7 @@ import * as Exit from 'effect/Exit';
 import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
 import { decodeJsonApiErrorExit, JsonApiErrorSchema } from './schemas.js';
-import { JsonApiError } from './types.js';
+import type { JsonApiError } from './types.js';
 
 // Type for Effect Schema parse errors
 interface SchemaParseError {

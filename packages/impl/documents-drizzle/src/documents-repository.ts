@@ -1,12 +1,11 @@
-import { InvalidData, LaikaError, LaikaResult, NotFoundError } from '@laikacms/core';
-import {
+import type { LaikaError, LaikaResult} from '@laikacms/core';
+import { InvalidData, NotFoundError } from '@laikacms/core';
+import type {
   Document,
   DocumentCreate,
-  DocumentsRepository,
   ListRecordsOptions,
   ListRecordSummaries,
   ListRevisionsOptions,
-  pathToSegments,
   Record as DocumentRecord,
   RecordSummary,
   Revision,
@@ -14,9 +13,12 @@ import {
   RevisionSummary,
   Unpublished,
   UnpublishedCreate,
-  UnpublishedUpdate,
+  UnpublishedUpdate} from '@laikacms/documents';
+import {
+  DocumentsRepository,
+  pathToSegments
 } from '@laikacms/documents';
-import { StorageObjectContent } from '@laikacms/storage';
+import type { StorageObjectContent } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 const PUBLISHED_STATUS = 'published';

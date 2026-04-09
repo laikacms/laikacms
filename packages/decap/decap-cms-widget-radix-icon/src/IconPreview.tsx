@@ -1,5 +1,5 @@
 import * as allIcons from '@radix-ui/react-icons';
-import { CmsWidgetPreviewProps } from 'decap-cms-core';
+import type { CmsWidgetPreviewProps } from 'decap-cms-core';
 import React from 'react';
 
 export const IconPreview: React.FC<CmsWidgetPreviewProps> = ({ value }) => {
