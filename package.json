@@ -2,7 +2,13 @@
   "name": "laikacms",
   "version": "0.1.0",
   "description": "The basis for modern content management.",
-  "keywords": ["headless-cms", "content-management", "jamstack", "react", "typescript"],
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "jamstack",
+    "react",
+    "typescript"
+  ],
   "author": {
     "name": "Sem Postma",
     "email": "sem@laikacms.com",
@@ -39,10 +45,11 @@
     "prepare": "husky"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.30.0",
     "@eslint/js": "catalog:lint",
+    "@types/node": "catalog:types",
     "@typescript-eslint/eslint-plugin": "catalog:lint",
     "@typescript-eslint/parser": "catalog:lint",
-    "@types/node": "catalog:types",
     "eslint": "catalog:lint",
     "globals": "catalog:lint",
     "husky": "^9.1.7",

@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/storage-fs",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Filesystem-backed storage adapter implementation for Laika CMS.",
   "main": "dist/index.js",

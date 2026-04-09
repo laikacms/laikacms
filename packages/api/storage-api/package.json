@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/storage-api",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Hono-based JSON:API server for Laika CMS storage domain.",
   "main": "dist/index.js",
