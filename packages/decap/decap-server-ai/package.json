@@ -1,5 +1,5 @@
 {
-  "name": "@laikacms/decap-server-ai",
+  "name": "@laikacms/decap-ai",
   "version": "0.1.0",
   "type": "module",
   "description": "AI chat backend for Decap CMS with LLM-agnostic support and document manipulation tools",
