@@ -10,7 +10,6 @@ import type {
   StorageObjectCreate,
   StorageObjectUpdate,
 } from '../entities/index.js';
-import type { AsyncCache } from '../types/cache.js';
 import type { Key } from '../types/key.js';
 
 export interface ListAtomsOptions {
@@ -21,14 +20,6 @@ export interface ListAtomsOptions {
 type ResultStream<T> = AsyncGenerator<LaikaResult<T>>;
 
 export abstract class StorageRepository {
-  protected readonly cache?: AsyncCache<string, unknown>;
-
-  constructor(
-    cache?: AsyncCache<string, unknown>,
-  ) {
-    this.cache = cache;
-  }
-
   // Storage Objects (formerly Files)
   abstract getObject(key: Key): ResultStream<StorageObject>;
   abstract updateObject(update: StorageObjectUpdate): ResultStream<StorageObject>;
