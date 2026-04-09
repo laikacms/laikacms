@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/crypto",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Cryptographic utilities for Laika CMS with post-quantum security hardening",
   "type": "module",
   "main": "./dist/index.js",
@@ -9,7 +9,6 @@
     "build": "tsc",
     "dev": "tsc --watch",
     "test": "vitest run",
-
     "test:watch": "vitest"
   },
   "keywords": [

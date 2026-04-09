@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/dynamodb-local",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DynamoDB Local development environment for Laika CMS",
   "author": "Sem Postma <sem@laikacms.com>",
   "type": "module",
@@ -9,7 +9,6 @@
     "stop": "node src/stop.js",
     "create-tables": "node src/create-tables.js",
     "reset": "node src/reset.js",
-
     "status": "node src/status.js"
   },
   "dependencies": {

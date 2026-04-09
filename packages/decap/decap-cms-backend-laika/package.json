@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/decap-cms-backend-laika",
   "description": "Laika CMS backend for Decap CMS with dependency injection for storage and documents repositories",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",

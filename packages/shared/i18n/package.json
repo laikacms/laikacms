@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/i18n",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Strongly typed i18n with flat JSON files compatible with i18next",
   "type": "module",
   "author": "Sem Postma <sem@laikacms.com>",
@@ -17,7 +17,6 @@
   ],
   "scripts": {
     "typecheck": "tsc --noEmit",
-
     "build": "tsc"
   },
   "keywords": [

@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/documents-api",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "JSON:API server for Laika CMS documents domain.",
   "main": "dist/index.js",

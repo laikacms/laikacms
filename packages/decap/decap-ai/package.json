@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/decap-ai",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "AI chat backend for Decap CMS with LLM-agnostic support and document manipulation tools",
   "main": "dist/index.js",

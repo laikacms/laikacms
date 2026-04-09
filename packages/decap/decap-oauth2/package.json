@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/decap-oauth2",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Fetch-based OAuth2 authentication library with PKCE, passkey, and TOTP support",
   "main": "dist/index.js",
   "module": "dist/index.js",

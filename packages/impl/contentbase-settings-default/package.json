@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/contentbase-settings-default",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Default implementation of the contentbase-settings module for Laika CMS.",
   "main": "dist/index.js",
@@ -23,7 +23,6 @@
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

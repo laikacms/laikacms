@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/documents-contentbase",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Default implementation of the documents module for Laika CMS.",
   "main": "dist/index.js",

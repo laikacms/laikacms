@@ -39,9 +39,6 @@
     "lint:fix": "eslint --fix --cache --config eslint.config.mjs .",
     "format": "dprint fmt",
     "format:check": "dprint check",
-    "publish:packages": "pnpm build && pnpm -r publish --access public",
-    "publish:dry": "pnpm build && pnpm -r publish --access public --dry-run",
-    "version:bump": "pnpm -r exec -- npm version",
     "prepare": "husky"
   },
   "devDependencies": {

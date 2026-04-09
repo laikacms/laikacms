@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/decap-cms-locale-nl",
   "description": "Icon widget for Decap CMS",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "homepage": "https://github.com/laikacms/laikacms",
   "bugs": "https://github.com/laikacms/laikacms/issues",
   "main": "dist/index.js",
