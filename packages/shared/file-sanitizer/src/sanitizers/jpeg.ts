@@ -35,10 +35,13 @@ const MARKER_PREFIX = 0xFF;
 const SOI = 0xD8; // Start of Image
 const EOI = 0xD9; // End of Image
 const SOS = 0xDA; // Start of Scan (image data follows)
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const APP0 = 0xE0; // JFIF
 const APP1 = 0xE1; // EXIF/XMP - STRIP
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const APP2 = 0xE2; // ICC Profile - KEEP
 const APP13 = 0xED; // IPTC - STRIP
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const APP14 = 0xEE; // Adobe - KEEP
 const COM = 0xFE; // Comment - STRIP
 

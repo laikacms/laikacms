@@ -16,7 +16,7 @@ export const createDefaultSettingsFile = (): ContentBaseSettings => ({
   collections: {},
 });
 
-export const parseSettingsJSON = <T>(json: string): LaikaResult<ContentBaseSettings> => {
+export const parseSettingsJSON = (json: string): LaikaResult<ContentBaseSettings> => {
   let data: unknown;
   try {
     data = JSON.parse(json);

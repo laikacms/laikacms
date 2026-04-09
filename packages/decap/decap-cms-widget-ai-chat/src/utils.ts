@@ -19,7 +19,7 @@ export function changeDraftField({
       locales: string[],
     }
     | undefined
-    | {},
+    | object,
 }) {
   return {
     type: 'DRAFT_CHANGE_FIELD' as typeof DRAFT_CHANGE_FIELD,

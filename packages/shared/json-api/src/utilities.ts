@@ -1,15 +1,13 @@
 import * as errors from '@laikacms/core';
 import {
-  ErrorCodeToStatusMap,
   InternalError,
   LaikaError,
   ServiceUnavailableError,
-  ValidationError,
+  ValidationError
 } from '@laikacms/core';
 import * as Exit from 'effect/Exit';
 import * as Result from 'effect/Result';
-import * as S from 'effect/Schema';
-import { decodeJsonApiErrorExit, JsonApiErrorSchema } from './schemas.js';
+import { decodeJsonApiErrorExit } from './schemas.js';
 import type { JsonApiError } from './types.js';
 
 // Type for Effect Schema parse errors

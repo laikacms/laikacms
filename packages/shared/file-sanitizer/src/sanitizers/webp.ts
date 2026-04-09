@@ -111,7 +111,7 @@ export class WebpSanitizer implements FileSanitizer {
       }
 
       // Decide whether to keep this chunk (WHITELIST approach)
-      let keepChunk = false;
+      let keepChunk;
 
       if (SAFE_CHUNKS.has(fourCC)) {
         // Safe chunk - keep it

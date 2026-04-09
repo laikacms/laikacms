@@ -4,8 +4,8 @@
  * This template provides an enhanced login page with passkey and TOTP support.
  */
 
-import { type AuthTranslation, defaultMessages, type OAuthMessages, type TotpTranslation } from '../i18n/index.js';
-import { backIcon, decapLogo, loginPageStyles, passkeyIcon } from './decap-styles.js';
+import { type AuthTranslation, defaultMessages, type OAuthMessages } from '../i18n/index.js';
+import { backIcon, loginPageStyles, passkeyIcon } from './decap-styles.js';
 import { html, type HtmlTemplate, messages, processCustomLogo, type TemplateVariables } from './html.js';
 
 // Template tag for JavaScript (enables intellisense)

@@ -1,5 +1,4 @@
 import { StorageFormatSchema } from '@laikacms/storage';
-import { StandardSchemaV1 } from '@standard-schema/spec';
 import * as S from 'effect/Schema';
 
 /**

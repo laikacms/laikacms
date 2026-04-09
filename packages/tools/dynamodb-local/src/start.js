@@ -27,6 +27,7 @@ try {
       process.exit(0);
     }
   } catch (error) {
+    console.error('❌ Failed to check existing container:', error.message);
     // Container doesn't exist, continue to create it
   }
 

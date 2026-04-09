@@ -53,7 +53,9 @@ export class FileSystemStorageRepository extends StorageRepository {
    * Serialize StorageObjectContent to string based on file extension
    */
   private async serialize(ext: string, content: StorageObjectContent): Promise<string> {
-    ext.startsWith('.') && (ext = ext.slice(1));
+    if (ext.startsWith('.')) {
+      ext = ext.slice(1);
+    }
     const serializer = this.serializerRegistry[ext];
 
     if (!serializer) {
@@ -77,7 +79,9 @@ export class FileSystemStorageRepository extends StorageRepository {
    * Deserialize string content to StorageObjectContent based on file extension
    */
   private async deserialize(ext: string, content: string): Promise<StorageObjectContent> {
-    ext.startsWith('.') && (ext = ext.slice(1));
+    if (ext.startsWith('.')) {
+      ext = ext.slice(1);
+    }
     const serializer = this.serializerRegistry[ext];
 
     if (!serializer) {

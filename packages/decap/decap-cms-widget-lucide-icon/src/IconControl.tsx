@@ -3,14 +3,13 @@ import type { CmsWidgetControlProps } from 'decap-cms-core';
 import { colors, shadows } from 'decap-cms-ui-default';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import * as lucideReact from 'lucide-react';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 
 const allIcons = Object.fromEntries(Object.entries(lucideReact.icons));
 
 export type IconControlProps = CmsWidgetControlProps<string>;
 
 export const IconControl: React.FC<IconControlProps> = props => {
-  const [isFocussed, setIsFocussed] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   const {
@@ -29,13 +28,11 @@ export const IconControl: React.FC<IconControlProps> = props => {
   }, [search]);
 
   const onFocus = () => {
-    setIsFocussed(true);
     setIsOpen(true);
     setActiveStyle();
   };
 
   const onBlur = () => {
-    setIsFocussed(false);
     setInactiveStyle();
   };
 

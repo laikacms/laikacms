@@ -58,8 +58,7 @@ export {
 } from './templates/html.js';
 export type { HtmlTemplate, ProcessedLogo, TemplateVariables, TemplateVarsType } from './templates/html.js';
 
-import { info } from 'effect/Console';
-import { buildCspWithLogo, processCustomLogo } from './templates/html.js';
+import { buildCspWithLogo } from './templates/html.js';
 
 // Security constants for post-quantum resistance
 const SECURITY_CONSTANTS = {
@@ -344,7 +343,7 @@ function validateUri(uri: string | null | undefined): string | null {
 async function verifyCodeChallenge(
   codeVerifier: string,
   codeChallenge: string,
-  method: 'S256',
+  _method: 'S256',
 ): Promise<boolean> {
   // Validate input lengths
   if (!codeVerifier || codeVerifier.length < 43 || codeVerifier.length > 128) {

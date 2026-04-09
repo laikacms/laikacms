@@ -10,7 +10,7 @@
  * Styled to match Decap CMS design system.
  */
 
-import { defaultMessages, type OAuthMessages, type PasswordResetTranslation } from '../i18n/index.js';
+import { defaultMessages, type OAuthMessages } from '../i18n/index.js';
 import { colors, loginPageStyles } from './decap-styles.js';
 import { html, type HtmlTemplate, messages, processCustomLogo, type TemplateVariables } from './html.js';
 

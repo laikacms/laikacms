@@ -4,7 +4,7 @@
  * HTML email template for password reset requests, styled with Decap CMS design system.
  */
 
-import { colors, decapLogoSvgSmall, emailBaseStyles } from './decap-styles.js';
+import { decapLogoSvgSmall, emailBaseStyles } from './decap-styles.js';
 
 /**
  * Template variables for password reset email

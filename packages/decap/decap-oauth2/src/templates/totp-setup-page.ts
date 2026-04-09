@@ -5,9 +5,9 @@
  * Shows a QR code and manual entry key for authenticator apps.
  */
 
-import { defaultMessages, type OAuthMessages, type TotpTranslation } from '../i18n/index.js';
+import { defaultMessages, type OAuthMessages } from '../i18n/index.js';
 import { decapLogo, loginPageStyles } from './decap-styles.js';
-import { getMessages, html, type HtmlTemplate, messages, type TemplateVariables } from './html.js';
+import { html, type HtmlTemplate, messages, type TemplateVariables } from './html.js';
 
 // Template tag for JavaScript (enables intellisense)
 const js = String.raw;

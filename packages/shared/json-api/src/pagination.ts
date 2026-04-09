@@ -1,4 +1,3 @@
-import { StandardSchemaV1 } from '@standard-schema/spec';
 import * as S from 'effect/Schema';
 import type { JsonApiLinksSchema } from './schemas.js';
 

@@ -1,4 +1,3 @@
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import * as S from 'effect/Schema';
 
 export const AtomBaseSchema = S.toStandardSchemaV1(S.Struct({

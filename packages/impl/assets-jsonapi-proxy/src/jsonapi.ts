@@ -170,6 +170,7 @@ export function folderCreateFromJsonApi(jsonApi: JsonApiFolderCreate): FolderCre
 }
 
 export function folderSummaryFromJsonApi(jsonApi: JsonApiFolderSummary): FolderSummary {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { type: _type, ...rest } = jsonApi.attributes;
   return { key: jsonApi.id, type: 'folder-summary', ...rest } as FolderSummary;
 }

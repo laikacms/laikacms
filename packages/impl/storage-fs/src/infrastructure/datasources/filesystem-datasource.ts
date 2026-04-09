@@ -1,4 +1,4 @@
-import type { LaikaResult } from '@laikacms/core';
+import type { LaikaError, LaikaResult } from '@laikacms/core';
 import { DirInsteadOfFile, FileInsteadOfDir, ForbiddenError, InternalError, NotFoundError } from '@laikacms/core';
 import { pathCombine, pathToSegments } from '@laikacms/storage';
 import { exec } from 'child_process';
@@ -9,6 +9,7 @@ import path from 'path';
 import posixPath from 'path/posix';
 import trash from 'trash';
 import type { DirSub, FileOrDir } from '../../domain/entities/file.js';
+import type { Stats } from 'fs';
 
 const ALLOW_RECURSIVE = false;
 
@@ -21,7 +22,7 @@ export class FileSystemDataSource {
   constructor(
     private readonly availableExtensions: string[] = [],
     private readonly defaultFileExtension: string = '',
-  ) {}
+  ) { }
 
   /**
    * Strip any extension from the path if it matches one of the available extensions.
@@ -92,60 +93,74 @@ export class FileSystemDataSource {
     return null;
   }
 
-  deleteEntries = async (
+  async fsStat(fullPath: string): Promise<LaikaResult<Stats>> {
+    try {
+      return Result.succeed(await fs.stat(fullPath));
+    } catch (error) {
+      if (error instanceof Error && 'code' in error) {
+        switch (error.code) {
+          case 'ENOENT':
+            return Result.fail(new NotFoundError(`The file at ${fullPath} does not exist`, { cause: error }));
+          case 'EPERM':
+            return Result.fail(new ForbiddenError(
+              `The file at ${fullPath} could not be deleted because you don't have the necessary permissions`,
+              { cause: error }
+            ));
+          case 'EACCES':
+            return Result.fail(new ForbiddenError(
+              `The file at ${fullPath} could not be deleted because you don't have access to it`,
+              { cause: error }
+            ));
+          case 'ENOTEMPTY':
+            return Result.fail(new ForbiddenError(
+              `The directory at ${fullPath} could not be deleted because it is not empty`,
+              { cause: error }
+            ));
+          case 'EISDIR':
+            return Result.fail(new DirInsteadOfFile(`The path ${fullPath} is a directory`, { cause: error }));
+          case 'EEXIST':
+            return Result.fail(new FileInsteadOfDir(`The path ${fullPath} is a file`, { cause: error }));
+          default:
+            return Result.fail(new InternalError('An unexpected error occurred while trying to delete the file', { cause: error }));
+        }
+      } else {
+        return Result.fail(new InternalError('Unexpected error during fs.stat', { cause: error }));
+      }
+    }
+  }
+
+  async *deleteEntries(
     basePath: string,
     entries: readonly DirSub[],
-  ): Promise<LaikaResult<DirSub[]>> => {
-    const checkResults = await Promise.allSettled(
-      entries.map(async entry => {
-        const fullPath = path.join(basePath, entry.path);
-        const stat = await fs.stat(fullPath);
-        if (stat.isDirectory() && entry.type !== 'dir') {
-          throw new DirInsteadOfFile(`The path ${fullPath} is a directory`);
-        }
-        if (stat.isFile() && entry.type !== 'file') {
-          throw new DirInsteadOfFile(`The path ${fullPath} is a directory`);
-        }
-        if (!stat.isFile() && !stat.isDirectory()) {
-          throw new ForbiddenError(`Currently only files and directories can be deleted`);
-        }
-        if (entry.type === 'dir') {
-          const listing = await fs.readdir(fullPath);
-          if (listing.length > 0 && !ALLOW_RECURSIVE) {
-            throw new ForbiddenError('Due to security concerns, deleting directories with content is not allowed');
-          }
-        }
-        return entry;
-      }),
-    );
-    const successful = checkResults.filter(result => result.status === 'fulfilled').map(result => result.value);
-    const failed = checkResults.filter(result => result.status === 'rejected').map(result => {
-      switch (result.reason.code) {
-        case 'ENOENT':
-          return new NotFoundError(`The file at ${result.reason.path} does not exist`);
-        case 'EPERM':
-          return new ForbiddenError(
-            `The file at ${result.reason.path} could not be deleted because you don't have the necessary permissions`,
-          );
-        case 'EACCES':
-          return new ForbiddenError(
-            `The file at ${result.reason.path} could not be deleted because you don't have access to it`,
-          );
-        case 'ENOTEMPTY':
-          return new ForbiddenError(
-            `The directory at ${result.reason.path} could not be deleted because it is not empty`,
-          );
-        case 'EISDIR':
-          return new DirInsteadOfFile(`The path ${result.reason.path} is a directory`);
-        case 'EEXIST':
-          return new FileInsteadOfDir(`The path ${result.reason.path} is a file`);
-        default:
-          return result.reason;
+  ): AsyncGenerator<LaikaResult<DirSub[]>> {
+    const successful: DirSub[] = [];
+    for (const entry of entries) {
+      const fullPath = path.join(basePath, entry.path);
+      const statResult = await this.fsStat(fullPath);
+      if (Result.isFailure(statResult)) {
+        yield Result.fail(statResult.failure);
+        continue;
       }
-    });
+      const stat = statResult.success;
+      if (stat.isDirectory() && entry.type !== 'dir') {
+        throw new DirInsteadOfFile(`The path ${fullPath} is a directory`);
+      }
+      if (stat.isFile() && entry.type !== 'file') {
+        throw new FileInsteadOfDir(`The path ${fullPath} is a file`);
+      }
+      if (!stat.isFile() && !stat.isDirectory()) {
+        throw new ForbiddenError(`Currently only files and directories can be deleted`);
+      }
+      if (entry.type === 'dir') {
+        const listing = await fs.readdir(fullPath);
+        if (listing.length > 0 && !ALLOW_RECURSIVE) {
+          throw new ForbiddenError('Due to security concerns, deleting directories with content is not allowed');
+        }
+      }
+      successful.push(entry);
+    }
     await trash(successful.map(entry => path.join(basePath, entry.path)));
-    // Note: We're ignoring failed entries for now, but they could be logged
-    return Result.succeed(successful);
+    yield Result.succeed(successful);
   };
 
   getFileContents = async (

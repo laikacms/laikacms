@@ -84,7 +84,6 @@ export class R2DataSource {
    * Delete multiple objects from R2
    */
   async *deleteObjects(keys: readonly string[]): AsyncGenerator<LaikaResult<Key>> {
-    const deletedKeys: string[] = [];
     const errorMessages: string[] = [];
 
     for (const key of keys) {

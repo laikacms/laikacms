@@ -1,33 +1,25 @@
 import type { ErrorStatus, LaikaError, LaikaResult } from '@laikacms/core';
-import { BadRequestError, ErrorCodeToStatusMap, NotFoundError } from '@laikacms/core';
+import { BadRequestError, NotFoundError } from '@laikacms/core';
 import type { DocumentsRepository } from '@laikacms/documents';
 import type { JsonApiCollectionResponse, JsonApiError, JsonApiResource, JsonApiResponse } from '@laikacms/json-api';
 import {
   buildPaginationLinks,
   errorToJsonApiMapper,
   parsePaginationQuery,
-  schemaIssueFormatter,
 } from '@laikacms/json-api';
 import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
 import {
   documentCreateFromJsonApi,
   type DocumentCreateJsonApi,
-  type DocumentJsonApi,
-  type DocumentSummaryJsonApi,
   documentSummaryToJsonApi,
   documentToJsonApi,
-  documentUpdateFromJsonApi,
   revisionCreateFromJsonApi,
   type RevisionCreateJsonApi,
-  type RevisionJsonApi,
-  type RevisionSummaryJsonApi,
   revisionSummaryToJsonApi,
   revisionToJsonApi,
   unpublishedCreateFromJsonApi,
   type UnpublishedCreateJsonApi,
-  type UnpublishedJsonApi,
-  type UnpublishedSummaryJsonApi,
   unpublishedSummaryToJsonApi,
   unpublishedToJsonApi,
   unpublishedUpdateFromJsonApi,
@@ -93,6 +85,7 @@ async function respondCollection<T, R extends JsonApiResource>(
   const queryParams = Object.fromEntries(url.searchParams.entries());
   const pagination = parsePaginationQuery(queryParams);
   const hasMore = false;
+  // eslint-disable-next-line no-unassigned-vars
   let lastCursor: string | undefined;
 
   const links = buildPaginationLinks(baseUrl, pagination, hasMore, lastCursor);

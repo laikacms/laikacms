@@ -1,4 +1,4 @@
-import { AccessTokenError, APIError, EditorialWorkflowError, unsentRequest } from 'decap-cms-lib-util';
+import { AccessTokenError, APIError, unsentRequest } from 'decap-cms-lib-util';
 
 import PKCEAuthenticationPage from './AuthenticationPage';
 
@@ -32,8 +32,6 @@ import {
 import type { DocumentsRepository } from '@laikacms/documents';
 import { DocumentsJsonApiProxyRepository } from '@laikacms/documents-jsonapi-proxy';
 import type { Pagination } from '@laikacms/storage';
-import * as Effect from 'effect/Effect';
-import * as f from 'effect/Function';
 import * as Result from 'effect/Result';
 
 // Helper to get first result from async generator

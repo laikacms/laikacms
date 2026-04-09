@@ -315,32 +315,6 @@ function getDocumentContext(
 }
 
 /**
- * Extract text content from UIMessage parts
- */
-function getMessageText(message: UIMessage): string {
-  return message.parts
-    .filter(isTextUIPart)
-    .map(part => part.text)
-    .join('');
-}
-
-/**
- * Extract tool invocations from UIMessage parts
- */
-function getToolParts(
-  message: UIMessage,
-): Array<{ toolCallId: string, toolName: string, state: string, output?: unknown }> {
-  return message.parts
-    .filter(isToolUIPart)
-    .map(part => ({
-      toolCallId: part.toolCallId,
-      toolName: part.type.replace('tool-', ''),
-      state: part.state,
-      output: 'output' in part ? part.output : undefined,
-    }));
-}
-
-/**
  * Component for rendering text parts
  */
 interface TextPartProps {

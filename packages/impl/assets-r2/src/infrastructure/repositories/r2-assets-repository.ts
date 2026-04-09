@@ -16,7 +16,7 @@ import { BadRequestError, InternalError, NotFoundError } from '@laikacms/core';
 import type { Sanitizer } from '@laikacms/sanitizer';
 import type { Folder, FolderCreate } from '@laikacms/storage';
 import * as Result from 'effect/Result';
-import { R2AssetMeta, R2AssetsDataSource } from '../datasources/r2-assets-datasource.js';
+import { R2AssetsDataSource } from '../datasources/r2-assets-datasource.js';
 
 /**
  * Helper to convert a failure result to a different type while preserving the error

@@ -1,4 +1,3 @@
-import type { CmsWidgetParam } from 'decap-cms-core';
 import { IconControl } from './IconControl';
 import { IconPreview } from './IconPreview';
 import type { IconWidgetOptions } from './types';

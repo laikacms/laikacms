@@ -1,10 +1,7 @@
 #!/usr/bin/env node
-import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import {
-  DeleteTableCommand,
-  DescribeTableCommand,
-  ListTablesCommand,
-  waitUntilTableNotExists,
+  DeleteTableCommand, DynamoDBClient, ListTablesCommand,
+  waitUntilTableNotExists
 } from '@aws-sdk/client-dynamodb';
 import { config } from './config.js';
 

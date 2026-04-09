@@ -695,24 +695,29 @@ function decodeCBOR(data: Uint8Array): Record<string, unknown> {
     const additionalInfo = initial & 0x1f;
 
     switch (majorType) {
-      case 0: // Unsigned integer
+      case 0: { // Unsigned integer
         return readUint(additionalInfo);
-      case 1: // Negative integer
+      }
+      case 1: { // Negative integer
         return -1 - readUint(additionalInfo);
-      case 2: // Byte string
+      } 
+      case 2: { // Byte string
         const byteLength = readUint(additionalInfo);
         return readBytes(byteLength);
-      case 3: // Text string
+      }
+      case 3: { // Text string
         const textLength = readUint(additionalInfo);
         return new TextDecoder().decode(readBytes(textLength));
-      case 4: // Array
+      }
+      case 4: { // Array
         const arrayLength = readUint(additionalInfo);
         const array: unknown[] = [];
         for (let i = 0; i < arrayLength; i++) {
           array.push(decode());
         }
         return array;
-      case 5: // Map
+      }
+      case 5: { // Map
         const mapLength = readUint(additionalInfo);
         const map: Record<string, unknown> = {};
         for (let i = 0; i < mapLength; i++) {
@@ -721,11 +726,13 @@ function decodeCBOR(data: Uint8Array): Record<string, unknown> {
           map[String(key)] = value;
         }
         return map;
-      case 7: // Simple/float
+      }
+      case 7: { // Simple/float
         if (additionalInfo === 20) return false;
         if (additionalInfo === 21) return true;
         if (additionalInfo === 22) return null;
         throw new Error('Unsupported CBOR simple value');
+      }
       default:
         throw new Error(`Unsupported CBOR major type: ${majorType}`);
     }

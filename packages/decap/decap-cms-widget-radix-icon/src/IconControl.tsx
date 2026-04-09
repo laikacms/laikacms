@@ -7,7 +7,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 export type IconControlProps = CmsWidgetControlProps<string>;
 
 export const IconControl: React.FC<IconControlProps> = props => {
-  const [isFocussed, setIsFocussed] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
   const [allIcons, setAllIcons] = useState(
@@ -39,27 +38,15 @@ export const IconControl: React.FC<IconControlProps> = props => {
   }, [search, allIcons]);
 
   const onFocus = () => {
-    setIsFocussed(true);
     setIsOpen(true);
     setActiveStyle();
   };
 
   const onBlur = () => {
-    setIsFocussed(false);
     setInactiveStyle();
   };
 
   const SelectedIcon = allIcons[props.value as keyof typeof allIcons] || undefined;
-
-  const isValid = () => {
-    const required = props.field?.get('required') ?? true;
-    if (required && !props.value) {
-      return {
-        error: { message: props.t('editor.editorWidgets.required') },
-      };
-    }
-    return true;
-  };
 
   return (
     <div

@@ -116,7 +116,7 @@ export class PngSanitizer implements FileSanitizer {
       if (chunkType === 'IEND') hasIEND = true;
 
       // Decide whether to keep this chunk (WHITELIST approach)
-      let keepChunk = false;
+      let keepChunk;
 
       if (SAFE_PNG_CHUNKS.has(chunkType)) {
         // Safe chunk - keep it

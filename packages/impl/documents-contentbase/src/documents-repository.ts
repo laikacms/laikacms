@@ -21,7 +21,7 @@ import {
   type UnpublishedUpdate,
 } from '@laikacms/documents';
 import type { StorageRepository } from '@laikacms/storage';
-import { AtomSummary, basename, pathCombine, pathToSegments } from '@laikacms/storage';
+import { basename, pathCombine, pathToSegments } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 /**

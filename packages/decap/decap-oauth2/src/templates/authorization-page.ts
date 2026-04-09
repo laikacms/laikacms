@@ -1,5 +1,4 @@
 import type { AuthTranslation, OAuthMessages } from '../i18n/index.js';
-import { decapLogo, loginPageStyles, passkeyIcon } from './decap-styles.js';
 import type { HtmlTemplate } from './html.js';
 import {
   authorizeUrl,
@@ -12,7 +11,6 @@ import {
   passkeySection,
   passkeyStyles,
   processCustomLogo,
-  templateVars,
 } from './html.js';
 
 const PASSKEY_STYLES_FRAGMENT = `
@@ -104,9 +102,6 @@ const getPasskeySectionFragment = (signInWithPasskeyText: string) => `
       ${signInWithPasskeyText}
     </button>
 `;
-
-// Keep backward compatibility
-const PASSKEY_SECTION_FRAGMENT = getPasskeySectionFragment('Sign in with Passkey');
 
 export interface AuthPagePasskeyOptions {
   challenge: string;

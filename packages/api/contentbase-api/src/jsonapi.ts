@@ -1,17 +1,10 @@
 import {
   type CollectionSettings,
-  CollectionSettingsSchema,
   type DocumentCollectionSettings,
-  DocumentCollectionSettingsSchema,
   type MediaCollectionSettings,
-  MediaCollectionSettingsSchema,
 } from '@laikacms/contentbase-settings';
 import {
   fromJsonApi,
-  JsonApiDeleteMultipleSchema,
-  JsonApiDeleteSchema,
-  type JsonApiError,
-  JsonApiErrorSchema,
   toJsonApi,
 } from '@laikacms/json-api';
 import * as S from 'effect/Schema';
