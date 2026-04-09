@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/decap-cms-editor-component-embedded-entry",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "Decap CMS editor component for embedding entries from collections",
   "main": "dist/index.js",
   "module": "dist/index.js",

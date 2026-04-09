@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/decap-cms-widget-ai-chat",
   "description": "AI Chat widget for Decap CMS with document manipulation tools",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "homepage": "https://github.com/laikacms/laikacms",
   "bugs": "https://github.com/laikacms/laikacms/issues",
   "module": "dist/index.js",

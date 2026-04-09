@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/decap-cms-widget-lucide-icon",
   "description": "Radix UI Icons widget for Decap CMS",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "homepage": "https://github.com/laikacms/laikacms",
   "bugs": "https://github.com/laikacms/laikacms/issues",
   "module": "dist/index.js",
