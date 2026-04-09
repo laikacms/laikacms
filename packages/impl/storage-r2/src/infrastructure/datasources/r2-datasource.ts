@@ -1,4 +1,4 @@
-import type { LaikaResult} from '@laikacms/core';
+import type { LaikaResult } from '@laikacms/core';
 import { InternalError, NotFoundError } from '@laikacms/core';
 import type { Key } from '@laikacms/storage';
 import * as Cause from 'effect/Cause';

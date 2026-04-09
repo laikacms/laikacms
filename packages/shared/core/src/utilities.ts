@@ -1,5 +1,5 @@
 import * as Result from 'effect/Result';
-import type { LaikaError, LaikaResult} from './domain';
+import type { LaikaError, LaikaResult } from './domain';
 import { NotFoundError } from './domain';
 
 export const lazy = <T>(func: () => T) => {

@@ -20,10 +20,7 @@ import type {
 
 import type { AssetCreate, AssetsRepository } from '@laikacms/assets';
 import { AssetsJsonApiProxyRepository } from '@laikacms/assets-jsonapi-proxy';
-import type {
-  ErrorCode,
-  LaikaError,
-  LaikaResult} from '@laikacms/core';
+import type { ErrorCode, LaikaError, LaikaResult } from '@laikacms/core';
 import {
   AsyncGenerator,
   errorCode,

@@ -10,11 +10,9 @@ import type {
   StorageObjectContent,
   StorageObjectCreate,
   StorageObjectUpdate,
-  StorageSerializerRegistry} from '@laikacms/storage';
-import {
-  pathCombine,
-  StorageRepository
+  StorageSerializerRegistry,
 } from '@laikacms/storage';
+import { pathCombine, StorageRepository } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 import * as minimatch from 'minimatch';
 import { FileSystemDataSource } from '../datasources/filesystem-datasource.js';

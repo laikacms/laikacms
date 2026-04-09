@@ -10,11 +10,9 @@ import type {
   StorageObjectContent,
   StorageObjectCreate,
   StorageObjectUpdate,
-  StorageSerializerRegistry} from '@laikacms/storage';
-import {
-  pathCombine,
-  StorageRepository
+  StorageSerializerRegistry,
 } from '@laikacms/storage';
+import { pathCombine, StorageRepository } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 import * as minimatch from 'minimatch';
 import { R2DataSource } from '../datasources/r2-datasource.js';

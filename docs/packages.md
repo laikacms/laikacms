@@ -56,7 +56,7 @@
 | `@laikacms/decap-cms-backend-laika`      | Decap CMS backend       |
 | `@laikacms/decap-api`                    | Decap-compatible API    |
 | `@laikacms/decap-oauth2`                 | OAuth2 server with PKCE |
-| `@laikacms/decap-ai`              | AI integration server   |
+| `@laikacms/decap-ai`                     | AI integration server   |
 | `@laikacms/decap-cms-widget-ai-chat`     | AI chat widget          |
 | `@laikacms/decap-cms-widget-lucide-icon` | Lucide icon picker      |
 | `@laikacms/decap-cms-widget-radix-icon`  | Radix icon picker       |

@@ -8,11 +8,10 @@ import type {
   AssetVariations,
   GetResourceOptions,
   ListResourcesOptions,
-  Resource} from '@laikacms/assets';
-import {
-  AssetsRepository
+  Resource,
 } from '@laikacms/assets';
-import type { LaikaError, LaikaResult} from '@laikacms/core';
+import { AssetsRepository } from '@laikacms/assets';
+import type { LaikaError, LaikaResult } from '@laikacms/core';
 import { BadRequestError, InternalError, NotFoundError } from '@laikacms/core';
 import type { Sanitizer } from '@laikacms/sanitizer';
 import type { Folder, FolderCreate } from '@laikacms/storage';

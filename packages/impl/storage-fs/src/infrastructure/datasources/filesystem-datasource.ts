@@ -1,12 +1,5 @@
-import type {
-  LaikaResult} from '@laikacms/core';
-import {
-  DirInsteadOfFile,
-  FileInsteadOfDir,
-  ForbiddenError,
-  InternalError,
-  NotFoundError,
-} from '@laikacms/core';
+import type { LaikaResult } from '@laikacms/core';
+import { DirInsteadOfFile, FileInsteadOfDir, ForbiddenError, InternalError, NotFoundError } from '@laikacms/core';
 import { pathCombine, pathToSegments } from '@laikacms/storage';
 import { exec } from 'child_process';
 import * as Result from 'effect/Result';

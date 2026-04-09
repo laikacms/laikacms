@@ -2,13 +2,10 @@ import type {
   CollectionSettings,
   ContentBaseSettings,
   DocumentCollectionSettings,
-  MediaCollectionSettings} from '@laikacms/contentbase-settings';
-import {
-  ContentBaseSettingsProvider,
-  createDefaultSettingsFile,
-  parseSettings,
+  MediaCollectionSettings,
 } from '@laikacms/contentbase-settings';
-import type { LaikaError, LaikaResult} from '@laikacms/core';
+import { ContentBaseSettingsProvider, createDefaultSettingsFile, parseSettings } from '@laikacms/contentbase-settings';
+import type { LaikaError, LaikaResult } from '@laikacms/core';
 import { InvalidData, NotFoundError } from '@laikacms/core';
 import type { StorageRepository } from '@laikacms/storage';
 import * as Result from 'effect/Result';

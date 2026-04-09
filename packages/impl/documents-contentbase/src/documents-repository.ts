@@ -1,12 +1,13 @@
 import type { ContentBaseSettingsProvider } from '@laikacms/contentbase-settings';
-import type { LaikaError, LaikaResult} from '@laikacms/core';
+import type { LaikaError, LaikaResult } from '@laikacms/core';
 import { BadRequestError, InvalidData, NotFoundError } from '@laikacms/core';
 import type {
   ListRecordsOptions,
   ListRecordSummaries,
   ListRevisionsOptions,
   RecordSummary,
-  RevisionSummary} from '@laikacms/documents';
+  RevisionSummary,
+} from '@laikacms/documents';
 import {
   type Document,
   type DocumentCreate,

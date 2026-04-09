@@ -1,4 +1,4 @@
-import type { LaikaError, LaikaResult} from '@laikacms/core';
+import type { LaikaError, LaikaResult } from '@laikacms/core';
 import { EntryAlreadyExistsError, InvalidData, NotFoundError } from '@laikacms/core';
 import type {
   Atom,
@@ -9,11 +9,9 @@ import type {
   StorageObject,
   StorageObjectContent,
   StorageObjectCreate,
-  StorageObjectUpdate} from '@laikacms/storage';
-import {
-  pathCombine,
-  StorageRepository,
+  StorageObjectUpdate,
 } from '@laikacms/storage';
+import { pathCombine, StorageRepository } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 /**

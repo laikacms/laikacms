@@ -1,4 +1,4 @@
-import type { LaikaError, LaikaResult} from '@laikacms/core';
+import type { LaikaError, LaikaResult } from '@laikacms/core';
 import { InvalidData, NotFoundError } from '@laikacms/core';
 import type {
   Document,
@@ -13,11 +13,9 @@ import type {
   RevisionSummary,
   Unpublished,
   UnpublishedCreate,
-  UnpublishedUpdate} from '@laikacms/documents';
-import {
-  DocumentsRepository,
-  pathToSegments
+  UnpublishedUpdate,
 } from '@laikacms/documents';
+import { DocumentsRepository, pathToSegments } from '@laikacms/documents';
 import type { StorageObjectContent } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 

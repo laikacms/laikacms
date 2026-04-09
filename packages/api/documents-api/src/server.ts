@@ -1,18 +1,7 @@
-import type {
-  ErrorStatus,
-  LaikaError,
-  LaikaResult} from '@laikacms/core';
-import {
-  BadRequestError,
-  ErrorCodeToStatusMap,
-  NotFoundError,
-} from '@laikacms/core';
+import type { ErrorStatus, LaikaError, LaikaResult } from '@laikacms/core';
+import { BadRequestError, ErrorCodeToStatusMap, NotFoundError } from '@laikacms/core';
 import type { DocumentsRepository } from '@laikacms/documents';
-import type {
-  JsonApiCollectionResponse,
-  JsonApiError,
-  JsonApiResource,
-  JsonApiResponse} from '@laikacms/json-api';
+import type { JsonApiCollectionResponse, JsonApiError, JsonApiResource, JsonApiResponse } from '@laikacms/json-api';
 import {
   buildPaginationLinks,
   errorToJsonApiMapper,

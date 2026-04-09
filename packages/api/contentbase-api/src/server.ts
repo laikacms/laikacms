@@ -1,6 +1,6 @@
 import type { ContentBaseSettingsProvider } from '@laikacms/contentbase-settings';
 import { type CollectionSettings } from '@laikacms/contentbase-settings';
-import type { LaikaResult} from '@laikacms/core';
+import type { LaikaResult } from '@laikacms/core';
 import { NotFoundError } from '@laikacms/core';
 import * as Result from 'effect/Result';
 import { Hono } from 'hono';

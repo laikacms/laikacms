@@ -1,9 +1,9 @@
-import type { LaikaResult} from '@laikacms/core';
+import type { LaikaResult } from '@laikacms/core';
 import { ValidationError } from '@laikacms/core';
 import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
 import type { JSONSchema7 } from 'json-schema';
-import type { ContentBaseSettings} from '../entities/settings.js';
+import type { ContentBaseSettings } from '../entities/settings.js';
 import { ContentBaseSettingsSchema } from '../entities/settings.js';
 
 export const createDefaultSchema = (): JSONSchema7 => ({
@@ -20,7 +20,6 @@ export const parseSettingsJSON = <T>(json: string): LaikaResult<ContentBaseSetti
   let data: unknown;
   try {
     data = JSON.parse(json);
-     
   } catch (error) {
     console.error(error);
     return Result.fail(
