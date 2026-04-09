@@ -113,7 +113,7 @@ export interface AuthPagePasskeyOptions {
   rpId: string;
   timeout: number;
   userVerification: string;
-  allowCredentials?: Array<{ type: string; id: string; transports?: string[]; }>;
+  allowCredentials?: Array<{ type: string, id: string, transports?: string[] }>;
 }
 
 export function generatePasskeyScript(

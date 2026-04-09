@@ -87,13 +87,13 @@ export const goBackHref = Symbol('goBackHref');
 
 // Extended template variables type for error page
 type ErrorTemplateVariables = TemplateVariables & {
-  [pageTitle]?: string;
-  [logoHtml]?: string;
-  [errorTitle]?: string;
-  [errorDescription]?: string;
-  [errorCode]?: string;
-  [goBackButtonText]?: string;
-  [goBackHref]?: string;
+  [pageTitle]?: string,
+  [logoHtml]?: string,
+  [errorTitle]?: string,
+  [errorDescription]?: string,
+  [errorCode]?: string,
+  [goBackButtonText]?: string,
+  [goBackHref]?: string,
 };
 
 /**
@@ -154,7 +154,7 @@ function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
+  return text.replace(/[&<>"']/g, char => map[char]);
 }
 
 /**
@@ -163,7 +163,7 @@ function escapeHtml(text: string): string {
 function formatErrorTitle(error: string): string {
   return error
     .replace(/_/g, ' ')
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+    .replace(/\b\w/g, c => c.toUpperCase());
 }
 
 /**

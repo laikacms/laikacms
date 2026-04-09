@@ -1,6 +1,5 @@
 import { InvalidData, LaikaError, LaikaResult } from '@laikacms/core';
 import {
-  StorageRepository,
   type Atom,
   type AtomSummary,
   type Folder,
@@ -8,7 +7,8 @@ import {
   type ListAtomsOptions,
   type StorageObject,
   type StorageObjectCreate,
-  type StorageObjectUpdate
+  type StorageObjectUpdate,
+  StorageRepository,
 } from '@laikacms/storage';
 import {
   atomFromJsonApi,
@@ -19,14 +19,14 @@ import {
   decodeJsonApiStorageObject,
   folderCreateToJsonApi,
   folderFromJsonApi,
-  storageObjectCreateToJsonApi,
-  storageObjectFromJsonApi,
-  storageObjectUpdateToJsonApi,
   type JsonApiAtom,
   type JsonApiAtomSummary,
   type JsonApiCollectionResponse,
   type JsonApiFolder,
-  type JsonApiStorageObject
+  type JsonApiStorageObject,
+  storageObjectCreateToJsonApi,
+  storageObjectFromJsonApi,
+  storageObjectUpdateToJsonApi,
 } from '@laikacms/storage-api';
 import * as Result from 'effect/Result';
 import { paginationCodec } from './pagination-codec.js';
@@ -81,7 +81,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
   private async handleResponse<T>(response: Response): Promise<LaikaResult<T>> {
     const contentType = response.headers.get('content-type');
-    
+
     if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
       return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
     }
@@ -90,11 +90,21 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
     if (!response.ok) {
       const errors = json.errors || [{ detail: 'Unknown error' }];
-      return Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+      return Result.fail(
+        new InvalidData(
+          errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+        ),
+      );
     }
 
     if (json.errors) {
-      return Result.fail(new InvalidData(json.errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+      return Result.fail(
+        new InvalidData(
+          json.errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(
+            ', ',
+          ),
+        ),
+      );
     }
 
     return Result.succeed(json.data as T);
@@ -203,7 +213,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
     for await (const result of this.getObject(create.key)) {
       existing = result;
     }
-    
+
     if (existing && Result.isSuccess(existing)) {
       // Object exists, update it
       yield* this.updateObject({ ...create, key: create.key });
@@ -249,7 +259,10 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
     return this.listAtomSummariesInternal(folderKey, options);
   }
 
-  private async *listFullAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly Atom[]>> {
+  private async *listFullAtoms(
+    folderKey: string,
+    options: ListAtomsOptions,
+  ): AsyncGenerator<LaikaResult<readonly Atom[]>> {
     try {
       const params = paginationCodec.encode(options.pagination);
 
@@ -275,7 +288,11 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       if (!response.ok || 'errors' in json) {
         const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
-        yield Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+        yield Result.fail(
+          new InvalidData(
+            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+          ),
+        );
         return;
       }
 
@@ -297,7 +314,10 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
     }
   }
 
-  private async *listAtomSummariesInternal(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
+  private async *listAtomSummariesInternal(
+    folderKey: string,
+    options: ListAtomsOptions,
+  ): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
     try {
       const params = paginationCodec.encode(options.pagination);
 
@@ -323,7 +343,11 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       if (!response.ok || 'errors' in json) {
         const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
-        yield Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+        yield Result.fail(
+          new InvalidData(
+            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+          ),
+        );
         return;
       }
 
@@ -383,7 +407,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
     for await (const result of this.getObject(key)) {
       objectResult = result;
     }
-    
+
     if (objectResult && Result.isSuccess(objectResult)) {
       yield objectResult;
       return;
@@ -420,14 +444,18 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
       if (!response.ok) {
         const errors = json.errors || [{ detail: 'Unknown error' }];
-        yield Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+        yield Result.fail(
+          new InvalidData(
+            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+          ),
+        );
         return;
       }
 
       // Extract successfully removed keys
       const removedKeys: string[] = [];
       const results = json['atomic:results'] || [];
-      
+
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
         if (!result.errors) {

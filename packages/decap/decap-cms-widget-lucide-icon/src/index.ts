@@ -1,10 +1,10 @@
-import { IconControl } from "./IconControl";
-import { IconPreview } from "./IconPreview";
-import { IconWidgetOptions } from "./types";
+import { IconControl } from './IconControl';
+import { IconPreview } from './IconPreview';
+import { IconWidgetOptions } from './types';
 
 function Widget(opts: IconWidgetOptions = {}) {
   return {
-    name: "icon",
+    name: 'icon',
     controlComponent: IconControl,
     previewComponent: IconPreview,
     ...opts,
@@ -12,7 +12,7 @@ function Widget(opts: IconWidgetOptions = {}) {
 }
 
 export const WidgetIcon = {
-  name: "icon",
+  name: 'icon',
   Widget,
   controlComponent: IconControl,
   previewComponent: IconPreview,

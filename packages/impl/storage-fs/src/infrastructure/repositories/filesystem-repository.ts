@@ -1,26 +1,20 @@
+import { BadRequestError, EntryAlreadyExistsError, InvalidData, LaikaError, LaikaResult } from '@laikacms/core';
 import {
-  BadRequestError,
-  EntryAlreadyExistsError,
-  InvalidData,
-  LaikaError,
-  LaikaResult
-} from '@laikacms/core';
-import {
+  Atom,
+  AtomSummary,
   Folder,
   FolderCreate,
-  Atom,
-  StorageRepository,
-  AtomSummary,
-  StorageObject,
-  StorageObjectContent,
-  StorageObjectUpdate,
   ListAtomsOptions,
   pathCombine,
+  StorageObject,
+  StorageObjectContent,
   StorageObjectCreate,
-  StorageSerializerRegistry
+  StorageObjectUpdate,
+  StorageRepository,
+  StorageSerializerRegistry,
 } from '@laikacms/storage';
-import * as minimatch from 'minimatch';
 import * as Result from 'effect/Result';
+import * as minimatch from 'minimatch';
 import { FileSystemDataSource } from '../datasources/filesystem-datasource.js';
 
 /**
@@ -44,15 +38,15 @@ export class FileSystemStorageRepository extends StorageRepository {
       '**/Thumbs.db',
       '**/desktop.ini',
       '**/.contentbase',
-      '**/.laikacms'
+      '**/.laikacms',
     ],
   ) {
     super();
     const availableExtensions = Object.keys(this.serializerRegistry);
     this.fileSystemDataSource = new FileSystemDataSource(availableExtensions, defaultFileExtension);
-    this.excludeFilter = this.ignoreList.map((pattern) =>
-      minimatch.makeRe(pattern, { dot: true, partial: true })
-    ).filter(x => x !== false);
+    this.excludeFilter = this.ignoreList.map(pattern => minimatch.makeRe(pattern, { dot: true, partial: true })).filter(
+      x => x !== false,
+    );
   }
 
   /**
@@ -61,11 +55,11 @@ export class FileSystemStorageRepository extends StorageRepository {
   private async serialize(ext: string, content: StorageObjectContent): Promise<string> {
     ext.startsWith('.') && (ext = ext.slice(1));
     const serializer = this.serializerRegistry[ext];
-    
+
     if (!serializer) {
       throw new BadRequestError(
-        `No serializer found for file extension: .${ext}. ` +
-        `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`
+        `No serializer found for file extension: .${ext}. `
+          + `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`,
       );
     }
 
@@ -74,7 +68,7 @@ export class FileSystemStorageRepository extends StorageRepository {
     } catch (error) {
       console.error(error);
       throw new BadRequestError(
-        `Failed to serialize content: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to serialize content: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -85,11 +79,11 @@ export class FileSystemStorageRepository extends StorageRepository {
   private async deserialize(ext: string, content: string): Promise<StorageObjectContent> {
     ext.startsWith('.') && (ext = ext.slice(1));
     const serializer = this.serializerRegistry[ext];
-    
+
     if (!serializer) {
       throw new BadRequestError(
-        `No serializer found for file extension: .${ext}. ` +
-        `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`
+        `No serializer found for file extension: .${ext}. `
+          + `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`,
       );
     }
 
@@ -98,36 +92,35 @@ export class FileSystemStorageRepository extends StorageRepository {
     } catch (error) {
       console.error(error);
       throw new BadRequestError(
-        `Failed to deserialize content: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to deserialize content: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
 
   async *removeAtoms(
-    keys: readonly string[]
+    keys: readonly string[],
   ): AsyncGenerator<LaikaResult<readonly string[]>> {
-  
     const dirSubToAtomMapping = new Map<string, string>();
 
     const result = await this.fileSystemDataSource.deleteEntries(
       this.rootDirectory,
-      keys.map(path => ({ path, type: 'file' as const }))
+      keys.map(path => ({ path, type: 'file' as const })),
     );
 
     if (Result.isSuccess(result)) {
       const resultAtoms = result.success
-        .map((dirSub) => dirSubToAtomMapping.get(dirSub.path))
+        .map(dirSub => dirSubToAtomMapping.get(dirSub.path))
         .filter(Boolean) as string[];
       yield Result.succeed(resultAtoms as readonly string[]);
     } else {
       yield failAs<readonly string[]>(result.failure);
     }
-  };
+  }
 
   async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
     const dirSubs = await this.fileSystemDataSource.getDirMeta(
       this.rootDirectory,
-      key
+      key,
     );
 
     if (Result.isFailure(dirSubs)) {
@@ -143,13 +136,13 @@ export class FileSystemStorageRepository extends StorageRepository {
     };
 
     yield Result.succeed(folder);
-  };
+  }
 
   async *getAtom(key: string): AsyncGenerator<LaikaResult<Atom>> {
     const isDir = await this.fileSystemDataSource.isDir(
       this.rootDirectory,
-      key
-    )
+      key,
+    );
 
     const type = isDir
       ? 'dir'
@@ -162,17 +155,17 @@ export class FileSystemStorageRepository extends StorageRepository {
     } else {
       yield Result.fail(new BadRequestError('Invalid type: ' + type));
     }
-  };
+  }
 
   async *getObject(key: string): AsyncGenerator<LaikaResult<StorageObject>> {
     const [fileMetaResult, fileContentResult] = await Promise.all([
       this.fileSystemDataSource.getFileMeta(
         this.rootDirectory,
-        key
+        key,
       ),
       this.fileSystemDataSource.getFileContents(
         this.rootDirectory,
-        key
+        key,
       ),
     ]);
 
@@ -194,7 +187,7 @@ export class FileSystemStorageRepository extends StorageRepository {
       key: keyWithoutExt,
       createdAt: fileMetaResult.success.createdAt.toISOString(),
       updatedAt: fileMetaResult.success.updatedAt.toISOString(),
-      content: await this.deserialize(ext, fileContentResult.success.content)
+      content: await this.deserialize(ext, fileContentResult.success.content),
     };
 
     yield Result.succeed(storageObject);
@@ -204,14 +197,14 @@ export class FileSystemStorageRepository extends StorageRepository {
     // First resolve the key to get the actual file extension
     const fileMetaResult = await this.fileSystemDataSource.getFileMeta(
       this.rootDirectory,
-      update.key
+      update.key,
     );
-    
+
     if (Result.isFailure(fileMetaResult)) {
       yield failAs<StorageObject>(fileMetaResult.failure);
       return;
     }
-    
+
     const ext = fileMetaResult.success.extension;
     const stringified = update.content ? await this.serialize(ext, update.content) : undefined;
 
@@ -220,7 +213,7 @@ export class FileSystemStorageRepository extends StorageRepository {
         this.rootDirectory,
         update.key,
         stringified,
-        ext
+        ext,
       );
       if (Result.isFailure(updateResult)) {
         yield failAs<StorageObject>(updateResult.failure);
@@ -236,20 +229,22 @@ export class FileSystemStorageRepository extends StorageRepository {
       yield Result.fail(new InvalidData('Object content is required for creation'));
       return;
     }
-    
+
     // Check if an object with this key already exists with any available extension
     const existingExt = await this.fileSystemDataSource.findExistingFileExtension(
       this.rootDirectory,
-      create.key
+      create.key,
     );
-    
+
     if (existingExt) {
-      yield Result.fail(new EntryAlreadyExistsError(
-        `An object with key "${create.key}" already exists with extension .${existingExt}`
-      ));
+      yield Result.fail(
+        new EntryAlreadyExistsError(
+          `An object with key "${create.key}" already exists with extension .${existingExt}`,
+        ),
+      );
       return;
     }
-    
+
     // Use the default file extension for new objects
     const ext = this.defaultFileExtension;
     const stringified = await this.serialize(ext, create.content);
@@ -258,7 +253,7 @@ export class FileSystemStorageRepository extends StorageRepository {
       this.rootDirectory,
       create.key,
       stringified,
-      ext
+      ext,
     );
 
     if (Result.isFailure(createResult)) {
@@ -272,21 +267,21 @@ export class FileSystemStorageRepository extends StorageRepository {
   async *createOrUpdateObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
     const ext = await this.fileSystemDataSource.findExistingFileExtension(
       this.rootDirectory,
-      create.key
+      create.key,
     ) || this.defaultFileExtension;
-    
+
     const createResult = await this.fileSystemDataSource.createOrUpdate(
       this.rootDirectory,
       create.key,
       create.content ? await this.serialize(ext, create.content) : '',
-      ext
+      ext,
     );
-    
+
     if (Result.isFailure(createResult)) {
       yield failAs<StorageObject>(createResult.failure);
       return;
     }
-    
+
     yield* this.getObject(create.key);
   }
 
@@ -295,7 +290,7 @@ export class FileSystemStorageRepository extends StorageRepository {
       this.rootDirectory,
       pathCombine(folderCreate.key, '.keep'),
       '',
-      '' // .keep files don't need an extension
+      '', // .keep files don't need an extension
     );
 
     if (Result.isFailure(createResult)) {
@@ -317,7 +312,7 @@ export class FileSystemStorageRepository extends StorageRepository {
   private async *getAtomsList<T extends AtomSummary | Atom>(
     folderKey: string,
     options: ListAtomsOptions,
-    summariesOnly: T extends AtomSummary ? true : false
+    summariesOnly: T extends AtomSummary ? true : false,
   ): AsyncGenerator<LaikaResult<readonly T[]>> {
     const dirSubs = await this.fileSystemDataSource.listFileSystemDirectory(
       this.rootDirectory,
@@ -330,12 +325,12 @@ export class FileSystemStorageRepository extends StorageRepository {
     }
 
     const availableExtensions = Object.keys(this.serializerRegistry);
-    
-    const filteredDirSubs = dirSubs.success.filter((dirSub: { path: string; type: string }) => {
-      return this.excludeFilter.every((pattern) => !pattern.test(dirSub.path))
-    }).map((dirSub: { path: string; type: string }) => {
+
+    const filteredDirSubs = dirSubs.success.filter((dirSub: { path: string, type: string }) => {
+      return this.excludeFilter.every(pattern => !pattern.test(dirSub.path));
+    }).map((dirSub: { path: string, type: string }) => {
       let key = dirSub.path;
-      
+
       // Strip extension from files if it matches an available extension
       if (dirSub.type === 'file') {
         for (const ext of availableExtensions) {
@@ -345,7 +340,7 @@ export class FileSystemStorageRepository extends StorageRepository {
           }
         }
       }
-      
+
       const atomSummary = {
         type: dirSub.type === 'file' ? 'object-summary' : 'folder-summary',
         key: key,
@@ -374,7 +369,7 @@ export class FileSystemStorageRepository extends StorageRepository {
         }
       }
     }
-    
+
     yield Result.succeed(atoms as readonly T[]);
   }
 }

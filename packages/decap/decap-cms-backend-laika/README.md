@@ -15,16 +15,16 @@ pnpm add @laikacms/decap-cms-backend-laika decap-cms-app
 ## Usage
 
 ```typescript
-import CMS from 'decap-cms-app'
-import createLaikaBackend from '@laikacms/decap-cms-backend-laika'
+import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
+import CMS from 'decap-cms-app';
 
 const LaikaBackend = createLaikaBackend({
   documentsApiBaseUrl: '/api/documents',
   assetsApiBaseUrl: '/api/assets',
-})
+});
 
-CMS.registerBackend('laika', LaikaBackend)
-CMS.init()
+CMS.registerBackend('laika', LaikaBackend);
+CMS.init();
 ```
 
 ## Config

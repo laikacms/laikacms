@@ -1,5 +1,5 @@
+import { StandardSchemaV1 } from '@standard-schema/spec';
 import * as S from 'effect/Schema';
-import { StandardSchemaV1 } from '@standard-schema/spec'
 
 // JSON:API Error Schema
 export const JsonApiErrorSchema = S.toStandardSchemaV1(S.Struct({
@@ -13,7 +13,7 @@ export const JsonApiErrorSchema = S.toStandardSchemaV1(S.Struct({
         pointer: S.optional(S.String),
         parameter: S.optional(S.String),
       })),
-    })
+    }),
   ),
 }));
 
@@ -30,7 +30,7 @@ export const JsonApiDeleteMultipleSchema = S.toStandardSchemaV1(S.Struct({
     S.Struct({
       type: S.String,
       id: S.String,
-    })
+    }),
   ),
 }));
 
@@ -85,7 +85,7 @@ export const AtomicOperationsResponseSchema = S.toStandardSchemaV1(S.Struct({
         }),
         S.Null,
       ]),
-    })
+    }),
   ),
 }));
 

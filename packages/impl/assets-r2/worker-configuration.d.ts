@@ -5,7 +5,11 @@
 interface R2Bucket {
   head(key: string): Promise<R2Object | null>;
   get(key: string, options?: R2GetOptions): Promise<R2ObjectBody | null>;
-  put(key: string, value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null | Blob, options?: R2PutOptions): Promise<R2Object>;
+  put(
+    key: string,
+    value: ReadableStream | ArrayBuffer | ArrayBufferView | string | null | Blob,
+    options?: R2PutOptions,
+  ): Promise<R2Object>;
   delete(keys: string | string[]): Promise<void>;
   list(options?: R2ListOptions): Promise<R2Objects>;
   createMultipartUpload(key: string, options?: R2MultipartOptions): Promise<R2MultipartUpload>;
@@ -105,7 +109,10 @@ interface R2MultipartOptions {
 interface R2MultipartUpload {
   key: string;
   uploadId: string;
-  uploadPart(partNumber: number, value: ReadableStream | ArrayBuffer | ArrayBufferView | string | Blob): Promise<R2UploadedPart>;
+  uploadPart(
+    partNumber: number,
+    value: ReadableStream | ArrayBuffer | ArrayBufferView | string | Blob,
+  ): Promise<R2UploadedPart>;
   abort(): Promise<void>;
   complete(uploadedParts: R2UploadedPart[]): Promise<R2Object>;
 }

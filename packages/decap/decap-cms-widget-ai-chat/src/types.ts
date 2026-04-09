@@ -2,7 +2,7 @@
  * Type definitions for @laikacms/decap-cms-widget-ai-chat
  */
 
-import type { Translation } from "./i18n/types";
+import type { Translation } from './i18n/types';
 
 /**
  * Session summary for the session list
@@ -56,9 +56,9 @@ export interface AiSession {
  */
 export interface SerializedCmsConfig {
   collections?: Array<{
-    name: string;
-    label?: string;
-    fields?: unknown[];
+    name: string,
+    label?: string,
+    fields?: unknown[],
   }>;
   backend?: string;
 }
@@ -67,14 +67,14 @@ export interface SerializedCmsConfig {
  * Document context for the AI
  */
 export type DocumentContext = {
-  data: string; // JSON string of the document data, truncated if necessary
-  '$dataTruncatedToMaxLength'?: number; // Indicates if the data was truncated
-  slug: string;
-  collection?: string;
-  schema?: string; // JSON string of the collection schema, truncated if necessary
-  '$schemaTruncatedToMaxLength'?: number; // Indicates if the schema was truncated
-  locale?: string; // Current locale being edited (for i18n support)
-}
+  data: string, // JSON string of the document data, truncated if necessary
+  '$dataTruncatedToMaxLength'?: number, // Indicates if the data was truncated
+  slug: string,
+  collection?: string,
+  schema?: string, // JSON string of the collection schema, truncated if necessary
+  '$schemaTruncatedToMaxLength'?: number, // Indicates if the schema was truncated
+  locale?: string, // Current locale being edited (for i18n support)
+};
 
 /**
  * AI SDK configuration options for the widget

@@ -1,29 +1,29 @@
 import {
-  CollectionSettingsSchema,
-  MediaCollectionSettingsSchema,
-  DocumentCollectionSettingsSchema,
   type CollectionSettings,
-  type MediaCollectionSettings,
+  CollectionSettingsSchema,
   type DocumentCollectionSettings,
-} from '@laikacms/contentbase-settings'
+  DocumentCollectionSettingsSchema,
+  type MediaCollectionSettings,
+  MediaCollectionSettingsSchema,
+} from '@laikacms/contentbase-settings';
 import {
-  toJsonApi,
   fromJsonApi,
-  JsonApiDeleteSchema,
   JsonApiDeleteMultipleSchema,
-  JsonApiErrorSchema,
+  JsonApiDeleteSchema,
   type JsonApiError,
+  JsonApiErrorSchema,
+  toJsonApi,
 } from '@laikacms/json-api';
 import * as S from 'effect/Schema';
 
 // Re-export common JSON:API utilities
 export {
-  toJsonApi,
   fromJsonApi,
-  JsonApiDeleteSchema,
   JsonApiDeleteMultipleSchema,
-  JsonApiErrorSchema,
+  JsonApiDeleteSchema,
   type JsonApiError,
+  JsonApiErrorSchema,
+  toJsonApi,
 } from '@laikacms/json-api';
 
 // ===== JSON:API RESOURCE TYPES =====
@@ -89,10 +89,13 @@ export const DocumentCollectionJsonApiSchema = S.toStandardSchemaV1(S.Struct({
     documentTitleKey: S.optional(S.String),
     documentDescriptionKey: S.optional(S.String),
     documentStatusKey: S.optional(S.String),
-    unpublishedStatuses: S.optional(S.Record(S.String, S.Struct({
-      directory: S.String,
-      name: S.String,
-    }))),
+    unpublishedStatuses: S.optional(S.Record(
+      S.String,
+      S.Struct({
+        directory: S.String,
+        name: S.String,
+      }),
+    )),
     revisionDirectory: S.optional(S.String),
     draftDirectory: S.optional(S.String),
     archiveDirectory: S.optional(S.String),

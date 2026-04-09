@@ -83,7 +83,10 @@ export interface AiSessionCallbacks {
   /**
    * Update session messages
    */
-  updateSession(sessionId: string, updates: Partial<Pick<AiSession, 'messages' | 'title' | 'updatedAt'>>): Promise<void>;
+  updateSession(
+    sessionId: string,
+    updates: Partial<Pick<AiSession, 'messages' | 'title' | 'updatedAt'>>,
+  ): Promise<void>;
 
   /**
    * Delete a session
@@ -220,12 +223,12 @@ export interface ChatRequest {
  */
 export interface SessionListResponse {
   sessions: Array<{
-    id: string;
-    title?: string;
-    documentSlug: string;
-    messageCount: number;
-    createdAt: number;
-    updatedAt: number;
+    id: string,
+    title?: string,
+    documentSlug: string,
+    messageCount: number,
+    createdAt: number,
+    updatedAt: number,
   }>;
 }
 

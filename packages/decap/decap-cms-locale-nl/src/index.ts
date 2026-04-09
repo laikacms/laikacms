@@ -95,11 +95,9 @@ const nl = {
     },
     editor: {
       onLeavePage: 'Weet je zeker dat je deze pagina wilt verlaten?',
-      onUpdatingWithUnsavedChanges:
-        'Er zijn nog niet-opgeslagen wijzigingen. Bewaar ze voordat u de status bijwerkt.',
+      onUpdatingWithUnsavedChanges: 'Er zijn nog niet-opgeslagen wijzigingen. Bewaar ze voordat u de status bijwerkt.',
       onPublishingNotReady: 'Stel de status in op "Voltooid" voordat u publiceert.',
-      onPublishingWithUnsavedChanges:
-        'Er zijn nog niet-opgeslagen wijzigingen. Bewaar deze voordat u publiceert.',
+      onPublishingWithUnsavedChanges: 'Er zijn nog niet-opgeslagen wijzigingen. Bewaar deze voordat u publiceert.',
       onPublishing: 'Weet u zeker dat u dit item wil publiceren?',
       onUnpublishing: 'Weet u zeker dat u de publicatie voor dit item ongedaan wilt maken?',
       onDeleteWithUnsavedChanges:
@@ -211,8 +209,7 @@ const nl = {
     },
     mediaLibrary: {
       onDelete: 'Weet u zeker dat u de geselecteerde media wilt verwijderen?',
-      fileTooLarge:
-        'Het bestand is te groot.\n De instellingen staan geen bestanden toe groter dan %{size} kB.',
+      fileTooLarge: 'Het bestand is te groot.\n De instellingen staan geen bestanden toe groter dan %{size} kB.',
     },
     mediaLibraryModal: {
       loading: 'Laden...',
@@ -267,8 +264,7 @@ const nl = {
       onDeleteUnpublishedChanges: 'Niet-gepubliceerde wijzigingen verwijderd',
       onFailToAuth: '%{details}',
       onLoggedOut: 'Je bent uitgelogd, back-up alstublieft uw data log daarna in',
-      onBackendDown:
-        'De backend-service ondervindt een storing. Zie %{details} voor meer informatie',
+      onBackendDown: 'De backend-service ondervindt een storing. Zie %{details} voor meer informatie',
     },
   },
   workflow: {

@@ -46,14 +46,17 @@ This package implements security measures with future quantum computing threats 
 
 ## Disclaimer
 
-> [!WARNING]
-> **This package is provided "as is" without warranty of any kind.**
+> [!WARNING] **This package is provided "as is" without warranty of any kind.**
 >
-> While reasonable effort has been made to implement secure authentication flows, you are responsible for reviewing the implementation, ensuring it meets your security requirements, conducting your own security audits, and keeping dependencies up to date.
+> While reasonable effort has been made to implement secure authentication flows, you are
+> responsible for reviewing the implementation, ensuring it meets your security requirements,
+> conducting your own security audits, and keeping dependencies up to date.
 >
-> The maintainers are **not liable** for any security incidents arising from the use of this package. See the [LICENSE](../../../LICENSE) for full terms.
+> The maintainers are **not liable** for any security incidents arising from the use of this
+> package. See the [LICENSE](../../../LICENSE) for full terms.
 >
-> Do not use this package in production without understanding its limitations and conducting appropriate security reviews.
+> Do not use this package in production without understanding its limitations and conducting
+> appropriate security reviews.
 
 ## License
 

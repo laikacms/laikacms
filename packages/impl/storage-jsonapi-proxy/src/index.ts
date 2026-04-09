@@ -7,5 +7,5 @@
  * from the client code.
  */
 
-export { StorageJsonApiProxyRepository } from './storage-jsonapi-proxy-repository.js';
 export { paginationCodec } from './pagination-codec.js';
+export { StorageJsonApiProxyRepository } from './storage-jsonapi-proxy-repository.js';

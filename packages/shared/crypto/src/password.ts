@@ -1,6 +1,6 @@
 // Password hashing utilities for user management
 // Security hardened for post-quantum computing resistance
-import * as bcrypt from 'bcryptjs'
+import * as bcrypt from 'bcryptjs';
 
 /**
  * Security constants for password handling
@@ -16,7 +16,7 @@ export const PASSWORD_CONSTANTS = {
   RECOMMENDED_ROUNDS: 14,
   // Dummy hash for constant-time operations when validation fails
   DUMMY_HASH: '$2a$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
-} as const
+} as const;
 
 /**
  * Validate password input before processing
@@ -25,10 +25,10 @@ export const PASSWORD_CONSTANTS = {
  */
 function isValidPasswordInput(password: unknown): password is string {
   return (
-    typeof password === 'string' &&
-    password.length > 0 &&
-    password.length <= PASSWORD_CONSTANTS.MAX_PASSWORD_LENGTH
-  )
+    typeof password === 'string'
+    && password.length > 0
+    && password.length <= PASSWORD_CONSTANTS.MAX_PASSWORD_LENGTH
+  );
 }
 
 /**
@@ -52,13 +52,13 @@ function isValidPasswordInput(password: unknown): password is string {
 export async function hashPassword(password: string, rounds: number = PASSWORD_CONSTANTS.MIN_ROUNDS): Promise<string> {
   // Validate password input
   if (!isValidPasswordInput(password)) {
-    throw new Error('Invalid password: must be a non-empty string with maximum 1024 characters')
+    throw new Error('Invalid password: must be a non-empty string with maximum 1024 characters');
   }
 
   // Enforce minimum rounds for security
-  const secureRounds = Math.max(rounds, PASSWORD_CONSTANTS.MIN_ROUNDS)
+  const secureRounds = Math.max(rounds, PASSWORD_CONSTANTS.MIN_ROUNDS);
 
-  return await bcrypt.hash(password, secureRounds)
+  return await bcrypt.hash(password, secureRounds);
 }
 
 /**
@@ -77,19 +77,19 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   // Validate password input - always perform comparison to maintain constant time
   if (!isValidPasswordInput(password)) {
     // Perform dummy comparison to prevent timing attacks
-    await bcrypt.compare('dummy-password-for-timing', PASSWORD_CONSTANTS.DUMMY_HASH)
-    return false
+    await bcrypt.compare('dummy-password-for-timing', PASSWORD_CONSTANTS.DUMMY_HASH);
+    return false;
   }
 
   // Validate hash format (bcrypt hashes start with $2)
   if (typeof hash !== 'string' || !hash.startsWith('$2')) {
     // Perform dummy comparison to prevent timing attacks
-    await bcrypt.compare(password, PASSWORD_CONSTANTS.DUMMY_HASH)
-    return false
+    await bcrypt.compare(password, PASSWORD_CONSTANTS.DUMMY_HASH);
+    return false;
   }
 
   // bcrypt.compare is designed to be constant-time
-  return await bcrypt.compare(password, hash)
+  return await bcrypt.compare(password, hash);
 }
 
 /**
@@ -103,15 +103,15 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
  */
 export function needsRehash(hash: string, targetRounds: number = PASSWORD_CONSTANTS.MIN_ROUNDS): boolean {
   if (typeof hash !== 'string' || !hash.startsWith('$2')) {
-    return true
+    return true;
   }
 
   // Extract rounds from bcrypt hash (format: $2a$XX$...)
-  const roundsMatch = hash.match(/^\$2[aby]?\$(\d{2})\$/)
+  const roundsMatch = hash.match(/^\$2[aby]?\$(\d{2})\$/);
   if (!roundsMatch) {
-    return true
+    return true;
   }
 
-  const currentRounds = parseInt(roundsMatch[1], 10)
-  return currentRounds < targetRounds
+  const currentRounds = parseInt(roundsMatch[1], 10);
+  return currentRounds < targetRounds;
 }

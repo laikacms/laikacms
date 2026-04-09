@@ -1,4 +1,4 @@
-import { StorageObjectContentSchema, AtomBaseSchema } from '@laikacms/storage';
+import { AtomBaseSchema, StorageObjectContentSchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
 
 /**

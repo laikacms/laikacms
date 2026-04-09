@@ -85,7 +85,7 @@ export interface OAuthTotpCallbacks {
   /** Store a pending TOTP session (after password verification, before TOTP verification) */
   storePendingTotpSession(sessionId: string, userId: string, expiresAt: number): Promise<void>;
   /** Get a pending TOTP session */
-  getPendingTotpSession(sessionId: string): Promise<{ userId: string; } | null>;
+  getPendingTotpSession(sessionId: string): Promise<{ userId: string } | null>;
 }
 
 /**
@@ -336,7 +336,7 @@ export async function verifyTOTPSetup(
   userId: string,
   code: string,
   config: TOTPConfig,
-): Promise<{ success: boolean; error?: string; }> {
+): Promise<{ success: boolean, error?: string }> {
   const { callbacks, window = 1 } = config;
 
   // Get stored secret
@@ -371,7 +371,7 @@ export async function verifyTOTPLogin(
   userId: string,
   code: string,
   config: TOTPConfig,
-): Promise<{ success: boolean; error?: string; }> {
+): Promise<{ success: boolean, error?: string }> {
   const { callbacks, window = 1 } = config;
 
   // Get stored secret
@@ -449,7 +449,7 @@ export async function verifyOAuthTOTPSetup(
   userId: string,
   code: string,
   config: OAuthTotpConfig,
-): Promise<{ success: boolean; error?: string; }> {
+): Promise<{ success: boolean, error?: string }> {
   const { callbacks, window = 1 } = config;
 
   // Get stored secret
@@ -474,7 +474,7 @@ export async function verifyOAuthTOTPLogin(
   userId: string,
   code: string,
   config: OAuthTotpConfig,
-): Promise<{ success: boolean; error?: string; }> {
+): Promise<{ success: boolean, error?: string }> {
   const { callbacks, window = 1 } = config;
 
   // Get stored secret

@@ -1,26 +1,20 @@
+import { BadRequestError, EntryAlreadyExistsError, InvalidData, LaikaError, LaikaResult } from '@laikacms/core';
 import {
-  BadRequestError,
-  EntryAlreadyExistsError,
-  InvalidData,
-  LaikaError,
-  LaikaResult
-} from '@laikacms/core';
-import { 
-  Folder, 
-  FolderCreate, 
-  Atom, 
-  StorageRepository, 
-  AtomSummary, 
-  StorageObject, 
-  StorageObjectContent, 
-  StorageObjectUpdate, 
-  ListAtomsOptions, 
-  pathCombine, 
-  StorageObjectCreate, 
-  StorageSerializerRegistry 
+  Atom,
+  AtomSummary,
+  Folder,
+  FolderCreate,
+  ListAtomsOptions,
+  pathCombine,
+  StorageObject,
+  StorageObjectContent,
+  StorageObjectCreate,
+  StorageObjectUpdate,
+  StorageRepository,
+  StorageSerializerRegistry,
 } from '@laikacms/storage';
-import * as minimatch from 'minimatch';
 import * as Result from 'effect/Result';
+import * as minimatch from 'minimatch';
 import { R2DataSource } from '../datasources/r2-datasource.js';
 
 /**
@@ -32,7 +26,7 @@ function failAs<T>(error: LaikaError): LaikaResult<T> {
 
 /**
  * R2StorageRepository implements the StorageRepository interface using Cloudflare R2 as the backing store.
- * 
+ *
  * R2 is a flat object store, so this implementation simulates a hierarchical file system:
  * - Folders are represented by key prefixes
  * - Empty folders are represented by .keep files
@@ -52,15 +46,15 @@ export class R2StorageRepository extends StorageRepository {
       '**/Thumbs.db',
       '**/desktop.ini',
       '**/.contentbase',
-      '**/.laikacms'
+      '**/.laikacms',
     ],
   ) {
     super();
     const availableExtensions = Object.keys(this.serializerRegistry);
     this.r2DataSource = new R2DataSource(bucket, availableExtensions, defaultFileExtension);
-    this.excludeFilter = this.ignoreList.map((pattern) =>
-      minimatch.makeRe(pattern, { dot: true, partial: true })
-    ).filter(x => x !== false);
+    this.excludeFilter = this.ignoreList.map(pattern => minimatch.makeRe(pattern, { dot: true, partial: true })).filter(
+      x => x !== false,
+    );
   }
 
   /**
@@ -69,11 +63,11 @@ export class R2StorageRepository extends StorageRepository {
   private async serialize(ext: string, content: StorageObjectContent): Promise<string> {
     ext.startsWith('.') && (ext = ext.slice(1));
     const serializer = this.serializerRegistry[ext];
-    
+
     if (!serializer) {
       throw new BadRequestError(
-        `No serializer found for file extension: .${ext}. ` +
-        `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`
+        `No serializer found for file extension: .${ext}. `
+          + `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`,
       );
     }
 
@@ -82,7 +76,7 @@ export class R2StorageRepository extends StorageRepository {
     } catch (error) {
       console.error(error);
       throw new BadRequestError(
-        `Failed to serialize content: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to serialize content: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
@@ -93,11 +87,11 @@ export class R2StorageRepository extends StorageRepository {
   private async deserialize(ext: string, content: string): Promise<StorageObjectContent> {
     ext.startsWith('.') && (ext = ext.slice(1));
     const serializer = this.serializerRegistry[ext];
-    
+
     if (!serializer) {
       throw new BadRequestError(
-        `No serializer found for file extension: .${ext}. ` +
-        `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`
+        `No serializer found for file extension: .${ext}. `
+          + `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`,
       );
     }
 
@@ -106,17 +100,17 @@ export class R2StorageRepository extends StorageRepository {
     } catch (error) {
       console.error(error);
       throw new BadRequestError(
-        `Failed to deserialize content: ${error instanceof Error ? error.message : String(error)}`
+        `Failed to deserialize content: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
   }
 
   async *removeAtoms(
-    keys: readonly string[]
+    keys: readonly string[],
   ): AsyncGenerator<LaikaResult<readonly string[]>> {
     const deletedKeys: string[] = [];
     const errors: string[] = [];
-    
+
     for await (const result of this.r2DataSource.deleteObjects(keys)) {
       if (Result.isSuccess(result)) {
         deletedKeys.push(result.success);
@@ -148,25 +142,25 @@ export class R2StorageRepository extends StorageRepository {
     };
 
     yield Result.succeed(folder);
-  };
+  }
 
   async *getAtom(key: string): AsyncGenerator<LaikaResult<Atom>> {
     // First check if it's a file
     const isFile = await this.r2DataSource.isFile(key);
-    
+
     if (isFile) {
       yield* this.getObject(key);
       return;
     }
-    
+
     // Then check if it's a directory
     const isDir = await this.r2DataSource.isDirectory(key);
-    
+
     if (isDir) {
       yield* this.getFolder(key);
       return;
     }
-    
+
     yield Result.fail(new BadRequestError(`Path not found: ${key}`));
   }
 
@@ -194,7 +188,7 @@ export class R2StorageRepository extends StorageRepository {
       key: keyWithoutExt,
       createdAt: objectMetaResult.success.createdAt.toISOString(),
       updatedAt: objectMetaResult.success.updatedAt.toISOString(),
-      content: await this.deserialize(ext, objectContentResult.success.content)
+      content: await this.deserialize(ext, objectContentResult.success.content),
     };
 
     yield Result.succeed(storageObject);
@@ -203,12 +197,12 @@ export class R2StorageRepository extends StorageRepository {
   async *updateObject(update: StorageObjectUpdate): AsyncGenerator<LaikaResult<StorageObject>> {
     // First resolve the key to get the actual file extension
     const objectMetaResult = await this.r2DataSource.getObjectMeta(update.key);
-    
+
     if (Result.isFailure(objectMetaResult)) {
       yield failAs<StorageObject>(objectMetaResult.failure);
       return;
     }
-    
+
     const ext = objectMetaResult.success.extension;
     const stringified = update.content ? await this.serialize(ext, update.content) : undefined;
 
@@ -216,7 +210,7 @@ export class R2StorageRepository extends StorageRepository {
       const updateResult = await this.r2DataSource.createOrUpdate(
         update.key,
         stringified,
-        ext
+        ext,
       );
       if (Result.isFailure(updateResult)) {
         yield failAs<StorageObject>(updateResult.failure);
@@ -232,17 +226,19 @@ export class R2StorageRepository extends StorageRepository {
       yield Result.fail(new InvalidData('Object content is required for creation'));
       return;
     }
-    
+
     // Check if an object with this key already exists with any available extension
     const existingExt = await this.r2DataSource.findExistingObjectExtension(create.key);
-    
+
     if (existingExt) {
-      yield Result.fail(new EntryAlreadyExistsError(
-        `An object with key "${create.key}" already exists with extension .${existingExt}`
-      ));
+      yield Result.fail(
+        new EntryAlreadyExistsError(
+          `An object with key "${create.key}" already exists with extension .${existingExt}`,
+        ),
+      );
       return;
     }
-    
+
     // Use the default file extension for new objects
     const ext = this.defaultFileExtension;
     const stringified = await this.serialize(ext, create.content);
@@ -250,7 +246,7 @@ export class R2StorageRepository extends StorageRepository {
     const createResult = await this.r2DataSource.createOrUpdate(
       create.key,
       stringified,
-      ext
+      ext,
     );
 
     if (Result.isFailure(createResult)) {
@@ -263,18 +259,18 @@ export class R2StorageRepository extends StorageRepository {
 
   async *createOrUpdateObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
     const ext = await this.r2DataSource.findExistingObjectExtension(create.key) || this.defaultFileExtension;
-    
+
     const createResult = await this.r2DataSource.createOrUpdate(
       create.key,
       create.content ? await this.serialize(ext, create.content) : '',
-      ext
+      ext,
     );
-    
+
     if (Result.isFailure(createResult)) {
       yield failAs<StorageObject>(createResult.failure);
       return;
     }
-    
+
     yield* this.getObject(create.key);
   }
 
@@ -283,7 +279,7 @@ export class R2StorageRepository extends StorageRepository {
     const createResult = await this.r2DataSource.createOrUpdate(
       pathCombine(folderCreate.key, '.keep'),
       '',
-      '' // .keep files don't need an extension
+      '', // .keep files don't need an extension
     );
 
     if (Result.isFailure(createResult)) {
@@ -304,7 +300,7 @@ export class R2StorageRepository extends StorageRepository {
 
   private async *getAtomSummariesList(
     folderKey: string,
-    _options: ListAtomsOptions
+    _options: ListAtomsOptions,
   ): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
     const entries = await this.r2DataSource.listDirectory(folderKey);
 
@@ -314,12 +310,12 @@ export class R2StorageRepository extends StorageRepository {
     }
 
     const availableExtensions = Object.keys(this.serializerRegistry);
-    
-    const filteredEntries = entries.success.filter((entry: { key: string; type: string }) => {
-      return this.excludeFilter.every((pattern) => !pattern.test(entry.key));
-    }).map((entry: { key: string; type: string }) => {
+
+    const filteredEntries = entries.success.filter((entry: { key: string, type: string }) => {
+      return this.excludeFilter.every(pattern => !pattern.test(entry.key));
+    }).map((entry: { key: string, type: string }) => {
       let key = entry.key;
-      
+
       // Strip extension from files if it matches an available extension
       if (entry.type === 'file') {
         for (const ext of availableExtensions) {
@@ -329,7 +325,7 @@ export class R2StorageRepository extends StorageRepository {
           }
         }
       }
-      
+
       const atomSummary: AtomSummary = {
         type: entry.type === 'file' ? 'object-summary' : 'folder-summary',
         key: key,
@@ -342,7 +338,7 @@ export class R2StorageRepository extends StorageRepository {
 
   private async *getFullAtomsList(
     folderKey: string,
-    _options: ListAtomsOptions
+    _options: ListAtomsOptions,
   ): AsyncGenerator<LaikaResult<readonly Atom[]>> {
     const entries = await this.r2DataSource.listDirectory(folderKey);
 
@@ -352,12 +348,12 @@ export class R2StorageRepository extends StorageRepository {
     }
 
     const availableExtensions = Object.keys(this.serializerRegistry);
-    
-    const filteredEntries = entries.success.filter((entry: { key: string; type: string }) => {
-      return this.excludeFilter.every((pattern) => !pattern.test(entry.key));
-    }).map((entry: { key: string; type: string }) => {
+
+    const filteredEntries = entries.success.filter((entry: { key: string, type: string }) => {
+      return this.excludeFilter.every(pattern => !pattern.test(entry.key));
+    }).map((entry: { key: string, type: string }) => {
       let key = entry.key;
-      
+
       // Strip extension from files if it matches an available extension
       if (entry.type === 'file') {
         for (const ext of availableExtensions) {
@@ -367,7 +363,7 @@ export class R2StorageRepository extends StorageRepository {
           }
         }
       }
-      
+
       return {
         type: entry.type === 'file' ? 'object-summary' : 'folder-summary',
         key: key,
@@ -390,7 +386,7 @@ export class R2StorageRepository extends StorageRepository {
         }
       }
     }
-    
+
     yield Result.succeed(atoms as readonly Atom[]);
   }
 }

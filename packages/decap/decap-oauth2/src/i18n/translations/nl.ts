@@ -51,7 +51,8 @@ export const nl: Translation = {
     loadingPrompt: 'Volg de instructies van je browser of apparaat...',
     successTitle: 'Passkey aangemaakt!',
     successDescription: 'Je kunt deze passkey nu gebruiken om in te loggen. Doorsturen...',
-    browserNotSupported: 'Je browser ondersteunt geen passkeys. Gebruik een moderne browser zoals Chrome, Safari of Firefox.',
+    browserNotSupported:
+      'Je browser ondersteunt geen passkeys. Gebruik een moderne browser zoals Chrome, Safari of Firefox.',
     setupFailed: 'Passkey instellen mislukt. Probeer het opnieuw.',
     registrationFailed: 'Registratie mislukt',
   },
@@ -63,7 +64,8 @@ export const nl: Translation = {
     backToLogin: 'Terug naar inloggen',
     checkEmailPageTitle: 'Controleer je e-mail - Decap CMS',
     checkEmailTitle: 'Controleer je e-mail',
-    checkEmailDescription: 'Als er een account bestaat met dat e-mailadres, hebben we je een link gestuurd om je wachtwoord te resetten. Controleer je inbox en spammap.',
+    checkEmailDescription:
+      'Als er een account bestaat met dat e-mailadres, hebben we je een link gestuurd om je wachtwoord te resetten. Controleer je inbox en spammap.',
     resetPageTitle: 'Wachtwoord resetten - Decap CMS',
     resetTitle: 'Wachtwoord resetten',
     resetDescription: 'Voer hieronder je nieuwe wachtwoord in.',
@@ -86,11 +88,13 @@ export const nl: Translation = {
     passwordResetSubject: 'Reset je wachtwoord',
     passwordResetTitle: 'Reset je wachtwoord',
     passwordResetGreeting: 'Hallo{{name}},',
-    passwordResetIntro: 'We hebben een verzoek ontvangen om het wachtwoord te resetten voor je account gekoppeld aan <strong>{{email}}</strong>.',
+    passwordResetIntro:
+      'We hebben een verzoek ontvangen om het wachtwoord te resetten voor je account gekoppeld aan <strong>{{email}}</strong>.',
     passwordResetAction: 'Klik op de knop hieronder om je wachtwoord te resetten:',
     passwordResetButton: 'Wachtwoord resetten',
     passwordResetLinkHint: 'Of kopieer en plak deze link in je browser:',
-    passwordResetWarning: '⚠️ Deze link verloopt over <strong>{{expiresIn}}</strong>. Als je geen wachtwoordreset hebt aangevraagd, kun je deze e-mail veilig negeren.',
+    passwordResetWarning:
+      '⚠️ Deze link verloopt over <strong>{{expiresIn}}</strong>. Als je geen wachtwoordreset hebt aangevraagd, kun je deze e-mail veilig negeren.',
     passwordResetFooter: 'Deze e-mail is verzonden door {{appName}}.',
     passwordResetSupport: 'Als je vragen hebt, neem contact op met',
   },

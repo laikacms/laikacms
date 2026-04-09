@@ -10,7 +10,7 @@ export const RANDOM_CONSTANTS = {
   DEFAULT_TOKEN_LENGTH: 64,
   /** Minimum token length for security */
   MIN_TOKEN_LENGTH: 32,
-} as const
+} as const;
 
 /**
  * Generate cryptographically secure random strings using rejection sampling.
@@ -25,32 +25,32 @@ export const RANDOM_CONSTANTS = {
  */
 export function generateSecureRandomString(
   length: number,
-  alphabet: string = RANDOM_CONSTANTS.BASE62_ALPHABET
+  alphabet: string = RANDOM_CONSTANTS.BASE62_ALPHABET,
 ): string {
-  const alphabetSize = alphabet.length
+  const alphabetSize = alphabet.length;
 
   // Calculate the largest multiple of alphabetSize that fits in a byte
   // This is used for rejection sampling to eliminate modulo bias
-  const maxValidValue = Math.floor(256 / alphabetSize) * alphabetSize
+  const maxValidValue = Math.floor(256 / alphabetSize) * alphabetSize;
 
-  let result = ''
+  let result = '';
 
   while (result.length < length) {
     // Generate more random bytes than needed to account for rejections
-    const needed = length - result.length
-    const bufferSize = Math.ceil(needed * 1.5) // 50% extra for rejections
-    const randomBytes = new Uint8Array(bufferSize)
-    crypto.getRandomValues(randomBytes)
+    const needed = length - result.length;
+    const bufferSize = Math.ceil(needed * 1.5); // 50% extra for rejections
+    const randomBytes = new Uint8Array(bufferSize);
+    crypto.getRandomValues(randomBytes);
 
     for (let i = 0; i < randomBytes.length && result.length < length; i++) {
       // Rejection sampling: only use values that don't introduce bias
       if (randomBytes[i] < maxValidValue) {
-        result += alphabet[randomBytes[i] % alphabetSize]
+        result += alphabet[randomBytes[i] % alphabetSize];
       }
     }
   }
 
-  return result
+  return result;
 }
 
 /**
@@ -60,7 +60,7 @@ export function generateSecureRandomString(
  * @returns Cryptographically secure hex string
  */
 export function generateSecureRandomHex(length: number): string {
-  return generateSecureRandomString(length, RANDOM_CONSTANTS.HEX_ALPHABET)
+  return generateSecureRandomString(length, RANDOM_CONSTANTS.HEX_ALPHABET);
 }
 
 /**
@@ -70,7 +70,7 @@ export function generateSecureRandomHex(length: number): string {
  * @returns Uint8Array of random bytes
  */
 export function generateSecureRandomBytes(length: number): Uint8Array {
-  const bytes = new Uint8Array(length)
-  crypto.getRandomValues(bytes)
-  return bytes
+  const bytes = new Uint8Array(length);
+  crypto.getRandomValues(bytes);
+  return bytes;
 }

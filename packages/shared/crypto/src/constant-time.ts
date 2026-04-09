@@ -14,11 +14,11 @@
  * @returns true if strings are equal, false otherwise
  */
 export async function constantTimeEqual(a: string, b: string): Promise<boolean> {
-  const encoder = new TextEncoder()
-  const bufA = encoder.encode(a)
-  const bufB = encoder.encode(b)
+  const encoder = new TextEncoder();
+  const bufA = encoder.encode(a);
+  const bufB = encoder.encode(b);
 
-  return constantTimeEqualBuffer(bufA, bufB)
+  return constantTimeEqualBuffer(bufA, bufB);
 }
 
 /**
@@ -34,28 +34,28 @@ export async function constantTimeEqualBuffer(a: Uint8Array, b: Uint8Array): Pro
   const key = await crypto.subtle.generateKey(
     { name: 'HMAC', hash: 'SHA-256' },
     false,
-    ['sign']
-  )
+    ['sign'],
+  );
 
   // Copy to new ArrayBuffers to avoid SharedArrayBuffer issues
-  const bufferA = new Uint8Array(a).buffer as ArrayBuffer
-  const bufferB = new Uint8Array(b).buffer as ArrayBuffer
+  const bufferA = new Uint8Array(a).buffer as ArrayBuffer;
+  const bufferB = new Uint8Array(b).buffer as ArrayBuffer;
 
   // Compute HMAC of both values
   const [hmacA, hmacB] = await Promise.all([
     crypto.subtle.sign('HMAC', key, bufferA),
     crypto.subtle.sign('HMAC', key, bufferB),
-  ])
+  ]);
 
   // Compare the HMACs byte by byte
   // Since HMACs are fixed length (32 bytes for SHA-256), this comparison is constant-time
-  const viewA = new Uint8Array(hmacA)
-  const viewB = new Uint8Array(hmacB)
+  const viewA = new Uint8Array(hmacA);
+  const viewB = new Uint8Array(hmacB);
 
-  let result = 0
+  let result = 0;
   for (let i = 0; i < viewA.length; i++) {
-    result |= viewA[i] ^ viewB[i]
+    result |= viewA[i] ^ viewB[i];
   }
 
-  return result === 0
+  return result === 0;
 }

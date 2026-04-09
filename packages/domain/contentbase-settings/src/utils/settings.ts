@@ -1,12 +1,12 @@
-import { JSONSchema7 } from "json-schema";
-import { ContentBaseSettings, ContentBaseSettingsSchema } from "../entities/settings.js";
-import * as Result from "effect/Result";
-import * as S from "effect/Schema";
-import { LaikaResult, ValidationError } from "@laikacms/core";
+import { LaikaResult, ValidationError } from '@laikacms/core';
+import * as Result from 'effect/Result';
+import * as S from 'effect/Schema';
+import { JSONSchema7 } from 'json-schema';
+import { ContentBaseSettings, ContentBaseSettingsSchema } from '../entities/settings.js';
 
-export const createDefaultSchema = () : JSONSchema7 => ({
+export const createDefaultSchema = (): JSONSchema7 => ({
   type: 'object',
-  properties: { },
+  properties: {},
   additionalProperties: true,
 });
 
@@ -21,16 +21,18 @@ export const parseSettingsJSON = <T>(json: string): LaikaResult<ContentBaseSetti
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (error) {
     console.error(error);
-    return Result.fail(new ValidationError(
-      "The .contentbase/settings.json file is not valid JSON and could not be parsed."
-    ));
+    return Result.fail(
+      new ValidationError(
+        'The .contentbase/settings.json file is not valid JSON and could not be parsed.',
+      ),
+    );
   }
-  
+
   return parseSettings(data);
-}
-  
+};
+
 export const parseSettings = (
-  data: unknown
+  data: unknown,
 ): LaikaResult<ContentBaseSettings> => {
   try {
     const decoded = S.decodeUnknownSync(ContentBaseSettingsSchema)(data);
@@ -38,6 +40,6 @@ export const parseSettings = (
   } catch (error) {
     console.log('data', data);
     const message = error instanceof Error ? error.message : String(error);
-    return Result.fail(new ValidationError("Invalid settings data: " + message));
+    return Result.fail(new ValidationError('Invalid settings data: ' + message));
   }
 };

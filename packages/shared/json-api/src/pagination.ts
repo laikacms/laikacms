@@ -1,10 +1,10 @@
+import { StandardSchemaV1 } from '@standard-schema/spec';
 import * as S from 'effect/Schema';
 import { JsonApiLinksSchema } from './schemas.js';
-import { StandardSchemaV1 } from '@standard-schema/spec'
 
 // Filters for number validation
-const isAtLeast1 = S.makeFilter<number>((n) => n >= 1 ? undefined : 'Must be at least 1');
-const isAtLeast0 = S.makeFilter<number>((n) => n >= 0 ? undefined : 'Must be at least 0');
+const isAtLeast1 = S.makeFilter<number>(n => n >= 1 ? undefined : 'Must be at least 1');
+const isAtLeast0 = S.makeFilter<number>(n => n >= 0 ? undefined : 'Must be at least 0');
 
 // Pagination types
 export const PaginationPageBasedSchema = S.toStandardSchemaV1(S.Struct({
@@ -47,19 +47,19 @@ interface MutableJsonApiLinks {
 }
 
 // Type guards for pagination types
-function isPageBased(p: Pagination): p is { page: number; perPage?: number } {
+function isPageBased(p: Pagination): p is { page: number, perPage?: number } {
   return 'page' in p && typeof p.page === 'number';
 }
 
-function isOffsetBased(p: Pagination): p is { offset: number; limit?: number } {
+function isOffsetBased(p: Pagination): p is { offset: number, limit?: number } {
   return 'offset' in p && typeof p.offset === 'number';
 }
 
-function isAfterBased(p: Pagination): p is { after?: string; perPage?: number } {
+function isAfterBased(p: Pagination): p is { after?: string, perPage?: number } {
   return 'after' in p;
 }
 
-function isBeforeBased(p: Pagination): p is { before?: string; perPage?: number } {
+function isBeforeBased(p: Pagination): p is { before?: string, perPage?: number } {
   return 'before' in p && !('after' in p);
 }
 
@@ -76,7 +76,7 @@ export function buildPaginationLinks(
   hasMore: boolean,
   currentCursor?: string,
   firstCursor?: string,
-  lastCursor?: string
+  lastCursor?: string,
 ): JsonApiLinks {
   const links: MutableJsonApiLinks = {
     self: baseUrl,
@@ -85,7 +85,7 @@ export function buildPaginationLinks(
   if (isAfterBased(pagination)) {
     // Cursor-based pagination (forward)
     const perPage = pagination.perPage;
-    
+
     // Add prev link if we have an after cursor (meaning we're not on the first page)
     if (pagination.after && firstCursor) {
       links.prev = `${baseUrl}?page[before]=${encodeURIComponent(firstCursor)}`;
@@ -93,7 +93,7 @@ export function buildPaginationLinks(
         links.prev += `&page[size]=${perPage}`;
       }
     }
-    
+
     // Add next link if there are more results
     if (hasMore && lastCursor) {
       links.next = `${baseUrl}?page[after]=${encodeURIComponent(lastCursor)}`;
@@ -104,7 +104,7 @@ export function buildPaginationLinks(
   } else if (isBeforeBased(pagination)) {
     // Cursor-based pagination (backward)
     const perPage = pagination.perPage;
-    
+
     // Add prev link if there are more results going backward
     if (hasMore && firstCursor) {
       links.prev = `${baseUrl}?page[before]=${encodeURIComponent(firstCursor)}`;
@@ -112,7 +112,7 @@ export function buildPaginationLinks(
         links.prev += `&page[size]=${perPage}`;
       }
     }
-    
+
     // Add next link if we have a before cursor (meaning we're not on the last page)
     if (pagination.before && lastCursor) {
       links.next = `${baseUrl}?page[after]=${encodeURIComponent(lastCursor)}`;
@@ -124,13 +124,13 @@ export function buildPaginationLinks(
     // Page-based pagination
     const page = pagination.page;
     const perPage = pagination.perPage || 10;
-    
+
     links.first = `${baseUrl}?page[number]=1&page[size]=${perPage}`;
-    
+
     if (page > 1) {
       links.prev = `${baseUrl}?page[number]=${page - 1}&page[size]=${perPage}`;
     }
-    
+
     if (hasMore) {
       links.next = `${baseUrl}?page[number]=${page + 1}&page[size]=${perPage}`;
     }
@@ -138,14 +138,14 @@ export function buildPaginationLinks(
     // Offset-based pagination
     const offset = pagination.offset;
     const limit = pagination.limit || 10;
-    
+
     links.first = `${baseUrl}?page[offset]=0&page[limit]=${limit}`;
-    
+
     if (offset > 0) {
       const prevOffset = Math.max(0, offset - limit);
       links.prev = `${baseUrl}?page[offset]=${prevOffset}&page[limit]=${limit}`;
     }
-    
+
     if (hasMore) {
       links.next = `${baseUrl}?page[offset]=${offset + limit}&page[limit]=${limit}`;
     }
@@ -155,11 +155,11 @@ export function buildPaginationLinks(
 }
 
 // Type for parsed pagination that allows undefined perPage
-type ParsedPagination = 
-  | { after: string | undefined; perPage: number | undefined }
-  | { before: string | undefined; perPage: number | undefined }
-  | { page: number; perPage: number | undefined }
-  | { offset: number; limit: number | undefined };
+type ParsedPagination =
+  | { after: string | undefined, perPage: number | undefined }
+  | { before: string | undefined, perPage: number | undefined }
+  | { page: number, perPage: number | undefined }
+  | { offset: number, limit: number | undefined };
 
 /**
  * Parses pagination parameters from query string

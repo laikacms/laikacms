@@ -1,47 +1,47 @@
-import { DocumentsRepository } from "@laikacms/documents";
 import {
   BadRequestError,
-  NotFoundError,
-  LaikaResult,
-  LaikaError,
   ErrorCodeToStatusMap,
   ErrorStatus,
-} from "@laikacms/core";
-import * as Result from "effect/Result";
-import * as S from "effect/Schema";
+  LaikaError,
+  LaikaResult,
+  NotFoundError,
+} from '@laikacms/core';
+import { DocumentsRepository } from '@laikacms/documents';
+import {
+  buildPaginationLinks,
+  errorToJsonApiMapper,
+  JsonApiCollectionResponse,
+  JsonApiError,
+  JsonApiResource,
+  JsonApiResponse,
+  parsePaginationQuery,
+  schemaIssueFormatter,
+} from '@laikacms/json-api';
+import * as Result from 'effect/Result';
+import * as S from 'effect/Schema';
 import {
   documentCreateFromJsonApi,
+  type DocumentCreateJsonApi,
+  type DocumentJsonApi,
+  type DocumentSummaryJsonApi,
   documentSummaryToJsonApi,
   documentToJsonApi,
+  documentUpdateFromJsonApi,
   revisionCreateFromJsonApi,
+  type RevisionCreateJsonApi,
+  type RevisionJsonApi,
+  type RevisionSummaryJsonApi,
   revisionSummaryToJsonApi,
   revisionToJsonApi,
   unpublishedCreateFromJsonApi,
+  type UnpublishedCreateJsonApi,
+  type UnpublishedJsonApi,
+  type UnpublishedSummaryJsonApi,
   unpublishedSummaryToJsonApi,
   unpublishedToJsonApi,
   unpublishedUpdateFromJsonApi,
-  documentUpdateFromJsonApi,
-  type DocumentJsonApi,
-  type DocumentCreateJsonApi,
-  type DocumentSummaryJsonApi,
-  type UnpublishedJsonApi,
-  type UnpublishedCreateJsonApi,
   type UnpublishedUpdateJsonApi,
-  type UnpublishedSummaryJsonApi,
-  type RevisionJsonApi,
-  type RevisionCreateJsonApi,
-  type RevisionSummaryJsonApi,
-} from "./jsonapi.js";
-import {
-  buildPaginationLinks,
-  JsonApiCollectionResponse,
-  JsonApiResource,
-  parsePaginationQuery,
-  schemaIssueFormatter,
-  errorToJsonApiMapper,
-  JsonApiError,
-  JsonApiResponse,
-} from "@laikacms/json-api";
+} from './jsonapi.js';
 
 type AllJsonApiResponses =
   | JsonApiResponse
@@ -49,7 +49,7 @@ type AllJsonApiResponses =
   | JsonApiError;
 
 const json = <
-  T extends AllJsonApiResponses | { meta: Record<string, unknown> } | { "atomic:results": unknown[] },
+  T extends AllJsonApiResponses | { meta: Record<string, unknown> } | { 'atomic:results': unknown[] },
 >(
   body: T,
   status: number = 200,
@@ -57,15 +57,14 @@ const json = <
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      "Content-Type": "application/vnd.api+json",
+      'Content-Type': 'application/vnd.api+json',
     },
   });
 };
 
 // JSON:API error response
 function respondError(result: LaikaResult<unknown>, status: ErrorStatus = 400) {
-  if (Result.isSuccess(result))
-    throw new Error("respondError called with success result");
+  if (Result.isSuccess(result)) throw new Error('respondError called with success result');
   return json(errorToJsonApiMapper(result), status);
 }
 
@@ -76,9 +75,8 @@ function respondResource<T, R extends JsonApiResource>(
 ) {
   if (Result.isFailure(result)) {
     // Check if this is a "not found" error and return 404
-    const isNotFound =
-      result.failure.code === NotFoundError.CODE ||
-      result.failure.message?.toLowerCase().includes("not found");
+    const isNotFound = result.failure.code === NotFoundError.CODE
+      || result.failure.message?.toLowerCase().includes('not found');
     return respondError(result, isNotFound ? 404 : 400);
   }
   // Wrap the resource in a "data" field per JSON:API spec
@@ -126,7 +124,7 @@ async function respondCollection<T, R extends JsonApiResource>(
 async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<LaikaResult<T>> {
   const { value, done } = await gen.next();
   if (done) {
-    return Result.fail(new NotFoundError("No result returned"));
+    return Result.fail(new NotFoundError('No result returned'));
   }
   return value;
 }
@@ -140,32 +138,30 @@ interface DocumentsApiOptions {
 
 // Schema definitions using Effect Schema
 const FolderFilterSchema = S.String.pipe(
-  S.check(S.makeFilter<string>((s) => 
-    /^[a-zA-Z0-9_/-]*$/.test(s) ? undefined : 'Invalid folder path'
-  ))
+  S.check(S.makeFilter<string>(s => /^[a-zA-Z0-9_/-]*$/.test(s) ? undefined : 'Invalid folder path')),
 );
 
 const RecordsQuerySchema = S.toStandardSchemaV1(S.Struct({
-  "filter[type]": S.optional(S.Union([
-    S.Literal("published"),
-    S.Literal("unpublished"),
-    S.Literal("all"),
+  'filter[type]': S.optional(S.Union([
+    S.Literal('published'),
+    S.Literal('unpublished'),
+    S.Literal('all'),
   ])),
-  "filter[folder]": S.optional(S.String),
-  "filter[depth]": S.optional(S.NumberFromString.pipe(
-    S.check(S.makeFilter<number>((n) => n >= 1 ? undefined : 'Depth must be at least 1'))
+  'filter[folder]': S.optional(S.String),
+  'filter[depth]': S.optional(S.NumberFromString.pipe(
+    S.check(S.makeFilter<number>(n => n >= 1 ? undefined : 'Depth must be at least 1')),
   )),
 }));
 
 const UnpublishedQuerySchema = S.toStandardSchemaV1(S.Struct({
-  "filter[status]": S.optional(S.String),
-  "filter[folder]": S.optional(S.String),
+  'filter[status]': S.optional(S.String),
+  'filter[folder]': S.optional(S.String),
 }));
 
 // JSON:API request body schemas
 const DocumentCreateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
-    type: S.Literal("published"),
+    type: S.Literal('published'),
     id: S.optional(S.String),
     attributes: S.Record(S.String, S.Any),
   }),
@@ -173,7 +169,7 @@ const DocumentCreateBodySchema = S.toStandardSchemaV1(S.Struct({
 
 const UnpublishedCreateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
-    type: S.Literal("unpublished"),
+    type: S.Literal('unpublished'),
     id: S.optional(S.String),
     attributes: S.Record(S.String, S.Any),
   }),
@@ -181,7 +177,7 @@ const UnpublishedCreateBodySchema = S.toStandardSchemaV1(S.Struct({
 
 const UnpublishedUpdateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
-    type: S.Literal("unpublished"),
+    type: S.Literal('unpublished'),
     id: S.String,
     attributes: S.Record(S.String, S.Any),
   }),
@@ -189,7 +185,7 @@ const UnpublishedUpdateBodySchema = S.toStandardSchemaV1(S.Struct({
 
 const UnpublishBodySchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
-    type: S.Literal("unpublished"),
+    type: S.Literal('unpublished'),
     attributes: S.Struct({
       status: S.String,
     }),
@@ -198,7 +194,7 @@ const UnpublishBodySchema = S.toStandardSchemaV1(S.Struct({
 
 const RevisionCreateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: S.Struct({
-    type: S.Literal("revision"),
+    type: S.Literal('revision'),
     id: S.optional(S.String),
     attributes: S.Record(S.String, S.Any),
   }),
@@ -207,37 +203,37 @@ const RevisionCreateBodySchema = S.toStandardSchemaV1(S.Struct({
 const RefSchema = S.toStandardSchemaV1(S.Struct({
   id: S.String,
   type: S.Union([
-    S.Literal("document"),
-    S.Literal("unpublished"),
-    S.Literal("revision"),
+    S.Literal('document'),
+    S.Literal('unpublished'),
+    S.Literal('revision'),
   ]),
 }));
 
 // Atomic operation schemas
 const AddUnpublishedOpSchema = S.toStandardSchemaV1(S.Struct({
-  op: S.Literal("add"),
+  op: S.Literal('add'),
   data: S.Struct({
-    type: S.Literal("unpublished"),
+    type: S.Literal('unpublished'),
     id: S.optional(S.String),
     attributes: S.Record(S.String, S.Any),
   }),
 }));
 
 const AddDocumentOpSchema = S.toStandardSchemaV1(S.Struct({
-  op: S.Literal("add"),
+  op: S.Literal('add'),
   data: S.Struct({
-    type: S.Literal("published"),
+    type: S.Literal('published'),
     id: S.optional(S.String),
     attributes: S.Record(S.String, S.Any),
   }),
 }));
 
 const StateTransitionOpSchema = S.toStandardSchemaV1(S.Struct({
-  op: S.Literal("update"),
-  href: S.Union([S.Literal("/publish"), S.Literal("/unpublish")]),
+  op: S.Literal('update'),
+  href: S.Union([S.Literal('/publish'), S.Literal('/unpublish')]),
   ref: RefSchema,
   data: S.optional(S.Struct({
-    type: S.Literal("unpublished"),
+    type: S.Literal('unpublished'),
     attributes: S.Struct({
       status: S.String,
     }),
@@ -245,16 +241,16 @@ const StateTransitionOpSchema = S.toStandardSchemaV1(S.Struct({
 }));
 
 const UpdateUnpublishedOpSchema = S.toStandardSchemaV1(S.Struct({
-  op: S.Literal("update"),
+  op: S.Literal('update'),
   data: S.Struct({
-    type: S.Literal("unpublished"),
+    type: S.Literal('unpublished'),
     id: S.String,
     attributes: S.Record(S.String, S.Any),
   }),
 }));
 
 const RemoveOpSchema = S.toStandardSchemaV1(S.Struct({
-  op: S.Literal("remove"),
+  op: S.Literal('remove'),
   ref: RefSchema,
 }));
 
@@ -267,7 +263,7 @@ const AtomicOperationSchema = S.Union([
 ]);
 
 const OperationsSchema = S.toStandardSchemaV1(S.Struct({
-  "atomic:operations": S.Array(AtomicOperationSchema),
+  'atomic:operations': S.Array(AtomicOperationSchema),
 }));
 
 // Decoders
@@ -291,38 +287,38 @@ type UpdateUnpublishedOp = S.Schema.Type<typeof UpdateUnpublishedOpSchema>;
 type RemoveOp = S.Schema.Type<typeof RemoveOpSchema>;
 
 export function buildJsonApi(options: DocumentsApiOptions) {
-  const { repo, onError, basePath = "" } = options;
+  const { repo, onError, basePath = '' } = options;
 
   return {
     async fetch(request: Request): Promise<Response> {
       const url = new URL(request.url);
       let path = url.pathname.substring(basePath.length);
-      if (path.startsWith("/")) path = path.substring(1);
-      if (path.endsWith("/")) path = path.slice(0, -1);
+      if (path.startsWith('/')) path = path.substring(1);
+      if (path.endsWith('/')) path = path.slice(0, -1);
 
       // Root endpoint - list available endpoints
-      if (path === "" && request.method === "GET") {
+      if (path === '' && request.method === 'GET') {
         return json({
           data: {
             // TODO: Root endpoint - list available endpoints
-            type: "endpoints",
-            id: "documents-api",
+            type: 'endpoints',
+            id: 'documents-api',
             attributes: {
               endpoints: [
-                "records",
-                "record-summaries",
-                "published",
-                "unpublished",
-                "unpublished-summaries",
-                "revisions",
-                "operations",
+                'records',
+                'record-summaries',
+                'published',
+                'unpublished',
+                'unpublished-summaries',
+                'revisions',
+                'operations',
               ],
             },
           },
         });
       }
 
-      const pathParts = path.split("/");
+      const pathParts = path.split('/');
       const resource = pathParts[0];
       const key = pathParts[1] ? decodeURIComponent(pathParts[1]) : undefined;
       const action = pathParts[2];
@@ -331,17 +327,19 @@ export function buildJsonApi(options: DocumentsApiOptions) {
 
       const listFullRecords = async () => {
         const parsed = decodeRecordsQuery(queryParams);
-        const type = parsed["filter[type]"] === 'all' ? undefined : (parsed["filter[type]"] ?? 'published');
-        const folder = parsed["filter[folder]"] ?? '';
-        const depth = parsed["filter[depth]"] ?? 1;
-        
-        const allResults: Array<{ type: string; key: string; [key: string]: unknown }> = [];
-        for await (const result of repo.listRecords({
-          pagination: parsePaginationQuery(queryParams),
-          folder,
-          type: type as 'published' | 'unpublished' | undefined,
-          depth
-        })) {
+        const type = parsed['filter[type]'] === 'all' ? undefined : (parsed['filter[type]'] ?? 'published');
+        const folder = parsed['filter[folder]'] ?? '';
+        const depth = parsed['filter[depth]'] ?? 1;
+
+        const allResults: Array<{ type: string, key: string, [key: string]: unknown }> = [];
+        for await (
+          const result of repo.listRecords({
+            pagination: parsePaginationQuery(queryParams),
+            folder,
+            type: type as 'published' | 'unpublished' | undefined,
+            depth,
+          })
+        ) {
           if (Result.isFailure(result)) {
             return respondError(result);
           }
@@ -350,11 +348,11 @@ export function buildJsonApi(options: DocumentsApiOptions) {
 
         console.log('Fetched records:', allResults);
 
-        const transformedResults = allResults.map((entry) => {
+        const transformedResults = allResults.map(entry => {
           switch (entry.type) {
-            case "published":
+            case 'published':
               return documentToJsonApi(entry as Parameters<typeof documentToJsonApi>[0]);
-            case "unpublished":
+            case 'unpublished':
               return unpublishedToJsonApi(entry as Parameters<typeof unpublishedToJsonApi>[0]);
             default:
               throw new Error(`Unknown entry type: ${entry.type}`);
@@ -362,21 +360,23 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         });
 
         return json({ data: transformedResults });
-      }
+      };
 
       const listRecordSummaries = async () => {
         const parsed = decodeRecordsQuery(queryParams);
-        const type = parsed["filter[type]"] === 'all' ? undefined : (parsed["filter[type]"] ?? 'published');
-        const folder = parsed["filter[folder]"] ?? '';
-        const depth = parsed["filter[depth]"] ?? 1;
-        
-        const allResults: Array<{ type: string; key: string; [key: string]: unknown }> = [];
-        for await (const result of repo.listRecordSummaries({
-          pagination: parsePaginationQuery(queryParams),
-          folder,
-          type: type as 'published' | 'unpublished' | undefined,
-          depth
-        })) {
+        const type = parsed['filter[type]'] === 'all' ? undefined : (parsed['filter[type]'] ?? 'published');
+        const folder = parsed['filter[folder]'] ?? '';
+        const depth = parsed['filter[depth]'] ?? 1;
+
+        const allResults: Array<{ type: string, key: string, [key: string]: unknown }> = [];
+        for await (
+          const result of repo.listRecordSummaries({
+            pagination: parsePaginationQuery(queryParams),
+            folder,
+            type: type as 'published' | 'unpublished' | undefined,
+            depth,
+          })
+        ) {
           if (Result.isFailure(result)) {
             return respondError(result);
           }
@@ -385,31 +385,35 @@ export function buildJsonApi(options: DocumentsApiOptions) {
 
         console.log('Fetched record summaries:', allResults);
 
-        const transformedResults = allResults.map((entry) => {
+        const transformedResults = allResults.map(entry => {
           switch (entry.type) {
-            case "published":
-              return documentSummaryToJsonApi({ ...entry, type: "published-summary" } as Parameters<typeof documentSummaryToJsonApi>[0]);
-            case "unpublished":
-              return unpublishedSummaryToJsonApi({ ...entry, type: "unpublished-summary" } as Parameters<typeof unpublishedSummaryToJsonApi>[0]);
+            case 'published':
+              return documentSummaryToJsonApi(
+                { ...entry, type: 'published-summary' } as Parameters<typeof documentSummaryToJsonApi>[0],
+              );
+            case 'unpublished':
+              return unpublishedSummaryToJsonApi(
+                { ...entry, type: 'unpublished-summary' } as Parameters<typeof unpublishedSummaryToJsonApi>[0],
+              );
             default:
               throw new Error(`Unknown entry type: ${entry.type}`);
           }
         });
 
         return json({ data: transformedResults });
-      }
+      };
 
       // ===== RECORDS =====
-      if (resource === "records" && request.method === "GET") {
+      if (resource === 'records' && request.method === 'GET') {
         return listFullRecords();
       }
 
-      if (resource === "record-summaries" && request.method === "GET") {
+      if (resource === 'record-summaries' && request.method === 'GET') {
         return listRecordSummaries();
       }
 
       // ===== DOCUMENTS (PUBLISHED) =====
-      if (resource === "published" && request.method === "GET" && key) {
+      if (resource === 'published' && request.method === 'GET' && key) {
         return respondResource(
           await firstResult(repo.getDocument(key)),
           documentToJsonApi,
@@ -417,10 +421,10 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       }
 
       if (
-        resource === "published" &&
-        action === "unpublish" &&
-        request.method === "POST" &&
-        key
+        resource === 'published'
+        && action === 'unpublish'
+        && request.method === 'POST'
+        && key
       ) {
         const body = await request.json();
         const { data } = decodeUnpublishBody(body);
@@ -430,10 +434,10 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         );
       }
 
-      if (resource === "published" && request.method === "POST") {
+      if (resource === 'published' && request.method === 'POST') {
         const body = await request.json();
         console.log(
-          "Received document creation request:",
+          'Received document creation request:',
           JSON.stringify(body, null, 2),
         );
         const { data } = decodeDocumentCreateBody(body);
@@ -448,7 +452,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         );
       }
 
-      if (resource === "published" && request.method === "PATCH" && key) {
+      if (resource === 'published' && request.method === 'PATCH' && key) {
         const body = await request.json();
         const { data } = decodeDocumentCreateBody(body);
         const updateData = {
@@ -461,11 +465,11 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         );
       }
 
-      if (resource === "published" && request.method === "DELETE" && key) {
+      if (resource === 'published' && request.method === 'DELETE' && key) {
         return respondVoid(await firstResult(repo.deleteDocument(key)));
       }
 
-      if (resource === "unpublished" && request.method === "GET" && key) {
+      if (resource === 'unpublished' && request.method === 'GET' && key) {
         return respondResource(
           await firstResult(repo.getUnpublished(key)),
           unpublishedToJsonApi,
@@ -473,10 +477,10 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       }
 
       if (
-        resource === "unpublished" &&
-        action === "publish" &&
-        request.method === "POST" &&
-        key
+        resource === 'unpublished'
+        && action === 'publish'
+        && request.method === 'POST'
+        && key
       ) {
         return respondResource(
           await firstResult(repo.publish(key)),
@@ -484,7 +488,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         );
       }
 
-      if (resource === "unpublished" && request.method === "POST") {
+      if (resource === 'unpublished' && request.method === 'POST') {
         const body = await request.json();
         const { data } = decodeUnpublishedCreateBody(body);
         const createData = unpublishedCreateFromJsonApi({
@@ -498,7 +502,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         );
       }
 
-      if (resource === "unpublished" && request.method === "PATCH" && key) {
+      if (resource === 'unpublished' && request.method === 'PATCH' && key) {
         const body = await request.json();
         const { data: bodyData } = decodeUnpublishedUpdateBody(body);
         const updateData = unpublishedUpdateFromJsonApi({
@@ -512,12 +516,12 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         );
       }
 
-      if (resource === "unpublished" && request.method === "DELETE" && key) {
+      if (resource === 'unpublished' && request.method === 'DELETE' && key) {
         return respondVoid(await firstResult(repo.deleteUnpublished(key)));
       }
 
       // ===== REVISIONS =====
-      if (resource === "revisions" && request.method === "POST") {
+      if (resource === 'revisions' && request.method === 'POST') {
         const body = await request.json();
         const { data } = decodeRevisionCreateBody(body);
         const createData = revisionCreateFromJsonApi({
@@ -532,10 +536,10 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       }
 
       if (
-        resource === "revisions" &&
-        request.method === "GET" &&
-        key &&
-        !action
+        resource === 'revisions'
+        && request.method === 'GET'
+        && key
+        && !action
       ) {
         const generator = repo.listRevisions(key, {
           pagination: parsePaginationQuery(queryParams),
@@ -558,10 +562,10 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       }
 
       if (
-        resource === "revisions" &&
-        request.method === "GET" &&
-        key &&
-        action
+        resource === 'revisions'
+        && request.method === 'GET'
+        && key
+        && action
       ) {
         return respondResource(
           await firstResult(repo.getRevision(key, action)),
@@ -570,19 +574,19 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       }
 
       // ===== ATOMIC OPERATIONS =====
-      if (resource === "operations" && request.method === "POST") {
+      if (resource === 'operations' && request.method === 'POST') {
         const body = await request.json();
         const parsedBody = decodeOperations(body);
 
-        const atomicOperations = parsedBody["atomic:operations"].map(
+        const atomicOperations = parsedBody['atomic:operations'].map(
           async (operation: AtomicOperation) => {
             let result: LaikaResult<unknown>;
             let transformer: ((data: unknown) => JsonApiResource) | null = null;
 
-            if (operation.op === "add") {
+            if (operation.op === 'add') {
               if (
-                "data" in operation &&
-                operation.data.type === "unpublished"
+                'data' in operation
+                && operation.data.type === 'unpublished'
               ) {
                 const op = operation as AddUnpublishedOp;
                 const createData = unpublishedCreateFromJsonApi({
@@ -593,8 +597,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                 result = await firstResult(repo.createUnpublished(createData));
                 transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
               } else if (
-                "data" in operation &&
-                operation.data.type === "published"
+                'data' in operation
+                && operation.data.type === 'published'
               ) {
                 const op = operation as AddDocumentOp;
                 const createData = documentCreateFromJsonApi({
@@ -605,34 +609,40 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                 result = await firstResult(repo.createDocument(createData));
                 transformer = documentToJsonApi as (data: unknown) => JsonApiResource;
               } else {
-                result = Result.fail(new BadRequestError(
-                  `Cannot add type: ${(operation as { data?: { type?: string } }).data?.type}`,
-                ));
+                result = Result.fail(
+                  new BadRequestError(
+                    `Cannot add type: ${(operation as { data?: { type?: string } }).data?.type}`,
+                  ),
+                );
               }
               return { op: result, operation, transformer };
             }
 
-            if (operation.op === "update") {
-              if ("href" in operation && "ref" in operation) {
+            if (operation.op === 'update') {
+              if ('href' in operation && 'ref' in operation) {
                 // State transition operation
                 const { href, ref, data } = operation as StateTransitionOp;
                 switch (href) {
-                  case "/publish":
-                    if (ref.type === "unpublished") {
+                  case '/publish':
+                    if (ref.type === 'unpublished') {
                       result = await firstResult(repo.publish(ref.id));
                       transformer = documentToJsonApi as (data: unknown) => JsonApiResource;
                     } else {
-                      result = Result.fail(new BadRequestError(
-                        `Cannot publish ${ref.type}`,
-                      ));
+                      result = Result.fail(
+                        new BadRequestError(
+                          `Cannot publish ${ref.type}`,
+                        ),
+                      );
                     }
                     break;
                   case '/unpublish':
-                    if (ref.type === "document") {
+                    if (ref.type === 'document') {
                       if (!data) {
-                        result = Result.fail(new BadRequestError(
-                          `Missing data for unpublish operation`,
-                        ));
+                        result = Result.fail(
+                          new BadRequestError(
+                            `Missing data for unpublish operation`,
+                          ),
+                        );
                         break;
                       }
                       result = await firstResult(repo.unpublish(
@@ -641,17 +651,21 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                       ));
                       transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
                     } else {
-                      result = Result.fail(new BadRequestError(
-                        `Cannot unpublish ${ref.type}`,
-                      ));
+                      result = Result.fail(
+                        new BadRequestError(
+                          `Cannot unpublish ${ref.type}`,
+                        ),
+                      );
                     }
                     break;
                   default:
-                    result = Result.fail(new BadRequestError(
-                      `Unknown action: ${href}`,
-                    ));
+                    result = Result.fail(
+                      new BadRequestError(
+                        `Unknown action: ${href}`,
+                      ),
+                    );
                 }
-              } else if ("data" in operation) {
+              } else if ('data' in operation) {
                 // Update content operation
                 const op = operation as UpdateUnpublishedOp;
                 const updateData = unpublishedUpdateFromJsonApi({
@@ -662,33 +676,39 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                 result = await firstResult(repo.updateUnpublished(updateData));
                 transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
               } else {
-                result = Result.fail(new BadRequestError(
-                  "Invalid update operation",
-                ));
+                result = Result.fail(
+                  new BadRequestError(
+                    'Invalid update operation',
+                  ),
+                );
               }
               return { op: result, operation, transformer };
             }
 
-            if (operation.op === "remove") {
+            if (operation.op === 'remove') {
               const { ref } = operation as RemoveOp;
-              if (ref.type === "document") {
+              if (ref.type === 'document') {
                 result = await firstResult(repo.deleteDocument(ref.id));
                 transformer = null;
-              } else if (ref.type === "unpublished") {
+              } else if (ref.type === 'unpublished') {
                 result = await firstResult(repo.deleteUnpublished(ref.id));
                 transformer = null;
               } else {
-                result = Result.fail(new BadRequestError(
-                  `Cannot remove ${ref.type}`,
-                ));
+                result = Result.fail(
+                  new BadRequestError(
+                    `Cannot remove ${ref.type}`,
+                  ),
+                );
               }
               return { op: result, operation, transformer };
             }
 
             return {
-              op: Result.fail(new BadRequestError(
-                `Unsupported operation: ${(operation as { op?: string }).op}`,
-              )),
+              op: Result.fail(
+                new BadRequestError(
+                  `Unsupported operation: ${(operation as { op?: string }).op}`,
+                ),
+              ),
               operation,
               transformer: null,
             };
@@ -697,13 +717,13 @@ export function buildJsonApi(options: DocumentsApiOptions) {
 
         const atomicsSettled = await Promise.allSettled(atomicOperations);
 
-        const atomicResults = atomicsSettled.map((promiseResult) => {
-          if (promiseResult.status === "rejected") {
+        const atomicResults = atomicsSettled.map(promiseResult => {
+          if (promiseResult.status === 'rejected') {
             return {
               errors: [
                 {
-                  status: "500",
-                  title: "Operation Failed",
+                  status: '500',
+                  title: 'Operation Failed',
                   detail: promiseResult.reason.message,
                 },
               ],
@@ -717,8 +737,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
             return {
               errors: [
                 {
-                  status: "400",
-                  title: "Operation Failed",
+                  status: '400',
+                  title: 'Operation Failed',
                   detail: failure.message,
                 },
               ],
@@ -726,7 +746,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           }
 
           // For remove operations, return meta instead of data
-          if (operation.op === "remove") {
+          if (operation.op === 'remove') {
             const removeOp = operation as RemoveOp;
             return {
               meta: {
@@ -745,14 +765,14 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         });
 
         return json({
-          "atomic:results": atomicResults,
+          'atomic:results': atomicResults,
         });
       }
 
       options.logger?.debug('Documents endpoint not found:', path);
-      const error = new NotFoundError("Endpoint not found")
+      const error = new NotFoundError('Endpoint not found');
 
-      console.log('error', Result.fail(error))
+      console.log('error', Result.fail(error));
 
       return respondError(
         Result.fail(error),

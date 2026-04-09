@@ -1,45 +1,50 @@
-import { Atom, AtomSummary, StorageRepository, StorageObject, Folder, StorageObjectCreate, StorageObjectUpdate, FolderCreate } from "@laikacms/storage";
 import {
   ErrorCodeToStatusMap,
   ErrorStatus,
   InternalError,
   InvalidData,
-  LaikaResult,
   LaikaError,
+  LaikaResult,
   NotFoundError,
-} from "@laikacms/core";
-import * as Result from "effect/Result";
-import * as S from "effect/Schema";
+} from '@laikacms/core';
+import { errorToJsonApiMapper, JsonApiError, JsonApiResponse } from '@laikacms/json-api';
 import {
-  storageObjectToJsonApi,
-  folderToJsonApi,
-  storageObjectCreateFromJsonApi,
-  storageObjectUpdateFromJsonApi,
-  folderCreateFromJsonApi,
-  atomToJsonApi,
+  Atom,
+  AtomSummary,
+  Folder,
+  FolderCreate,
+  StorageObject,
+  StorageObjectCreate,
+  StorageObjectUpdate,
+  StorageRepository,
+} from '@laikacms/storage';
+import * as Result from 'effect/Result';
+import * as S from 'effect/Schema';
+import {
   atomSummaryToJsonApi,
-  parsePaginationQuery,
+  atomToJsonApi,
   buildPaginationLinks,
+  folderCreateFromJsonApi,
+  folderToJsonApi,
+  type JsonApiAtom,
+  type JsonApiAtomSummary,
   type JsonApiCollectionResponse,
+  type JsonApiFolder,
+  type JsonApiFolderCreate,
   type JsonApiResource,
   type JsonApiStorageObject,
   type JsonApiStorageObjectCreate,
   type JsonApiStorageObjectUpdate,
-  type JsonApiFolder,
-  type JsonApiFolderCreate,
-  type JsonApiAtom,
-  type JsonApiAtomSummary,
-} from "./jsonapi.js";
-import {
-  errorToJsonApiMapper,
-  JsonApiError,
-  JsonApiResponse,
-} from "@laikacms/json-api";
+  parsePaginationQuery,
+  storageObjectCreateFromJsonApi,
+  storageObjectToJsonApi,
+  storageObjectUpdateFromJsonApi,
+} from './jsonapi.js';
 
 type AllJsonApiResponses = JsonApiResponse | JsonApiCollectionResponse | JsonApiError;
 
 interface AtomicResults {
-  "atomic:results": Array<{ data?: JsonApiResource; errors?: JsonApiError["errors"] } | undefined>;
+  'atomic:results': Array<{ data?: JsonApiResource, errors?: JsonApiError['errors'] } | undefined>;
 }
 
 const json = <
@@ -51,15 +56,14 @@ const json = <
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      "Content-Type": "application/vnd.api+json",
+      'Content-Type': 'application/vnd.api+json',
     },
   });
 };
 
 // JSON:API error response
 function respondError(result: LaikaResult<unknown>, status: ErrorStatus = 400) {
-  if (Result.isSuccess(result))
-    throw new InternalError("respondError called with success result");
+  if (Result.isSuccess(result)) throw new InternalError('respondError called with success result');
   return json(errorToJsonApiMapper(result), status);
 }
 
@@ -91,8 +95,8 @@ async function respondCollectionWithConverter<T, R extends JsonApiResource>(
   // For cursor-based pagination, extract cursors from items if available
   if (items.length > 0) {
     // Assuming items have an 'id' or 'key' property that can be used as cursor
-    const firstItem = items[0] as { id?: string; key?: string };
-    const lastItem = items[items.length - 1] as { id?: string; key?: string };
+    const firstItem = items[0] as { id?: string, key?: string };
+    const lastItem = items[items.length - 1] as { id?: string, key?: string };
     firstCursor = firstItem.id || firstItem.key;
     lastCursor = lastItem.id || lastItem.key;
   }
@@ -107,7 +111,7 @@ async function respondCollectionWithConverter<T, R extends JsonApiResource>(
   );
 
   const response: JsonApiCollectionResponse = {
-    data: items.map((item) => converter(item)),
+    data: items.map(item => converter(item)),
     links,
     meta: {
       page: {
@@ -124,7 +128,7 @@ async function respondCollectionWithConverter<T, R extends JsonApiResource>(
 async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<LaikaResult<T>> {
   const { value, done } = await gen.next();
   if (done) {
-    return Result.fail(new NotFoundError("No result returned"));
+    return Result.fail(new NotFoundError('No result returned'));
   }
   return value;
 }
@@ -167,27 +171,27 @@ const StorageObjectUpdateBodySchema = S.toStandardSchemaV1(S.Struct({
 
 // Atomic operations schemas
 const RemoveOperationSchema = S.toStandardSchemaV1(S.Struct({
-  op: S.Literal("remove"),
+  op: S.Literal('remove'),
   ref: S.Struct({
-    type: S.Union([S.Literal("object"), S.Literal("folder"), S.Literal("atom")]),
+    type: S.Union([S.Literal('object'), S.Literal('folder'), S.Literal('atom')]),
     id: S.String,
   }),
 }));
 
 const AddOperationSchema = S.toStandardSchemaV1(S.Struct({
-  op: S.Literal("add"),
+  op: S.Literal('add'),
   data: S.Union([JsonApiStorageObjectCreateSchema, JsonApiFolderCreateSchema]),
 }));
 
 const UpdateOperationSchema = S.toStandardSchemaV1(S.Struct({
-  op: S.Literal("update"),
+  op: S.Literal('update'),
   data: JsonApiStorageObjectUpdateSchema,
 }));
 
 const AtomicOperationSchema = S.Union([RemoveOperationSchema, AddOperationSchema, UpdateOperationSchema]);
 
 const AtomicOperationsRequestSchema = S.toStandardSchemaV1(S.Struct({
-  "atomic:operations": S.Array(AtomicOperationSchema),
+  'atomic:operations': S.Array(AtomicOperationSchema),
 }));
 
 type StorageObjectCreateBody = S.Schema.Type<typeof StorageObjectCreateBodySchema>;
@@ -203,7 +207,7 @@ interface StorageApiOptions {
 }
 
 export function buildJsonApi(options: StorageApiOptions) {
-  const { repo, onError, basePath = "" } = options;
+  const { repo, onError, basePath = '' } = options;
 
   // Create decoders
   const decodeStorageObjectCreateBody = S.decodeUnknownSync(StorageObjectCreateBodySchema);
@@ -214,38 +218,38 @@ export function buildJsonApi(options: StorageApiOptions) {
     async fetch(request: Request): Promise<Response> {
       const url = new URL(request.url);
       let path = url.pathname.substring(basePath.length);
-      if (path.startsWith("/")) path = path.substring(1);
-      if (path.endsWith("/")) path = path.slice(0, -1);
+      if (path.startsWith('/')) path = path.substring(1);
+      if (path.endsWith('/')) path = path.slice(0, -1);
 
       // Root endpoint - list available endpoints
-      if (path === "" && request.method === "GET") {
+      if (path === '' && request.method === 'GET') {
         return json({
           data: {
-            type: "api-info",
-            id: "storage",
+            type: 'api-info',
+            id: 'storage',
             attributes: {
-              name: "Storage API",
-              version: "1.0.0",
+              name: 'Storage API',
+              version: '1.0.0',
               endpoints: [
-                { path: "/atoms/{key}", methods: ["GET"], description: "List atoms in a folder" },
-                { path: "/objects/{key}", methods: ["POST", "PATCH"], description: "Create or update storage objects" },
-                { path: "/operations", methods: ["POST"], description: "Atomic operations (add, update, remove)" },
+                { path: '/atoms/{key}', methods: ['GET'], description: 'List atoms in a folder' },
+                { path: '/objects/{key}', methods: ['POST', 'PATCH'], description: 'Create or update storage objects' },
+                { path: '/operations', methods: ['POST'], description: 'Atomic operations (add, update, remove)' },
               ],
             },
           },
         });
       }
 
-      const [resource, key, operation] = path.split("/");
+      const [resource, key, operation] = path.split('/');
 
       const listFullAtoms = async () => {
-        console.log("Listing atoms for collection", key);
+        console.log('Listing atoms for collection', key);
         const listOptions = {
           depth: 1,
           pagination: {
             perPage: 10,
           },
-        }
+        };
         let results: Atom[] = [];
         for await (const listOfAtoms of repo.listAtoms(key, listOptions)) {
           if (Result.isFailure(listOfAtoms)) {
@@ -258,16 +262,16 @@ export function buildJsonApi(options: StorageApiOptions) {
           results = results.concat([...listOfAtoms.success]);
         }
         return respondCollectionWithConverter(request, results, atomToJsonApi, request.url);
-      }
+      };
 
       const listAtomSummaries = async () => {
-        console.log("Listing atom summaries for collection", key);
+        console.log('Listing atom summaries for collection', key);
         const listOptions = {
           depth: 1,
           pagination: {
             perPage: 10,
           },
-        }
+        };
         let results: AtomSummary[] = [];
         for await (const listOfAtoms of repo.listAtomSummaries(key, listOptions)) {
           if (Result.isFailure(listOfAtoms)) {
@@ -280,19 +284,18 @@ export function buildJsonApi(options: StorageApiOptions) {
           results = results.concat([...listOfAtoms.success]);
         }
         return respondCollectionWithConverter(request, results, atomSummaryToJsonApi, request.url);
-      }
+      };
 
-      if (resource === "atoms" && request.method === "GET") return listFullAtoms();
-      else if (resource === "atom-summaries" && request.method === "GET") return listAtomSummaries();
-
-      else if (resource === "objects" && request.method === "POST") {
+      if (resource === 'atoms' && request.method === 'GET') return listFullAtoms();
+      else if (resource === 'atom-summaries' && request.method === 'GET') return listAtomSummaries();
+      else if (resource === 'objects' && request.method === 'POST') {
         let body: StorageObjectCreateBody;
         try {
           const rawBody = await request.json();
           body = decodeStorageObjectCreateBody(rawBody);
         } catch {
           return respondError(
-            Result.fail(new InvalidData("Invalid request body")),
+            Result.fail(new InvalidData('Invalid request body')),
             400,
           );
         }
@@ -308,21 +311,21 @@ export function buildJsonApi(options: StorageApiOptions) {
         );
       }
 
-      if (path.startsWith("objects") && request.method === "PATCH") {
-        const [_, pathKey] = path.split("/");
+      if (path.startsWith('objects') && request.method === 'PATCH') {
+        const [_, pathKey] = path.split('/');
         let body: StorageObjectUpdateBody;
         try {
           const rawBody = await request.json();
           body = decodeStorageObjectUpdateBody(rawBody);
         } catch {
           return respondError(
-            Result.fail(new InvalidData("Invalid request body")),
+            Result.fail(new InvalidData('Invalid request body')),
             400,
           );
         }
         if (body.data.id !== pathKey) {
           return respondError(
-            Result.fail(new InvalidData("Key in URL does not match key in body")),
+            Result.fail(new InvalidData('Key in URL does not match key in body')),
             ErrorCodeToStatusMap[InvalidData.CODE],
           );
         }
@@ -336,21 +339,19 @@ export function buildJsonApi(options: StorageApiOptions) {
           result,
           storageObjectToJsonApi,
         );
-      }
-
-      else if (path === "operations" && request.method === "POST") {
+      } else if (path === 'operations' && request.method === 'POST') {
         let body: AtomicOperationsRequest;
         try {
           const rawBody = await request.json();
           body = decodeAtomicOperationsRequest(rawBody);
         } catch {
           return respondError(
-            Result.fail(new InvalidData("Invalid atomic operations request")),
+            Result.fail(new InvalidData('Invalid atomic operations request')),
             400,
           );
         }
 
-        type Ref = { key: string; type: string };
+        type Ref = { key: string, type: string };
         const removeOperations: [
           string,
           (ref: LaikaResult<Ref>) => void,
@@ -358,22 +359,20 @@ export function buildJsonApi(options: StorageApiOptions) {
         ][] = [];
 
         const remove = (key: string): Promise<LaikaResult<Ref>> =>
-          new Promise((resolve, reject) =>
-            removeOperations.push([key, resolve, reject]),
-          );
+          new Promise((resolve, reject) => removeOperations.push([key, resolve, reject]));
 
-        const atomicOperations = body["atomic:operations"]
+        const atomicOperations = body['atomic:operations']
           .map((operation: AtomicOperation) => {
             switch (operation.op) {
-              case "add":
-                if (operation.data.type === "object") {
+              case 'add':
+                if (operation.data.type === 'object') {
                   const createData: StorageObjectCreate = {
                     key: operation.data.id,
                     type: 'object',
                     content: operation.data.attributes.content || {},
                   };
                   return firstResult(repo.createObject(createData)).then(result => ({ op: result, operation }));
-                } else if (operation.data.type === "folder") {
+                } else if (operation.data.type === 'folder') {
                   const createData: FolderCreate = {
                     key: operation.data.id,
                     type: 'folder',
@@ -384,8 +383,8 @@ export function buildJsonApi(options: StorageApiOptions) {
                   op: Result.fail(new InvalidData(`Unsupported add type`)),
                   operation,
                 });
-              case "update":
-                if (operation.data.type === "object") {
+              case 'update':
+                if (operation.data.type === 'object') {
                   const updateData: StorageObjectUpdate = {
                     key: operation.data.id,
                     type: 'object',
@@ -397,24 +396,26 @@ export function buildJsonApi(options: StorageApiOptions) {
                   op: Result.fail(new InvalidData(`Unsupported update type`)),
                   operation,
                 });
-              case "remove":
-                return remove(operation.ref.id).then((op) => ({
+              case 'remove':
+                return remove(operation.ref.id).then(op => ({
                   op,
                   operation,
                 }));
             }
           });
 
-        for await (const atoms of repo.removeAtoms(
-          removeOperations.map(([key]) => key),
-        )) {
+        for await (
+          const atoms of repo.removeAtoms(
+            removeOperations.map(([key]) => key),
+          )
+        ) {
           if (Result.isFailure(atoms)) return respondError(atoms);
           const removedAtoms = atoms.success;
           for (const atom of removedAtoms) {
             const found = removeOperations.find(([key]) => key === atom);
             if (found) {
               const [, resolve] = found;
-              resolve(Result.succeed({ type: "atom", key: atom }));
+              resolve(Result.succeed({ type: 'atom', key: atom }));
             }
           }
         }
@@ -423,17 +424,17 @@ export function buildJsonApi(options: StorageApiOptions) {
 
         const atomicResults: Array<{ data: JsonApiResource }> = [];
         for (const promiseResult of atomicsSettled) {
-          if (promiseResult.status === "rejected") {
+          if (promiseResult.status === 'rejected') {
             // Skip rejected promises for now
             continue;
           }
           const value = promiseResult.value;
           if (Result.isSuccess(value.op)) {
-            if (value.operation.op === "add" || value.operation.op === "update") {
+            if (value.operation.op === 'add' || value.operation.op === 'update') {
               const data = value.op.success;
               if (typeof data === 'object' && data !== null && 'type' in data) {
                 const typedData = data as { type: string };
-                if (typedData.type === "object") {
+                if (typedData.type === 'object') {
                   atomicResults.push({ data: storageObjectToJsonApi(data as StorageObject) });
                 } else {
                   atomicResults.push({ data: folderToJsonApi(data as Folder) });
@@ -445,17 +446,15 @@ export function buildJsonApi(options: StorageApiOptions) {
         }
 
         return json({
-          "atomic:results": atomicResults,
+          'atomic:results': atomicResults,
         });
-      }
-
-      else {
+      } else {
         options.logger?.debug('storage endpoint not found:', path);
         return respondError(
-          Result.fail(new NotFoundError("Storage endpoint not found")),
+          Result.fail(new NotFoundError('Storage endpoint not found')),
           404,
         );
       }
-    }
+    },
   };
 }

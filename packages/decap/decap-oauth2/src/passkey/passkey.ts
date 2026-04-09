@@ -105,10 +105,10 @@ export interface PasskeyCallbacks {
   consumeChallenge(challenge: string): Promise<StoredChallenge | null>;
 
   /** Get user by ID */
-  getUserById(userId: string): Promise<{ id: string; email: string; name?: string; } | null>;
+  getUserById(userId: string): Promise<{ id: string, email: string, name?: string } | null>;
 
   /** Get user by email */
-  getUserByEmail(email: string): Promise<{ id: string; email: string; name?: string; } | null>;
+  getUserByEmail(email: string): Promise<{ id: string, email: string, name?: string } | null>;
 
   /**
    * Store a pending passkey setup session (after password verification, before passkey registration).
@@ -120,7 +120,7 @@ export interface PasskeyCallbacks {
    * Get a pending passkey setup session.
    * Returns the userId if the session is valid and not expired, null otherwise.
    */
-  getPendingPasskeySetupSession(sessionId: string): Promise<{ userId: string; } | null>;
+  getPendingPasskeySetupSession(sessionId: string): Promise<{ userId: string } | null>;
 }
 
 /**
@@ -161,32 +161,32 @@ export interface PasskeyConfig {
  */
 export interface RegistrationOptions {
   publicKey: {
-    challenge: string; // base64url
+    challenge: string, // base64url
     rp: {
-      id: string;
-      name: string;
-    };
+      id: string,
+      name: string,
+    },
     user: {
-      id: string; // base64url
-      name: string;
-      displayName: string;
-    };
+      id: string, // base64url
+      name: string,
+      displayName: string,
+    },
     pubKeyCredParams: Array<{
-      type: 'public-key';
-      alg: number;
-    }>;
-    timeout: number;
-    attestation: 'none' | 'indirect' | 'direct';
+      type: 'public-key',
+      alg: number,
+    }>,
+    timeout: number,
+    attestation: 'none' | 'indirect' | 'direct',
     authenticatorSelection: {
-      authenticatorAttachment?: 'platform' | 'cross-platform';
-      residentKey: 'required' | 'preferred' | 'discouraged';
-      userVerification: 'required' | 'preferred' | 'discouraged';
-    };
+      authenticatorAttachment?: 'platform' | 'cross-platform',
+      residentKey: 'required' | 'preferred' | 'discouraged',
+      userVerification: 'required' | 'preferred' | 'discouraged',
+    },
     excludeCredentials: Array<{
-      type: 'public-key';
-      id: string; // base64url
-      transports?: Array<'usb' | 'nfc' | 'ble' | 'internal' | 'hybrid'>;
-    }>;
+      type: 'public-key',
+      id: string, // base64url
+      transports?: Array<'usb' | 'nfc' | 'ble' | 'internal' | 'hybrid'>,
+    }>,
   };
 }
 
@@ -275,8 +275,8 @@ export interface RegistrationResponse {
   rawId: string; // base64url
   type: 'public-key';
   response: {
-    clientDataJSON: string; // base64url
-    attestationObject: string; // base64url
+    clientDataJSON: string, // base64url
+    attestationObject: string, // base64url
   };
   authenticatorAttachment?: 'platform' | 'cross-platform';
 }
@@ -288,7 +288,7 @@ export async function verifyRegistration(
   response: RegistrationResponse,
   config: PasskeyConfig,
   credentialName?: string,
-): Promise<{ success: boolean; credentialId?: string; error?: string; }> {
+): Promise<{ success: boolean, credentialId?: string, error?: string }> {
   const { rpId, origin, callbacks } = config;
 
   try {
@@ -380,15 +380,15 @@ export async function verifyRegistration(
  */
 export interface AuthenticationOptions {
   publicKey: {
-    challenge: string; // base64url
-    rpId: string;
-    timeout: number;
-    userVerification: 'required' | 'preferred' | 'discouraged';
+    challenge: string, // base64url
+    rpId: string,
+    timeout: number,
+    userVerification: 'required' | 'preferred' | 'discouraged',
     allowCredentials?: Array<{
-      type: 'public-key';
-      id: string; // base64url
-      transports?: Array<'usb' | 'nfc' | 'ble' | 'internal' | 'hybrid'>;
-    }>;
+      type: 'public-key',
+      id: string, // base64url
+      transports?: Array<'usb' | 'nfc' | 'ble' | 'internal' | 'hybrid'>,
+    }>,
   };
 }
 
@@ -451,10 +451,10 @@ export interface AuthenticationResponse {
   rawId: string; // base64url
   type: 'public-key';
   response: {
-    clientDataJSON: string; // base64url
-    authenticatorData: string; // base64url
-    signature: string; // base64url
-    userHandle?: string; // base64url (user ID)
+    clientDataJSON: string, // base64url
+    authenticatorData: string, // base64url
+    signature: string, // base64url
+    userHandle?: string, // base64url (user ID)
   };
 }
 
@@ -464,7 +464,7 @@ export interface AuthenticationResponse {
 export async function verifyAuthentication(
   response: AuthenticationResponse,
   config: PasskeyConfig,
-): Promise<{ success: boolean; userId?: string; credentialId?: string; error?: string; }> {
+): Promise<{ success: boolean, userId?: string, credentialId?: string, error?: string }> {
   const { rpId, origin, callbacks } = config;
 
   try {
@@ -591,16 +591,16 @@ async function sha256(data: Uint8Array): Promise<Uint8Array> {
 interface ParsedAuthenticatorData {
   rpIdHash: Uint8Array;
   flags: {
-    userPresent: boolean;
-    userVerified: boolean;
-    attestedCredentialData: boolean;
-    extensionData: boolean;
+    userPresent: boolean,
+    userVerified: boolean,
+    attestedCredentialData: boolean,
+    extensionData: boolean,
   };
   signCount: number;
   attestedCredentialData?: {
-    aaguid: Uint8Array;
-    credentialId: Uint8Array;
-    publicKey: Uint8Array;
+    aaguid: Uint8Array,
+    credentialId: Uint8Array,
+    publicKey: Uint8Array,
   };
 }
 

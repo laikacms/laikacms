@@ -6,13 +6,13 @@
  * @returns Base64url-encoded hash
  */
 export async function sha512(plain: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(plain)
-  const hash = await crypto.subtle.digest('SHA-512', data)
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  const hash = await crypto.subtle.digest('SHA-512', data);
   return btoa(String.fromCharCode(...new Uint8Array(hash)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
-    .replace(/=/g, '')
+    .replace(/=/g, '');
 }
 
 /**
@@ -23,13 +23,13 @@ export async function sha512(plain: string): Promise<string> {
  * @returns Base64url-encoded hash
  */
 export async function sha256(plain: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(plain)
-  const hash = await crypto.subtle.digest('SHA-256', data)
+  const encoder = new TextEncoder();
+  const data = encoder.encode(plain);
+  const hash = await crypto.subtle.digest('SHA-256', data);
   return btoa(String.fromCharCode(...new Uint8Array(hash)))
     .replace(/\+/g, '-')
     .replace(/\//g, '_')
-    .replace(/=/g, '')
+    .replace(/=/g, '');
 }
 
 /**
@@ -39,9 +39,9 @@ export async function sha256(plain: string): Promise<string> {
  * @returns Raw hash bytes
  */
 export async function sha256Raw(data: string | ArrayBuffer): Promise<Uint8Array> {
-  const input = typeof data === 'string' ? new TextEncoder().encode(data).buffer : data
-  const hash = await crypto.subtle.digest('SHA-256', input)
-  return new Uint8Array(hash)
+  const input = typeof data === 'string' ? new TextEncoder().encode(data).buffer : data;
+  const hash = await crypto.subtle.digest('SHA-256', input);
+  return new Uint8Array(hash);
 }
 
 /**
@@ -51,7 +51,7 @@ export async function sha256Raw(data: string | ArrayBuffer): Promise<Uint8Array>
  * @returns Raw hash bytes
  */
 export async function sha512Raw(data: string | ArrayBuffer): Promise<Uint8Array> {
-  const input = typeof data === 'string' ? new TextEncoder().encode(data).buffer : data
-  const hash = await crypto.subtle.digest('SHA-512', input)
-  return new Uint8Array(hash)
+  const input = typeof data === 'string' ? new TextEncoder().encode(data).buffer : data;
+  const hash = await crypto.subtle.digest('SHA-512', input);
+  return new Uint8Array(hash);
 }

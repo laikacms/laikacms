@@ -66,12 +66,12 @@ export const backToLoginText = Symbol('backToLoginText');
 
 // Extended template variables type for logout pages
 type LogoutTemplateVariables = TemplateVariables & {
-  [loginUrl]?: string;
-  [logoHtml]?: string;
-  [pageTitle]?: string;
-  [title]?: string;
-  [description]?: string;
-  [backToLoginText]?: string;
+  [loginUrl]?: string,
+  [logoHtml]?: string,
+  [pageTitle]?: string,
+  [title]?: string,
+  [description]?: string,
+  [backToLoginText]?: string,
 };
 
 /**
@@ -165,7 +165,7 @@ export function renderLogoutSuccessPage(options: LogoutPageOptions): LogoutPageR
   const t = (options.messages ?? defaultMessages).logout;
   // Process custom logo (handles URL vs HTML)
   const processedLogo = processCustomLogo(options.customLogo);
-  
+
   const html = logoutSuccessTemplate({
     [messages]: options.messages ?? defaultMessages,
     [loginUrl]: options.loginUrl || DEFAULT_LOGIN_FALLBACK,
@@ -190,7 +190,7 @@ export function renderLogoutAllSuccessPage(options: LogoutPageOptions): LogoutPa
   const t = (options.messages ?? defaultMessages).logout;
   // Process custom logo (handles URL vs HTML)
   const processedLogo = processCustomLogo(options.customLogo);
-  
+
   const html = logoutAllSuccessTemplate({
     [messages]: options.messages ?? defaultMessages,
     [loginUrl]: options.loginUrl || DEFAULT_LOGIN_FALLBACK,

@@ -17,7 +17,8 @@
 
 ---
 
-API-first CMS designed to work with [Decap CMS](https://decapcms.org/) or your own UI. Swap storage backends without rewriting code.
+API-first CMS designed to work with [Decap CMS](https://decapcms.org/) or your own UI. Swap storage
+backends without rewriting code.
 
 ## Quick Start
 
@@ -51,13 +52,13 @@ export default {
 
 ## Packages
 
-| Layer | Packages |
-|-------|----------|
-| Domain | `@laikacms/storage`, `@laikacms/documents`, `@laikacms/assets` |
-| API | `@laikacms/storage-api`, `@laikacms/documents-api`, `@laikacms/assets-api` |
+| Layer          | Packages                                                                      |
+| -------------- | ----------------------------------------------------------------------------- |
+| Domain         | `@laikacms/storage`, `@laikacms/documents`, `@laikacms/assets`                |
+| API            | `@laikacms/storage-api`, `@laikacms/documents-api`, `@laikacms/assets-api`    |
 | Implementation | `@laikacms/storage-r2`, `@laikacms/storage-fs`, `@laikacms/documents-drizzle` |
-| Shared | `@laikacms/core`, `@laikacms/crypto`, `@laikacms/json-api` |
-| Decap | `@laikacms/decap-cms-backend-laika`, `@laikacms/decap-oauth2` |
+| Shared         | `@laikacms/core`, `@laikacms/crypto`, `@laikacms/json-api`                    |
+| Decap          | `@laikacms/decap-cms-backend-laika`, `@laikacms/decap-oauth2`                 |
 
 See [docs/packages.md](./docs/packages.md) for full list.
 

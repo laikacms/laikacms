@@ -1,9 +1,9 @@
 /**
  * File Sanitizer Types
- * 
+ *
  * Uses a WHITELIST approach - only explicitly supported file types are allowed.
  * Unknown or unsupported files will throw an error (unless in ignoreExtensions list).
- * 
+ *
  * IMPORTANT: This sanitizer takes a CONSERVATIVE approach:
  * - Only simple, well-understood formats are modified
  * - Complex formats that are hard to safely modify throw errors
@@ -14,9 +14,9 @@
  * File types that can be safely sanitized (simple chunk-based formats)
  */
 export type SanitizableFileType =
-  | 'png'   // Simple chunk-based format
-  | 'gif'   // Simple block-based format
-  | 'webp'  // Simple chunk-based format (RIFF container)
+  | 'png' // Simple chunk-based format
+  | 'gif' // Simple block-based format
+  | 'webp' // Simple chunk-based format (RIFF container)
   | 'jpeg'; // Marker-based format (strips EXIF/IPTC/XMP)
 
 /**
@@ -43,16 +43,16 @@ export interface SanitizeOptions {
    * @default 104857600
    */
   maxFileSize?: number;
-  
+
   /**
    * File extensions to ignore (pass through unchanged without sanitization).
    * Use this when you have other security measures in place for certain file types.
-   * 
+   *
    * Example: ['pdf', 'jpeg', 'jpg'] - these files will be returned unchanged
-   * 
+   *
    * WARNING: Use with caution - this bypasses security checks for
    * the specified file types.
-   * 
+   *
    * @default []
    */
   ignoreExtensions?: string[];
@@ -66,17 +66,17 @@ export interface SanitizeResult {
    * The sanitized file data
    */
   data: Uint8Array;
-  
+
   /**
    * Detected file type
    */
   fileType: SanitizableFileType | 'ignored';
-  
+
   /**
    * Metadata that was stripped (for logging/debugging)
    */
   strippedMetadata: StrippedMetadataInfo;
-  
+
   /**
    * Whether the file was passed through without modification (ignored)
    */
@@ -91,12 +91,12 @@ export interface StrippedMetadataInfo {
    * Whether any text metadata was found and stripped
    */
   hadTextMetadata: boolean;
-  
+
   /**
    * Whether any timestamp data was found and stripped
    */
   hadTimestamps: boolean;
-  
+
   /**
    * List of chunk/block types that were stripped (for debugging)
    */
@@ -111,12 +111,12 @@ export interface FileSanitizer {
    * The file type this sanitizer handles
    */
   readonly fileType: SanitizableFileType;
-  
+
   /**
    * Check if this sanitizer can handle the given data
    */
   canHandle(data: Uint8Array): boolean;
-  
+
   /**
    * Sanitize the file data
    * @throws {CorruptedFileError} if the file is corrupted
@@ -134,7 +134,7 @@ export const SAFE_PNG_CHUNKS = new Set([
   'PLTE', // Palette
   'IDAT', // Image data
   'IEND', // Image end
-  
+
   // Safe ancillary chunks (affect rendering)
   'tRNS', // Transparency
   'gAMA', // Gamma

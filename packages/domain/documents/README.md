@@ -15,7 +15,7 @@ pnpm add @laikacms/documents
 ## Usage
 
 ```typescript
-import { DocumentsRepository, Document, Unpublished } from '@laikacms/documents'
+import { Document, DocumentsRepository, Unpublished } from '@laikacms/documents';
 ```
 
 ## Entities
@@ -34,10 +34,10 @@ Draft → Pending Review → Pending Publish → Published
 
 ```typescript
 abstract class DocumentsRepository {
-  abstract getDocument(key: string): ResultStream<Document>
-  abstract createDocument(create: DocumentCreate): ResultStream<Document>
-  abstract getUnpublished(key: string): ResultStream<Unpublished>
-  abstract publish(key: string): ResultStream<Document>
+  abstract getDocument(key: string): ResultStream<Document>;
+  abstract createDocument(create: DocumentCreate): ResultStream<Document>;
+  abstract getUnpublished(key: string): ResultStream<Unpublished>;
+  abstract publish(key: string): ResultStream<Document>;
   // ...
 }
 ```

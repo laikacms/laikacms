@@ -6,25 +6,26 @@ import type { Translation } from './en.js';
 
 export const nl: Translation = {
   errors: {
-    missingAuthHeader: "Ontbrekende of ongeldige Authorization header",
-    authenticationFailed: "Authenticatie mislukt",
-    methodNotAllowed: "Methode niet toegestaan",
-    invalidJsonBody: "Ongeldige JSON body",
-    missingOrInvalidMessage: "Ontbrekend of ongeldig bericht",
-    missingDocumentContext: "Ontbrekende document context",
-    sessionNotFound: "Sessie niet gevonden",
-    sessionAccessDenied: "Toegang tot sessie geweigerd",
-    missingDocumentSlug: "Ontbrekende documentSlug query parameter",
-    failedToListSessions: "Sessies ophalen mislukt",
-    failedToGetSession: "Sessie ophalen mislukt",
-    failedToDeleteSession: "Sessie verwijderen mislukt",
-    aiProcessingFailed: "AI verwerking mislukt",
-    unknownEndpoint: "Onbekend AI endpoint: %s",
+    missingAuthHeader: 'Ontbrekende of ongeldige Authorization header',
+    authenticationFailed: 'Authenticatie mislukt',
+    methodNotAllowed: 'Methode niet toegestaan',
+    invalidJsonBody: 'Ongeldige JSON body',
+    missingOrInvalidMessage: 'Ontbrekend of ongeldig bericht',
+    missingDocumentContext: 'Ontbrekende document context',
+    sessionNotFound: 'Sessie niet gevonden',
+    sessionAccessDenied: 'Toegang tot sessie geweigerd',
+    missingDocumentSlug: 'Ontbrekende documentSlug query parameter',
+    failedToListSessions: 'Sessies ophalen mislukt',
+    failedToGetSession: 'Sessie ophalen mislukt',
+    failedToDeleteSession: 'Sessie verwijderen mislukt',
+    aiProcessingFailed: 'AI verwerking mislukt',
+    unknownEndpoint: 'Onbekend AI endpoint: %s',
   },
   /**
    * Base system prompt - translated to Dutch
    */
-  systemPrompt: `Je bent een AI assistent die gebruikers helpt met het bewerken van content in een CMS (Content Management System).
+  systemPrompt:
+    `Je bent een AI assistent die gebruikers helpt met het bewerken van content in een CMS (Content Management System).
 
 Je hebt toegang tot tools waarmee je:
 - De huidige documentgegevens kunt lezen

@@ -1,5 +1,5 @@
-import type { DRAFT_CHANGE_FIELD } from "decap-cms-core/actions/entries";
-import { List, Map } from "immutable";
+import type { DRAFT_CHANGE_FIELD } from 'decap-cms-core/actions/entries';
+import { List, Map } from 'immutable';
 
 export function changeDraftField({
   field,
@@ -8,15 +8,18 @@ export function changeDraftField({
   entries,
   i18n,
 }: {
-  field: Map<string, any>;
-  value: string;
-  metadata: Record<string, unknown>;
-  entries: Map<string, any>[];
-  i18n?: {
-    currentLocale: string;
-    defaultLocale: string;
-    locales: string[];
-  } | undefined | {};
+  field: Map<string, any>,
+  value: string,
+  metadata: Record<string, unknown>,
+  entries: Map<string, any>[],
+  i18n?:
+    | {
+      currentLocale: string,
+      defaultLocale: string,
+      locales: string[],
+    }
+    | undefined
+    | {},
 }) {
   return {
     type: 'DRAFT_CHANGE_FIELD' as typeof DRAFT_CHANGE_FIELD,
@@ -43,9 +46,9 @@ export function hasI18n(collection: Map<string, any>) {
 }
 
 export type I18nInfo = {
-  locales: string[];
-  defaultLocale: string;
-  structure: I18N_STRUCTURE;
+  locales: string[],
+  defaultLocale: string,
+  structure: I18N_STRUCTURE,
 };
 
 export function getI18nInfo(collection: Map<string, any>): I18nInfo | Record<string, any> {

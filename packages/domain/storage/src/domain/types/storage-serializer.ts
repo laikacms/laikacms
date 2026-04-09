@@ -10,7 +10,7 @@ export interface StorageSerializer<F extends StorageFormat> {
   format: F;
   serializeDocumentFileContents(
     content: StorageObjectContent,
-    schema: JSONSchema7
+    schema: JSONSchema7,
   ): Promise<string>;
 
   deserializeDocumentFileContents(

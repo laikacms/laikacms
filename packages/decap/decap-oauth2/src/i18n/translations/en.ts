@@ -50,7 +50,8 @@ export const en = {
     loadingPrompt: 'Follow the prompts from your browser or device...',
     successTitle: 'Passkey Created!',
     successDescription: 'You can now use this passkey to sign in. Redirecting...',
-    browserNotSupported: 'Your browser does not support passkeys. Please use a modern browser like Chrome, Safari, or Firefox.',
+    browserNotSupported:
+      'Your browser does not support passkeys. Please use a modern browser like Chrome, Safari, or Firefox.',
     setupFailed: 'Failed to set up passkey. Please try again.',
     registrationFailed: 'Registration failed',
   },
@@ -62,7 +63,8 @@ export const en = {
     backToLogin: 'Back to login',
     checkEmailPageTitle: 'Check Your Email - Decap CMS',
     checkEmailTitle: 'Check Your Email',
-    checkEmailDescription: "If an account exists with that email address, we've sent you a link to reset your password. Please check your inbox and spam folder.",
+    checkEmailDescription:
+      "If an account exists with that email address, we've sent you a link to reset your password. Please check your inbox and spam folder.",
     resetPageTitle: 'Reset Password - Decap CMS',
     resetTitle: 'Reset Password',
     resetDescription: 'Enter your new password below.',
@@ -85,11 +87,13 @@ export const en = {
     passwordResetSubject: 'Reset Your Password',
     passwordResetTitle: 'Reset Your Password',
     passwordResetGreeting: 'Hi{{name}},',
-    passwordResetIntro: 'We received a request to reset the password for your account associated with <strong>{{email}}</strong>.',
+    passwordResetIntro:
+      'We received a request to reset the password for your account associated with <strong>{{email}}</strong>.',
     passwordResetAction: 'Click the button below to reset your password:',
     passwordResetButton: 'Reset Password',
     passwordResetLinkHint: 'Or copy and paste this link into your browser:',
-    passwordResetWarning: '⚠️ This link will expire in <strong>{{expiresIn}}</strong>. If you didn\'t request a password reset, you can safely ignore this email.',
+    passwordResetWarning:
+      "⚠️ This link will expire in <strong>{{expiresIn}}</strong>. If you didn't request a password reset, you can safely ignore this email.",
     passwordResetFooter: 'This email was sent by {{appName}}.',
     passwordResetSupport: 'If you have questions, contact',
   },

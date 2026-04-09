@@ -22,10 +22,10 @@ export function readUint16LE(data: Uint8Array, offset: number): number {
  */
 export function readUint32BE(data: Uint8Array, offset: number): number {
   return (
-    (data[offset] << 24) |
-    (data[offset + 1] << 16) |
-    (data[offset + 2] << 8) |
-    data[offset + 3]
+    (data[offset] << 24)
+    | (data[offset + 1] << 16)
+    | (data[offset + 2] << 8)
+    | data[offset + 3]
   ) >>> 0;
 }
 
@@ -34,10 +34,10 @@ export function readUint32BE(data: Uint8Array, offset: number): number {
  */
 export function readUint32LE(data: Uint8Array, offset: number): number {
   return (
-    data[offset] |
-    (data[offset + 1] << 8) |
-    (data[offset + 2] << 16) |
-    (data[offset + 3] << 24)
+    data[offset]
+    | (data[offset + 1] << 8)
+    | (data[offset + 2] << 16)
+    | (data[offset + 3] << 24)
   ) >>> 0;
 }
 
@@ -96,7 +96,7 @@ export function bytesEqual(a: Uint8Array, b: Uint8Array, aOffset = 0, bOffset = 
 export function findBytes(data: Uint8Array, pattern: Uint8Array, startOffset = 0): number {
   const patternLen = pattern.length;
   const dataLen = data.length;
-  
+
   for (let i = startOffset; i <= dataLen - patternLen; i++) {
     let found = true;
     for (let j = 0; j < patternLen; j++) {
@@ -155,14 +155,14 @@ export function startsWith(data: Uint8Array, pattern: Uint8Array | readonly numb
 export function readNullTerminatedString(data: Uint8Array, offset: number, maxLength?: number): string {
   const bytes: number[] = [];
   const limit = maxLength ? Math.min(offset + maxLength, data.length) : data.length;
-  
+
   for (let i = offset; i < limit; i++) {
     if (data[i] === 0) {
       break;
     }
     bytes.push(data[i]);
   }
-  
+
   return String.fromCharCode(...bytes);
 }
 

@@ -1,15 +1,15 @@
 import { Folder, FolderCreate, Key, Pagination } from '@laikacms/storage';
 
+import { LaikaError, LaikaResult } from '@laikacms/core';
 import type {
   Asset,
   AssetCreate,
-  AssetUpdate,
-  AssetVariations,
-  AssetUrl,
   AssetMetadata,
+  AssetUpdate,
+  AssetUrl,
+  AssetVariations,
   Resource,
 } from '../entities/index.js';
-import { LaikaError, LaikaResult } from '@laikacms/core';
 
 /**
  * Hints for prefetching related data.
@@ -24,13 +24,13 @@ export interface FetchHints {
    * Maps to getVariations() method.
    */
   variations?: boolean;
-  
+
   /**
    * Prefetch access URLs.
    * Maps to getUrls() method.
    */
   urls?: boolean;
-  
+
   /**
    * Prefetch full metadata.
    * Maps to getMetadata() method.
@@ -53,9 +53,9 @@ export interface GetResourceOptions {
  */
 export interface ListResourcesOptions {
   pagination: Pagination;
-  
+
   depth: number;
-  
+
   /**
    * Hints for prefetching related data.
    */
@@ -95,7 +95,7 @@ export abstract class AssetsRepository {
   // ============================================
   // Resource Operations (unified endpoint)
   // ============================================
-  
+
   /**
    * Get a resource (asset or folder) by key.
    *
@@ -108,7 +108,7 @@ export abstract class AssetsRepository {
    * @param options Options including hints for prefetching
    */
   abstract getResource(key: string, options?: GetResourceOptions): ResultStream<Resource[]>;
-  
+
   /**
    * List all resources (assets and folders) in a folder.
    *
@@ -122,13 +122,13 @@ export abstract class AssetsRepository {
    */
   abstract listResources(
     folderKey: string,
-    options: ListResourcesOptions
+    options: ListResourcesOptions,
   ): ResultStream<Resource[]>;
-  
+
   // ============================================
   // Asset Operations
   // ============================================
-  
+
   /**
    * Get a single asset by key.
    *
@@ -136,53 +136,53 @@ export abstract class AssetsRepository {
    * @param options Options including hints for prefetching
    */
   abstract getAsset(key: string, options?: GetResourceOptions): ResultStream<Asset>;
-  
+
   /**
    * Create a new asset.
-   * 
+   *
    * The implementation handles all upload complexity internally:
    * - Small files may be uploaded in a single request
    * - Large files may use multipart uploads (S3, R2)
    * - Streaming uploads may use resumable protocols (Google Drive)
    */
   abstract createAsset(create: AssetCreate): ResultStream<Asset>;
-  
+
   /**
    * Update an asset's metadata.
    */
   abstract updateAsset(update: AssetUpdate): ResultStream<Asset>;
-  
+
   /**
    * Delete an asset.
    */
   abstract deleteAsset(key: Key): ResultStream<void>;
-  
+
   /**
    * Delete multiple assets.
    * Yields results in batches for progress tracking.
    */
   abstract deleteAssets(keys: readonly Key[]): ResultStream<Key[]>;
-  
+
   abstract getVariations(assets: Asset[]): ResultStream<AssetVariations[]>;
-  
+
   abstract getUrls(assets: Asset[]): ResultStream<AssetUrl[]>;
-  
+
   abstract getMetadata(assets: Asset[]): ResultStream<AssetMetadata[]>;
-  
+
   // ============================================
   // Folder Operations
   // ============================================
-  
+
   /**
    * Get folder metadata.
    */
   abstract getFolder(key: Key): ResultStream<Folder>;
-  
+
   /**
    * Create a new folder.
    */
   abstract createFolder(folderCreate: FolderCreate): ResultStream<Folder>;
-  
+
   /**
    * Delete a folder.
    * @param recursive If true, delete all contents. If false, fail if not empty.

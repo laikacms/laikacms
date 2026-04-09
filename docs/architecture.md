@@ -60,7 +60,8 @@ class R2StorageRepository extends StorageRepository {
 
 ### Result Streams
 
-All repository methods return `AsyncGenerator<LaikaResult<T>>` for streaming results with error handling.
+All repository methods return `AsyncGenerator<LaikaResult<T>>` for streaming results with error
+handling.
 
 ```typescript
 const gen = repo.listAtoms({ prefix: 'posts/' });
@@ -73,7 +74,8 @@ for await (const result of gen) {
 
 ## Standard Schema
 
-Validation uses [Standard Schema](https://github.com/standard-schema/standard-schema) for interoperability with Zod, Valibot, ArkType.
+Validation uses [Standard Schema](https://github.com/standard-schema/standard-schema) for
+interoperability with Zod, Valibot, ArkType.
 
 ```typescript
 import { z } from 'zod';

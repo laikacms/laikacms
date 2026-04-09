@@ -19,7 +19,7 @@
     "declarationMap": true,
     "paths": {
       "decap-cms-ui-default": ["../../../types/decap-cms-ui-default/index.d.ts"],
-      "decap-cms-ui-default/*": ["../../../types/decap-cms-ui-default/*"],
+      "decap-cms-ui-default/*": ["../../../types/decap-cms-ui-default/*"]
     }
   },
   "include": [

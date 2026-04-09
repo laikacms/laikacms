@@ -200,7 +200,7 @@ function formatDuration(seconds: number): string {
 export async function requestPasswordReset(
   user: User,
   config: PasswordResetConfig,
-): Promise<{ success: boolean; error?: string; }> {
+): Promise<{ success: boolean, error?: string }> {
   const {
     emailProvider,
     callbacks,
@@ -291,7 +291,7 @@ export async function resetPassword(
   token: string,
   newPassword: string,
   config: PasswordResetConfig,
-): Promise<{ success: boolean; error?: string; }> {
+): Promise<{ success: boolean, error?: string }> {
   const { callbacks } = config;
 
   // Validate inputs

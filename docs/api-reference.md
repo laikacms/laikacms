@@ -6,14 +6,14 @@ All APIs follow [JSON:API](https://jsonapi.org/) specification.
 
 Base path: `/api/storage`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/atoms` | List atoms (objects + folders) |
-| GET | `/atoms/:key` | Get single atom |
-| POST | `/atoms` | Create object |
-| PATCH | `/atoms/:key` | Update object |
-| DELETE | `/atoms/:key` | Delete atom |
-| POST | `/atoms/atomic` | Batch operations |
+| Method | Endpoint        | Description                    |
+| ------ | --------------- | ------------------------------ |
+| GET    | `/atoms`        | List atoms (objects + folders) |
+| GET    | `/atoms/:key`   | Get single atom                |
+| POST   | `/atoms`        | Create object                  |
+| PATCH  | `/atoms/:key`   | Update object                  |
+| DELETE | `/atoms/:key`   | Delete atom                    |
+| POST   | `/atoms/atomic` | Batch operations               |
 
 ### Query Parameters
 
@@ -37,26 +37,26 @@ curl -X POST https://api.example.com/api/storage/atoms \
 
 Base path: `/api/documents`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/documents` | List documents |
-| GET | `/documents/:id` | Get document |
-| POST | `/documents` | Create document |
-| PATCH | `/documents/:id` | Update document |
-| DELETE | `/documents/:id` | Delete document |
-| GET | `/unpublished` | List drafts |
-| POST | `/unpublished/:id/publish` | Publish draft |
+| Method | Endpoint                   | Description     |
+| ------ | -------------------------- | --------------- |
+| GET    | `/documents`               | List documents  |
+| GET    | `/documents/:id`           | Get document    |
+| POST   | `/documents`               | Create document |
+| PATCH  | `/documents/:id`           | Update document |
+| DELETE | `/documents/:id`           | Delete document |
+| GET    | `/unpublished`             | List drafts     |
+| POST   | `/unpublished/:id/publish` | Publish draft   |
 
 ## Assets API
 
 Base path: `/api/assets`
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/assets` | List assets |
-| GET | `/assets/:id` | Get asset metadata |
-| POST | `/assets` | Upload asset |
-| DELETE | `/assets/:id` | Delete asset |
+| Method | Endpoint      | Description        |
+| ------ | ------------- | ------------------ |
+| GET    | `/assets`     | List assets        |
+| GET    | `/assets/:id` | Get asset metadata |
+| POST   | `/assets`     | Upload asset       |
+| DELETE | `/assets/:id` | Delete asset       |
 
 ### Upload
 
@@ -79,10 +79,10 @@ curl -X POST https://api.example.com/api/assets/assets \
 }
 ```
 
-| Code | Status | Description |
-|------|--------|-------------|
-| NOT_FOUND | 404 | Resource not found |
-| INVALID_DATA | 400 | Invalid request data |
-| UNAUTHORIZED | 401 | Authentication required |
-| FORBIDDEN | 403 | Permission denied |
-| INTERNAL_ERROR | 500 | Server error |
+| Code           | Status | Description             |
+| -------------- | ------ | ----------------------- |
+| NOT_FOUND      | 404    | Resource not found      |
+| INVALID_DATA   | 400    | Invalid request data    |
+| UNAUTHORIZED   | 401    | Authentication required |
+| FORBIDDEN      | 403    | Permission denied       |
+| INTERNAL_ERROR | 500    | Server error            |

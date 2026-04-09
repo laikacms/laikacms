@@ -1,15 +1,4 @@
-import {
-  GetCommand,
-  PutCommand,
-  type DynamoDBDocumentClient,
-} from '@aws-sdk/lib-dynamodb';
-import {
-  LaikaError,
-  LaikaResult,
-  NotFoundError,
-  InvalidData,
-  InternalError,
-} from "@laikacms/core";
+import { type DynamoDBDocumentClient, GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import {
   CollectionSettings,
   ContentBaseSettings,
@@ -18,18 +7,19 @@ import {
   DocumentCollectionSettings,
   MediaCollectionSettings,
   parseSettings,
-} from "@laikacms/contentbase-settings";
+} from '@laikacms/contentbase-settings';
+import { InternalError, InvalidData, LaikaError, LaikaResult, NotFoundError } from '@laikacms/core';
+import * as Result from 'effect/Result';
 import type { JSONSchema7 } from 'json-schema';
 import superjson from 'superjson';
-import * as Result from 'effect/Result';
 
 // DynamoDB Key Prefixes
 const PREFIX_PROJECT = 'PROJECT';
 const PREFIX_SETTINGS = 'SETTINGS';
 
 type SettingsDocument = {
-    collections: Record<string, CollectionSettings>;
-    schemas: Record<string, JSONSchema7>;
+  collections: Record<string, CollectionSettings>,
+  schemas: Record<string, JSONSchema7>,
 };
 
 /**
@@ -41,7 +31,7 @@ function failAs<T>(error: LaikaError): LaikaResult<T> {
 
 /**
  * DynamoDB-backed ContentBase settings repository
- * 
+ *
  * Stores settings in a single item per project:
  * - PK: PROJECT#{projectId}
  * - SK: SETTINGS
@@ -55,7 +45,7 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
   constructor(
     private readonly docClient: DynamoDBDocumentClient,
     private readonly tableName: string,
-    private readonly projectId: string
+    private readonly projectId: string,
   ) {
     super();
     this.pk = `${PREFIX_PROJECT}#${projectId}`;
@@ -67,13 +57,15 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
    */
   private async getSettingsDocument(): Promise<LaikaResult<SettingsDocument>> {
     try {
-      const result = await this.docClient.send(new GetCommand({
-        TableName: this.tableName,
-        Key: {
-          PK: this.pk,
-          SK: this.sk,
-        },
-      }));
+      const result = await this.docClient.send(
+        new GetCommand({
+          TableName: this.tableName,
+          Key: {
+            PK: this.pk,
+            SK: this.sk,
+          },
+        }),
+      );
 
       if (!result.Item) {
         // Settings don't exist, create default
@@ -83,14 +75,16 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
           schemas: {} as Record<string, JSONSchema7>,
         };
 
-        await this.docClient.send(new PutCommand({
-          TableName: this.tableName,
-          Item: {
-            PK: this.pk,
-            SK: this.sk,
-            settings: superjson.serialize(settingsObj),
-          },
-        }));
+        await this.docClient.send(
+          new PutCommand({
+            TableName: this.tableName,
+            Item: {
+              PK: this.pk,
+              SK: this.sk,
+              settings: superjson.serialize(settingsObj),
+            },
+          }),
+        );
 
         return Result.succeed(settingsObj);
       }
@@ -108,18 +102,20 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
    * Update the entire settings document in DynamoDB
    */
   private async putSettingsDocument(document: {
-    collections: Record<string, CollectionSettings>;
-    schemas: Record<string, JSONSchema7>;
+    collections: Record<string, CollectionSettings>,
+    schemas: Record<string, JSONSchema7>,
   }): Promise<LaikaResult<void>> {
     try {
-      await this.docClient.send(new PutCommand({
-        TableName: this.tableName,
-        Item: {
-          PK: this.pk,
-          SK: this.sk,
-          settings: superjson.serialize(document),
-        },
-      }));
+      await this.docClient.send(
+        new PutCommand({
+          TableName: this.tableName,
+          Item: {
+            PK: this.pk,
+            SK: this.sk,
+            settings: superjson.serialize(document),
+          },
+        }),
+      );
 
       return Result.succeed(undefined);
     } catch (error) {
@@ -180,9 +176,11 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
     }
     console.log('Document collection settings:', collectionSettings);
     if (collectionSettings.success.type !== 'document') {
-      return Result.fail(new InvalidData(
-        `Settings for document collection '${collection}' are of type '${collectionSettings.success.type}' not of type 'document'.`
-      ));
+      return Result.fail(
+        new InvalidData(
+          `Settings for document collection '${collection}' are of type '${collectionSettings.success.type}' not of type 'document'.`,
+        ),
+      );
     }
 
     return Result.succeed(collectionSettings.success as DocumentCollectionSettings);
@@ -195,9 +193,11 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
     }
 
     if (collectionSettings.success.type !== 'media') {
-      return Result.fail(new InvalidData(
-        `Settings for media collection '${collection}' are of type '${collectionSettings.success.type}' not of type 'media'.`
-      ));
+      return Result.fail(
+        new InvalidData(
+          `Settings for media collection '${collection}' are of type '${collectionSettings.success.type}' not of type 'media'.`,
+        ),
+      );
     }
 
     return Result.succeed(collectionSettings.success as MediaCollectionSettings);
@@ -215,7 +215,10 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
     return this.putSettingsDocument(document.success);
   }
 
-  async putDocumentCollectionSettings(collection: string, settings: DocumentCollectionSettings): Promise<LaikaResult<void>> {
+  async putDocumentCollectionSettings(
+    collection: string,
+    settings: DocumentCollectionSettings,
+  ): Promise<LaikaResult<void>> {
     return this.putCollectionSettings(collection, settings);
   }
 

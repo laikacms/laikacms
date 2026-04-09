@@ -1,10 +1,10 @@
 /**
  * QR Code SVG Generator
- * 
+ *
  * Generates SVG representations of QR codes using the qrcode.ts library.
  */
 
-import { QrCode, Ecc } from './qrcode.js';
+import { Ecc, QrCode } from './qrcode.js';
 
 /**
  * Options for QR code SVG generation
@@ -25,10 +25,14 @@ export interface QRCodeSVGOptions {
  */
 function getEccLevel(level: 'L' | 'M' | 'Q' | 'H'): Ecc {
   switch (level) {
-    case 'L': return Ecc.LOW;
-    case 'M': return Ecc.MEDIUM;
-    case 'Q': return Ecc.QUARTILE;
-    case 'H': return Ecc.HIGH;
+    case 'L':
+      return Ecc.LOW;
+    case 'M':
+      return Ecc.MEDIUM;
+    case 'Q':
+      return Ecc.QUARTILE;
+    case 'H':
+      return Ecc.HIGH;
   }
 }
 
@@ -46,16 +50,16 @@ function escapeXml(str: string): string {
 
 /**
  * Generates an SVG string representation of a QR code for the given text.
- * 
+ *
  * @param text - The text to encode in the QR code
  * @param options - Optional configuration for the QR code generation
  * @returns An SVG string that can be embedded in HTML or saved to a file
- * 
+ *
  * @example
  * ```typescript
  * const svg = generateQRCodeSVG('https://example.com');
  * // Returns an SVG string with default options
- * 
+ *
  * const customSvg = generateQRCodeSVG('Hello World', {
  *   errorCorrection: 'H',
  *   border: 2,
@@ -82,7 +86,7 @@ export function generateQRCodeSVG(text: string, options: QRCodeSVGOptions = {}):
   // Build the SVG path for dark modules
   // Using a single path with multiple rectangles is more efficient than individual rects
   const parts: string[] = [];
-  
+
   for (let y = 0; y < qr.size; y++) {
     for (let x = 0; x < qr.size; x++) {
       if (qr.getModule(x, y)) {
@@ -99,7 +103,7 @@ export function generateQRCodeSVG(text: string, options: QRCodeSVGOptions = {}):
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}">`,
     `<rect width="100%" height="100%" fill="${escapeXml(lightColor)}"/>`,
     `<path d="${pathData}" fill="${escapeXml(darkColor)}"/>`,
-    `</svg>`
+    `</svg>`,
   ].join('');
 
   return svg;
@@ -107,11 +111,11 @@ export function generateQRCodeSVG(text: string, options: QRCodeSVGOptions = {}):
 
 /**
  * Generates a data URI for a QR code SVG that can be used directly in img src attributes.
- * 
+ *
  * @param text - The text to encode in the QR code
  * @param options - Optional configuration for the QR code generation
  * @returns A data URI string (data:image/svg+xml;base64,...)
- * 
+ *
  * @example
  * ```typescript
  * const dataUri = generateQRCodeDataURI('https://example.com');

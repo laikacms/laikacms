@@ -1,5 +1,5 @@
+import { type EditorComponentOptions } from 'decap-cms-core';
 import React from 'react';
-import { type EditorComponentOptions } from "decap-cms-core";
 
 export interface EmbeddedEntryMetadata {
   title?: string;
@@ -25,8 +25,8 @@ export interface EmbeddedEntryData {
   displayMode?: 'inline' | 'card' | 'reference';
   // Fallback data for when entry is deleted/inaccessible
   fallback?: {
-    title: string;
-    reason: 'deleted' | 'inaccessible' | 'not_found';
+    title: string,
+    reason: 'deleted' | 'inaccessible' | 'not_found',
   };
 }
 
@@ -45,19 +45,19 @@ export interface EmbeddedEntryField {
   show_status_indicators?: boolean;
   enable_rich_previews?: boolean;
   filters?: Array<{
-    field: string;
-    values: string[];
+    field: string,
+    values: string[],
   }>;
 }
 
 const isEmbeddedEntryData = (data: any): data is EmbeddedEntryData => {
   return (
-    data &&
-    typeof data === 'object' &&
-    typeof data.collection === 'string' &&
-    typeof data.entry === 'string'
+    data
+    && typeof data === 'object'
+    && typeof data.collection === 'string'
+    && typeof data.entry === 'string'
   );
-}
+};
 
 const embeddedEntry: EditorComponentOptions = {
   label: 'Embedded Entry',
@@ -67,8 +67,7 @@ const embeddedEntry: EditorComponentOptions = {
       collection: match[1],
       entry: match[2],
     },
-  toBlock: ({ collection, entry }: EmbeddedEntryData) =>
-    `{{< embedded-entry "${collection}" "${entry}" >}}`,
+  toBlock: ({ collection, entry }: EmbeddedEntryData) => `{{< embedded-entry "${collection}" "${entry}" >}}`,
   toPreview: (data: any) => {
     if (!isEmbeddedEntryData(data)) throw new Error('Invalid data for Embedded Entry component');
     const { collection, entry } = data;
@@ -82,7 +81,7 @@ const embeddedEntry: EditorComponentOptions = {
         borderRadius: '4px',
         backgroundColor: '#f9f9f9',
         textAlign: 'center' as const,
-      }
+      },
     }, [
       React.createElement('strong', { key: 'label' }, 'Embedded Entry'),
       React.createElement('br', { key: 'br1' }),
@@ -97,7 +96,7 @@ const embeddedEntry: EditorComponentOptions = {
       name: 'relation',
       widget: 'relation',
       label: 'Select Entry',
-    }
+    },
   ],
   allow_add: true,
 };

@@ -1,11 +1,10 @@
-
 export const pathToSegments = (path: string) => {
   const segments = path
     .split('/')
     .map(x => x.trim())
     .filter(x => x.length > 0);
   return segments;
-}
+};
 
 export const pathCombine = (...segments: string[]) => {
   const path = segments
@@ -13,7 +12,7 @@ export const pathCombine = (...segments: string[]) => {
     .filter(x => x.length > 0)
     .join('/');
   return path;
-}
+};
 
 export const basename = (path: string) => {
   if (typeof path !== 'string') return '';
@@ -32,7 +31,7 @@ export const basename = (path: string) => {
   while (start >= 0 && path[start] !== '/' && path[start] !== '\\') start--;
 
   return path.slice(start + 1, end + 1);
-}
+};
 
 export const extension = (path: string) => {
   const base = basename(path);
@@ -41,4 +40,4 @@ export const extension = (path: string) => {
     return '';
   }
   return base.slice(lastDotIndex + 1);
-}
+};

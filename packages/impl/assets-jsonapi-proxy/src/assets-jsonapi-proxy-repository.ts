@@ -1,27 +1,27 @@
 import {
-  AssetsRepository,
   type Asset,
   type AssetCreate,
-  type AssetUpdate,
-  type AssetVariations,
-  type AssetUrl,
   type AssetMetadata,
-  type Resource,
+  AssetsRepository,
+  type AssetUpdate,
+  type AssetUrl,
+  type AssetVariations,
   type GetResourceOptions,
   type ListResourcesOptions,
+  type Resource,
 } from '@laikacms/assets';
-import { type Folder, type FolderCreate } from '@laikacms/storage';
-import { LaikaResult, LaikaError, InvalidData, InternalError } from '@laikacms/core';
+import { InternalError, InvalidData, LaikaError, LaikaResult } from '@laikacms/core';
 import { JsonApiCollectionResponse } from '@laikacms/json-api';
+import { type Folder, type FolderCreate } from '@laikacms/storage';
+import * as Result from 'effect/Result';
 import {
-  parseResource,
   parseAsset,
-  parseFolder,
   parseAssetMetadata,
   parseAssetUrl,
   parseAssetVariations,
+  parseFolder,
+  parseResource,
 } from './jsonapi.js';
-import * as Result from 'effect/Result';
 
 export interface AssetsJsonApiProxyRepositoryOptions {
   baseUrl: string;
@@ -84,9 +84,11 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     return this.staticHeaders;
   }
 
-  private async handleResponse<T, I = undefined, Data = JsonApiCollectionResponse & { data: T, included?: I[] }>(response: Response): Promise<LaikaResult<Data>> {
+  private async handleResponse<T, I = undefined, Data = JsonApiCollectionResponse & { data: T, included?: I[] }>(
+    response: Response,
+  ): Promise<LaikaResult<Data>> {
     const contentType = response.headers.get('content-type');
-    
+
     if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
       return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
     }
@@ -95,11 +97,21 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
 
     if (!response.ok) {
       const errors = json.errors || [{ detail: 'Unknown error' }];
-      return Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+      return Result.fail(
+        new InvalidData(
+          errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+        ),
+      );
     }
 
     if (json.errors) {
-      return Result.fail(new InvalidData(json.errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+      return Result.fail(
+        new InvalidData(
+          json.errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(
+            ', ',
+          ),
+        ),
+      );
     }
 
     // Return the full JSON response, not just json.data
@@ -110,15 +122,15 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   async *getResource(key: string, options?: GetResourceOptions): AsyncGenerator<LaikaResult<Resource[]>> {
     try {
       const headers = await this.getHeaders();
-      
+
       // Build include query parameter from hints
       const includeParams: string[] = [];
       if (options?.hints?.variations) includeParams.push('asset-variation');
       if (options?.hints?.urls) includeParams.push('asset-url');
       if (options?.hints?.metadata) includeParams.push('asset-metadata');
-      
+
       const queryString = includeParams.length > 0 ? `?include=${includeParams.join(',')}` : '';
-      
+
       const response = await fetch(`${this.baseUrl}/resources/${encodeURIComponent(key)}${queryString}`, {
         method: 'GET',
         headers,
@@ -158,21 +170,21 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   async *listResources(folderKey: string, options: ListResourcesOptions): AsyncGenerator<LaikaResult<Resource[]>> {
     try {
       const headers = await this.getHeaders();
-      
+
       // Build query parameters
       const params = new URLSearchParams();
-      
+
       // Use folderKey as the prefix filter
       if (folderKey) {
         params.set('filter[prefix]', folderKey);
       }
-      
+
       // Handle depth for recursive listing (minimum 1)
       const depth = Math.max(1, options?.depth ?? 1);
       if (depth > 1) {
         params.set('filter[depth]', String(depth));
       }
-      
+
       // Handle pagination - check which type it is
       if (options?.pagination) {
         const pagination = options.pagination;
@@ -190,7 +202,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
           if (pagination.perPage) params.set('page[size]', String(pagination.perPage));
         }
       }
-      
+
       // Build include query parameter from hints
       const includeParams: string[] = [];
       if (options?.hints?.variations) includeParams.push('asset-variation');
@@ -199,10 +211,10 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       if (includeParams.length > 0) {
         params.set('include', includeParams.join(','));
       }
-      
+
       const queryString = params.toString();
       const url = `${this.baseUrl}/resources${queryString ? `?${queryString}` : ''}`;
-      
+
       const response = await fetch(url, {
         method: 'GET',
         headers,
@@ -218,7 +230,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
 
       if (!response.ok || 'errors' in json) {
         const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
-        yield Result.fail(new InvalidData(errors.map((e) => e.detail || e.title || 'Unknown error').join(', ')));
+        yield Result.fail(new InvalidData(errors.map(e => e.detail || e.title || 'Unknown error').join(', ')));
         return;
       }
 
@@ -236,13 +248,13 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         yield failAs<Asset>(result.failure);
         return;
       }
-      
+
       const resource = result.success[0];
       if (!resource || resource.type !== 'asset') {
         yield Result.fail(new InvalidData(`Expected asset but got ${resource?.type || 'nothing'}`));
         return;
       }
-      
+
       yield Result.succeed(resource as Asset);
     }
   }
@@ -250,7 +262,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   async *createAsset(create: AssetCreate): AsyncGenerator<LaikaResult<Asset>> {
     try {
       const headers = await this.getHeaders();
-      
+
       // For binary content, we need to use multipart/form-data
       const formData = new FormData();
       formData.append('key', create.key);
@@ -260,10 +272,10 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       if (create.customMetadata) {
         formData.append('customMetadata', JSON.stringify(create.customMetadata));
       }
-      
+
       // Handle different content types - convert to ArrayBuffer for Blob compatibility
       let blobContent: ArrayBuffer;
-      
+
       if (create.content instanceof ArrayBuffer) {
         blobContent = create.content;
       } else if (create.content instanceof Uint8Array) {
@@ -294,16 +306,16 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         yield Result.fail(new InvalidData('Unsupported content type'));
         return;
       }
-      
+
       // Use File instead of Blob to preserve the filename
       const filename = create.filename || create.key.split('/').pop() || 'file';
       const file = new File([blobContent], filename, { type: create.mimeType });
       formData.append('file', file, filename);
-      
+
       // Remove Content-Type header to let browser set it with boundary
       const headersWithoutContentType = { ...headers };
       delete headersWithoutContentType['Content-Type'];
-      
+
       const response = await fetch(`${this.baseUrl}/resources`, {
         method: 'POST',
         headers: headersWithoutContentType,
@@ -325,7 +337,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   async *updateAsset(update: AssetUpdate): AsyncGenerator<LaikaResult<Asset>> {
     try {
       const headers = await this.getHeaders();
-      
+
       // AssetUpdate only has metadata fields, no content
       const jsonApiData = {
         type: 'asset',
@@ -336,7 +348,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
           ...(update.cacheControl && { cacheControl: update.cacheControl }),
         },
       };
-      
+
       const response = await fetch(`${this.baseUrl}/resources/${encodeURIComponent(update.key)}`, {
         method: 'PATCH',
         headers,
@@ -359,7 +371,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     try {
       const headers = await this.getHeaders();
       const deletedKeys: string[] = [];
-      
+
       for (const key of keys) {
         const response = await fetch(`${this.baseUrl}/resources/${encodeURIComponent(key)}`, {
           method: 'DELETE',
@@ -370,7 +382,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
           deletedKeys.push(key);
         }
       }
-      
+
       yield Result.succeed(deletedKeys);
     } catch (error) {
       yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
@@ -380,7 +392,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   async *deleteAsset(key: string): AsyncGenerator<LaikaResult<void>> {
     try {
       const headers = await this.getHeaders();
-      
+
       const response = await fetch(`${this.baseUrl}/resources/${encodeURIComponent(key)}`, {
         method: 'DELETE',
         headers,
@@ -389,7 +401,11 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       if (!response.ok) {
         const json = await response.json().catch(() => ({}));
         const errors = json.errors || [{ detail: 'Failed to delete asset' }];
-        yield Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+        yield Result.fail(
+          new InvalidData(
+            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+          ),
+        );
         return;
       }
 
@@ -402,7 +418,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   async *deleteFolder(key: string, recursive?: boolean): AsyncGenerator<LaikaResult<void>> {
     try {
       const headers = await this.getHeaders();
-      
+
       // Build query parameters for recursive deletion
       const params = new URLSearchParams();
       if (recursive) {
@@ -410,7 +426,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       }
       const queryString = params.toString();
       const url = `${this.baseUrl}/resources/${encodeURIComponent(key)}${queryString ? `?${queryString}` : ''}`;
-      
+
       const response = await fetch(url, {
         method: 'DELETE',
         headers,
@@ -419,7 +435,11 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       if (!response.ok) {
         const json = await response.json().catch(() => ({}));
         const errors = json.errors || [{ detail: 'Failed to delete folder' }];
-        yield Result.fail(new InvalidData(errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || 'Unknown error').join(', ')));
+        yield Result.fail(
+          new InvalidData(
+            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+          ),
+        );
         return;
       }
 
@@ -442,7 +462,9 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
             return;
           }
           if (!this.variations.has(asset.key)) {
-            yield Result.fail(new InternalError(`Hint for variations was requested but no variations found for asset: ${asset.key}`));
+            yield Result.fail(
+              new InternalError(`Hint for variations was requested but no variations found for asset: ${asset.key}`),
+            );
             return;
           }
           results.push(this.variations.get(asset.key)!);
@@ -465,7 +487,9 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
             return;
           }
           if (!this.urls.has(asset.key)) {
-            yield Result.fail(new InternalError(`Hint for URLs was requested but no URLs found for asset: ${asset.key}`));
+            yield Result.fail(
+              new InternalError(`Hint for URLs was requested but no URLs found for asset: ${asset.key}`),
+            );
             return;
           }
           results.push(this.urls.get(asset.key)!);
@@ -488,7 +512,9 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
             return;
           }
           if (!this.metadata.has(asset.key)) {
-            yield Result.fail(new InternalError(`Hint for metadata was requested but no metadata found for asset: ${asset.key}`));
+            yield Result.fail(
+              new InternalError(`Hint for metadata was requested but no metadata found for asset: ${asset.key}`),
+            );
             return;
           }
           results.push(this.metadata.get(asset.key)!);
@@ -504,13 +530,13 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         yield failAs<Folder>(result.failure);
         return;
       }
-      
+
       const resource = result.success[0];
       if (!resource || resource.type !== 'folder') {
         yield Result.fail(new InvalidData(`Expected folder but got ${resource?.type || 'nothing'}`));
         return;
       }
-      
+
       yield Result.succeed(resource as Folder);
     }
   }
@@ -518,13 +544,13 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
     try {
       const headers = await this.getHeaders();
-      
+
       const jsonApiData = {
         type: 'folder',
         id: folderCreate.key,
         attributes: {},
       };
-      
+
       const response = await fetch(`${this.baseUrl}/resources`, {
         method: 'POST',
         headers,

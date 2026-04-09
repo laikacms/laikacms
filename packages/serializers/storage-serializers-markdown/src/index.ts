@@ -1,12 +1,12 @@
-import { StorageSerializer, StorageObjectContent, StorageFormat } from '@laikacms/storage';
-import { JSONSchema7 } from 'json-schema';
+import { StorageFormat, StorageObjectContent, StorageSerializer } from '@laikacms/storage';
 import matter from 'gray-matter';
+import { JSONSchema7 } from 'json-schema';
 
 export const markdownSerializer: StorageSerializer<StorageFormat> = {
   format: 'markdown' as StorageFormat,
   async serializeDocumentFileContents(
     content: StorageObjectContent,
-    _schema: JSONSchema7
+    _schema: JSONSchema7,
   ): Promise<string> {
     const body = content?.body || '';
     const data = { ...content };
@@ -15,11 +15,11 @@ export const markdownSerializer: StorageSerializer<StorageFormat> = {
   },
   async deserializeDocumentFileContents(
     raw: string,
-    _schema: JSONSchema7
+    _schema: JSONSchema7,
   ): Promise<StorageObjectContent> {
     const output = matter(raw);
     return { ...(output.data as Record<string, unknown>), body: output.content };
-  }
+  },
 };
 
 export default markdownSerializer;

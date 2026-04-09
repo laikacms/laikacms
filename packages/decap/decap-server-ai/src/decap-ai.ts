@@ -1,15 +1,15 @@
 /**
  * Main decap-ai implementation
  * Provides AI chat functionality for Decap CMS with document manipulation tools
- * 
+ *
  * This implementation is designed to be compatible with the Vercel AI SDK.
  * Tools are passed directly from the consumer using the standard tool() function.
  */
 
-import { generateId, streamText, convertToModelMessages, type ToolSet } from 'ai';
 import { Header } from '@laikacms/core';
+import { convertToModelMessages, generateId, streamText, type ToolSet } from 'ai';
+import en from './i18n/en.js';
 import { documentTools } from './tools/document-tools.js';
-import en from './i18n/en.js'
 import type {
   AiMessage,
   AiSession,
@@ -17,7 +17,7 @@ import type {
   DecapAiConfig,
   SessionDetailResponse,
   SessionListResponse,
-  User
+  User,
 } from './types.js';
 
 const SECURITY_HEADERS = {
@@ -194,7 +194,7 @@ export function decapAi(config: DecapAiConfig): DecapAi {
     try {
       const sessions = await config.callbacks.getSessionsByDocument(documentSlug, user.id);
       const response: SessionListResponse = {
-        sessions: sessions.map((s) => ({
+        sessions: sessions.map(s => ({
           id: s.id,
           title: s.title,
           documentSlug: s.documentSlug,
@@ -246,7 +246,7 @@ export function decapAi(config: DecapAiConfig): DecapAi {
       if (pathname === `${basePath}/health`) {
         return new Response(
           JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }),
-          { status: 200, headers: SECURITY_HEADERS }
+          { status: 200, headers: SECURITY_HEADERS },
         );
       }
 

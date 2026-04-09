@@ -22,7 +22,7 @@
       "decap-cms-lib-auth": ["../../../types/decap-cms-lib-auth/index.d.ts"],
       "decap-cms-lib-auth/*": ["../../../types/decap-cms-lib-auth/*"],
       "decap-cms-backend-github": ["../../../types/decap-cms-backend-github/index.d.ts"],
-      "decap-cms-backend-github/*": ["../../../types/decap-cms-backend-github/*"],
+      "decap-cms-backend-github/*": ["../../../types/decap-cms-backend-github/*"]
     }
   },
   "include": [

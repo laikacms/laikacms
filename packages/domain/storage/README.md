@@ -15,7 +15,7 @@ pnpm add @laikacms/storage
 ## Usage
 
 ```typescript
-import { StorageRepository, StorageObject, Atom } from '@laikacms/storage'
+import { Atom, StorageObject, StorageRepository } from '@laikacms/storage';
 ```
 
 ## Entities
@@ -29,10 +29,10 @@ import { StorageRepository, StorageObject, Atom } from '@laikacms/storage'
 
 ```typescript
 abstract class StorageRepository {
-  abstract getObject(key: Key): ResultStream<StorageObject>
-  abstract createObject(create: StorageObjectCreate): ResultStream<StorageObject>
-  abstract updateObject(update: StorageObjectUpdate): ResultStream<StorageObject>
-  abstract listAtoms(folderKey: Key, options: ListAtomsOptions): ResultStream<readonly Atom[]>
+  abstract getObject(key: Key): ResultStream<StorageObject>;
+  abstract createObject(create: StorageObjectCreate): ResultStream<StorageObject>;
+  abstract updateObject(update: StorageObjectUpdate): ResultStream<StorageObject>;
+  abstract listAtoms(folderKey: Key, options: ListAtomsOptions): ResultStream<readonly Atom[]>;
   // ...
 }
 ```

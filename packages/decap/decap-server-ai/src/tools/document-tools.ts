@@ -1,6 +1,6 @@
 /**
  * Built-in document manipulation tools for AI chat
- * 
+ *
  * These are CLIENT-SIDE ONLY tools handled by the widget's onToolCall.
  * They have no execute function, so the AI SDK will send them to the client.
  */
@@ -39,7 +39,8 @@ const jsonPatchOperationSchema = z.object({
  * CLIENT-SIDE ONLY - handled by widget's onToolCall
  */
 export const updateDocument = tool({
-  description: `Update the document using JSON Patch operations (RFC 6902). This tool modifies the document directly in the CMS.
+  description:
+    `Update the document using JSON Patch operations (RFC 6902). This tool modifies the document directly in the CMS.
 
 Operations:
 - "add": Add a value at the specified path. Creates intermediate objects/arrays as needed.

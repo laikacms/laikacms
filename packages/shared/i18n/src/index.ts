@@ -1,4 +1,4 @@
-import { en, type Translation } from "./translations/en";
+import { en, type Translation } from './translations/en';
 
 export type TranslationKey = keyof typeof en;
 export type { Translation };

@@ -7,17 +7,18 @@
  * Run with: npx tsx scripts/validate-packages.ts
  */
 
-import { readdir, readFile, stat } from "node:fs/promises";
-import { join, relative } from "node:path";
+import { readdir, readFile, stat } from 'node:fs/promises';
+import { join, relative } from 'node:path';
 
 // JSON Schema URL for package.json key order
-const PACKAGE_JSON_SCHEMA_URL = "https://raw.githubusercontent.com/SchemaStore/schemastore/refs/heads/master/src/schemas/json/package.json";
+const PACKAGE_JSON_SCHEMA_URL =
+  'https://raw.githubusercontent.com/SchemaStore/schemastore/refs/heads/master/src/schemas/json/package.json';
 
 // ============================================================================
 // Configuration (loaded from root package.json)
 // ============================================================================
 
-const PACKAGES_DIR = "packages";
+const PACKAGES_DIR = 'packages';
 
 // Author can be a string or an object
 interface AuthorObject {
@@ -32,9 +33,9 @@ type Author = string | AuthorObject;
  * Normalizes author to a string format "Name <email>"
  */
 function normalizeAuthor(author: Author | undefined): string {
-  if (!author) return "";
-  if (typeof author === "string") return author;
-  
+  if (!author) return '';
+  if (typeof author === 'string') return author;
+
   // Object format: { name, email?, url? }
   if (author.email) {
     return `${author.name} <${author.email}>`;
@@ -48,48 +49,48 @@ function normalizeAuthor(author: Author | undefined): string {
 function authorsMatch(pkgAuthor: Author | undefined, rootAuthor: Author | undefined): boolean {
   const normalizedPkg = normalizeAuthor(pkgAuthor);
   const normalizedRoot = normalizeAuthor(rootAuthor);
-  
+
   if (normalizedPkg === normalizedRoot) return true;
-  
+
   // Also allow just the name to match
-  const rootName = typeof rootAuthor === "object" ? rootAuthor.name : rootAuthor?.split("<")[0].trim();
-  const pkgName = typeof pkgAuthor === "object" ? pkgAuthor.name : pkgAuthor?.split("<")[0].trim();
-  
+  const rootName = typeof rootAuthor === 'object' ? rootAuthor.name : rootAuthor?.split('<')[0].trim();
+  const pkgName = typeof pkgAuthor === 'object' ? pkgAuthor.name : pkgAuthor?.split('<')[0].trim();
+
   return pkgName === rootName;
 }
 
 // These will be loaded from root package.json
 let ROOT_CONFIG: {
-  author: Author;
-  authorString: string; // Normalized string format
-  engines: Record<string, string>;
-  packageManager: string;
-  scope: string;
+  author: Author,
+  authorString: string, // Normalized string format
+  engines: Record<string, string>,
+  packageManager: string,
+  scope: string,
 } = {
-  author: "",
-  authorString: "",
+  author: '',
+  authorString: '',
   engines: {},
-  packageManager: "",
-  scope: "",
+  packageManager: '',
+  scope: '',
 };
 
 async function loadRootConfig(): Promise<void> {
-  const rootPackageJsonPath = join(process.cwd(), "package.json");
-  const content = await readFile(rootPackageJsonPath, "utf-8");
+  const rootPackageJsonPath = join(process.cwd(), 'package.json');
+  const content = await readFile(rootPackageJsonPath, 'utf-8');
   const rootPkg = JSON.parse(content);
 
   // Extract scope from the first package name or use default
   const name = rootPkg.name as string;
   const scopeMatch = name.match(/^@([^/]+)\//);
 
-  const author = rootPkg.author || "";
-  
+  const author = rootPkg.author || '';
+
   ROOT_CONFIG = {
     author,
     authorString: normalizeAuthor(author),
     engines: rootPkg.engines || {},
-    packageManager: rootPkg.packageManager || "",
-    scope: scopeMatch ? `@${scopeMatch[1]}` : "",
+    packageManager: rootPkg.packageManager || '',
+    scope: scopeMatch ? `@${scopeMatch[1]}` : '',
   };
 
   // If root doesn't have a scope, we'll detect it from packages
@@ -97,8 +98,8 @@ async function loadRootConfig(): Promise<void> {
     const packagesDir = join(process.cwd(), PACKAGES_DIR);
     const packages = await findPackages(packagesDir);
     if (packages.length > 0) {
-      const firstPkgPath = join(packages[0], "package.json");
-      const firstPkgContent = await readFile(firstPkgPath, "utf-8");
+      const firstPkgPath = join(packages[0], 'package.json');
+      const firstPkgContent = await readFile(firstPkgPath, 'utf-8');
       const firstPkg = JSON.parse(firstPkgContent);
       const pkgScopeMatch = (firstPkg.name as string).match(/^(@[^/]+)\//);
       if (pkgScopeMatch) {
@@ -132,7 +133,7 @@ interface ValidationError {
   path: string;
   rule: string;
   message: string;
-  severity: "error" | "warning";
+  severity: 'error' | 'warning';
 }
 
 interface ValidationResult {
@@ -150,20 +151,20 @@ let SCHEMA_KEY_ORDER: string[] = [];
  */
 async function fetchSchemaKeyOrder(): Promise<string[]> {
   try {
-    console.log("📥 Fetching package.json schema from SchemaStore...");
+    console.log('📥 Fetching package.json schema from SchemaStore...');
     const response = await fetch(PACKAGE_JSON_SCHEMA_URL);
     if (!response.ok) {
       throw new Error(`Failed to fetch schema: ${response.status} ${response.statusText}`);
     }
     const schema = await response.json() as { properties?: Record<string, unknown> };
-    
+
     if (schema.properties) {
       const keys = Object.keys(schema.properties);
       console.log(`   Found ${keys.length} keys in schema\n`);
       return keys;
     }
-    
-    console.log("   Warning: No properties found in schema, using fallback order\n");
+
+    console.log('   Warning: No properties found in schema, using fallback order\n');
     return [];
   } catch (error) {
     console.log(`   Warning: Could not fetch schema (${error}), using fallback order\n`);
@@ -172,7 +173,7 @@ async function fetchSchemaKeyOrder(): Promise<string[]> {
 }
 
 // Valid subdirectories in packages/
-const VALID_SUBDIRS = ["domain", "impl", "api", "serializers", "shared", "decap", "tools"] as const;
+const VALID_SUBDIRS = ['domain', 'impl', 'api', 'serializers', 'shared', 'decap', 'tools'] as const;
 type ValidSubdir = typeof VALID_SUBDIRS[number];
 
 const DECAP_PATTERNS = {
@@ -192,7 +193,7 @@ const SUBDIR_PATTERNS: Record<ValidSubdir, RegExp[]> = {
     /^(storage|documents|assets)$/,
     /^contentbase-settings$/,
   ],
-  
+
   // Infrastructure implementations
   impl: [
     /^(storage|documents|assets)-drizzle$/,
@@ -201,17 +202,17 @@ const SUBDIR_PATTERNS: Record<ValidSubdir, RegExp[]> = {
     /^documents-contentbase$/,
     /^assets-r2$/,
   ],
-  
+
   // API servers
   api: [
     /^(storage|documents|assets|contentbase)-api$/,
   ],
-  
+
   // Serializers
   serializers: [
     /^storage-serializers-(json|yaml|markdown|raw)$/,
   ],
-  
+
   // Shared utilities
   shared: [
     /^(core|i18n|crypto|auth|sanitizer)$/,
@@ -219,12 +220,12 @@ const SUBDIR_PATTERNS: Record<ValidSubdir, RegExp[]> = {
     /^file-sanitizer$/,
     /^token-crypto$/,
   ],
-  
+
   // Decap packages (all decap-* packages)
   decap: [
     /^decap-/,
   ],
-  
+
   // Development tools
   tools: [
     /^dynamodb-local$/,
@@ -244,34 +245,34 @@ function validateAuthor(pkg: PackageJson, pkgPath: string): ValidationError[] {
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "author-required",
+      rule: 'author-required',
       message: `Missing author field. Expected: "${rootAuthorString}"`,
-      severity: "error",
+      severity: 'error',
     });
   } else if (!authorsMatch(pkg.author, ROOT_CONFIG.author)) {
     // Check if it's just missing the email
-    const rootName = typeof ROOT_CONFIG.author === "object"
+    const rootName = typeof ROOT_CONFIG.author === 'object'
       ? ROOT_CONFIG.author.name
-      : ROOT_CONFIG.authorString.split("<")[0].trim();
-    const pkgName = typeof pkg.author === "object"
+      : ROOT_CONFIG.authorString.split('<')[0].trim();
+    const pkgName = typeof pkg.author === 'object'
       ? pkg.author.name
-      : pkgAuthorString.split("<")[0].trim();
-    
+      : pkgAuthorString.split('<')[0].trim();
+
     if (pkgName === rootName) {
       errors.push({
         package: pkg.name,
         path: pkgPath,
-        rule: "author-format",
+        rule: 'author-format',
         message: `Author should include email. Found: "${pkgAuthorString}", expected: "${rootAuthorString}"`,
-        severity: "warning",
+        severity: 'warning',
       });
     } else {
       errors.push({
         package: pkg.name,
         path: pkgPath,
-        rule: "author-mismatch",
+        rule: 'author-mismatch',
         message: `Incorrect author. Found: "${pkgAuthorString}", expected: "${rootAuthorString}"`,
-        severity: "error",
+        severity: 'error',
       });
     }
   }
@@ -286,9 +287,9 @@ function validateScope(pkg: PackageJson, pkgPath: string): ValidationError[] {
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "scope-required",
+      rule: 'scope-required',
       message: `Package name must be scoped with "${ROOT_CONFIG.scope}/". Found: "${pkg.name}"`,
-      severity: "error",
+      severity: 'error',
     });
   }
 
@@ -298,43 +299,44 @@ function validateScope(pkg: PackageJson, pkgPath: string): ValidationError[] {
 function validateDecapPackageNaming(
   pkg: PackageJson,
   pkgPath: string,
-  folderPath: string
+  folderPath: string,
 ): ValidationError[] {
   const errors: ValidationError[] = [];
-  const name = pkg.name.replace(`${ROOT_CONFIG.scope}/`, "");
+  const name = pkg.name.replace(`${ROOT_CONFIG.scope}/`, '');
 
   // Check if this is in packages/decap/ directory
-  const isInDecapFolder = folderPath.startsWith("packages/decap/");
+  const isInDecapFolder = folderPath.startsWith('packages/decap/');
 
   // Skip non-decap packages
-  if (!name.startsWith("decap-")) {
+  if (!name.startsWith('decap-')) {
     return errors;
   }
 
   if (isInDecapFolder) {
     // Packages in packages/decap/ should follow any valid decap pattern
     const validPatterns = Object.values(DECAP_PATTERNS);
-    const matchesPattern = validPatterns.some((pattern) => pattern.test(name));
+    const matchesPattern = validPatterns.some(pattern => pattern.test(name));
 
     if (!matchesPattern) {
       errors.push({
         package: pkg.name,
         path: pkgPath,
-        rule: "decap-folder-naming",
-        message: `Package in packages/decap/ should follow a valid decap pattern (decap-server-<name>, decap-cms-widget-<name>, decap-cms-locale-<locale>, decap-cms-editor-component-<name>, decap-cms-backend-<name>, decap-oauth2, or decap-api). Found: "${name}"`,
-        severity: "error",
+        rule: 'decap-folder-naming',
+        message:
+          `Package in packages/decap/ should follow a valid decap pattern (decap-server-<name>, decap-cms-widget-<name>, decap-cms-locale-<locale>, decap-cms-editor-component-<name>, decap-cms-backend-<name>, decap-oauth2, or decap-api). Found: "${name}"`,
+        severity: 'error',
       });
     }
 
     // Check folder name matches package name
-    const folderName = folderPath.split("/").pop();
+    const folderName = folderPath.split('/').pop();
     if (folderName && folderName !== name) {
       errors.push({
         package: pkg.name,
         path: pkgPath,
-        rule: "decap-folder-name-mismatch",
+        rule: 'decap-folder-name-mismatch',
         message: `Folder name "${folderName}" doesn't match package name "${name}"`,
-        severity: "warning",
+        severity: 'warning',
       });
     }
   } else {
@@ -342,9 +344,9 @@ function validateDecapPackageNaming(
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "decap-wrong-directory",
+      rule: 'decap-wrong-directory',
       message: `Decap package "${name}" should be in packages/decap/, not "${folderPath}"`,
-      severity: "error",
+      severity: 'error',
     });
   }
 
@@ -356,7 +358,7 @@ function validateDecapPackageNaming(
  */
 function getExpectedSubdir(name: string): ValidSubdir | null {
   for (const [subdir, patterns] of Object.entries(SUBDIR_PATTERNS)) {
-    if (patterns.some((pattern) => pattern.test(name))) {
+    if (patterns.some(pattern => pattern.test(name))) {
       return subdir as ValidSubdir;
     }
   }
@@ -374,10 +376,10 @@ function getActualSubdir(folderPath: string): string | null {
 function validateDirectoryPlacement(
   pkg: PackageJson,
   pkgPath: string,
-  folderPath: string
+  folderPath: string,
 ): ValidationError[] {
   const errors: ValidationError[] = [];
-  const name = pkg.name.replace(`${ROOT_CONFIG.scope}/`, "");
+  const name = pkg.name.replace(`${ROOT_CONFIG.scope}/`, '');
 
   // Get actual and expected subdirectories
   const actualSubdir = getActualSubdir(folderPath);
@@ -388,9 +390,11 @@ function validateDirectoryPlacement(
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "directory-structure",
-      message: `Package should be in a subdirectory of packages/ (one of: ${VALID_SUBDIRS.join(", ")}). Found: "${folderPath}"`,
-      severity: "error",
+      rule: 'directory-structure',
+      message: `Package should be in a subdirectory of packages/ (one of: ${
+        VALID_SUBDIRS.join(', ')
+      }). Found: "${folderPath}"`,
+      severity: 'error',
     });
     return errors;
   }
@@ -400,9 +404,9 @@ function validateDirectoryPlacement(
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "invalid-subdirectory",
-      message: `Invalid subdirectory "${actualSubdir}". Valid subdirectories are: ${VALID_SUBDIRS.join(", ")}`,
-      severity: "error",
+      rule: 'invalid-subdirectory',
+      message: `Invalid subdirectory "${actualSubdir}". Valid subdirectories are: ${VALID_SUBDIRS.join(', ')}`,
+      severity: 'error',
     });
     return errors;
   }
@@ -412,14 +416,14 @@ function validateDirectoryPlacement(
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "wrong-subdirectory",
+      rule: 'wrong-subdirectory',
       message: `Package "${name}" should be in packages/${expectedSubdir}/, not packages/${actualSubdir}/`,
-      severity: "error",
+      severity: 'error',
     });
   }
 
   // Validate folder name matches package name
-  const folderName = folderPath.split("/").pop();
+  const folderName = folderPath.split('/').pop();
   if (folderName) {
     // Handle special case: core-lib folder -> @laikacms/core
     const expectedFolderNames = [name, `${name}-lib`];
@@ -429,9 +433,9 @@ function validateDirectoryPlacement(
         errors.push({
           package: pkg.name,
           path: pkgPath,
-          rule: "folder-name-mismatch",
+          rule: 'folder-name-mismatch',
           message: `Folder name "${folderName}" doesn't match package name "${name}"`,
-          severity: "warning",
+          severity: 'warning',
         });
       }
     }
@@ -442,7 +446,7 @@ function validateDirectoryPlacement(
 
 function validatePackageStructure(
   pkg: PackageJson,
-  pkgPath: string
+  pkgPath: string,
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -451,9 +455,9 @@ function validatePackageStructure(
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "version-required",
-      message: "Missing version field",
-      severity: "error",
+      rule: 'version-required',
+      message: 'Missing version field',
+      severity: 'error',
     });
   }
 
@@ -461,9 +465,9 @@ function validatePackageStructure(
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "description-required",
-      message: "Missing description field",
-      severity: "warning",
+      rule: 'description-required',
+      message: 'Missing description field',
+      severity: 'warning',
     });
   }
 
@@ -471,28 +475,28 @@ function validatePackageStructure(
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "license-required",
-      message: "Missing license field. Expected: MIT",
-      severity: "error",
+      rule: 'license-required',
+      message: 'Missing license field. Expected: MIT',
+      severity: 'error',
     });
-  } else if (pkg.license !== "MIT") {
+  } else if (pkg.license !== 'MIT') {
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "license-must-be-mit",
+      rule: 'license-must-be-mit',
       message: `License must be MIT. Found: "${pkg.license}"`,
-      severity: "error",
+      severity: 'error',
     });
   }
 
   // Check for consistent type: module
-  if (pkg.type !== "module" && pkg.main?.endsWith(".js")) {
+  if (pkg.type !== 'module' && pkg.main?.endsWith('.js')) {
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "esm-type",
+      rule: 'esm-type',
       message: 'Consider adding "type": "module" for ESM packages',
-      severity: "warning",
+      severity: 'warning',
     });
   }
 
@@ -504,17 +508,17 @@ function validatePackageStructure(
       errors.push({
         package: pkg.name,
         path: pkgPath,
-        rule: "engines-required",
+        rule: 'engines-required',
         message: `Missing engines field. Expected engines.node: "${nodeVersion}"`,
-        severity: "warning",
+        severity: 'warning',
       });
     } else if (pkg.engines.node !== nodeVersion) {
       errors.push({
         package: pkg.name,
         path: pkgPath,
-        rule: "engines-node-mismatch",
-        message: `Inconsistent engines.node. Found: "${pkg.engines.node || "undefined"}", expected: "${nodeVersion}"`,
-        severity: "error",
+        rule: 'engines-node-mismatch',
+        message: `Inconsistent engines.node. Found: "${pkg.engines.node || 'undefined'}", expected: "${nodeVersion}"`,
+        severity: 'error',
       });
     }
   }
@@ -524,9 +528,10 @@ function validatePackageStructure(
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "packageManager-in-package",
-      message: `packageManager field should only be in root package.json, not in individual packages. Found: "${pkg.packageManager}"`,
-      severity: "warning",
+      rule: 'packageManager-in-package',
+      message:
+        `packageManager field should only be in root package.json, not in individual packages. Found: "${pkg.packageManager}"`,
+      severity: 'warning',
     });
   }
 
@@ -535,41 +540,41 @@ function validatePackageStructure(
 
 function validatePackageName(
   pkg: PackageJson,
-  pkgPath: string
+  pkgPath: string,
 ): ValidationError[] {
   const errors: ValidationError[] = [];
-  const name = pkg.name.replace(`${ROOT_CONFIG.scope}/`, "");
+  const name = pkg.name.replace(`${ROOT_CONFIG.scope}/`, '');
 
   // Check for valid npm package name characters
   if (!/^[a-z][a-z0-9-]*$/.test(name)) {
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "name-format",
+      rule: 'name-format',
       message: `Package name should be lowercase with hyphens only. Found: "${name}"`,
-      severity: "error",
+      severity: 'error',
     });
   }
 
   // Check for double hyphens
-  if (name.includes("--")) {
+  if (name.includes('--')) {
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "name-double-hyphen",
+      rule: 'name-double-hyphen',
       message: `Package name should not contain double hyphens. Found: "${name}"`,
-      severity: "error",
+      severity: 'error',
     });
   }
 
   // Check for trailing/leading hyphens
-  if (name.startsWith("-") || name.endsWith("-")) {
+  if (name.startsWith('-') || name.endsWith('-')) {
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "name-hyphen-position",
+      rule: 'name-hyphen-position',
       message: `Package name should not start or end with hyphen. Found: "${name}"`,
-      severity: "error",
+      severity: 'error',
     });
   }
 
@@ -586,10 +591,10 @@ function validatePackageName(
  */
 function getOutOfOrderKeys(packageKeys: string[], canonicalOrder: string[]): string[] {
   const outOfOrder: string[] = [];
-  
+
   // Filter canonical order to only include keys present in this package
   const expectedOrder = canonicalOrder.filter(k => packageKeys.includes(k));
-  
+
   // Check if the package keys match the expected order
   let expectedIndex = 0;
   for (const key of packageKeys) {
@@ -603,14 +608,14 @@ function getOutOfOrderKeys(packageKeys: string[], canonicalOrder: string[]): str
       }
     }
   }
-  
+
   return outOfOrder;
 }
 
 function validateKeyOrder(
   pkg: PackageJson,
   pkgPath: string,
-  packageKeys: string[]
+  packageKeys: string[],
 ): ValidationError[] {
   const errors: ValidationError[] = [];
 
@@ -619,17 +624,17 @@ function validateKeyOrder(
   }
 
   const outOfOrderKeys = getOutOfOrderKeys(packageKeys, SCHEMA_KEY_ORDER);
-  
+
   if (outOfOrderKeys.length > 0) {
     // Find the expected order for this package's keys
     const expectedOrder = SCHEMA_KEY_ORDER.filter((k: string) => packageKeys.includes(k));
-    
+
     errors.push({
       package: pkg.name,
       path: pkgPath,
-      rule: "key-order",
-      message: `Keys out of order: [${outOfOrderKeys.join(", ")}]. Expected order: [${expectedOrder.join(", ")}]`,
-      severity: "warning",
+      rule: 'key-order',
+      message: `Keys out of order: [${outOfOrderKeys.join(', ')}]. Expected order: [${expectedOrder.join(', ')}]`,
+      severity: 'warning',
     });
   }
 
@@ -650,7 +655,7 @@ async function findPackages(dir: string): Promise<string[]> {
       if (!entry.isDirectory()) continue;
 
       const fullPath = join(currentDir, entry.name);
-      const packageJsonPath = join(fullPath, "package.json");
+      const packageJsonPath = join(fullPath, 'package.json');
 
       try {
         await stat(packageJsonPath);
@@ -678,8 +683,8 @@ interface PackageData {
 }
 
 async function loadPackageData(pkgPath: string): Promise<PackageData> {
-  const packageJsonPath = join(pkgPath, "package.json");
-  const content = await readFile(packageJsonPath, "utf-8");
+  const packageJsonPath = join(pkgPath, 'package.json');
+  const content = await readFile(packageJsonPath, 'utf-8');
   const pkg: PackageJson = JSON.parse(content);
   const relativePath = relative(process.cwd(), pkgPath);
   const keys = Object.keys(pkg);
@@ -703,16 +708,16 @@ function validatePackage(data: PackageData): ValidationResult {
   return {
     packageName: pkg.name,
     packagePath: relativePath,
-    errors: allErrors.filter((e) => e.severity === "error"),
-    warnings: allErrors.filter((e) => e.severity === "warning"),
+    errors: allErrors.filter(e => e.severity === 'error'),
+    warnings: allErrors.filter(e => e.severity === 'warning'),
   };
 }
 
 async function main(): Promise<void> {
   // Load configuration from root package.json
   await loadRootConfig();
-  
-  console.log("🔍 Validating packages...\n");
+
+  console.log('🔍 Validating packages...\n');
   console.log(`Configuration loaded from root package.json:`);
   console.log(`  Author: ${ROOT_CONFIG.authorString}`);
   console.log(`  Scope: ${ROOT_CONFIG.scope}`);
@@ -769,21 +774,21 @@ async function main(): Promise<void> {
   }
 
   // Summary
-  console.log("\n" + "=".repeat(60));
-  console.log("📊 Summary");
-  console.log("=".repeat(60));
+  console.log('\n' + '='.repeat(60));
+  console.log('📊 Summary');
+  console.log('='.repeat(60));
   console.log(`   Packages scanned: ${results.length}`);
   console.log(`   Errors: ${totalErrors}`);
   console.log(`   Warnings: ${totalWarnings}`);
 
   if (totalErrors > 0) {
-    console.log("\n❌ Validation failed with errors");
+    console.log('\n❌ Validation failed with errors');
     process.exit(1);
   } else if (totalWarnings > 0) {
-    console.log("\n⚠️  Validation passed with warnings");
+    console.log('\n⚠️  Validation passed with warnings');
     process.exit(0);
   } else {
-    console.log("\n✅ All packages valid!");
+    console.log('\n✅ All packages valid!');
     process.exit(0);
   }
 }
@@ -791,7 +796,7 @@ async function main(): Promise<void> {
 // Parse CLI arguments
 const args = process.argv.slice(2);
 
-if (args.includes("--help") || args.includes("-h")) {
+if (args.includes('--help') || args.includes('-h')) {
   console.log(`
 Usage: npx tsx scripts/validate-packages.ts [options]
 
@@ -804,7 +809,7 @@ Examples:
   process.exit(0);
 }
 
-main().catch((error) => {
-  console.error("Fatal error:", error);
+main().catch(error => {
+  console.error('Fatal error:', error);
   process.exit(1);
 });

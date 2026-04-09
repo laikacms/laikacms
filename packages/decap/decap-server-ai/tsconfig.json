@@ -17,7 +17,7 @@
     "isolatedModules": true,
     "noEmit": false,
     "paths": {
-      "@/*": ["./src/*"],
+      "@/*": ["./src/*"]
     }
   },
   "include": ["src/**/*"],

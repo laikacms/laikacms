@@ -1,5 +1,5 @@
-import * as S from 'effect/Schema';
 import { StandardSchemaV1 } from '@standard-schema/spec';
+import * as S from 'effect/Schema';
 /**
  * Browser-compatible binary content type.
  * Supports Uint8Array (works in both browser and Node.js),
@@ -11,10 +11,11 @@ export type BinaryContent = Uint8Array | ArrayBuffer | ReadableStream<Uint8Array
 // is at least 10 characters long
 
 export const BinaryContentSchema = S.declare<BinaryContent>(
-  (val): val is BinaryContent => val instanceof Uint8Array || val instanceof ArrayBuffer ||
-    (typeof ReadableStream !== 'undefined' && val instanceof ReadableStream),
-  { message: 'Content must be Uint8Array, ArrayBuffer, or ReadableStream<Uint8Array>' }
-)
+  (val): val is BinaryContent =>
+    val instanceof Uint8Array || val instanceof ArrayBuffer
+    || (typeof ReadableStream !== 'undefined' && val instanceof ReadableStream),
+  { message: 'Content must be Uint8Array, ArrayBuffer, or ReadableStream<Uint8Array>' },
+);
 
 /**
  * Data required to create a new asset.

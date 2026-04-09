@@ -1,10 +1,6 @@
 #!/usr/bin/env node
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import {
-  CreateTableCommand,
-  DescribeTableCommand,
-  ResourceInUseException
-} from '@aws-sdk/client-dynamodb';
+import { CreateTableCommand, DescribeTableCommand, ResourceInUseException } from '@aws-sdk/client-dynamodb';
 import { config } from './config.js';
 
 const client = new DynamoDBClient({
@@ -52,7 +48,7 @@ async function createTable(tableConfig) {
 
 async function waitForDynamoDB(maxRetries = 5, delayMs = 2000) {
   console.log('🔍 Checking DynamoDB Local connection...');
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       await client.send(new DescribeTableCommand({ TableName: 'test-connection' }));

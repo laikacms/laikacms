@@ -1,5 +1,3 @@
-
-
 import { AssetsRepository } from '@laikacms/assets';
 import { buildAssetsApi } from '@laikacms/assets-api';
 import { AuthenticationError, Header, NotFoundError, TemplateLiteral as TL, Url } from '@laikacms/core';
@@ -115,12 +113,12 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       // Validate and extract API key with length limits
       const rawApiKey = apiKeyHeader || apiKeyAuth || urlApiKey;
       const apiKey = rawApiKey ? validateTokenInput(rawApiKey) : null;
-      
+
       if (rawApiKey && !apiKey) {
         // API key was provided but failed validation
         throw new AuthenticationError('Invalid API key format');
       }
-      
+
       if (apiKey) {
         // If an API key is provided, only try API key authentication
         if (!authenticateApiToken) {
@@ -132,13 +130,13 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         // Regular Bearer token authentication
         const rawToken = Header.ExtractAuthorizationBearerToken(authHeader);
         const token = validateTokenInput(rawToken);
-        
+
         if (!token) {
           throw new AuthenticationError('Invalid or missing authentication token');
         }
-        
+
         // Authenticate the token
-        return  await authenticateAccessToken(token);
+        return await authenticateAccessToken(token);
       }
     } catch (e) {
       options.logger?.error('Authentication failed:', e);
@@ -150,7 +148,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       );
     }
   };
-  
+
   return {
     authenticateRequest,
     async fetch(request: Request): Promise<Response> {
@@ -179,11 +177,11 @@ export const decapApi = (options: DecapOptions): DecapApi => {
 
       if (pathname.startsWith(sessionEndpoint)) {
         options.logger?.debug('Session endpoint for user:', user.id);
-        
+
         // Return user data (excluding sensitive fields like passwordHash)
         // The user is responsible for not passing in sensitive data, except for the passwordHash
         const { passwordHash, ...safeUserData } = user;
-        
+
         return new Response(
           JSON.stringify({
             data: {
@@ -196,27 +194,26 @@ export const decapApi = (options: DecapOptions): DecapApi => {
           }),
           { status: 200, headers: SECURITY_HEADERS },
         );
-      }
-
-      else if (pathname.startsWith(storageEndpoint)) {
+      } else if (pathname.startsWith(storageEndpoint)) {
         const storageApi = buildStorageApi({ repo: storage, basePath: `${base}/storage`, logger: options.logger });
         return storageApi.fetch(request);
-      }
-      else if (pathname.startsWith(documentsEndpoint)) {
-        const documentsApi = buildDocumentsApi({ repo: documents, basePath: `${base}/documents`, logger: options.logger });
+      } else if (pathname.startsWith(documentsEndpoint)) {
+        const documentsApi = buildDocumentsApi({
+          repo: documents,
+          basePath: `${base}/documents`,
+          logger: options.logger,
+        });
         return documentsApi.fetch(request);
-      }
-      else if (assets && pathname.startsWith(assetsEndpoint)) {
+      } else if (assets && pathname.startsWith(assetsEndpoint)) {
         const assetsApi = buildAssetsApi({ repository: assets, basePath: `${base}/assets` });
         return assetsApi.fetch(request);
-      }
-      else {
+      } else {
         options.logger?.debug('Endpoint not found:', pathname);
         return new Response(
           JSON.stringify(errorToJsonApiMapper(new NotFoundError('Endpoint not found'))),
           { status: 404, headers: SECURITY_HEADERS },
         );
       }
-    }
+    },
   };
 };

@@ -1,10 +1,10 @@
 import {
   type Asset,
-  type AssetVariations,
-  type AssetUrl,
-  type AssetMetadata,
   type AssetCreate,
+  type AssetMetadata,
   type AssetUpdate,
+  type AssetUrl,
+  type AssetVariations,
 } from '@laikacms/assets';
 import { type Folder, type FolderCreate } from '@laikacms/storage';
 
@@ -43,9 +43,9 @@ export interface JsonApiAsset {
   id: string;
   attributes: Omit<Asset, 'key'>;
   relationships?: {
-    metadata?: { data: { type: 'asset-metadata'; id: string } };
-    urls?: { data: { type: 'asset-url'; id: string } };
-    variations?: { data: { type: 'asset-variation'; id: string } };
+    metadata?: { data: { type: 'asset-metadata', id: string } },
+    urls?: { data: { type: 'asset-url', id: string } },
+    variations?: { data: { type: 'asset-variation', id: string } },
   };
 }
 
@@ -166,16 +166,16 @@ export type IncludeType = 'asset-metadata' | 'asset-url' | 'asset-variation';
  * Parse the ?include= query parameter into FetchHints
  */
 export function parseIncludeQuery(includeParam: string | undefined): {
-  metadata: boolean;
-  urls: boolean;
-  variations: boolean;
+  metadata: boolean,
+  urls: boolean,
+  variations: boolean,
 } {
   if (!includeParam) {
     return { metadata: false, urls: false, variations: false };
   }
-  
+
   const includes = includeParam.split(',').map(s => s.trim().toLowerCase());
-  
+
   return {
     metadata: includes.includes('asset-metadata'),
     urls: includes.includes('asset-url'),

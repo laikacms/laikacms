@@ -7,7 +7,7 @@
 
 import { defaultMessages, type OAuthMessages, type TotpTranslation } from '../i18n/index.js';
 import { decapLogo, loginPageStyles } from './decap-styles.js';
-import { html, type HtmlTemplate, messages, type TemplateVariables, getMessages } from './html.js';
+import { getMessages, html, type HtmlTemplate, messages, type TemplateVariables } from './html.js';
 
 // Template tag for JavaScript (enables intellisense)
 const js = String.raw;
@@ -173,23 +173,23 @@ const verifyAndContinue = Symbol('verifyAndContinue');
  * Template variables type for TOTP setup page
  */
 type TotpSetupTemplateVariables = TemplateVariables & {
-  [pageTitle]: string;
-  [title]: string;
-  [setupStep1]: string;
-  [setupStep2]: string;
-  [setupStep3]: string;
-  [qrCodeDataUrl]: string;
-  [qrCodeAlt]: string;
-  [manualKeyLabel]: string;
-  [formattedSecret]: string;
-  [baseUrl]: string;
-  [setupToken]: string;
-  [redirectUri]: string;
-  [enterVerificationCode]: string;
-  [inputPlaceholder]: string;
-  [inputLabel]: string;
-  [verifyAndContinue]: string;
-  [messages]: OAuthMessages;
+  [pageTitle]: string,
+  [title]: string,
+  [setupStep1]: string,
+  [setupStep2]: string,
+  [setupStep3]: string,
+  [qrCodeDataUrl]: string,
+  [qrCodeAlt]: string,
+  [manualKeyLabel]: string,
+  [formattedSecret]: string,
+  [baseUrl]: string,
+  [setupToken]: string,
+  [redirectUri]: string,
+  [enterVerificationCode]: string,
+  [inputPlaceholder]: string,
+  [inputLabel]: string,
+  [verifyAndContinue]: string,
+  [messages]: OAuthMessages,
 };
 
 /**
@@ -261,7 +261,7 @@ function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
+  return text.replace(/[&<>"']/g, char => map[char]);
 }
 
 /**
@@ -289,10 +289,10 @@ export function renderTotpSetupPage(options: TotpSetupPageOptions): string {
   const msgs = options.messages ?? defaultMessages;
   const t = msgs.totp;
   const base = options.baseUrl || '';
-  
+
   // Format secret for display (groups of 4)
   const formatted = options.secret.match(/.{1,4}/g)?.join(' ') || options.secret;
-  
+
   // Replace {{issuer}} placeholder in qrCodeAlt
   const qrCodeAltText = t.qrCodeAlt.replace('{{issuer}}', options.issuer);
 

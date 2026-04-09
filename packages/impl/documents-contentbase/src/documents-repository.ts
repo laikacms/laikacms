@@ -1,29 +1,23 @@
-import { AtomSummary, basename, pathToSegments, StorageRepository, pathCombine } from "@laikacms/storage";
+import { ContentBaseSettingsProvider } from '@laikacms/contentbase-settings';
+import { BadRequestError, InvalidData, LaikaError, LaikaResult, NotFoundError } from '@laikacms/core';
 import {
-  LaikaError,
-  LaikaResult,
-  NotFoundError,
-  InvalidData,
-  BadRequestError,
-} from "@laikacms/core";
-import {
-  type Revision,
   type Document,
+  type DocumentCreate,
+  DocumentsRepository,
+  type DocumentUpdate,
+  ListRecordsOptions,
+  ListRecordSummaries,
+  ListRevisionsOptions,
+  type Record,
+  RecordSummary,
+  type Revision,
+  type RevisionCreate,
+  RevisionSummary,
   type Unpublished,
   type UnpublishedCreate,
   type UnpublishedUpdate,
-  type Record,
-  type DocumentCreate,
-  type DocumentUpdate,
-  type RevisionCreate,
-  DocumentsRepository,
-  RevisionSummary,
-  ListRevisionsOptions,
-  ListRecordsOptions,
-  ListRecordSummaries,
-  RecordSummary,
-} from "@laikacms/documents";
-import { ContentBaseSettingsProvider } from "@laikacms/contentbase-settings";
+} from '@laikacms/documents';
+import { AtomSummary, basename, pathCombine, pathToSegments, StorageRepository } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 /**
@@ -47,7 +41,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   constructor(
     private readonly collection: string,
     private readonly storageRepository: StorageRepository,
-    private readonly settingsProvider: ContentBaseSettingsProvider
+    private readonly settingsProvider: ContentBaseSettingsProvider,
   ) {
     super();
   }
@@ -69,7 +63,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
    */
   private async getUnpublishedPath(
     key: string,
-    status: string
+    status: string,
   ): Promise<LaikaResult<string>> {
     const settings = await this.settingsProvider.getDocumentCollectionSettings(this.collection);
     if (Result.isFailure(settings)) {
@@ -80,10 +74,12 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     const statusConfig = unpublishedStatuses[status];
 
     if (!statusConfig) {
-      return Result.fail(new BadRequestError(
-        `Unknown unpublished status '${status}' for collection '${this.collection}'. ` +
-        `Available statuses: ${Object.keys(unpublishedStatuses).join(', ')}`
-      ));
+      return Result.fail(
+        new BadRequestError(
+          `Unknown unpublished status '${status}' for collection '${this.collection}'. `
+            + `Available statuses: ${Object.keys(unpublishedStatuses).join(', ')}`,
+        ),
+      );
     }
 
     // Path format: .contentbase/[collection]/[status.directory]/[key]
@@ -96,7 +92,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
    */
   private async getRevisionPath(
     key: string,
-    revision?: string
+    revision?: string,
   ): Promise<LaikaResult<string>> {
     const settings = await this.settingsProvider.getDocumentCollectionSettings(this.collection);
     if (Result.isFailure(settings)) {
@@ -105,7 +101,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
     const revisionDirectory = settings.success.revisionDirectory || `.contentbase/${this.collection}/revisions`;
     const basePath = pathCombine(revisionDirectory, key);
-    
+
     if (revision) {
       return Result.succeed(pathCombine(basePath, revision));
     }
@@ -138,8 +134,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     const document: Document = {
       ...result.success,
       key,
-      type: "published",
-      status: "published",
+      type: 'published',
+      status: 'published',
     };
 
     yield Result.succeed(document);
@@ -155,7 +151,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     const now = new Date().toISOString();
 
     const object = await firstResult(this.storageRepository.createObject({
-      type: "object",
+      type: 'object',
       key: pathResult.success,
       content: create.content,
     }));
@@ -168,8 +164,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     const document: Document = {
       ...object.success,
       key: create.key,
-      type: "published",
-      status: "published",
+      type: 'published',
+      status: 'published',
       createdAt: now,
       updatedAt: now,
     };
@@ -252,7 +248,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
         const unpublished: Unpublished = {
           ...result.success,
           key,
-          type: "unpublished",
+          type: 'unpublished',
           status,
         };
         yield Result.succeed(unpublished);
@@ -273,7 +269,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     const now = new Date().toISOString();
 
     const object = await firstResult(this.storageRepository.createObject({
-      type: "object",
+      type: 'object',
       key: pathResult.success,
       content: create.content,
     }));
@@ -286,7 +282,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     const unpublished: Unpublished = {
       ...object.success,
       key: create.key,
-      type: "unpublished",
+      type: 'unpublished',
       status: create.status,
       createdAt: now,
       updatedAt: now,
@@ -367,7 +363,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
     // Create in new location
     const createResult = await firstResult(this.storageRepository.createObject({
-      type: "object",
+      type: 'object',
       key: newPath.success,
       content: existing.content,
     }));
@@ -442,9 +438,9 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
     const now = new Date().toISOString();
 
-    // Write to unpublished location  
+    // Write to unpublished location
     const createResult = await firstResult(this.storageRepository.createObject({
-      type: "object",
+      type: 'object',
       key: unpublishedPath.success,
       content: document.content,
     }));
@@ -463,7 +459,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
     const unpublished: Unpublished = {
       key,
-      type: "unpublished",
+      type: 'unpublished',
       status,
       content: document.content,
       createdAt: document.createdAt,
@@ -500,7 +496,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
     // Write to documents
     const createResult = await firstResult(this.storageRepository.createObject({
-      type: "object",
+      type: 'object',
       key: documentPath.success,
       content: unpublished.content,
     }));
@@ -519,8 +515,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
     const document: Document = {
       key,
-      type: "published",
-      status: "published",
+      type: 'published',
+      status: 'published',
       content: unpublished.content,
       createdAt: unpublished.createdAt,
       updatedAt: now,
@@ -536,7 +532,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
    */
   private async *listRecordsInternal<T extends 'full' | 'summary'>(
     options: ListRecordsOptions,
-    mode: T
+    mode: T,
   ): AsyncGenerator<LaikaResult<readonly (T extends 'full' ? Record : RecordSummary)[]>> {
     const settings = await this.settingsProvider.getDocumentCollectionSettings(this.collection);
     if (Result.isFailure(settings)) {
@@ -562,8 +558,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           }
 
           const items = atoms.success
-            .filter((atom) => atom.type === 'object')
-            .map((atom) => {
+            .filter(atom => atom.type === 'object')
+            .map(atom => {
               const key = this.extractKeyFromPath(atom.key, directory);
               return {
                 ...atom,
@@ -583,8 +579,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           }
 
           const items = atoms.success
-            .filter((atom) => atom.type === 'object-summary')
-            .map((atom) => {
+            .filter(atom => atom.type === 'object-summary')
+            .map(atom => {
               const key = this.extractKeyFromPath(atom.key, directory);
               return {
                 ...atom,
@@ -626,8 +622,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
             }
 
             const items = atoms.success
-              .filter((atom) => atom.type === 'object')
-              .map((atom) => {
+              .filter(atom => atom.type === 'object')
+              .map(atom => {
                 const key = this.extractKeyFromPath(atom.key, basePath);
                 return {
                   ...atom,
@@ -649,8 +645,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
             }
 
             const items = atoms.success
-              .filter((atom) => atom.type === 'object-summary')
-              .map((atom) => {
+              .filter(atom => atom.type === 'object-summary')
+              .map(atom => {
                 const key = this.extractKeyFromPath(atom.key, basePath);
                 return {
                   ...atom,
@@ -697,7 +693,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     }
 
     if (!result.success.createdAt) {
-      yield Result.fail(new InvalidData("Revision is missing createdAt date"));
+      yield Result.fail(new InvalidData('Revision is missing createdAt date'));
       return;
     }
 
@@ -705,7 +701,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       ...result.success,
       createdAt: result.success.createdAt,
       revision,
-      type: "revision",
+      type: 'revision',
       key,
     };
 
@@ -722,7 +718,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     const now = new Date().toISOString();
 
     const object = await firstResult(this.storageRepository.createObject({
-      type: "object",
+      type: 'object',
       key: pathResult.success,
       content: create.content,
     }));
@@ -736,7 +732,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       ...object.success,
       key: create.key,
       revision: create.revision,
-      type: "revision",
+      type: 'revision',
       createdAt: now,
       updatedAt: now,
     };
@@ -744,7 +740,10 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     yield Result.succeed(revision);
   }
 
-  async *listRevisions(key: string, options: ListRevisionsOptions): AsyncGenerator<LaikaResult<readonly RevisionSummary[]>> {
+  async *listRevisions(
+    key: string,
+    options: ListRevisionsOptions,
+  ): AsyncGenerator<LaikaResult<readonly RevisionSummary[]>> {
     const pathResult = await this.getRevisionPath(key);
     if (Result.isFailure(pathResult)) {
       yield failAs<readonly RevisionSummary[]>(pathResult.failure);
@@ -765,12 +764,12 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       }
 
       const summaries = result.success
-        .filter((atom) => atom.type === "object-summary")
-        .map((atom) => {
+        .filter(atom => atom.type === 'object-summary')
+        .map(atom => {
           const revisionName = basename(atom.key);
           return {
             ...atom,
-            type: "revision-summary" as const,
+            type: 'revision-summary' as const,
             revision: revisionName,
             key,
           } satisfies RevisionSummary;

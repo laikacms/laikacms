@@ -1,58 +1,48 @@
-import * as S from 'effect/Schema';
 import {
-  StorageObjectUpdateSchema,
-  StorageObjectSchema,
-  FolderCreateSchema,
-  FolderSchema,
-  StorageObjectSummarySchema,
-  FolderSummarySchema,
-  StorageObjectCreateSchema,
-  type StorageObject,
-  type StorageObjectCreate,
-  type StorageObjectUpdate,
-  type StorageObjectSummary,
-  type Folder,
-  type FolderCreate,
-  type FolderSummary,
-} from '@laikacms/storage';
-import {
-  DocumentSchema,
-  DocumentCreateSchema,
-  DocumentUpdateSchema,
-  DocumentSummarySchema,
-  RevisionSchema,
-  RevisionCreateSchema,
-  RevisionSummarySchema,
-  UnpublishedSchema,
-  UnpublishedCreateSchema,
-  UnpublishedUpdateSchema,
-  UnpublishedSummarySchema,
   type Document,
   type DocumentCreate,
-  type DocumentUpdate,
+  DocumentCreateSchema,
+  DocumentSchema,
   type DocumentSummary,
+  DocumentSummarySchema,
+  type DocumentUpdate,
+  DocumentUpdateSchema,
   type Revision,
   type RevisionCreate,
+  RevisionCreateSchema,
+  RevisionSchema,
   type RevisionSummary,
+  RevisionSummarySchema,
   type Unpublished,
   type UnpublishedCreate,
-  type UnpublishedUpdate,
+  UnpublishedCreateSchema,
+  UnpublishedSchema,
   type UnpublishedSummary,
-} from '@laikacms/documents'
+  UnpublishedSummarySchema,
+  type UnpublishedUpdate,
+  UnpublishedUpdateSchema,
+} from '@laikacms/documents';
+import { fromJsonApi, type JsonApiCollectionResponse, type JsonApiError, toJsonApi } from '@laikacms/json-api';
 import {
-  toJsonApi,
-  fromJsonApi,
-  type JsonApiError,
-  type JsonApiCollectionResponse,
-} from '@laikacms/json-api';
+  type Folder,
+  type FolderCreate,
+  FolderCreateSchema,
+  FolderSchema,
+  type FolderSummary,
+  FolderSummarySchema,
+  type StorageObject,
+  type StorageObjectCreate,
+  StorageObjectCreateSchema,
+  StorageObjectSchema,
+  type StorageObjectSummary,
+  StorageObjectSummarySchema,
+  type StorageObjectUpdate,
+  StorageObjectUpdateSchema,
+} from '@laikacms/storage';
+import * as S from 'effect/Schema';
 
 // Re-export common JSON:API utilities
-export {
-  toJsonApi,
-  fromJsonApi,
-  type JsonApiError,
-  type JsonApiCollectionResponse,
-} from '@laikacms/json-api';
+export { fromJsonApi, type JsonApiCollectionResponse, type JsonApiError, toJsonApi } from '@laikacms/json-api';
 
 // ===== JSON:API RESOURCE TYPES =====
 
@@ -172,8 +162,7 @@ export interface RevisionSummaryJsonApi {
 // ===== TRANSFORMER FUNCTIONS =====
 
 // Storage Object transformers
-export const storageObjectToJsonApi = (obj: StorageObject): StorageObjectJsonApi =>
-  toJsonApi(obj, 'object', 'key');
+export const storageObjectToJsonApi = (obj: StorageObject): StorageObjectJsonApi => toJsonApi(obj, 'object', 'key');
 
 export const storageObjectFromJsonApi = (jsonApi: StorageObjectJsonApi): StorageObject =>
   fromJsonApi(jsonApi, 'object', 'key');
@@ -194,11 +183,9 @@ export const storageObjectSummaryFromJsonApi = (jsonApi: StorageObjectSummaryJso
   fromJsonApi(jsonApi, 'object-summary', 'key');
 
 // Document transformers
-export const documentToJsonApi = (doc: Document): DocumentJsonApi =>
-  toJsonApi(doc, 'published', 'key');
+export const documentToJsonApi = (doc: Document): DocumentJsonApi => toJsonApi(doc, 'published', 'key');
 
-export const documentFromJsonApi = (jsonApi: DocumentJsonApi): Document =>
-  fromJsonApi(jsonApi, 'published', 'key');
+export const documentFromJsonApi = (jsonApi: DocumentJsonApi): Document => fromJsonApi(jsonApi, 'published', 'key');
 
 export const documentCreateToJsonApi = (doc: DocumentCreate): DocumentCreateJsonApi =>
   toJsonApi(doc, 'published', 'key');
@@ -219,8 +206,7 @@ export const documentSummaryFromJsonApi = (jsonApi: DocumentSummaryJsonApi): Doc
   fromJsonApi(jsonApi, 'published-summary', 'key');
 
 // Unpublished transformers
-export const unpublishedToJsonApi = (doc: Unpublished): UnpublishedJsonApi =>
-  toJsonApi(doc, 'unpublished', 'key');
+export const unpublishedToJsonApi = (doc: Unpublished): UnpublishedJsonApi => toJsonApi(doc, 'unpublished', 'key');
 
 export const unpublishedFromJsonApi = (jsonApi: UnpublishedJsonApi): Unpublished =>
   fromJsonApi(jsonApi, 'unpublished', 'key');
@@ -244,14 +230,11 @@ export const unpublishedSummaryFromJsonApi = (jsonApi: UnpublishedSummaryJsonApi
   fromJsonApi(jsonApi, 'unpublished-summary', 'key');
 
 // Folder transformers
-export const folderToJsonApi = (folder: Folder): FolderJsonApi =>
-  toJsonApi(folder, 'folder', 'key');
+export const folderToJsonApi = (folder: Folder): FolderJsonApi => toJsonApi(folder, 'folder', 'key');
 
-export const folderFromJsonApi = (jsonApi: FolderJsonApi): Folder =>
-  fromJsonApi(jsonApi, 'folder', 'key');
+export const folderFromJsonApi = (jsonApi: FolderJsonApi): Folder => fromJsonApi(jsonApi, 'folder', 'key');
 
-export const folderCreateToJsonApi = (folder: FolderCreate): FolderCreateJsonApi =>
-  toJsonApi(folder, 'folder', 'key');
+export const folderCreateToJsonApi = (folder: FolderCreate): FolderCreateJsonApi => toJsonApi(folder, 'folder', 'key');
 
 export const folderCreateFromJsonApi = (jsonApi: FolderCreateJsonApi): FolderCreate =>
   fromJsonApi(jsonApi, 'folder', 'key');
@@ -263,11 +246,9 @@ export const folderSummaryFromJsonApi = (jsonApi: FolderSummaryJsonApi): FolderS
   fromJsonApi(jsonApi, 'folder-summary', 'key');
 
 // Revision transformers
-export const revisionToJsonApi = (rev: Revision): RevisionJsonApi =>
-  toJsonApi(rev, 'revision', 'key');
+export const revisionToJsonApi = (rev: Revision): RevisionJsonApi => toJsonApi(rev, 'revision', 'key');
 
-export const revisionFromJsonApi = (jsonApi: RevisionJsonApi): Revision =>
-  fromJsonApi(jsonApi, 'revision', 'key');
+export const revisionFromJsonApi = (jsonApi: RevisionJsonApi): Revision => fromJsonApi(jsonApi, 'revision', 'key');
 
 export const revisionCreateToJsonApi = (rev: RevisionCreate): RevisionCreateJsonApi =>
   toJsonApi(rev, 'revision', 'key');

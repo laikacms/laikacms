@@ -1,6 +1,6 @@
 /**
  * DynamoDB table configuration
- * 
+ *
  * This module provides the table schema definitions for both:
  * - Local development (DynamoDB Local)
  * - Production (AWS DynamoDB)
@@ -9,31 +9,31 @@
 export interface TableConfig {
   name: string;
   createParams: {
-    TableName: string;
-    KeySchema: Array<{ AttributeName: string; KeyType: 'HASH' | 'RANGE' }>;
-    AttributeDefinitions: Array<{ AttributeName: string; AttributeType: 'S' | 'N' | 'B' }>;
+    TableName: string,
+    KeySchema: Array<{ AttributeName: string, KeyType: 'HASH' | 'RANGE' }>,
+    AttributeDefinitions: Array<{ AttributeName: string, AttributeType: 'S' | 'N' | 'B' }>,
     GlobalSecondaryIndexes?: Array<{
-      IndexName: string;
-      KeySchema: Array<{ AttributeName: string; KeyType: 'HASH' | 'RANGE' }>;
-      Projection: { ProjectionType: 'ALL' | 'KEYS_ONLY' | 'INCLUDE'; NonKeyAttributes?: string[] };
-    }>;
-    BillingMode: 'PAY_PER_REQUEST' | 'PROVISIONED';
+      IndexName: string,
+      KeySchema: Array<{ AttributeName: string, KeyType: 'HASH' | 'RANGE' }>,
+      Projection: { ProjectionType: 'ALL' | 'KEYS_ONLY' | 'INCLUDE', NonKeyAttributes?: string[] },
+    }>,
+    BillingMode: 'PAY_PER_REQUEST' | 'PROVISIONED',
     ProvisionedThroughput?: {
-      ReadCapacityUnits: number;
-      WriteCapacityUnits: number;
-    };
+      ReadCapacityUnits: number,
+      WriteCapacityUnits: number,
+    },
   };
 }
 
 /**
  * Get table configuration for a given environment
- * 
+ *
  * @param env - Environment name (e.g., 'dev', 'staging', 'prod')
  * @returns Table configurations for main and content tables
  */
 export function getTableConfig(env: string = 'dev'): {
-  main: TableConfig;
-  content: TableConfig;
+  main: TableConfig,
+  content: TableConfig,
 } {
   return {
     main: {
@@ -125,12 +125,12 @@ export function getTableConfig(env: string = 'dev'): {
 
 /**
  * Get CDK-compatible table configuration
- * 
+ *
  * This returns the configuration in a format suitable for AWS CDK
  */
 export function getCDKTableConfig(env: string = 'dev') {
   const config = getTableConfig(env);
-  
+
   return {
     main: {
       tableName: config.main.name,

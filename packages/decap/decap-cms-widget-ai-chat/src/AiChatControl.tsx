@@ -1,16 +1,16 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { connect } from 'react-redux';
-import type { CmsWidgetControlProps } from "decap-cms-core";
+import { type UIMessage, useChat } from '@ai-sdk/react';
 import { css } from '@emotion/css';
-import { useChat, type UIMessage } from '@ai-sdk/react';
 import { DefaultChatTransport, isTextUIPart, isToolUIPart, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
+import type { CmsWidgetControlProps } from 'decap-cms-core';
+import type { EditorialWorkflow, Entries, State } from 'decap-cms-core/types/redux';
 import { applyPatch, type Operation } from 'fast-json-patch';
-import type { AiChatWidgetOptions, SessionSummary, DocumentContext } from "./types";
-import { changeDraftField, selectFields, type I18nInfo } from "./utils";
-import type { EditorialWorkflow, Entries, State } from "decap-cms-core/types/redux";
-import { fromJS, type List, type Map } from "immutable";
-import { getI18nInfo } from "./utils";
-import en from './i18n/nl'
+import { fromJS, type List, type Map } from 'immutable';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { connect } from 'react-redux';
+import en from './i18n/nl';
+import type { AiChatWidgetOptions, DocumentContext, SessionSummary } from './types';
+import { changeDraftField, type I18nInfo, selectFields } from './utils';
+import { getI18nInfo } from './utils';
 
 // Styles
 const containerStyles = css`
@@ -274,7 +274,7 @@ function getLocaleData(entry: any, locale: string | undefined, defaultLocale: st
     // Default locale - data is directly in 'data'
     return entry?.get?.('data')?.toJS?.() || {};
   }
-  
+
   // Non-default locale - data is in 'i18n.<locale>.data'
   const i18nData = entry?.get?.('i18n');
   if (i18nData) {
@@ -289,7 +289,7 @@ function getLocaleData(entry: any, locale: string | undefined, defaultLocale: st
       return localeEntry.toJS?.() || localeEntry || {};
     }
   }
-  
+
   // Fallback to default data if locale-specific data not found
   return entry?.get?.('data')?.toJS?.() || {};
 }
@@ -297,7 +297,11 @@ function getLocaleData(entry: any, locale: string | undefined, defaultLocale: st
 /**
  * Get current document context from Decap CMS
  */
-function getDocumentContext(entry: any, locale: string | undefined, defaultLocale: string | undefined): DocumentContext {
+function getDocumentContext(
+  entry: any,
+  locale: string | undefined,
+  defaultLocale: string | undefined,
+): DocumentContext {
   const data = getLocaleData(entry, locale, defaultLocale);
   const slug = entry?.get?.('slug') || 'untitled';
   const collection = entry?.get?.('collection') || undefined;
@@ -323,7 +327,9 @@ function getMessageText(message: UIMessage): string {
 /**
  * Extract tool invocations from UIMessage parts
  */
-function getToolParts(message: UIMessage): Array<{ toolCallId: string; toolName: string; state: string; output?: unknown }> {
+function getToolParts(
+  message: UIMessage,
+): Array<{ toolCallId: string, toolName: string, state: string, output?: unknown }> {
   return message.parts
     .filter(isToolUIPart)
     .map(part => ({
@@ -361,15 +367,19 @@ const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({ toolCallId, too
       <div className="tool-name">
         🔧 {toolName}
       </div>
-      {state === 'output-available' && output != null ? (
-        <div className="tool-result">
-          {JSON.stringify(output, null, 2)}
-        </div>
-      ) : state === 'output-error' ? (
-        <div className="tool-result" style={{ color: '#dc3545' }}>
-          Error: {JSON.stringify(output, null, 2)}
-        </div>
-      ) : null}
+      {state === 'output-available' && output != null
+        ? (
+          <div className="tool-result">
+            {JSON.stringify(output, null, 2)}
+          </div>
+        )
+        : state === 'output-error'
+        ? (
+          <div className="tool-result" style={{ color: '#dc3545' }}>
+            Error: {JSON.stringify(output, null, 2)}
+          </div>
+        )
+        : null}
     </div>
   );
 };
@@ -394,7 +404,7 @@ function getToolNameFromPart(part: any): string {
 /**
  * Render a single message part based on its type
  */
-const MessagePart: React.FC<{ part: any; index: number }> = ({ part, index }) => {
+const MessagePart: React.FC<{ part: any, index: number }> = ({ part, index }) => {
   if (part.type === 'text') {
     return <TextPart key={index} text={part.text} />;
   }
@@ -406,7 +416,7 @@ const MessagePart: React.FC<{ part: any; index: number }> = ({ part, index }) =>
     const toolName = getToolNameFromPart(part) || part.toolInvocation?.toolName || 'Unknown tool';
     const state = part.state || part.toolInvocation?.state || '';
     const output = part.output ?? part.toolInvocation?.output;
-    
+
     return (
       <ToolInvocationPart
         key={toolCallId || index}
@@ -420,21 +430,21 @@ const MessagePart: React.FC<{ part: any; index: number }> = ({ part, index }) =>
   return null;
 };
 
-const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = (props) => {
+const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
   const { field, fields, locale, entry, widget, config, metadata, dispatch, collection } = props;
   console.log('AiChatControl props', props);
 
   // Get messages - use widget messages if provided, otherwise use defaults
   const t = widget.messages ?? en;
-  
+
   // Get i18n info for locale handling
   const i18nInfo = useMemo(() => getI18nInfo(collection), [collection]);
   const defaultLocale = (i18nInfo as I18nInfo).defaultLocale;
-  
+
   const placeholder = field.get('placeholder') as string || t.defaultPlaceholder;
   const welcomeMessage = field.get('welcomeMessage') as string || t.defaultWelcomeMessage;
   const maxHeight = field.get('maxHeight') as string || '500px';
-  
+
   // The api option should be the base path (e.g., '/api/v1/ai')
   // useChat sends to `${api}` directly, so we need to append /chat
   const apiBasePath = widget.aiSdk?.api || '/api/v1/ai';
@@ -449,7 +459,11 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = (props) => {
   const [input, setInput] = useState('');
 
   // Get document context with locale-aware data
-  const documentContext = useMemo(() => getDocumentContext(entry, locale, defaultLocale), [entry, locale, defaultLocale]);
+  const documentContext = useMemo(() => getDocumentContext(entry, locale, defaultLocale), [
+    entry,
+    locale,
+    defaultLocale,
+  ]);
 
   console.log('Document context for AI', documentContext);
 
@@ -515,15 +529,15 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = (props) => {
 
         case 'updateDocument': {
           const operations = (args as { operations?: Operation[] })?.operations || [];
-          
+
           try {
             // Apply JSON Patch operations to get the new document
             const result = applyPatch(currentData, operations, true, false);
 
             console.log('Update document tool call', { currentData, operations, result });
-            
+
             if (result.newDocument) {
-              Object.keys(result.newDocument).forEach((key) => {
+              Object.keys(result.newDocument).forEach(key => {
                 const rawValue = result.newDocument[key];
                 const hasChanges = operations.some(op => op.path.startsWith(`/${key}`));
                 if (!hasChanges) {
@@ -547,8 +561,8 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = (props) => {
                 const i18n = {
                   currentLocale: locale,
                   defaultLocale: (i18nInfoForAction as I18nInfo).defaultLocale,
-                  locales: (i18nInfoForAction as I18nInfo).locales
-                }
+                  locales: (i18nInfoForAction as I18nInfo).locales,
+                };
                 const action = changeDraftField({ field: thisField, value, metadata, entries, i18n });
                 console.log('Dispatching DRAFT_CHANGE_FIELD action:', action);
                 dispatch(action);
@@ -601,7 +615,7 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = (props) => {
     setIsLoadingSessions(true);
     try {
       const response = await aiFetch(
-        `${sessionsEndpoint}/sessions?documentSlug=${encodeURIComponent(documentContext.slug)}`
+        `${sessionsEndpoint}/sessions?documentSlug=${encodeURIComponent(documentContext.slug)}`,
       );
 
       if (response.ok) {
@@ -706,7 +720,7 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = (props) => {
               onChange={handleSessionSelect}
             >
               <option value="new">{t.newConversation}</option>
-              {sessions.map((s) => (
+              {sessions.map(s => (
                 <option key={s.id} value={s.id}>
                   {s.title || `${t.session} ${s.id.slice(0, 8)}`}
                 </option>
@@ -726,25 +740,25 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = (props) => {
 
       {/* Messages */}
       <div className={messagesContainerStyles}>
-        {messages.length === 0 ? (
-          <div className={emptyStateStyles}>
-            <div className="icon">💬</div>
-            <h3>{t.startConversation}</h3>
-            <p>{welcomeMessage}</p>
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`${messageStyles} ${message.role}`}
-            >
-              {/* Render parts in order - text and tool calls interleaved */}
-              {message.parts.map((part: any, index: number) => (
-                <MessagePart key={index} part={part} index={index} />
-              ))}
+        {messages.length === 0
+          ? (
+            <div className={emptyStateStyles}>
+              <div className="icon">💬</div>
+              <h3>{t.startConversation}</h3>
+              <p>{welcomeMessage}</p>
             </div>
-          ))
-        )}
+          )
+          : (
+            messages.map(message => (
+              <div
+                key={message.id}
+                className={`${messageStyles} ${message.role}`}
+              >
+                {/* Render parts in order - text and tool calls interleaved */}
+                {message.parts.map((part: any, index: number) => <MessagePart key={index} part={part} index={index} />)}
+              </div>
+            ))
+          )}
 
         {isLoading && (
           <div className={loadingStyles}>
@@ -767,7 +781,7 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = (props) => {
         <textarea
           className={inputStyles}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={e => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={placeholder}
           disabled={isLoading}
@@ -805,7 +819,7 @@ function mapStateToProps(state: State, ownProps: AiChatControlProps) {
     unPublishedEntry,
     publishedEntry,
     fields,
-  }
+  };
 }
 
 const ConnectedAiChatControl = connect(mapStateToProps, null, null, { forwardRef: true })(AiChatControl);

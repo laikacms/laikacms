@@ -17,8 +17,8 @@ software designed to work with your own custom or existing user interfaces.
 ## What is Laika CMS?
 
 Laika CMS is **composable, modular content management software** designed to work across any
-JavaScript runtime—Node.js, Cloudflare Workers, AWS Lambda, Deno, and more. It's API-first,
-meaning you bring your own frontend or use existing solutions like Decap CMS.
+JavaScript runtime—Node.js, Cloudflare Workers, AWS Lambda, Deno, and more. It's API-first, meaning
+you bring your own frontend or use existing solutions like Decap CMS.
 
 ### Key Principles
 

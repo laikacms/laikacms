@@ -143,9 +143,14 @@ const successIcon =
 /**
  * JavaScript for passkey setup (function to inject baseUrl and registration options)
  */
-function getPasskeySetupScript(baseUrl: string, registrationOptionsJson: string, passkeyMessages?: PasskeyTranslation): string {
+function getPasskeySetupScript(
+  baseUrl: string,
+  registrationOptionsJson: string,
+  passkeyMessages?: PasskeyTranslation,
+): string {
   // Use provided messages or defaults
-  const browserNotSupportedText = passkeyMessages?.browserNotSupported ?? 'Your browser does not support passkeys. Please use a modern browser like Chrome, Safari, or Firefox.';
+  const browserNotSupportedText = passkeyMessages?.browserNotSupported
+    ?? 'Your browser does not support passkeys. Please use a modern browser like Chrome, Safari, or Firefox.';
   const setupFailedText = passkeyMessages?.setupFailed ?? 'Failed to set up passkey. Please try again.';
   const registrationFailedText = passkeyMessages?.registrationFailed ?? 'Registration failed';
 
@@ -281,18 +286,18 @@ function getPasskeySetupScript(baseUrl: string, registrationOptionsJson: string,
  */
 export interface WebAuthnRegistrationOptions {
   challenge: string; // base64url
-  rp: { id: string; name: string; };
-  user: { id: string; name: string; displayName: string; }; // id is base64url
-  pubKeyCredParams: Array<{ type: 'public-key'; alg: number; }>;
+  rp: { id: string, name: string };
+  user: { id: string, name: string, displayName: string }; // id is base64url
+  pubKeyCredParams: Array<{ type: 'public-key', alg: number }>;
   timeout: number;
   attestation: 'none' | 'indirect' | 'direct';
   authenticatorSelection: {
-    authenticatorAttachment?: 'platform' | 'cross-platform';
-    residentKey: 'required' | 'preferred' | 'discouraged';
-    userVerification: 'required' | 'preferred' | 'discouraged';
+    authenticatorAttachment?: 'platform' | 'cross-platform',
+    residentKey: 'required' | 'preferred' | 'discouraged',
+    userVerification: 'required' | 'preferred' | 'discouraged',
   };
   excludeCredentials: Array<
-    { type: 'public-key'; id: string; transports?: Array<'usb' | 'nfc' | 'ble' | 'internal' | 'hybrid'>; }
+    { type: 'public-key', id: string, transports?: Array<'usb' | 'nfc' | 'ble' | 'internal' | 'hybrid'> }
   >;
 }
 
@@ -316,21 +321,21 @@ const scriptContent = Symbol('scriptContent');
  * Template variables type for passkey setup page
  */
 type PasskeySetupTemplateVariables = TemplateVariables & {
-  [pageTitle]: string;
-  [title]: string;
-  [description]: string;
-  [setupToken]: string;
-  [redirectUri]: string;
-  [userId]: string;
-  [nameLabel]: string;
-  [namePlaceholder]: string;
-  [createButton]: string;
-  [skipLinkHtml]: string;
-  [loadingPrompt]: string;
-  [successTitle]: string;
-  [successDescription]: string;
-  [scriptContent]: string;
-  [messages]: OAuthMessages;
+  [pageTitle]: string,
+  [title]: string,
+  [description]: string,
+  [setupToken]: string,
+  [redirectUri]: string,
+  [userId]: string,
+  [nameLabel]: string,
+  [namePlaceholder]: string,
+  [createButton]: string,
+  [skipLinkHtml]: string,
+  [loadingPrompt]: string,
+  [successTitle]: string,
+  [successDescription]: string,
+  [scriptContent]: string,
+  [messages]: OAuthMessages,
 };
 
 /**
@@ -413,7 +418,7 @@ function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
+  return text.replace(/[&<>"']/g, char => map[char]);
 }
 
 /**
@@ -440,7 +445,7 @@ export function renderPasskeySetupPage(options: PasskeySetupPageOptions): string
   const msgs = options.messages ?? defaultMessages;
   const t = msgs.passkey;
   const base = options.baseUrl || '';
-  
+
   const skipLink = options.required
     ? ''
     : `<a href="${escapeHtml(options.redirectUri)}" class="skip-link">${escapeHtml(t.skipLink)}</a>`;

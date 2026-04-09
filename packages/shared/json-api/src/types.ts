@@ -1,14 +1,14 @@
 import * as S from 'effect/Schema';
 import {
-  JsonApiErrorSchema,
   AtomicOperationSchema,
   AtomicOperationsRequestSchema,
   AtomicOperationsResponseSchema,
-  JsonApiLinksSchema,
   CursorPaginationMetaSchema,
   JsonApiCollectionResponseSchema,
-  JsonApiResponseSchema,
+  JsonApiErrorSchema,
+  JsonApiLinksSchema,
   JsonApiResourceSchema,
+  JsonApiResponseSchema,
 } from './schemas.js';
 
 export type JsonApiError = S.Schema.Type<typeof JsonApiErrorSchema>;

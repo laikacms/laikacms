@@ -1,28 +1,28 @@
-import { LaikaResult, LaikaError, ErrorStatus, errorStatus, BadRequestError } from '@laikacms/core';
-import { AssetsRepository, FetchHints, Asset, AssetCreate, AssetUpdate } from '@laikacms/assets';
+import { Asset, AssetCreate, AssetsRepository, AssetUpdate, FetchHints } from '@laikacms/assets';
+import { BadRequestError, ErrorStatus, errorStatus, LaikaError, LaikaResult } from '@laikacms/core';
 import { Folder, FolderCreate } from '@laikacms/storage';
-import {
-  JsonApiResource,
-  JsonApiResponse,
-  JsonApiCollectionResponse,
-  resourceToJsonApi,
-  assetToJsonApi,
-  folderToJsonApi,
-  assetVariationsToJsonApi,
-  assetMetadataToJsonApi,
-  assetCreateFromJsonApi,
-  assetUpdateFromJsonApi,
-  folderCreateFromJsonApi,
-  parseIncludeQuery,
-  parsePaginationQuery,
-  buildPaginationLinks,
-  assetUrlToJsonApi,
-  type JsonApiAssetCreate,
-  type JsonApiFolderCreate,
-  type JsonApiAssetUpdate,
-} from './jsonapi.js';
 import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
+import {
+  assetCreateFromJsonApi,
+  assetMetadataToJsonApi,
+  assetToJsonApi,
+  assetUpdateFromJsonApi,
+  assetUrlToJsonApi,
+  assetVariationsToJsonApi,
+  buildPaginationLinks,
+  folderCreateFromJsonApi,
+  folderToJsonApi,
+  type JsonApiAssetCreate,
+  type JsonApiAssetUpdate,
+  JsonApiCollectionResponse,
+  type JsonApiFolderCreate,
+  JsonApiResource,
+  JsonApiResponse,
+  parseIncludeQuery,
+  parsePaginationQuery,
+  resourceToJsonApi,
+} from './jsonapi.js';
 
 // ============================================
 // Types
@@ -44,7 +44,7 @@ export interface AssetsApiOptions {
 const json = <T>(
   data: T,
   status: number = 200,
-  headers: Record<string, string> = {}
+  headers: Record<string, string> = {},
 ): Response => {
   return new Response(JSON.stringify(data), {
     status,
@@ -64,7 +64,7 @@ function respondError(error: LaikaError, status: ErrorStatus = 400): Response {
         detail: error.message,
       }],
     },
-    status
+    status,
   );
 }
 
@@ -77,13 +77,13 @@ function respondValidationError(errors: Array<{ message: string }>, status: Erro
         detail: e.message,
       })),
     },
-    status
+    status,
   );
 }
 
 function respondResource(
   resource: JsonApiResource,
-  included?: JsonApiResource[]
+  included?: JsonApiResource[],
 ): Response {
   const response: JsonApiResponse = { data: resource };
   if (included && included.length > 0) {
@@ -96,7 +96,7 @@ function respondCollection(
   resources: JsonApiResource[],
   included?: JsonApiResource[],
   links?: Record<string, string | null>,
-  meta?: Record<string, unknown>
+  meta?: Record<string, unknown>,
 ): Response {
   const response: JsonApiCollectionResponse = { data: resources };
   if (included && included.length > 0) {
@@ -186,11 +186,11 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       if (path === `${basePath}/resources` && method === 'GET') {
         const folderKey = query['folder'] || query['filter[prefix]'] || '';
         const pagination = parsePaginationQuery(query);
-        
+
         // Parse depth parameter (minimum 1)
         const depthParam = query['filter[depth]'] || query['depth'];
         const depth = depthParam ? Math.max(1, parseInt(depthParam, 10) || 1) : 1;
-        
+
         // Use offset-based pagination which has limit
         const paginationOptions = {
           offset: 0,
@@ -202,11 +202,13 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         let hasMore = false;
         let nextCursor: string | undefined;
 
-        for await (const batch of repository.listResources(folderKey, {
-          pagination: paginationOptions,
-          depth,
-          hints,
-        })) {
+        for await (
+          const batch of repository.listResources(folderKey, {
+            pagination: paginationOptions,
+            depth,
+            hints,
+          })
+        ) {
           if (Result.isFailure(batch)) {
             return respondError(batch.failure, errorStatus.BAD_REQUEST);
           }
@@ -251,7 +253,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           pagination,
           hasMore,
           nextCursor,
-          pagination.cursor
+          pagination.cursor,
         );
 
         return respondCollection(resources, included, links);
@@ -261,12 +263,12 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       // Get a single resource by key
       if (path.startsWith(`${basePath}/resources/`) && method === 'GET') {
         const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
-        
+
         for await (const result of repository.getResource(key, { hints })) {
           if (Result.isFailure(result)) {
             return respondError(result.failure, errorStatus.NOT_FOUND);
           }
-          
+
           const resourceData = result.success[0];
           if (!resourceData) {
             return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
@@ -302,7 +304,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
 
           return respondResource(resource, included);
         }
-        
+
         return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
       }
 
@@ -310,39 +312,45 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       // Create a new resource (asset or folder)
       if (path === `${basePath}/resources` && method === 'POST') {
         const contentType = request.headers.get('Content-Type') || '';
-        
+
         // Handle multipart form data for asset uploads
         if (contentType.includes('multipart/form-data')) {
           const formData = await request.formData();
           const file = formData.get('file') as File | null;
           const metadataJson = formData.get('metadata') as string | null;
-          
+
           // Also check for individual form fields (alternative to metadata JSON)
           const keyField = formData.get('key') as string | null;
           const mimeTypeField = formData.get('mimeType') as string | null;
           const filenameField = formData.get('filename') as string | null;
           const cacheControlField = formData.get('cacheControl') as string | null;
           const customMetadataField = formData.get('customMetadata') as string | null;
-          
+
           if (!file) {
             return respondError(
               new BadRequestError('Missing file in multipart form data'),
-              errorStatus.BAD_REQUEST
+              errorStatus.BAD_REQUEST,
             );
           }
 
-          let metadata: { key?: string; mimeType?: string; filename?: string; customMetadata?: Record<string, string>; cacheControl?: string } | undefined;
+          let metadata: {
+            key?: string,
+            mimeType?: string,
+            filename?: string,
+            customMetadata?: Record<string, string>,
+            cacheControl?: string,
+          } | undefined;
           if (metadataJson) {
             try {
               metadata = JSON.parse(metadataJson);
             } catch {
               return respondError(
                 new BadRequestError('Invalid metadata JSON'),
-                errorStatus.BAD_REQUEST
+                errorStatus.BAD_REQUEST,
               );
             }
           }
-          
+
           // Parse customMetadata from individual field if provided
           let customMetadata: Record<string, string> | undefined = metadata?.customMetadata;
           if (customMetadataField) {
@@ -360,14 +368,16 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           const cacheControl = cacheControlField || metadata?.cacheControl;
           const content = await file.arrayBuffer();
 
-          for await (const result of repository.createAsset({
-            key: assetKey,
-            mimeType,
-            content,
-            filename,
-            customMetadata,
-            cacheControl,
-          })) {
+          for await (
+            const result of repository.createAsset({
+              key: assetKey,
+              mimeType,
+              content,
+              filename,
+              customMetadata,
+              cacheControl,
+            })
+          ) {
             if (Result.isFailure(result)) {
               return respondError(result.failure, errorStatus.BAD_REQUEST);
             }
@@ -387,7 +397,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             } catch {
               return respondValidationError(
                 [{ message: 'Invalid folder create data' }],
-                errorStatus.BAD_REQUEST
+                errorStatus.BAD_REQUEST,
               );
             }
 
@@ -411,7 +421,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             } catch {
               return respondValidationError(
                 [{ message: 'Invalid asset create data' }],
-                errorStatus.BAD_REQUEST
+                errorStatus.BAD_REQUEST,
               );
             }
 
@@ -420,7 +430,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             if (!base64Content) {
               return respondError(
                 new BadRequestError('Missing content in asset creation. Use multipart/form-data for binary uploads.'),
-                errorStatus.BAD_REQUEST
+                errorStatus.BAD_REQUEST,
               );
             }
 
@@ -450,13 +460,13 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
 
           return respondError(
             new BadRequestError('Invalid resource type. Must be "asset" or "folder".'),
-            errorStatus.BAD_REQUEST
+            errorStatus.BAD_REQUEST,
           );
         }
 
         return respondError(
           new BadRequestError('Unsupported Content-Type. Use multipart/form-data or application/vnd.api+json.'),
-          errorStatus.BAD_REQUEST
+          errorStatus.BAD_REQUEST,
         );
       }
 
@@ -465,7 +475,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       if (path.startsWith(`${basePath}/resources/`) && method === 'PATCH') {
         const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
         const body = await request.json() as { data: Record<string, unknown> };
-        
+
         // Add the key as id for validation
         const dataWithId = { ...body.data, id: key };
         let parsed: JsonApiAssetUpdateData;
@@ -474,7 +484,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         } catch {
           return respondValidationError(
             [{ message: 'Invalid asset update data' }],
-            errorStatus.BAD_REQUEST
+            errorStatus.BAD_REQUEST,
           );
         }
 
@@ -541,7 +551,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             detail: `Route not found: ${method} ${path}`,
           }],
         },
-        404
+        404,
       );
     },
   };

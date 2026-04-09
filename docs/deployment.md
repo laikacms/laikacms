@@ -48,9 +48,9 @@ serve({ fetch: api.fetch, port: 3000 });
 ## AWS Lambda
 
 ```typescript
-import { handle } from 'hono/aws-lambda';
 import { buildJsonApi } from '@laikacms/storage-api';
 import { S3StorageRepository } from '@laikacms/storage-s3';
+import { handle } from 'hono/aws-lambda';
 
 const repo = new S3StorageRepository({ bucket: process.env.BUCKET_NAME });
 const api = buildJsonApi({ repo });
@@ -60,11 +60,11 @@ export const handler = handle(api);
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `JWT_SECRET` | JWT signing secret |
+| Variable       | Description                       |
+| -------------- | --------------------------------- |
+| `JWT_SECRET`   | JWT signing secret                |
 | `CORS_ORIGINS` | Allowed origins (comma-separated) |
-| `LOG_LEVEL` | Logging level |
+| `LOG_LEVEL`    | Logging level                     |
 
 ## Security Checklist
 

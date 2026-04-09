@@ -8,25 +8,25 @@ export interface CacheEntry<T> {
 
 /**
  * Async key-value cache interface with expiration support
- * 
+ *
  * Similar to Map but async and with TTL (time-to-live) support.
- * 
+ *
  * @example
  * ```typescript
  * const cache: AsyncCache<string, User> = new MemoryCache();
- * 
+ *
  * // Set with expiration (5 minutes)
  * await cache.set('user:123', user, new Date(Date.now() + 5 * 60 * 1000));
- * 
+ *
  * // Get value (returns undefined if expired)
  * const user = await cache.get('user:123');
- * 
+ *
  * // Check if key exists and not expired
  * const exists = await cache.has('user:123');
- * 
+ *
  * // Delete entry
  * await cache.delete('user:123');
- * 
+ *
  * // Clear all entries
  * await cache.clear();
  * ```

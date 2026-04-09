@@ -1,7 +1,7 @@
-import { FolderSummarySchema } from "@laikacms/storage";
+import { FolderSummarySchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
-import { DocumentSummarySchema } from "../document/document-summary.js";
-import { UnpublishedSummarySchema } from "../unpublished/unpublished-summary.js";
+import { DocumentSummarySchema } from '../document/document-summary.js';
+import { UnpublishedSummarySchema } from '../unpublished/unpublished-summary.js';
 
 /**
  * Record summary union type

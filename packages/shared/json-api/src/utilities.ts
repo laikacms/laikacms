@@ -1,32 +1,35 @@
-import * as S from 'effect/Schema';
-import * as errors from "@laikacms/core"
+import * as errors from '@laikacms/core';
 import {
   ErrorCodeToStatusMap,
   InternalError,
   LaikaError,
   ServiceUnavailableError,
   ValidationError,
-} from "@laikacms/core";
-import { JsonApiError } from "./types.js";
-import { JsonApiErrorSchema, decodeJsonApiErrorExit } from "./schemas.js";
-import * as Result from 'effect/Result';
+} from '@laikacms/core';
 import * as Exit from 'effect/Exit';
+import * as Result from 'effect/Result';
+import * as S from 'effect/Schema';
+import { decodeJsonApiErrorExit, JsonApiErrorSchema } from './schemas.js';
+import { JsonApiError } from './types.js';
 
 // Type for Effect Schema parse errors
 interface SchemaParseError {
   readonly _tag: 'ParseError';
   readonly issues: ReadonlyArray<{
-    readonly path: ReadonlyArray<string | number>;
-    readonly message: string;
+    readonly path: ReadonlyArray<string | number>,
+    readonly message: string,
   }>;
 }
 
 export const errorToJsonApiMapper = (
-  err: unknown
+  err: unknown,
 ): JsonApiError & { status: errors.ErrorStatus } => {
-  console.error('errorToJsonApiMapper():', err)
+  console.error('errorToJsonApiMapper():', err);
 
-  const errorObj = typeof err === 'string' ? new errors.UnknownError() /* explicitly do not show a message since we dont know if the message is internal or not */ : err
+  const errorObj = typeof err === 'string'
+    ? new errors
+      .UnknownError() /* explicitly do not show a message since we dont know if the message is internal or not */
+    : err;
 
   // Handle Effect Schema parse errors
   if (typeof err === 'object' && err !== null && '_tag' in err && (err as SchemaParseError)._tag === 'ParseError') {
@@ -49,7 +52,7 @@ export const errorToJsonApiMapper = (
         {
           title: err.title,
           code: err.code,
-          status: "" + err.status,
+          status: '' + err.status,
           detail: err.message,
         },
       ],
@@ -63,11 +66,15 @@ export const errorToJsonApiMapper = (
   }
 
   // Handle AWS SDK errors
-  if (typeof errorObj === 'object' && errorObj !== null && ("name" in errorObj && errorObj.name === "NetworkingError" || "name" in errorObj && errorObj.name === "TimeoutError")) {
+  if (
+    typeof errorObj === 'object' && errorObj !== null
+    && ('name' in errorObj && errorObj.name === 'NetworkingError'
+      || 'name' in errorObj && errorObj.name === 'TimeoutError')
+  ) {
     return {
       errors: [
         {
-          status: "" + ServiceUnavailableError.STATUS,
+          status: '' + ServiceUnavailableError.STATUS,
           code: ServiceUnavailableError.CODE,
           title: ServiceUnavailableError.TITLE,
           detail: `Cannot connect to a required service.`,
@@ -81,10 +88,10 @@ export const errorToJsonApiMapper = (
   return {
     errors: [
       {
-        status: "" + InternalError.STATUS,
+        status: '' + InternalError.STATUS,
         code: InternalError.CODE,
         title: InternalError.TITLE,
-        detail: "Internal Server Error",
+        detail: 'Internal Server Error',
       },
     ],
     status: InternalError.STATUS,
@@ -98,7 +105,7 @@ export const errorToJsonApiMapper = (
  * @returns JSON:API error object
  */
 export function schemaIssueFormatter(
-  issue: { path: ReadonlyArray<string | number>; message: string },
+  issue: { path: ReadonlyArray<string | number>, message: string },
 ): JsonApiError['errors'][number] {
   const pointer = issue.path.length > 0
     ? '/' + issue.path.map((p: string | number) => String(p)).join('/')
@@ -114,12 +121,12 @@ export function schemaIssueFormatter(
 }
 
 export const errorFromResponse = async (response: Response) => {
-  let isJson = response.headers.get("Content-Type")?.includes("application/json");
-  let error: JsonApiError['errors'][number] | undefined
+  let isJson = response.headers.get('Content-Type')?.includes('application/json');
+  let error: JsonApiError['errors'][number] | undefined;
   let detail: string | undefined;
 
   if (response.ok) {
-    throw new errors.IllegalStateException("errorFromResponse called with ok response");
+    throw new errors.IllegalStateException('errorFromResponse called with ok response');
   }
 
   if (isJson) {
@@ -140,7 +147,7 @@ export const errorFromResponse = async (response: Response) => {
   }
 
   if (!isJson || !error) {
-    switch(response.status) {
+    switch (response.status) {
       case 400:
         return new errors.NotFoundError(detail);
       case 401:
@@ -166,11 +173,11 @@ export const errorFromResponse = async (response: Response) => {
 
   const ErrorMap = {
     ...errors,
-    LaikaError: undefined
-  }
+    LaikaError: undefined,
+  };
 
   const allFuncs = Object.values(ErrorMap).filter(cls => typeof cls === 'function');
-  const ErrorClassesWIthCode = allFuncs.filter((cls) => 'CODE' in cls);
+  const ErrorClassesWIthCode = allFuncs.filter(cls => 'CODE' in cls);
   const CorrectError = ErrorClassesWIthCode.find(cls => cls.CODE === error.code);
 
   if (!CorrectError) {
@@ -182,11 +189,11 @@ export const errorFromResponse = async (response: Response) => {
   }
 
   return new CorrectError(error.detail);
-}
+};
 
 export const isLaikaError = (error: unknown): error is LaikaError<errors.ErrorCode, number> => {
   return error instanceof LaikaError;
-}
+};
 
 export const toUserErrorMessage = (error: unknown): string => {
   if (isLaikaError(error)) {
@@ -205,4 +212,4 @@ export const toUserErrorMessage = (error: unknown): string => {
   }
 
   return 'An unknown error occurred';
-}
+};

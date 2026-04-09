@@ -26,7 +26,11 @@ export {
   getAuthorizationPageHTML,
 } from './authorization-page.js';
 
-export type { AuthorizationPageOptions, AuthorizationPageResult, AuthPagePasskeyOptions } from './authorization-page.js';
+export type {
+  AuthorizationPageOptions,
+  AuthorizationPageResult,
+  AuthPagePasskeyOptions,
+} from './authorization-page.js';
 
 // Login page template with passkey and TOTP support
 export { generateWebAuthnScript, renderEnhancedLoginPage } from './login-page.js';

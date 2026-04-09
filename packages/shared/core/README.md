@@ -15,7 +15,7 @@ pnpm add @laikacms/core
 ## Usage
 
 ```typescript
-import { LaikaError, NotFoundError, InvalidData, LaikaResult } from '@laikacms/core'
+import { InvalidData, LaikaError, LaikaResult, NotFoundError } from '@laikacms/core';
 ```
 
 ## Error Types
@@ -29,7 +29,8 @@ import { LaikaError, NotFoundError, InvalidData, LaikaResult } from '@laikacms/c
 ## Result Type
 
 ```typescript
-type LaikaResult<T> = Result<T, LaikaError>
+type LaikaResult<T> = Result<T, LaikaError>;
 ```
 
-Compatible with Effect's Result type internally, but exposed via Standard Schema for interoperability with Zod, Valibot, etc.
+Compatible with Effect's Result type internally, but exposed via Standard Schema for
+interoperability with Zod, Valibot, etc.

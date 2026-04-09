@@ -22,7 +22,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json -w",
     "clean": "rimraf dist",
-    
+
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {

@@ -1,13 +1,13 @@
 /**
  * @laikacms/decap-ai
- * 
+ *
  * AI chat backend for Decap CMS with LLM-agnostic support and document manipulation tools.
- * 
+ *
  * @example
  * ```typescript
  * import { decapAi } from '@laikacms/decap-ai';
  * import { openai } from '@ai-sdk/openai';
- * 
+ *
  * const ai = decapAi({
  *   authenticateAccessToken: async (token) => {
  *     // Your authentication logic (same as decap-api)
@@ -23,7 +23,7 @@
  *   },
  *   systemPrompt: 'You are a helpful CMS assistant...',
  * });
- * 
+ *
  * // In your worker/server
  * export default {
  *   fetch: ai.fetch,

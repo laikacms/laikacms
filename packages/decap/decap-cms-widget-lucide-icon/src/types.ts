@@ -3,7 +3,7 @@ export interface IconWidgetOptions {
   filter?: RegExp;
 }
 
-declare module "decap-cms-core" {
+declare module 'decap-cms-core' {
   export interface CmsWidgetControlProps<T> {
     name: string;
     setActiveStyle: () => void;

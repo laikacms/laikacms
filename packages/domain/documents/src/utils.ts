@@ -4,7 +4,7 @@ export const pathToSegments = (path: string) => {
     .map(x => x.trim())
     .filter(x => x.length > 0);
   return segments;
-}
+};
 
 export const pathCombine = (...segments: string[]) => {
   const path = segments
@@ -12,4 +12,4 @@ export const pathCombine = (...segments: string[]) => {
     .filter(x => x.length > 0)
     .join('/');
   return path;
-}
+};

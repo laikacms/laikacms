@@ -15,31 +15,31 @@ pnpm add @laikacms/storage-api
 ## Usage
 
 ```typescript
-import { buildJsonApi } from '@laikacms/storage-api'
+import { buildJsonApi } from '@laikacms/storage-api';
 
-const api = buildJsonApi({ repo: myStorageRepo })
+const api = buildJsonApi({ repo: myStorageRepo });
 
 // Use with any runtime
-export default { fetch: api.fetch }
+export default { fetch: api.fetch };
 ```
 
 ## Endpoints
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/atoms/{folder}` | List atoms |
-| GET | `/atom-summaries/{folder}` | List summaries |
-| POST | `/objects` | Create object |
-| PATCH | `/objects/{key}` | Update object |
-| POST | `/operations` | Atomic batch |
+| Method | Path                       | Description    |
+| ------ | -------------------------- | -------------- |
+| GET    | `/atoms/{folder}`          | List atoms     |
+| GET    | `/atom-summaries/{folder}` | List summaries |
+| POST   | `/objects`                 | Create object  |
+| PATCH  | `/objects/{key}`           | Update object  |
+| POST   | `/operations`              | Atomic batch   |
 
 ## Options
 
 ```typescript
 interface StorageApiOptions {
-  repo: StorageRepository
-  basePath?: string
-  onError?(error: unknown): void
-  logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'>
+  repo: StorageRepository;
+  basePath?: string;
+  onError?(error: unknown): void;
+  logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'>;
 }
 ```

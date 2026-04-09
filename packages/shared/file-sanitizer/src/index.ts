@@ -43,8 +43,8 @@
 
 // Re-export abstract types from @laikacms/sanitizer
 export type {
-  Sanitizer,
   SanitizeOptions as AbstractSanitizeOptions,
+  Sanitizer,
   SanitizeResult as AbstractSanitizeResult,
   StrippedMetadataInfo as AbstractStrippedMetadataInfo,
 } from '@laikacms/sanitizer';
@@ -53,55 +53,47 @@ export type {
 export { FileSanitizerImpl } from './file-sanitizer.js';
 
 // Main sanitizer functions (standalone usage)
-export { sanitizeFile, canSanitize, getSupportedFileTypes } from './sanitizer.js';
+export { canSanitize, getSupportedFileTypes, sanitizeFile } from './sanitizer.js';
 
 // Types
 export type {
-  SanitizableFileType,
   DetectedFileType,
+  FileSanitizer,
+  SanitizableFileType,
   SanitizeOptions,
   SanitizeResult,
   StrippedMetadataInfo,
-  FileSanitizer,
 } from './types.js';
 
 // Type guards and utilities
 export {
-  isSanitizableFileType,
   ignoredResult,
-  SANITIZABLE_FILE_TYPES,
-  SAFE_PNG_CHUNKS,
+  isSanitizableFileType,
   PNG_METADATA_CHUNKS,
+  SAFE_PNG_CHUNKS,
+  SANITIZABLE_FILE_TYPES,
 } from './types.js';
 
 // Detection utilities
 export { detectFileType, getMimeType } from './utils/detect.js';
 
 // Individual sanitizers (for advanced use cases)
-export { PngSanitizer } from './sanitizers/png.js';
 export { GifSanitizer } from './sanitizers/gif.js';
-export { WebpSanitizer } from './sanitizers/webp.js';
 export { JpegSanitizer } from './sanitizers/jpeg.js';
+export { PngSanitizer } from './sanitizers/png.js';
+export { WebpSanitizer } from './sanitizers/webp.js';
 
 // Dangerous content scanners (for scanning unsupported file types)
 export {
-  scanForDangerousContent,
+  GenericScanner,
   getScannersForType,
   Mp4Scanner,
-  TiffScanner,
   PdfScanner,
-  GenericScanner,
+  scanForDangerousContent,
+  TiffScanner,
 } from './scanners/index.js';
 
 // Scanner types
-export type {
-  DangerousContentType,
-  ScanResult,
-  DangerousContentScanner,
-} from './scanners/types.js';
+export type { DangerousContentScanner, DangerousContentType, ScanResult } from './scanners/types.js';
 
-export {
-  emptyScanResult,
-  dangerousScanResult,
-  mergeScanResults,
-} from './scanners/types.js';
+export { dangerousScanResult, emptyScanResult, mergeScanResults } from './scanners/types.js';

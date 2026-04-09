@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { 
-  ListTablesCommand,
+import {
   DeleteTableCommand,
   DescribeTableCommand,
-  waitUntilTableNotExists
+  ListTablesCommand,
+  waitUntilTableNotExists,
 } from '@aws-sdk/client-dynamodb';
 import { config } from './config.js';
 
@@ -18,13 +18,13 @@ async function deleteTable(tableName) {
   try {
     console.log(`🗑️  Deleting table ${tableName}...`);
     await client.send(new DeleteTableCommand({ TableName: tableName }));
-    
+
     // Wait for table to be deleted
     await waitUntilTableNotExists(
       { client, maxWaitTime: 60 },
-      { TableName: tableName }
+      { TableName: tableName },
     );
-    
+
     console.log(`✅ Table ${tableName} deleted successfully`);
   } catch (error) {
     if (error.name === 'ResourceNotFoundException') {
@@ -42,7 +42,7 @@ async function resetTables() {
   try {
     // List all tables
     const { TableNames } = await client.send(new ListTablesCommand({}));
-    
+
     if (!TableNames || TableNames.length === 0) {
       console.log('ℹ️  No tables to delete');
       return;

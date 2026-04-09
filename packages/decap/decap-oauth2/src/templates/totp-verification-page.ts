@@ -55,16 +55,16 @@ export const verifyButtonText = Symbol('verifyButtonText');
 
 // Extended template variables type for TOTP verification page
 type TotpVerificationTemplateVariables = TemplateVariables & {
-  [pageTitle]?: string;
-  [logoHtml]?: string;
-  [authorizeUrl]?: string;
-  [errorHtml]?: string;
-  [title]?: string;
-  [description]?: string;
-  [inputLabel]?: string;
-  [inputPlaceholder]?: string;
-  [sessionId]?: string;
-  [verifyButtonText]?: string;
+  [pageTitle]?: string,
+  [logoHtml]?: string,
+  [authorizeUrl]?: string,
+  [errorHtml]?: string,
+  [title]?: string,
+  [description]?: string,
+  [inputLabel]?: string,
+  [inputPlaceholder]?: string,
+  [sessionId]?: string,
+  [verifyButtonText]?: string,
 };
 
 /**
@@ -143,7 +143,7 @@ function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
+  return text.replace(/[&<>"']/g, char => map[char]);
 }
 
 /**

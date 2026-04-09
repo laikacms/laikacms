@@ -1,15 +1,8 @@
+import { IllegalStateException, InternalError, InvalidData, LaikaError, LaikaResult } from '@laikacms/core';
 import {
-  IllegalStateException,
-  InternalError,
-  InvalidData,
-  LaikaResult,
-  LaikaError,
-} from "@laikacms/core";
-import * as Result from "effect/Result";
-import {
-  DocumentsRepository,
   type Document,
   type DocumentCreate,
+  DocumentsRepository,
   type DocumentUpdate,
   type ListRecordsOptions,
   type ListRevisionsOptions,
@@ -21,29 +14,30 @@ import {
   type Unpublished,
   type UnpublishedCreate,
   type UnpublishedUpdate,
-} from "@laikacms/documents";
+} from '@laikacms/documents';
 import {
   documentCreateToJsonApi,
-  documentUpdateToJsonApi,
   documentFromJsonApi,
+  type DocumentJsonApi,
   documentSummaryFromJsonApi,
+  type DocumentSummaryJsonApi,
+  documentUpdateToJsonApi,
+  type JsonApiCollectionResponse,
   revisionCreateToJsonApi,
   revisionFromJsonApi,
+  type RevisionJsonApi,
   revisionSummaryFromJsonApi,
+  type RevisionSummaryJsonApi,
   unpublishedCreateToJsonApi,
   unpublishedFromJsonApi,
-  unpublishedSummaryFromJsonApi,
-  unpublishedUpdateToJsonApi,
-  type JsonApiCollectionResponse,
-  type DocumentJsonApi,
-  type DocumentSummaryJsonApi,
   type UnpublishedJsonApi,
+  unpublishedSummaryFromJsonApi,
   type UnpublishedSummaryJsonApi,
-  type RevisionJsonApi,
-  type RevisionSummaryJsonApi,
-} from "@laikacms/documents-api";
-import { paginationCodec } from "./pagination-codec.js";
-import { errorFromResponse } from "@laikacms/json-api";
+  unpublishedUpdateToJsonApi,
+} from '@laikacms/documents-api';
+import { errorFromResponse } from '@laikacms/json-api';
+import * as Result from 'effect/Result';
+import { paginationCodec } from './pagination-codec.js';
 
 function failAs<T>(error: LaikaError): LaikaResult<T> {
   return Result.fail(error);
@@ -70,11 +64,11 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
   constructor(options: DocumentsJsonApiProxyRepositoryOptions) {
     super();
-    this.baseUrl = options.baseUrl.replace(/\/$/, ""); // Remove trailing slash
+    this.baseUrl = options.baseUrl.replace(/\/$/, ''); // Remove trailing slash
     this.tokenPromise = options.tokenPromise;
     this.staticHeaders = {
-      "Content-Type": "application/vnd.api+json",
-      Accept: "application/vnd.api+json",
+      'Content-Type': 'application/vnd.api+json',
+      Accept: 'application/vnd.api+json',
       ...(options.authToken
         ? { Authorization: `Bearer ${options.authToken}` }
         : {}),
@@ -96,11 +90,11 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   private async handleResponse<T>(response: Response): Promise<LaikaResult<T>> {
-    const contentType = response.headers.get("content-type");
+    const contentType = response.headers.get('content-type');
 
     if (
-      !contentType?.includes("application/vnd.api+json") &&
-      !contentType?.includes("application/json")
+      !contentType?.includes('application/vnd.api+json')
+      && !contentType?.includes('application/json')
     ) {
       return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
     }
@@ -112,21 +106,25 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       return Result.fail(new InvalidData(errorResult.message));
     }
 
-    if ("errors" in json && Array.isArray(json.errors)) {
-      return Result.fail(new InvalidData(
-        json.errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
-      ));
+    if ('errors' in json && Array.isArray(json.errors)) {
+      return Result.fail(
+        new InvalidData(
+          json.errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(
+            ', ',
+          ),
+        ),
+      );
     }
 
     return Result.succeed(json.data as T);
   }
 
   private async handleVoidResponse(response: Response): Promise<LaikaResult<void>> {
-    const contentType = response.headers.get("content-type");
+    const contentType = response.headers.get('content-type');
 
     if (
-      !contentType?.includes("application/vnd.api+json") &&
-      !contentType?.includes("application/json")
+      !contentType?.includes('application/vnd.api+json')
+      && !contentType?.includes('application/json')
     ) {
       return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
     }
@@ -134,19 +132,24 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
     const json = await response.json();
 
     if (!response.ok) {
-      const errors =
-        "errors" in json && Array.isArray(json.errors)
-          ? json.errors
-          : [{ detail: "Unknown error" }];
-      return Result.fail(new InvalidData(
-        errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
-      ));
+      const errors = 'errors' in json && Array.isArray(json.errors)
+        ? json.errors
+        : [{ detail: 'Unknown error' }];
+      return Result.fail(
+        new InvalidData(
+          errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+        ),
+      );
     }
 
-    if ("errors" in json && Array.isArray(json.errors)) {
-      return Result.fail(new InvalidData(
-        json.errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
-      ));
+    if ('errors' in json && Array.isArray(json.errors)) {
+      return Result.fail(
+        new InvalidData(
+          json.errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(
+            ', ',
+          ),
+        ),
+      );
     }
 
     return Result.succeed(undefined);
@@ -178,21 +181,21 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
     try {
       const params = paginationCodec.encode(options.pagination);
       if (options.type) {
-        params.set("filter[type]", options.type);
+        params.set('filter[type]', options.type);
       }
-      params.set('filter[depth]', '' + options.depth)
-      params.set("filter[folder]", options.folder);
+      params.set('filter[depth]', '' + options.depth);
+      params.set('filter[folder]', options.folder);
 
       const headers = await this.getHeaders();
       const response = await fetch(`${this.baseUrl}/records?${params}`, {
-        method: "GET",
+        method: 'GET',
         headers,
       });
 
-      const contentType = response.headers.get("content-type");
+      const contentType = response.headers.get('content-type');
       if (
-        !contentType?.includes("application/vnd.api+json") &&
-        !contentType?.includes("application/json")
+        !contentType?.includes('application/vnd.api+json')
+        && !contentType?.includes('application/json')
       ) {
         yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
         return;
@@ -200,14 +203,15 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
       const json: JsonApiCollectionResponse = await response.json();
 
-      if (!response.ok || ("errors" in json && Array.isArray(json.errors))) {
-        const errors =
-          "errors" in json && Array.isArray(json.errors)
-            ? json.errors
-            : [{ detail: "Unknown error" }];
-        yield Result.fail(new InvalidData(
-          errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
-        ));
+      if (!response.ok || ('errors' in json && Array.isArray(json.errors))) {
+        const errors = 'errors' in json && Array.isArray(json.errors)
+          ? json.errors
+          : [{ detail: 'Unknown error' }];
+        yield Result.fail(
+          new InvalidData(
+            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+          ),
+        );
         return;
       }
 
@@ -217,19 +221,19 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         try {
           let record: Record;
           switch (item.type) {
-            case "published":
+            case 'published':
               record = documentFromJsonApi(item as DocumentJsonApi) as Record;
               break;
-            case "unpublished":
+            case 'unpublished':
               record = unpublishedFromJsonApi(item as UnpublishedJsonApi) as Record;
               break;
-            case "revision":
+            case 'revision':
               record = revisionFromJsonApi(item as RevisionJsonApi) as unknown as Record;
               break;
-            case "folder":
+            case 'folder':
               continue;
             default:
-              throw new IllegalStateException("Unknown record type: " + item.type);
+              throw new IllegalStateException('Unknown record type: ' + item.type);
           }
           items.push(record);
         } catch (error) {
@@ -250,21 +254,21 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
     try {
       const params = paginationCodec.encode(options.pagination);
       if (options.type) {
-        params.set("filter[type]", options.type);
+        params.set('filter[type]', options.type);
       }
-      params.set('filter[depth]', '' + options.depth)
-      params.set("filter[folder]", options.folder);
+      params.set('filter[depth]', '' + options.depth);
+      params.set('filter[folder]', options.folder);
 
       const headers = await this.getHeaders();
       const response = await fetch(`${this.baseUrl}/record-summaries?${params}`, {
-        method: "GET",
+        method: 'GET',
         headers,
       });
 
-      const contentType = response.headers.get("content-type");
+      const contentType = response.headers.get('content-type');
       if (
-        !contentType?.includes("application/vnd.api+json") &&
-        !contentType?.includes("application/json")
+        !contentType?.includes('application/vnd.api+json')
+        && !contentType?.includes('application/json')
       ) {
         yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
         return;
@@ -272,14 +276,15 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
       const json: JsonApiCollectionResponse = await response.json();
 
-      if (!response.ok || ("errors" in json && Array.isArray(json.errors))) {
-        const errors =
-          "errors" in json && Array.isArray(json.errors)
-            ? json.errors
-            : [{ detail: "Unknown error" }];
-        yield Result.fail(new InvalidData(
-          errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
-        ));
+      if (!response.ok || ('errors' in json && Array.isArray(json.errors))) {
+        const errors = 'errors' in json && Array.isArray(json.errors)
+          ? json.errors
+          : [{ detail: 'Unknown error' }];
+        yield Result.fail(
+          new InvalidData(
+            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+          ),
+        );
         return;
       }
 
@@ -289,22 +294,22 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         try {
           let summary: RecordSummary;
           switch (item.type) {
-            case "published":
-            case "published-summary":
+            case 'published':
+            case 'published-summary':
               summary = documentSummaryFromJsonApi(item as DocumentSummaryJsonApi) as RecordSummary;
               break;
-            case "unpublished":
-            case "unpublished-summary":
+            case 'unpublished':
+            case 'unpublished-summary':
               summary = unpublishedSummaryFromJsonApi(item as UnpublishedSummaryJsonApi) as RecordSummary;
               break;
-            case "revision":
-            case "revision-summary":
+            case 'revision':
+            case 'revision-summary':
               summary = revisionSummaryFromJsonApi(item as RevisionSummaryJsonApi) as unknown as RecordSummary;
               break;
-            case "folder":
+            case 'folder':
               continue;
             default:
-              throw new IllegalStateException("Unknown record type: " + item.type);
+              throw new IllegalStateException('Unknown record type: ' + item.type);
           }
           items.push(summary);
         } catch (error) {
@@ -325,7 +330,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const headers = await this.getHeaders();
       const response = await fetch(
         `${this.baseUrl}/published/${encodeURIComponent(key)}`,
-        { method: "GET", headers },
+        { method: 'GET', headers },
       );
 
       const result = await this.handleResponse<DocumentJsonApi>(response);
@@ -348,11 +353,11 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   async *createDocument(create: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
     try {
       const jsonApiData = documentCreateToJsonApi(create);
-      console.log("Creating document with JSON:API data:", jsonApiData);
+      console.log('Creating document with JSON:API data:', jsonApiData);
       const headers = await this.getHeaders();
 
       const response = await fetch(`${this.baseUrl}/published`, {
-        method: "POST",
+        method: 'POST',
         headers,
         body: JSON.stringify({ data: jsonApiData }),
       });
@@ -382,7 +387,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const response = await fetch(
         `${this.baseUrl}/published/${encodeURIComponent(update.key)}`,
         {
-          method: "PATCH",
+          method: 'PATCH',
           headers,
           body: JSON.stringify({ data: jsonApiData }),
         },
@@ -410,7 +415,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const headers = await this.getHeaders();
       const response = await fetch(
         `${this.baseUrl}/published/${encodeURIComponent(key)}`,
-        { method: "DELETE", headers },
+        { method: 'DELETE', headers },
       );
 
       yield await this.handleVoidResponse(response);
@@ -425,7 +430,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const headers = await this.getHeaders();
       const response = await fetch(
         `${this.baseUrl}/unpublished/${encodeURIComponent(key)}`,
-        { method: "GET", headers },
+        { method: 'GET', headers },
       );
 
       const result = await this.handleResponse<UnpublishedJsonApi>(response);
@@ -453,7 +458,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const headers = await this.getHeaders();
 
       const response = await fetch(`${this.baseUrl}/unpublished`, {
-        method: "POST",
+        method: 'POST',
         headers,
         body: JSON.stringify({ data: jsonApiData }),
       });
@@ -485,7 +490,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const response = await fetch(
         `${this.baseUrl}/unpublished/${encodeURIComponent(update.key)}`,
         {
-          method: "PATCH",
+          method: 'PATCH',
           headers,
           body: JSON.stringify({ data: jsonApiData }),
         },
@@ -513,7 +518,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const headers = await this.getHeaders();
       const response = await fetch(
         `${this.baseUrl}/unpublished/${encodeURIComponent(key)}`,
-        { method: "DELETE", headers },
+        { method: 'DELETE', headers },
       );
 
       yield await this.handleVoidResponse(response);
@@ -527,7 +532,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const headers = await this.getHeaders();
       const response = await fetch(
         `${this.baseUrl}/unpublished/${encodeURIComponent(key)}/publish`,
-        { method: "POST", headers },
+        { method: 'POST', headers },
       );
 
       const result = await this.handleResponse<DocumentJsonApi>(response);
@@ -553,11 +558,11 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const response = await fetch(
         `${this.baseUrl}/published/${encodeURIComponent(key)}/unpublish`,
         {
-          method: "POST",
+          method: 'POST',
           headers,
           body: JSON.stringify({
             data: {
-              type: "unpublished",
+              type: 'unpublished',
               attributes: { status },
             },
           }),
@@ -587,7 +592,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const headers = await this.getHeaders();
       const response = await fetch(
         `${this.baseUrl}/revisions/${encodeURIComponent(key)}/${encodeURIComponent(revision)}`,
-        { method: "GET", headers },
+        { method: 'GET', headers },
       );
 
       const result = await this.handleResponse<RevisionJsonApi>(response);
@@ -613,7 +618,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const headers = await this.getHeaders();
 
       const response = await fetch(`${this.baseUrl}/revisions`, {
-        method: "POST",
+        method: 'POST',
         headers,
         body: JSON.stringify({ data: jsonApiData }),
       });
@@ -645,13 +650,13 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
       const response = await fetch(
         `${this.baseUrl}/revisions/${encodeURIComponent(key)}?${params}`,
-        { method: "GET", headers },
+        { method: 'GET', headers },
       );
 
-      const contentType = response.headers.get("content-type");
+      const contentType = response.headers.get('content-type');
       if (
-        !contentType?.includes("application/vnd.api+json") &&
-        !contentType?.includes("application/json")
+        !contentType?.includes('application/vnd.api+json')
+        && !contentType?.includes('application/json')
       ) {
         yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
         return;
@@ -659,14 +664,15 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
       const json: JsonApiCollectionResponse = await response.json();
 
-      if (!response.ok || ("errors" in json && Array.isArray(json.errors))) {
-        const errors =
-          "errors" in json && Array.isArray(json.errors)
-            ? json.errors
-            : [{ detail: "Unknown error" }];
-        yield Result.fail(new InvalidData(
-          errors.map((e: { detail?: string; title?: string }) => e.detail || e.title || "Unknown error").join(", "),
-        ));
+      if (!response.ok || ('errors' in json && Array.isArray(json.errors))) {
+        const errors = 'errors' in json && Array.isArray(json.errors)
+          ? json.errors
+          : [{ detail: 'Unknown error' }];
+        yield Result.fail(
+          new InvalidData(
+            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
+          ),
+        );
         return;
       }
 

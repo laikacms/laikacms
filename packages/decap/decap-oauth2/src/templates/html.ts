@@ -94,7 +94,8 @@ export function processCustomLogo(customLogo: string | undefined, altText: strin
       const escapedUrl = escapeHtmlAttribute(customLogo);
       const escapedAlt = escapeHtmlAttribute(altText);
       return {
-        html: `<img src="${escapedUrl}" alt="${escapedAlt}" style="max-width: 300px; max-height: 80px; height: auto;" />`,
+        html:
+          `<img src="${escapedUrl}" alt="${escapedAlt}" style="max-width: 300px; max-height: 80px; height: auto;" />`,
         imgSrc: [url.origin],
       };
     } catch {
@@ -118,7 +119,7 @@ function escapeHtmlAttribute(text: string): string {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
+  return text.replace(/[&<>"']/g, char => map[char]);
 }
 
 /**

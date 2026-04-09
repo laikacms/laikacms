@@ -1,38 +1,34 @@
 import {
   type Asset,
   type AssetCreate,
-  type AssetUpdate,
   type AssetMetadata,
+  type AssetUpdate,
   type AssetUrl,
   type AssetVariations,
 } from '@laikacms/assets';
-import {
-  type Folder,
-  type FolderCreate,
-  type FolderSummary,
-} from '@laikacms/storage';
+import { type Folder, type FolderCreate, type FolderSummary } from '@laikacms/storage';
 
 // Re-export common JSON:API utilities
 export {
-  JsonApiDeleteSchema,
-  JsonApiDeleteMultipleSchema,
-  AtomicOperationSchema,
-  AtomicOperationsRequestSchema,
-  AtomicOperationsResponseSchema,
-  JsonApiLinksSchema,
-  CursorPaginationMetaSchema,
-  JsonApiCollectionResponseSchema,
-  JsonApiErrorSchema,
-  parsePaginationQuery,
-  buildPaginationLinks,
-  type JsonApiError,
   type AtomicOperation,
+  AtomicOperationSchema,
   type AtomicOperationsRequest,
+  AtomicOperationsRequestSchema,
   type AtomicOperationsResponse,
-  type JsonApiLinks,
+  AtomicOperationsResponseSchema,
+  buildPaginationLinks,
   type CursorPaginationMeta,
+  CursorPaginationMetaSchema,
   type JsonApiCollectionResponse,
+  JsonApiCollectionResponseSchema,
+  JsonApiDeleteMultipleSchema,
+  JsonApiDeleteSchema,
+  type JsonApiError,
+  JsonApiErrorSchema,
+  type JsonApiLinks,
+  JsonApiLinksSchema,
   type JsonApiResource,
+  parsePaginationQuery,
 } from '@laikacms/json-api';
 
 // ============================================
@@ -197,7 +193,9 @@ export function resourceFromJsonApi(jsonApi: JsonApiAsset | JsonApiFolder): Asse
   return folderFromJsonApi(jsonApi);
 }
 
-export function includedFromJsonApi(jsonApi: JsonApiAssetMetadata | JsonApiAssetUrl | JsonApiAssetVariations): AssetMetadata | AssetUrl | AssetVariations {
+export function includedFromJsonApi(
+  jsonApi: JsonApiAssetMetadata | JsonApiAssetUrl | JsonApiAssetVariations,
+): AssetMetadata | AssetUrl | AssetVariations {
   if (jsonApi.type === 'asset-metadata') {
     return assetMetadataFromJsonApi(jsonApi);
   }
@@ -207,7 +205,9 @@ export function includedFromJsonApi(jsonApi: JsonApiAssetMetadata | JsonApiAsset
   return assetVariationsFromJsonApi(jsonApi);
 }
 
-export function includedToJsonApi(included: AssetMetadata | AssetUrl | AssetVariations): JsonApiAssetMetadata | JsonApiAssetUrl | JsonApiAssetVariations {
+export function includedToJsonApi(
+  included: AssetMetadata | AssetUrl | AssetVariations,
+): JsonApiAssetMetadata | JsonApiAssetUrl | JsonApiAssetVariations {
   if ('mimeType' in included && 'size' in included) {
     return assetMetadataToJsonApi(included as AssetMetadata);
   }
@@ -221,23 +221,33 @@ export function includedToJsonApi(included: AssetMetadata | AssetUrl | AssetVari
 // Type Guards
 // ============================================
 
-export function isJsonApiAsset(jsonApi: { type: string; id: string; attributes?: Record<string, unknown> }): jsonApi is JsonApiAsset {
+export function isJsonApiAsset(
+  jsonApi: { type: string, id: string, attributes?: Record<string, unknown> },
+): jsonApi is JsonApiAsset {
   return jsonApi.type === 'asset';
 }
 
-export function isJsonApiFolder(jsonApi: { type: string; id: string; attributes?: Record<string, unknown> }): jsonApi is JsonApiFolder {
+export function isJsonApiFolder(
+  jsonApi: { type: string, id: string, attributes?: Record<string, unknown> },
+): jsonApi is JsonApiFolder {
   return jsonApi.type === 'folder';
 }
 
-export function isJsonApiAssetMetadata(jsonApi: { type: string; id: string; attributes?: Record<string, unknown> }): jsonApi is JsonApiAssetMetadata {
+export function isJsonApiAssetMetadata(
+  jsonApi: { type: string, id: string, attributes?: Record<string, unknown> },
+): jsonApi is JsonApiAssetMetadata {
   return jsonApi.type === 'asset-metadata';
 }
 
-export function isJsonApiAssetUrl(jsonApi: { type: string; id: string; attributes?: Record<string, unknown> }): jsonApi is JsonApiAssetUrl {
+export function isJsonApiAssetUrl(
+  jsonApi: { type: string, id: string, attributes?: Record<string, unknown> },
+): jsonApi is JsonApiAssetUrl {
   return jsonApi.type === 'asset-url';
 }
 
-export function isJsonApiAssetVariations(jsonApi: { type: string; id: string; attributes?: Record<string, unknown> }): jsonApi is JsonApiAssetVariations {
+export function isJsonApiAssetVariations(
+  jsonApi: { type: string, id: string, attributes?: Record<string, unknown> },
+): jsonApi is JsonApiAssetVariations {
   return jsonApi.type === 'asset-variants';
 }
 

@@ -49,8 +49,8 @@ export interface Translation {
 
 export type TranslationKey = keyof Translation;
 
-export type SupportedLocale = "en" | "nl";
+export type SupportedLocale = 'en' | 'nl';
 
 export function isSupportedLocale(locale: string): locale is SupportedLocale {
-  return locale === "en" || locale === "nl";
+  return locale === 'en' || locale === 'nl';
 }

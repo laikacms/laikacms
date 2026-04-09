@@ -22,7 +22,7 @@ pnpm add @laikacms/file-sanitizer
 ## Usage
 
 ```typescript
-import { sanitizeFile, detectFileType } from '@laikacms/file-sanitizer';
+import { detectFileType, sanitizeFile } from '@laikacms/file-sanitizer';
 
 const file = await request.blob();
 const result = await sanitizeFile(file);
@@ -35,24 +35,26 @@ if (result.safe) {
 
 ## Supported Formats
 
-| Format | Sanitization |
-|--------|--------------|
+| Format | Sanitization                         |
+| ------ | ------------------------------------ |
 | JPEG   | EXIF stripping, structure validation |
-| PNG    | Chunk validation |
-| GIF    | Structure validation |
-| WebP   | Container validation |
-| TIFF   | Tag validation |
-| PDF    | JavaScript detection |
-| MP4    | Container structure validation |
+| PNG    | Chunk validation                     |
+| GIF    | Structure validation                 |
+| WebP   | Container validation                 |
+| TIFF   | Tag validation                       |
+| PDF    | JavaScript detection                 |
+| MP4    | Container structure validation       |
 
 ## Disclaimer
 
-> [!CAUTION]
-> **This package provides BEST-EFFORT sanitization only.**
+> [!CAUTION] **This package provides BEST-EFFORT sanitization only.**
 >
-> This is **not** a comprehensive security solution. It is designed to catch common accidents (e.g., files with wrong extensions), detect basic malicious patterns, and strip potentially dangerous metadata.
+> This is **not** a comprehensive security solution. It is designed to catch common accidents (e.g.,
+> files with wrong extensions), detect basic malicious patterns, and strip potentially dangerous
+> metadata.
 >
-> It will **NOT** stop determined attackers, detect sophisticated malware, guarantee file safety, or replace proper antivirus scanning.
+> It will **NOT** stop determined attackers, detect sophisticated malware, guarantee file safety, or
+> replace proper antivirus scanning.
 >
 > **Do not rely on this package as your sole defense against malicious uploads.**
 
@@ -62,11 +64,14 @@ if (result.safe) {
 2. **Antivirus Scanning** - Use dedicated malware detection services
 3. **Access Restrictions** - Limit file access permissions
 4. **CDN Delivery** - Serve files through secure CDNs with proper headers
-5. **Content-Type Headers** - Always set correct `Content-Type` and `X-Content-Type-Options: nosniff`
+5. **Content-Type Headers** - Always set correct `Content-Type` and
+   `X-Content-Type-Options: nosniff`
 
 ### Liability
 
-The maintainers are **not responsible** for any security incidents resulting from malicious file uploads. This package is provided "as is" without warranty. See the [LICENSE](../../../LICENSE) for full terms.
+The maintainers are **not responsible** for any security incidents resulting from malicious file
+uploads. This package is provided "as is" without warranty. See the [LICENSE](../../../LICENSE) for
+full terms.
 
 ## License
 

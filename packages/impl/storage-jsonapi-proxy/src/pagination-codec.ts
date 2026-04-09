@@ -10,7 +10,7 @@ export const paginationCodec = {
    */
   encode(pagination: Pagination): URLSearchParams {
     const params = new URLSearchParams();
-    
+
     // Handle cursor-based pagination (after/before)
     if ('after' in pagination && pagination.after) {
       params.set('page[after]', pagination.after);
@@ -18,12 +18,12 @@ export const paginationCodec = {
     if ('before' in pagination && pagination.before) {
       params.set('page[before]', pagination.before);
     }
-    
+
     // Handle page-based pagination
     if ('page' in pagination) {
       params.set('page[number]', String(pagination.page));
     }
-    
+
     // Handle offset-based pagination
     if ('offset' in pagination) {
       params.set('page[offset]', String(pagination.offset));
@@ -31,12 +31,12 @@ export const paginationCodec = {
     if ('limit' in pagination && pagination.limit !== undefined) {
       params.set('page[limit]', String(pagination.limit));
     }
-    
+
     // Handle perPage (common to cursor and page-based)
     if ('perPage' in pagination && pagination.perPage !== undefined) {
       params.set('page[size]', String(pagination.perPage));
     }
-    
+
     return params;
   },
 
@@ -50,22 +50,22 @@ export const paginationCodec = {
     const before = params.get('page[before]');
     const perPageStr = params.get('page[size]');
     const perPage = perPageStr ? parseInt(perPageStr, 10) : undefined;
-    
+
     if (after) {
       return { after, perPage };
     }
-    
+
     if (before) {
       return { before, perPage };
     }
-    
+
     // Check for page-based pagination
     const pageStr = params.get('page[number]');
     if (pageStr) {
       const page = parseInt(pageStr, 10);
       return perPage ? { page, perPage } : { page };
     }
-    
+
     // Check for offset-based pagination
     const offsetStr = params.get('page[offset]');
     const limitStr = params.get('page[limit]');
@@ -74,7 +74,7 @@ export const paginationCodec = {
       const limit = limitStr ? parseInt(limitStr, 10) : undefined;
       return limit ? { offset, limit } : { offset };
     }
-    
+
     // Default to cursor-based with after
     return perPage ? { after: undefined, perPage } : { after: undefined };
   },
@@ -91,5 +91,5 @@ export const paginationCodec = {
    */
   decodeFromString(queryString: string): Pagination {
     return this.decode(new URLSearchParams(queryString));
-  }
+  },
 };

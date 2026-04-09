@@ -15,12 +15,13 @@ Email [security@laikacms.com](mailto:security@laikacms.com). Do not use public i
 ### `@laikacms/decap-oauth2`
 
 > [!WARNING]
-> Provided "as is" without warranty. Review the implementation and conduct your own security audits before production use.
+> Provided "as is" without warranty. Review the implementation and conduct your own security audits
+> before production use.
 
 ### `@laikacms/file-sanitizer`
 
-> [!CAUTION]
-> **Best-effort sanitization only.** Will not stop determined attackers. Use additional measures: isolated storage, antivirus scanning, CDN delivery.
+> [!CAUTION] **Best-effort sanitization only.** Will not stop determined attackers. Use additional
+> measures: isolated storage, antivirus scanning, CDN delivery.
 
 ### `@laikacms/sanitizer`
 

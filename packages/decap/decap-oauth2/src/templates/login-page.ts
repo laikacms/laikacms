@@ -4,9 +4,9 @@
  * This template provides an enhanced login page with passkey and TOTP support.
  */
 
-import { defaultMessages, type AuthTranslation, type OAuthMessages, type TotpTranslation } from '../i18n/index.js';
-import { html, type HtmlTemplate, messages, processCustomLogo, type TemplateVariables } from './html.js';
+import { type AuthTranslation, defaultMessages, type OAuthMessages, type TotpTranslation } from '../i18n/index.js';
 import { backIcon, decapLogo, loginPageStyles, passkeyIcon } from './decap-styles.js';
+import { html, type HtmlTemplate, messages, processCustomLogo, type TemplateVariables } from './html.js';
 
 // Template tag for JavaScript (enables intellisense)
 const js = String.raw;
@@ -22,7 +22,7 @@ function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
+  return text.replace(/[&<>"']/g, char => map[char]);
 }
 
 /**
@@ -33,7 +33,7 @@ export interface PasskeyAuthOptions {
   rpId: string;
   timeout: number;
   userVerification: string;
-  allowCredentials?: Array<{ type: string; id: string; transports?: string[]; }>;
+  allowCredentials?: Array<{ type: string, id: string, transports?: string[] }>;
 }
 
 /**
@@ -295,24 +295,24 @@ const logoHtml = Symbol('logoHtml');
  * Template variables type for enhanced login page
  */
 type EnhancedLoginTemplateVariables = TemplateVariables & {
-  [pageTitle]: string;
-  [authorizeUrl]: string;
-  [emailLabel]: string;
-  [emailPlaceholder]: string;
-  [passwordLabel]: string;
-  [passwordPlaceholder]: string;
-  [signInButton]: string;
-  [dividerOr]: string;
-  [signInWithPasskey]: string;
-  [backText]: string;
-  [totpDescription]: string;
-  [totpInputLabel]: string;
-  [totpVerifyButton]: string;
-  [forgotPasswordLinkHtml]: string;
-  [errorMessageHtml]: string;
-  [passkeyScriptHtml]: string;
-  [logoHtml]: string;
-  [messages]: OAuthMessages;
+  [pageTitle]: string,
+  [authorizeUrl]: string,
+  [emailLabel]: string,
+  [emailPlaceholder]: string,
+  [passwordLabel]: string,
+  [passwordPlaceholder]: string,
+  [signInButton]: string,
+  [dividerOr]: string,
+  [signInWithPasskey]: string,
+  [backText]: string,
+  [totpDescription]: string,
+  [totpInputLabel]: string,
+  [totpVerifyButton]: string,
+  [forgotPasswordLinkHtml]: string,
+  [errorMessageHtml]: string,
+  [passkeyScriptHtml]: string,
+  [logoHtml]: string,
+  [messages]: OAuthMessages,
 };
 
 /**
@@ -442,7 +442,9 @@ export function renderEnhancedLoginPage(options: EnhancedLoginPageOptions): Enha
 
   // Build forgot password link HTML if URL is provided
   const forgotPasswordLink = options.forgotPasswordUrl
-    ? `<a href="${escapeHtml(options.forgotPasswordUrl)}" class="forgot-password-link">${escapeHtml(authMsgs.forgotPasswordLink)}</a>`
+    ? `<a href="${escapeHtml(options.forgotPasswordUrl)}" class="forgot-password-link">${
+      escapeHtml(authMsgs.forgotPasswordLink)
+    }</a>`
     : '';
 
   // Build error message HTML if error is provided

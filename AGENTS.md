@@ -1,6 +1,7 @@
 # AI Agents Guide
 
-Laika CMS is **modular, runtime-agnostic content management software**. API-first, works with any JavaScript runtime.
+Laika CMS is **modular, runtime-agnostic content management software**. API-first, works with any
+JavaScript runtime.
 
 ## Principles
 
@@ -11,6 +12,7 @@ Laika CMS is **modular, runtime-agnostic content management software**. API-firs
 ## Documentation
 
 Docs are in `docs/` folder (no separate website). Use relative links:
+
 - To other docs: `[Architecture](./architecture.md)`
 - To packages: `[storage](../packages/domain/storage)`
 

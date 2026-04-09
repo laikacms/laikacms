@@ -11,8 +11,8 @@
  */
 
 import { defaultMessages, type OAuthMessages, type PasswordResetTranslation } from '../i18n/index.js';
-import { html, type HtmlTemplate, messages, processCustomLogo, type TemplateVariables } from './html.js';
 import { colors, loginPageStyles } from './decap-styles.js';
+import { html, type HtmlTemplate, messages, processCustomLogo, type TemplateVariables } from './html.js';
 
 // Additional styles for password reset pages
 const passwordResetStyles = `
@@ -104,64 +104,64 @@ const signInLink = Symbol('signInLink');
  * Template variables type for forgot password page
  */
 type ForgotPasswordTemplateVariables = TemplateVariables & {
-  [forgotPageTitle]: string;
-  [forgotTitle]: string;
-  [forgotDescription]: string;
-  [forgotFormUrl]: string;
-  [sendResetLink]: string;
-  [backToLogin]: string;
-  [loginUrl]: string;
-  [errorMessage]: string;
-  [logoHtml]: string;
-  [captchaWidgetHtml]: string;
-  [captchaScriptHtml]: string;
-  [messages]: OAuthMessages;
+  [forgotPageTitle]: string,
+  [forgotTitle]: string,
+  [forgotDescription]: string,
+  [forgotFormUrl]: string,
+  [sendResetLink]: string,
+  [backToLogin]: string,
+  [loginUrl]: string,
+  [errorMessage]: string,
+  [logoHtml]: string,
+  [captchaWidgetHtml]: string,
+  [captchaScriptHtml]: string,
+  [messages]: OAuthMessages,
 };
 
 /**
  * Template variables type for check email page
  */
 type CheckEmailTemplateVariables = TemplateVariables & {
-  [checkEmailPageTitle]: string;
-  [checkEmailTitle]: string;
-  [checkEmailDescription]: string;
-  [backToLogin]: string;
-  [loginUrl]: string;
-  [logoHtml]: string;
-  [messages]: OAuthMessages;
+  [checkEmailPageTitle]: string,
+  [checkEmailTitle]: string,
+  [checkEmailDescription]: string,
+  [backToLogin]: string,
+  [loginUrl]: string,
+  [logoHtml]: string,
+  [messages]: OAuthMessages,
 };
 
 /**
  * Template variables type for reset password page
  */
 type ResetPasswordTemplateVariables = TemplateVariables & {
-  [resetPageTitle]: string;
-  [resetTitle]: string;
-  [resetDescription]: string;
-  [resetFormUrl]: string;
-  [resetToken]: string;
-  [newPasswordLabel]: string;
-  [newPasswordPlaceholder]: string;
-  [confirmPasswordLabel]: string;
-  [confirmPasswordPlaceholder]: string;
-  [passwordHint]: string;
-  [resetButton]: string;
-  [errorMessage]: string;
-  [logoHtml]: string;
-  [messages]: OAuthMessages;
+  [resetPageTitle]: string,
+  [resetTitle]: string,
+  [resetDescription]: string,
+  [resetFormUrl]: string,
+  [resetToken]: string,
+  [newPasswordLabel]: string,
+  [newPasswordPlaceholder]: string,
+  [confirmPasswordLabel]: string,
+  [confirmPasswordPlaceholder]: string,
+  [passwordHint]: string,
+  [resetButton]: string,
+  [errorMessage]: string,
+  [logoHtml]: string,
+  [messages]: OAuthMessages,
 };
 
 /**
  * Template variables type for success page
  */
 type SuccessTemplateVariables = TemplateVariables & {
-  [successPageTitle]: string;
-  [successTitle]: string;
-  [successDescription]: string;
-  [signInLink]: string;
-  [loginUrl]: string;
-  [logoHtml]: string;
-  [messages]: OAuthMessages;
+  [successPageTitle]: string,
+  [successTitle]: string,
+  [successDescription]: string,
+  [signInLink]: string,
+  [loginUrl]: string,
+  [logoHtml]: string,
+  [messages]: OAuthMessages,
 };
 
 /**
@@ -327,7 +327,7 @@ function escapeHtml(text: string): string {
     '"': '&quot;',
     "'": '&#039;',
   };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
+  return text.replace(/[&<>"']/g, char => map[char]);
 }
 
 // Default login URL uses JavaScript history.back() as a fallback

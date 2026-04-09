@@ -1,2 +1,2 @@
-export * from './utils.js';
 export * from './domain/index.js';
+export * from './utils.js';

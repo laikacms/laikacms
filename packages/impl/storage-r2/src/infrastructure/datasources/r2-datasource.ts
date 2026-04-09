@@ -1,8 +1,4 @@
-import {
-  InternalError,
-  LaikaResult,
-  NotFoundError
-} from '@laikacms/core';
+import { InternalError, LaikaResult, NotFoundError } from '@laikacms/core';
 import { Key } from '@laikacms/storage';
 import * as Cause from 'effect/Cause';
 import * as Result from 'effect/Result';
@@ -16,7 +12,7 @@ export class R2DataSource {
   constructor(
     private readonly bucket: R2Bucket,
     private readonly availableExtensions: string[] = [],
-    private readonly defaultFileExtension: string = ''
+    private readonly defaultFileExtension: string = '',
   ) {}
 
   /**
@@ -48,17 +44,17 @@ export class R2DataSource {
   private async resolveKeyWithExtension(key: Key): Promise<Key | null> {
     const normalizedKey = this.normalizeKey(key);
     const keyWithoutExt = this.stripExtension(normalizedKey);
-    
+
     // Try to find object with any available extension
     for (const ext of this.availableExtensions) {
       const keyWithExt = `${keyWithoutExt}.${ext}`;
       const object = await this.bucket.head(keyWithExt);
-      
+
       if (object) {
         return keyWithExt;
       }
     }
-    
+
     // No object found with any extension
     return null;
   }
@@ -70,16 +66,16 @@ export class R2DataSource {
   async findExistingObjectExtension(key: Key): Promise<string | null> {
     const normalizedKey = this.normalizeKey(key);
     const keyWithoutExt = this.stripExtension(normalizedKey);
-    
+
     for (const ext of this.availableExtensions) {
       const keyWithExt = `${keyWithoutExt}.${ext}`;
       const object = await this.bucket.head(keyWithExt);
-      
+
       if (object) {
         return ext;
       }
     }
-    
+
     return null;
   }
 
@@ -93,7 +89,7 @@ export class R2DataSource {
     for (const key of keys) {
       try {
         const resolvedKey = await this.resolveKeyWithExtension(key);
-        
+
         if (!resolvedKey) {
           errorMessages.push(`Object at ${key} does not exist`);
           continue;
@@ -112,30 +108,30 @@ export class R2DataSource {
   /**
    * Get the contents of an object
    */
-  async getObjectContents(key: string): Promise<LaikaResult<{ content: string; key: string; extension: string }>> {
+  async getObjectContents(key: string): Promise<LaikaResult<{ content: string, key: string, extension: string }>> {
     try {
       const normalizedKey = this.normalizeKey(key);
       const resolvedKey = await this.resolveKeyWithExtension(normalizedKey);
-      
+
       if (!resolvedKey) {
         return Result.fail(new NotFoundError(`Object at ${key} cannot be resolved`));
       }
-      
+
       const object = await this.bucket.get(resolvedKey);
-      
+
       if (!object) {
         return Result.fail(new NotFoundError(`Object at ${key} does not exist`));
       }
 
       const content = await object.text();
-      
+
       // Extract extension from resolved key
       const lastDot = resolvedKey.lastIndexOf('.');
       const extension = lastDot > 0 ? resolvedKey.slice(lastDot + 1) : '';
-      
+
       // Return key without extension for the interface
       const keyWithoutExt = this.stripExtension(resolvedKey);
-      
+
       return Result.succeed({ content, key: keyWithoutExt, extension });
     } catch (error) {
       console.error(error);
@@ -146,24 +142,26 @@ export class R2DataSource {
   /**
    * Get metadata for an object
    */
-  async getObjectMeta(key: string): Promise<LaikaResult<{ 
-    size: number; 
-    createdAt: Date; 
-    updatedAt: Date; 
-    key: string; 
-    extension: string;
-    etag: string;
-  }>> {
+  async getObjectMeta(key: string): Promise<
+    LaikaResult<{
+      size: number,
+      createdAt: Date,
+      updatedAt: Date,
+      key: string,
+      extension: string,
+      etag: string,
+    }>
+  > {
     try {
       const normalizedKey = this.normalizeKey(key);
       const resolvedKey = await this.resolveKeyWithExtension(normalizedKey);
-      
+
       if (!resolvedKey) {
         return Result.fail(new NotFoundError(`Object at ${key} cannot be resolved`));
       }
-      
+
       const object = await this.bucket.head(resolvedKey);
-      
+
       if (!object) {
         return Result.fail(new NotFoundError(`Object at ${key} does not exist`));
       }
@@ -171,20 +169,20 @@ export class R2DataSource {
       // Extract extension from resolved key
       const lastDot = resolvedKey.lastIndexOf('.');
       const extension = lastDot > 0 ? resolvedKey.slice(lastDot + 1) : '';
-      
+
       // Return key without extension for the interface
       const keyWithoutExt = this.stripExtension(resolvedKey);
-      
+
       // R2 doesn't have a separate created time, so we use uploaded time for both
       const uploadedDate = object.uploaded;
-      
-      return Result.succeed({ 
-        size: object.size, 
-        createdAt: uploadedDate, 
-        updatedAt: uploadedDate, 
-        key: keyWithoutExt, 
+
+      return Result.succeed({
+        size: object.size,
+        createdAt: uploadedDate,
+        updatedAt: uploadedDate,
+        key: keyWithoutExt,
         extension,
-        etag: object.etag
+        etag: object.etag,
       });
     } catch (error) {
       console.error(error);
@@ -197,14 +195,14 @@ export class R2DataSource {
    * Since R2 is a flat object store, folders don't have real metadata.
    * We return the current time as a placeholder.
    */
-  async getFolderMeta(key: string): Promise<LaikaResult<{ createdAt: Date; updatedAt: Date }>> {
+  async getFolderMeta(key: string): Promise<LaikaResult<{ createdAt: Date, updatedAt: Date }>> {
     const normalizedKey = this.normalizeKey(key);
     const prefix = normalizedKey ? `${normalizedKey}/` : '';
-    
+
     try {
       // Check if any objects exist with this prefix
       const listed = await this.bucket.list({ prefix, limit: 1 });
-      
+
       if (listed.objects.length === 0 && listed.delimitedPrefixes.length === 0) {
         return Result.fail(new NotFoundError(`Folder at ${key} does not exist`));
       }
@@ -224,11 +222,11 @@ export class R2DataSource {
   async listDirectory(prefix: string): Promise<LaikaResult<R2Entry[]>> {
     const normalizedPrefix = this.normalizeKey(prefix);
     const searchPrefix = normalizedPrefix ? `${normalizedPrefix}/` : '';
-    
+
     try {
       const entries: R2Entry[] = [];
       let cursor: string | undefined;
-      
+
       do {
         const listed = await this.bucket.list({
           prefix: searchPrefix,
@@ -242,7 +240,7 @@ export class R2DataSource {
           if (object.key.endsWith('/.keep') || object.key === '.keep') {
             continue;
           }
-          
+
           entries.push({
             type: 'file',
             key: object.key,
@@ -275,13 +273,13 @@ export class R2DataSource {
   async createOrUpdate(
     key: string,
     content: string,
-    extension: string
+    extension: string,
   ): Promise<LaikaResult<{ key: string }>> {
     const normalizedKey = this.normalizeKey(key);
     // Strip any extension user may have added and use the provided extension
     const keyWithoutExt = this.stripExtension(normalizedKey);
     const keyWithExt = extension ? `${keyWithoutExt}.${extension}` : keyWithoutExt;
-    
+
     try {
       await this.bucket.put(keyWithExt, content, {
         httpMetadata: {
@@ -303,7 +301,7 @@ export class R2DataSource {
   async isDirectory(key: string): Promise<boolean> {
     const normalizedKey = this.normalizeKey(key);
     const prefix = normalizedKey ? `${normalizedKey}/` : '';
-    
+
     try {
       const listed = await this.bucket.list({ prefix, limit: 1 });
       return listed.objects.length > 0 || listed.delimitedPrefixes.length > 0;
@@ -337,7 +335,7 @@ export class R2DataSource {
       'ts': 'application/typescript',
       'xml': 'application/xml',
     };
-    
+
     return contentTypes[extension] || 'application/octet-stream';
   }
 }

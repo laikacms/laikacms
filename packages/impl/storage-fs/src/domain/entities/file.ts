@@ -1,26 +1,25 @@
-
 export interface DirSubDir {
-    type: 'dir'
-    path: string,
+  type: 'dir';
+  path: string;
 }
 
 export interface DirSubFile {
-    type: 'file'
-    path: string,
+  type: 'file';
+  path: string;
 }
 
-export type DirSub = DirSubDir | DirSubFile
+export type DirSub = DirSubDir | DirSubFile;
 
 export interface File {
-    type: 'file',
-    path: string,
-    content: string
+  type: 'file';
+  path: string;
+  content: string;
 }
 
 export interface Dir {
-    type: 'dir',
-    path: string,
-    content: DirSub[]
+  type: 'dir';
+  path: string;
+  content: DirSub[];
 }
 
-export type FileOrDir = File | Dir
+export type FileOrDir = File | Dir;

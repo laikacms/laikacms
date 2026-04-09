@@ -1,6 +1,6 @@
 /**
  * Dangerous Content Scanner Types
- * 
+ *
  * Scanners detect privacy-sensitive content in files that cannot be sanitized.
  * If dangerous content is found, the file should be rejected.
  */
@@ -11,12 +11,12 @@ import type { DetectedFileType } from '../types.js';
  * Types of dangerous content that can be detected
  */
 export type DangerousContentType =
-  | 'gps_coordinates'      // GPS latitude/longitude
-  | 'location_metadata'    // Location names, addresses
-  | 'device_info'          // Camera/device identifiers
-  | 'timestamp'            // Creation/modification timestamps
-  | 'author_info'          // Author/creator information
-  | 'facial_recognition';  // Face detection/recognition data (regions, names)
+  | 'gps_coordinates' // GPS latitude/longitude
+  | 'location_metadata' // Location names, addresses
+  | 'device_info' // Camera/device identifiers
+  | 'timestamp' // Creation/modification timestamps
+  | 'author_info' // Author/creator information
+  | 'facial_recognition'; // Face detection/recognition data (regions, names)
 
 /**
  * Result of scanning for dangerous content
@@ -26,12 +26,12 @@ export interface ScanResult {
    * Whether dangerous content was found
    */
   hasDangerousContent: boolean;
-  
+
   /**
    * Types of dangerous content found
    */
   foundTypes: DangerousContentType[];
-  
+
   /**
    * Human-readable descriptions of what was found
    */
@@ -46,12 +46,12 @@ export interface DangerousContentScanner {
    * File types this scanner can handle
    */
   readonly supportedTypes: readonly DetectedFileType[];
-  
+
   /**
    * Check if this scanner can handle the given file type
    */
   canHandle(fileType: DetectedFileType): boolean;
-  
+
   /**
    * Scan the file for dangerous content
    */
@@ -74,7 +74,7 @@ export function emptyScanResult(): ScanResult {
  */
 export function dangerousScanResult(
   types: DangerousContentType[],
-  details: string[]
+  details: string[],
 ): ScanResult {
   return {
     hasDangerousContent: true,
@@ -89,7 +89,7 @@ export function dangerousScanResult(
 export function mergeScanResults(...results: ScanResult[]): ScanResult {
   const foundTypes: DangerousContentType[] = [];
   const details: string[] = [];
-  
+
   for (const result of results) {
     for (const type of result.foundTypes) {
       if (!foundTypes.includes(type)) {
@@ -98,7 +98,7 @@ export function mergeScanResults(...results: ScanResult[]): ScanResult {
     }
     details.push(...result.details);
   }
-  
+
   return {
     hasDangerousContent: foundTypes.length > 0,
     foundTypes,

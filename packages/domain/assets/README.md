@@ -15,7 +15,7 @@ pnpm add @laikacms/assets
 ## Usage
 
 ```typescript
-import { AssetsRepository, Asset, AssetCreate } from '@laikacms/assets'
+import { Asset, AssetCreate, AssetsRepository } from '@laikacms/assets';
 ```
 
 ## Entities
@@ -28,9 +28,9 @@ import { AssetsRepository, Asset, AssetCreate } from '@laikacms/assets'
 
 ```typescript
 abstract class AssetsRepository {
-  abstract getAsset(key: string): ResultStream<Asset>
-  abstract createAsset(create: AssetCreate): ResultStream<Asset>
-  abstract getUrls(assets: Asset[]): ResultStream<AssetUrl[]>
+  abstract getAsset(key: string): ResultStream<Asset>;
+  abstract createAsset(create: AssetCreate): ResultStream<Asset>;
+  abstract getUrls(assets: Asset[]): ResultStream<AssetUrl[]>;
   // ...
 }
 ```

@@ -1,4 +1,4 @@
-import { AtomBaseSchema } from "@laikacms/storage";
+import { AtomBaseSchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
 
 export const RevisionSummarySchema = S.toStandardSchemaV1(S.Struct({

@@ -9,7 +9,7 @@
     "stop": "node src/stop.js",
     "create-tables": "node src/create-tables.js",
     "reset": "node src/reset.js",
-    
+
     "status": "node src/status.js"
   },
   "dependencies": {

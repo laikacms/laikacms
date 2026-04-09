@@ -1,6 +1,6 @@
-import React, { Component } from 'react';
 import { PkceAuthenticator } from 'decap-cms-lib-auth';
 import { AuthenticationPage, Icon } from 'decap-cms-ui-default';
+import React, { Component } from 'react';
 
 interface BackendConfig {
   base_url?: string;
@@ -80,14 +80,14 @@ class PKCEAuthenticationPage extends Component<PKCEAuthPageProps, PKCEAuthPageSt
 
   handleLogin = (e: React.MouseEvent) => {
     e.preventDefault();
-    
+
     if (!this.auth) {
       this.setState({ loginError: 'Authentication not properly initialized' });
       return;
     }
 
     const scope = 'openid email profile';
-    
+
     this.auth.authenticate({ scope }, (err: Error | null, data: unknown) => {
       if (err) {
         this.setState({ loginError: err.toString() });

@@ -1,26 +1,34 @@
 // PKCE OAuth 2.0 implementation for Decap CMS
 // Security hardened for post-quantum computing resistance
+import { TemplateLiteral as TL, Url } from '@laikacms/core';
 import {
   addTimingJitter,
   constantTimeEqual,
   generateSecureRandomString,
   sha256,
-  verifyPassword
+  verifyPassword,
 } from '@laikacms/crypto';
-import { TemplateLiteral as TL, Url } from '@laikacms/core';
-import { requestPasswordReset, resetPassword, type PasswordResetConfig } from './email/email.js';
+import { type PasswordResetConfig, requestPasswordReset, resetPassword } from './email/email.js';
 import { type OAuthMessages } from './i18n/index.js';
-import { setupOAuthTOTP, verifyOAuthTOTPSetup, verifyTOTP, type OAuthTotpConfig } from './totp/totp.js';
+import { type OAuthTotpConfig, setupOAuthTOTP, verifyOAuthTOTPSetup, verifyTOTP } from './totp/totp.js';
 
-import { generateAuthenticationOptions, generateRegistrationOptions, PasskeyConfig, verifyAuthentication, verifyRegistration } from './passkey/passkey.js';
 import {
-  AuthorizationPageOptions,
-  getAuthorizationPageHTML,
-} from './templates/authorization-page.js';
+  generateAuthenticationOptions,
+  generateRegistrationOptions,
+  PasskeyConfig,
+  verifyAuthentication,
+  verifyRegistration,
+} from './passkey/passkey.js';
+import { AuthorizationPageOptions, getAuthorizationPageHTML } from './templates/authorization-page.js';
 import { renderErrorPage } from './templates/error.js';
 import { renderLogoutAllSuccessPage, renderLogoutSuccessPage } from './templates/logout-page.js';
 import { renderPasskeySetupPage } from './templates/passkey-setup-page.js';
-import { renderForgotPasswordPage, renderForgotPasswordSuccessPage, renderResetPasswordPage, renderResetPasswordSuccessPage } from './templates/password-reset-pages.js';
+import {
+  renderForgotPasswordPage,
+  renderForgotPasswordSuccessPage,
+  renderResetPasswordPage,
+  renderResetPasswordSuccessPage,
+} from './templates/password-reset-pages.js';
 import { renderTotpSetupPage } from './templates/totp-setup-page.js';
 import { renderTotpVerificationPage } from './templates/totp-verification-page.js';
 export type { AuthorizationPageOptions } from './templates/authorization-page.js';
@@ -45,12 +53,12 @@ export {
   passkeySection,
   passkeyStyles,
   processCustomLogo,
-  templateVars
+  templateVars,
 } from './templates/html.js';
 export type { HtmlTemplate, ProcessedLogo, TemplateVariables, TemplateVarsType } from './templates/html.js';
 
-import { buildCspWithLogo, processCustomLogo } from './templates/html.js';
 import { info } from 'effect/Console';
+import { buildCspWithLogo, processCustomLogo } from './templates/html.js';
 
 // Security constants for post-quantum resistance
 const SECURITY_CONSTANTS = {
@@ -170,7 +178,7 @@ export interface PasskeyOptions extends PasskeyConfig {
 export interface CaptchaConfig {
   /** Enable CAPTCHA on login and forgot password forms */
   enabled: boolean;
-  
+
   /**
    * HTML to render the CAPTCHA widget in the form.
    * This is inserted before the submit button.
@@ -181,7 +189,7 @@ export interface CaptchaConfig {
    * - Turnstile: `<div class="cf-turnstile" data-sitekey="YOUR_SITE_KEY"></div>`
    */
   widgetHtml: string;
-  
+
   /**
    * Script tag(s) to load the CAPTCHA library.
    * This is inserted in the <head> section.
@@ -192,7 +200,7 @@ export interface CaptchaConfig {
    * - Turnstile: `<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>`
    */
   scriptHtml: string;
-  
+
   /**
    * Name of the form field that contains the CAPTCHA response token.
    * Default field names by provider:
@@ -201,7 +209,7 @@ export interface CaptchaConfig {
    * - Turnstile: 'cf-turnstile-response'
    */
   responseFieldName: string;
-  
+
   /**
    * Verify the CAPTCHA response token.
    * This callback should call your CAPTCHA provider's verification API.
@@ -360,9 +368,9 @@ function oauthError(
 ): Response {
   // For API requests, return JSON per RFC 6749
   const body: {
-    error: string;
-    error_description?: string;
-    error_uri?: string;
+    error: string,
+    error_description?: string,
+    error_uri?: string,
   } = { error };
 
   if (errorDescription) {
@@ -384,12 +392,12 @@ function oauthError(
 }
 
 interface OnAuthErrorHtmlOptions {
-  error: string,
-  errorDescription?: string,
-  status: number,
-  messages?: OAuthMessages,
-  customLogo?: string,
-  goBackHref: string
+  error: string;
+  errorDescription?: string;
+  status: number;
+  messages?: OAuthMessages;
+  customLogo?: string;
+  goBackHref: string;
 }
 
 // HTML error page for OAuth errors (browser-facing) - uses template from templates folder
@@ -442,7 +450,7 @@ export async function handleAuthorize(
       status: 405,
       messages: config.translations,
       goBackHref: config.loginRedirectUrl || '/',
-    })
+    });
   }
 
   const url = new URL(request.url);
@@ -524,8 +532,14 @@ export async function handleAuthorize(
       const pendingSession = await config.totp.callbacks.getPendingTotpSession(totpSessionParam);
       if (pendingSession) {
         // Show TOTP verification page
-        const totpPage = getTotpVerificationPage(url.toString(), totpSessionParam, config.translations, config.customLogo);
-        const baseCsp = "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:";
+        const totpPage = getTotpVerificationPage(
+          url.toString(),
+          totpSessionParam,
+          config.translations,
+          config.customLogo,
+        );
+        const baseCsp =
+          "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src 'self' data:";
         const csp = buildCspWithLogo(baseCsp, totpPage.imgSrc);
 
         return new Response(totpPage.html, {
@@ -607,11 +621,15 @@ export async function handleAuthorize(
     // Build CSP with logo origins if needed
     // Include Cloudflare Turnstile domains if CAPTCHA is enabled
     const captchaCspAdditions = captchaEnabled
-      ? " https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com"
-      : "";
+      ? ' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com'
+      : '';
     const baseCsp = passkeyEnabled
       ? `default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'${captchaCspAdditions}; img-src 'self' data:; connect-src 'self'`
-      : `default-src 'self'; style-src 'unsafe-inline'${captchaEnabled ? "; script-src 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com" : ""}; img-src 'self' data:`;
+      : `default-src 'self'; style-src 'unsafe-inline'${
+        captchaEnabled
+          ? "; script-src 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com"
+          : ''
+      }; img-src 'self' data:`;
     const csp = buildCspWithLogo(baseCsp, authPage.imgSrc);
 
     return new Response(authPage.html, {
@@ -737,13 +755,13 @@ export async function handleAuthorize(
         goBackHref: config.loginRedirectUrl || '/',
       });
     }
-    
+
     // Get client IP from request headers (common headers used by proxies/CDNs)
     const clientIp = request.headers.get('CF-Connecting-IP')
       || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
       || request.headers.get('X-Real-IP')
       || undefined;
-    
+
     const captchaValid = await config.captcha.verify(captchaToken, clientIp);
     if (!captchaValid) {
       await addTimingJitter();
@@ -1393,16 +1411,16 @@ async function handlePasskeyRegister(
 
   try {
     const body = await request.json() as {
-      setup_token: string;
+      setup_token: string,
       credential: {
-        id: string;
-        rawId: string;
+        id: string,
+        rawId: string,
         response: {
-          clientDataJSON: string;
-          attestationObject: string;
-        };
-        type: string;
-      };
+          clientDataJSON: string,
+          attestationObject: string,
+        },
+        type: string,
+      },
     };
 
     const { setup_token, credential } = body;
@@ -1469,15 +1487,15 @@ async function handlePasskeyAuthenticateVerify(
     const url = new URL(request.url);
     // The client sends the credential data directly at the root level, not nested under 'credential'
     const credential = await request.json() as {
-      id: string;
-      rawId: string;
+      id: string,
+      rawId: string,
       response: {
-        clientDataJSON: string;
-        authenticatorData: string;
-        signature: string;
-        userHandle?: string;
-      };
-      type: string;
+        clientDataJSON: string,
+        authenticatorData: string,
+        signature: string,
+        userHandle?: string,
+      },
+      type: string,
     };
 
     if (!credential || !credential.id || !credential.response) {
@@ -1683,13 +1701,13 @@ async function handleForgotPassword(
           },
         });
       }
-      
+
       // Get client IP from request headers
       const clientIp = request.headers.get('CF-Connecting-IP')
         || request.headers.get('X-Forwarded-For')?.split(',')[0]?.trim()
         || request.headers.get('X-Real-IP')
         || undefined;
-      
+
       const captchaValid = await config.captcha.verify(captchaToken, clientIp);
       if (!captchaValid) {
         const page = renderForgotPasswordPage({
@@ -2071,4 +2089,3 @@ export async function handleLogoutAll(
     },
   });
 }
-

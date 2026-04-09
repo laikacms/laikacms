@@ -1,105 +1,102 @@
+import { InvalidData, LaikaError, LaikaResult, NotFoundError } from '@laikacms/core';
 import {
-  LaikaError,
-  LaikaResult,
-  NotFoundError,
-  InvalidData,
-} from "@laikacms/core";
-import { StorageObjectContent } from "@laikacms/storage";
-import {
-  Revision,
   Document,
+  DocumentCreate,
+  DocumentsRepository,
+  ListRecordsOptions,
+  ListRecordSummaries,
+  ListRevisionsOptions,
+  pathToSegments,
+  Record as DocumentRecord,
+  RecordSummary,
+  Revision,
+  RevisionCreate,
+  RevisionSummary,
   Unpublished,
   UnpublishedCreate,
   UnpublishedUpdate,
-  Record as DocumentRecord,
-  DocumentsRepository,
-  RevisionSummary,
-  ListRevisionsOptions,
-  ListRecordsOptions,
-  RecordSummary,
-  DocumentCreate,
-  RevisionCreate,
-  pathToSegments,
-  ListRecordSummaries,
-} from "@laikacms/documents";
+} from '@laikacms/documents';
+import { StorageObjectContent } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
-const PUBLISHED_STATUS = "published";
+const PUBLISHED_STATUS = 'published';
 
 function failAs<T>(error: LaikaError): LaikaResult<T> {
   return Result.fail(error);
 }
 
 export type DocumentModel = {
-  key: string;
-  depth: number;
-  status: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
+  key: string,
+  depth: number,
+  status: string,
+  content: string,
+  createdAt: string,
+  updatedAt: string,
 };
 
 export type RevisionModel = {
-  key: string;
-  depth: number;
-  revision: string;
-  content: string;
-  createdAt: string;
-  updatedAt: string;
+  key: string,
+  depth: number,
+  revision: string,
+  content: string,
+  createdAt: string,
+  updatedAt: string,
 };
 
 export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA> {
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
   documentQueryBuilders: {
-    keyEquals: (value: string) => CKE;
-    keyStartsWith: (prefix: string) => CKSW;
-    statusEquals: (value: string) => CSE;
-    statusNotEquals: (value: string) => CSNE;
-    statusIn: (values: string[]) => CSI;
-    depthLte: (value: number) => CDLTE;
-    and: (...conditions: (CKE | CKSW | CSE | CSNE | CSI | CDLTE | CA)[]) => CA;
+    keyEquals: (value: string) => CKE,
+    keyStartsWith: (prefix: string) => CKSW,
+    statusEquals: (value: string) => CSE,
+    statusNotEquals: (value: string) => CSNE,
+    statusIn: (values: string[]) => CSI,
+    depthLte: (value: number) => CDLTE,
+    and: (...conditions: (CKE | CKSW | CSE | CSNE | CSI | CDLTE | CA)[]) => CA,
   };
   revisionQueryBuilders: {
-    keyEquals: (value: string) => RKE;
-    revisionEquals: (value: string) => RE;
-    and: (...conditions: (RKE | RE | RA)[]) => RA;
+    keyEquals: (value: string) => RKE,
+    revisionEquals: (value: string) => RE,
+    and: (...conditions: (RKE | RE | RA)[]) => RA,
   };
   callbacks: {
     documents: {
       insert: (query: {
-        values: DocumentModel;
-      }) => Promise<DocumentModel[]>;
+        values: DocumentModel,
+      }) => Promise<DocumentModel[]>,
       update: (query: {
-        where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA;
-        values: Partial<DocumentModel>;
-      }) => Promise<DocumentModel[]>;
-      delete: (query: { where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA }) => Promise<DocumentModel[]>;
+        where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA,
+        values: Partial<DocumentModel>,
+      }) => Promise<DocumentModel[]>,
+      delete: (query: { where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA }) => Promise<DocumentModel[]>,
       select: (query: {
-        where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA;
-        excludeContent?: boolean;
-        limit?: number;
-        offset?: number;
-      }) => Promise<DocumentModel[]>;
+        where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA,
+        excludeContent?: boolean,
+        limit?: number,
+        offset?: number,
+      }) => Promise<DocumentModel[]>,
     },
     revisions: {
       insert: (query: {
-        values: RevisionModel;
-      }) => Promise<RevisionModel[]>;
+        values: RevisionModel,
+      }) => Promise<RevisionModel[]>,
       update: (query: {
-        where: RKE | RE | RA;
-        values: Partial<RevisionModel>;
-      }) => Promise<RevisionModel[]>;
-      delete: (query: { where: RKE | RE | RA }) => Promise<RevisionModel[]>;
+        where: RKE | RE | RA,
+        values: Partial<RevisionModel>,
+      }) => Promise<RevisionModel[]>,
+      delete: (query: { where: RKE | RE | RA }) => Promise<RevisionModel[]>,
       select: (query: {
-        where: RKE | RE | RA;
-        limit?: number;
-        excludeContent?: boolean;
-      }) => Promise<RevisionModel[]>;
-    }
+        where: RKE | RE | RA,
+        limit?: number,
+        excludeContent?: boolean,
+      }) => Promise<RevisionModel[]>,
+    },
   };
 }
 
-export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /* Revisions */ RKE, RE, RA> extends DocumentsRepository {
+export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /* Revisions */ RKE, RE, RA>
+  extends DocumentsRepository
+{
   constructor(
     private options: DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA>,
   ) {
@@ -120,17 +117,19 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
     try {
       const content = JSON.parse(row.content) as StorageObjectContent;
       yield Result.succeed({
-        type: "published" as const,
+        type: 'published' as const,
         key: row.key,
-        status: "published" as const,
+        status: 'published' as const,
         content,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       });
     } catch (error) {
-      yield Result.fail(new InvalidData(
-        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`
-      ));
+      yield Result.fail(
+        new InvalidData(
+          `Invalid JSON content format: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        ),
+      );
     }
   }
 
@@ -184,7 +183,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
     try {
       const content = JSON.parse(row.content) as StorageObjectContent;
       yield Result.succeed({
-        type: "unpublished" as const,
+        type: 'unpublished' as const,
         key: row.key,
         status: row.status,
         content,
@@ -192,9 +191,11 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
         updatedAt: row.updatedAt,
       });
     } catch (error) {
-      yield Result.fail(new InvalidData(
-        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`
-      ));
+      yield Result.fail(
+        new InvalidData(
+          `Invalid JSON content format: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        ),
+      );
     }
   }
 
@@ -307,10 +308,10 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
     const rows = await this.options.callbacks.documents.select({
       excludeContent: summaryOnly,
       where: qb.and(...[
-        options.type === "published" ? qb.statusEquals(PUBLISHED_STATUS) : undefined,
-        options.type === "unpublished" ? qb.statusNotEquals(PUBLISHED_STATUS) : undefined,
+        options.type === 'published' ? qb.statusEquals(PUBLISHED_STATUS) : undefined,
+        options.type === 'unpublished' ? qb.statusNotEquals(PUBLISHED_STATUS) : undefined,
         options.statuses ? qb.statusIn(options.statuses) : undefined,
-        options.folder ? qb.keyStartsWith(options.folder + "/") : undefined,
+        options.folder ? qb.keyStartsWith(options.folder + '/') : undefined,
         options.folder ? qb.depthLte(pathToSegments(options.folder).length + options.depth) : undefined,
       ].filter(x => x !== undefined)),
       offset: 'offset' in options.pagination ? options.pagination.offset : 0,
@@ -319,7 +320,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
     for (const row of rows) {
       try {
         records.push({
-          type: options.type === "published" ? "published" : options.type === "unpublished" ? "unpublished" : "record",
+          type: options.type === 'published' ? 'published' : options.type === 'unpublished' ? 'unpublished' : 'record',
           key: row.key,
           status: PUBLISHED_STATUS,
           createdAt: row.createdAt,
@@ -327,9 +328,13 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
           ...(summaryOnly ? {} : { content: JSON.parse(row.content) as StorageObjectContent }),
         } as T);
       } catch (error) {
-        yield Result.fail(new InvalidData(
-          `Invalid JSON content format for document key "${row.key}": ${error instanceof Error ? error.message : "Unknown error"}`
-        ));
+        yield Result.fail(
+          new InvalidData(
+            `Invalid JSON content format for document key "${row.key}": ${
+              error instanceof Error ? error.message : 'Unknown error'
+            }`,
+          ),
+        );
         return;
       }
     }
@@ -362,7 +367,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
     try {
       const content = JSON.parse(row.content) as StorageObjectContent;
       yield Result.succeed({
-        type: "revision" as const,
+        type: 'revision' as const,
         key: row.key,
         revision: row.revision,
         content,
@@ -370,9 +375,11 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
         updatedAt: row.updatedAt,
       });
     } catch (error) {
-      yield Result.fail(new InvalidData(
-        `Invalid JSON content format: ${error instanceof Error ? error.message : "Unknown error"}`
-      ));
+      yield Result.fail(
+        new InvalidData(
+          `Invalid JSON content format: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        ),
+      );
     }
   }
 
@@ -399,8 +406,8 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
     const rows = await this.options.callbacks.revisions.select({
       where: qb.keyEquals(key),
     });
-    const summaries: RevisionSummary[] = rows.map((row) => ({
-      type: "revision-summary" as const,
+    const summaries: RevisionSummary[] = rows.map(row => ({
+      type: 'revision-summary' as const,
       key,
       revision: row.revision,
       createdAt: row.createdAt,
