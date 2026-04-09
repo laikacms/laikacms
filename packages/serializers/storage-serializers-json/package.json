@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/storage-serializers-json",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "JSON document serializer for Laika CMS storage",
   "main": "dist/index.js",

@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/storage-r2",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "Cloudflare R2-backed storage adapter implementation for Laika CMS.",
   "main": "dist/index.js",

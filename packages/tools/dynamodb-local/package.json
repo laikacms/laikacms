@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/dynamodb-local",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "DynamoDB Local development environment for Laika CMS",
   "author": "Sem Postma <sem@laikacms.com>",
   "type": "module",

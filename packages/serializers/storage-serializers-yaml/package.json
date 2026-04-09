@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/storage-serializers-yaml",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "YAML document serializer for Laika CMS storage",
   "main": "dist/index.js",

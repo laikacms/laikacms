@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/storage-jsonapi-proxy",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "JSON:API proxy implementation for storage - enables microservice architecture",
   "main": "dist/index.js",

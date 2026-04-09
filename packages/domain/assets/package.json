@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/assets",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "Assets interface for Laika CMS - binary files, images, and media management.",
   "main": "dist/index.js",

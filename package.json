@@ -1,6 +1,6 @@
 {
   "name": "laikacms",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "The basis for modern content management.",
   "keywords": ["headless-cms", "content-management", "jamstack", "react", "typescript"],
   "author": {

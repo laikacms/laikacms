@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/contentbase-settings-ddb",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "DynamoDB implementation of the contentbase-settings module for Laika CMS.",
   "main": "dist/index.js",

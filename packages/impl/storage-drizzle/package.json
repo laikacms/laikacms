@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/storage-drizzle",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "type": "module",
   "description": "Drizzle ORM storage adapter implementation for Laika CMS with automatic migrations.",
   "main": "dist/index.js",
