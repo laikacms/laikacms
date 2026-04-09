@@ -50,7 +50,7 @@
     "node": "22.x"
   },
   "dependencies": {
-    "@laikacms/core": "workspace:^",
+    "@laikacms/core": "workspace:*",
     "ai": "catalog:ai",
     "effect": "catalog:default",
     "zod": "^3.25.76"

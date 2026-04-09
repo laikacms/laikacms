@@ -311,7 +311,7 @@ importers:
   packages/decap/decap-ai:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../shared/core
       ai:
         specifier: catalog:ai
@@ -621,10 +621,10 @@ importers:
   packages/decap/decap-oauth2:
     dependencies:
       '@laikacms/core':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../shared/core
       '@laikacms/crypto':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../../shared/crypto
       effect:
         specifier: catalog:default
