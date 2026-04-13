@@ -33,8 +33,8 @@ interface R2AssetsRepositoryOptions {
    * The R2 bucket to use for storage
    */
   bucket: R2Bucket;
-  publicUrlBase: string;
   sanitizer: Sanitizer | { dangerouslyAllowAllFiles: true };
+  createUrl?: (url: string) => string;
 }
 
 /**
@@ -47,7 +47,7 @@ interface R2AssetsRepositoryOptions {
  */
 export class R2AssetsRepository extends AssetsRepository {
   private readonly datasource: R2AssetsDataSource;
-  private readonly publicUrlBase?: string;
+  private readonly createUrl?: (url: string) => string;
   private readonly sanitizer?: Sanitizer;
 
   constructor(options: R2AssetsRepositoryOptions) {
@@ -66,7 +66,7 @@ export class R2AssetsRepository extends AssetsRepository {
     }
 
     this.datasource = new R2AssetsDataSource(options.bucket);
-    this.publicUrlBase = options.publicUrlBase;
+    this.createUrl = options.createUrl;
     const noSanitizer = 'dangerouslyAllowAllFiles' in options && options.dangerouslyAllowAllFiles === true;
     const sanitizer = noSanitizer ? undefined : options.sanitizer as Sanitizer;
     this.sanitizer = 'sanitizer' in options && !noSanitizer ? sanitizer : undefined;
@@ -350,7 +350,7 @@ export class R2AssetsRepository extends AssetsRepository {
   async *getUrls(assets: Asset[]): AsyncGenerator<LaikaResult<AssetUrl[]>> {
     yield Result.succeed(assets.map(asset => ({
       key: asset.key,
-      url: this.publicUrlBase ? `${this.publicUrlBase}/${asset.key}` : undefined,
+      url: this.createUrl ? this.createUrl(asset.key) : asset.key,
     })));
   }
 

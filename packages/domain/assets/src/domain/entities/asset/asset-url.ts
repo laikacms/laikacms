@@ -1,4 +1,4 @@
-import '@standard-schema/spec';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import * as S from 'effect/Schema';
 
 /**
@@ -25,6 +25,6 @@ export const AssetUrlSchema = S.toStandardSchemaV1(S.Struct({
    * ISO 8601 date string.
    */
   expiresAt: S.optional(S.DateTimeUtcFromString),
-}));
+})) satisfies StandardSchemaV1;
 
 export type AssetUrl = S.Schema.Type<typeof AssetUrlSchema>;

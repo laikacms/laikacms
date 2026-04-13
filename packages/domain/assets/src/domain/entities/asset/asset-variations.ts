@@ -16,6 +16,10 @@ export const AssetVariationSchema = S.toStandardSchemaV1(S.Struct({
   /**
    * URL to access this variation.
    * May be a signed URL with expiration.
+   * May support the following template variables:
+   * - {width}: Width in pixels
+   * - {height}: Height in pixels
+   * The presence of these variables indicates the variation can be dynamically transformed.
    */
   url: S.String,
 

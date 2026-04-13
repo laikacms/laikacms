@@ -1,4 +1,4 @@
-import '@standard-schema/spec';
+import type { StandardSchemaV1 } from '@standard-schema/spec';
 import * as S from 'effect/Schema';
 
 // JSON:API Error Schema
@@ -15,7 +15,7 @@ export const JsonApiErrorSchema = S.toStandardSchemaV1(S.Struct({
       })),
     }),
   ),
-}));
+})) satisfies StandardSchemaV1;
 
 // JSON:API Delete Operations
 export const JsonApiDeleteSchema = S.toStandardSchemaV1(S.Struct({
