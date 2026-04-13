@@ -1,5 +1,11 @@
 # @laikacms/json-api
 
+## 0.1.2
+
+### Patch Changes
+
+- 61f45b2: Updated asset url handling
+
 ## 0.1.1
 
 ### Patch Changes

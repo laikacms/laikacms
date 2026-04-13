@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/assets-r2",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "Cloudflare R2-backed assets repository implementation for Laika CMS.",
   "main": "dist/index.js",

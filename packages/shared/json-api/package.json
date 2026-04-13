@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/json-api",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "JSON:API utilities and schemas for Laika CMS",
   "type": "module",
   "main": "./dist/index.js",
