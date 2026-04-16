@@ -1,13 +1,13 @@
 /**
  * File Sanitizer Types
  *
- * Uses a WHITELIST approach - only explicitly supported file types are allowed.
- * Unknown or unsupported files will throw an error (unless in ignoreExtensions list).
+ * Uses a BLOCKLIST approach - only strips chunks/segments known to contain
+ * privacy-sensitive or dangerous metadata. Unknown and unrecognized chunks
+ * are preserved to avoid breaking file functionality.
  *
- * IMPORTANT: This sanitizer takes a CONSERVATIVE approach:
- * - Only simple, well-understood formats are modified
- * - Complex formats that are hard to safely modify throw errors
- * - When in doubt, reject the file rather than risk data corruption
+ * Supported file types are sanitized by stripping dangerous metadata.
+ * Unsupported file types are scanned for dangerous content and rejected
+ * if found, or rejected as unsupported.
  */
 
 /**
@@ -125,29 +125,7 @@ export interface FileSanitizer {
 }
 
 /**
- * Whitelist of PNG chunk types that are safe to preserve
- * Everything else is stripped by default
- */
-export const SAFE_PNG_CHUNKS = new Set([
-  // Critical chunks (required for image display)
-  'IHDR', // Image header
-  'PLTE', // Palette
-  'IDAT', // Image data
-  'IEND', // Image end
-
-  // Safe ancillary chunks (affect rendering)
-  'tRNS', // Transparency
-  'gAMA', // Gamma
-  'cHRM', // Chromaticity
-  'sRGB', // Standard RGB color space
-  'sBIT', // Significant bits
-  'bKGD', // Background color
-  'pHYs', // Physical pixel dimensions
-  'iCCP', // ICC color profile (needed for color accuracy)
-]);
-
-/**
- * PNG chunks that contain metadata (always stripped)
+ * PNG chunks that contain privacy-sensitive metadata (always stripped)
  */
 export const PNG_METADATA_CHUNKS = new Set([
   'tEXt', // Text metadata
@@ -158,12 +136,12 @@ export const PNG_METADATA_CHUNKS = new Set([
 ]);
 
 /**
- * Sanitizable file types whitelist
+ * Sanitizable file types list
  */
 export const SANITIZABLE_FILE_TYPES: readonly SanitizableFileType[] = ['png', 'gif', 'webp', 'jpeg'];
 
 /**
- * Check if a file type is sanitizable (in our whitelist)
+ * Check if a file type is sanitizable (in our supported list)
  */
 export function isSanitizableFileType(type: DetectedFileType): type is SanitizableFileType {
   return (SANITIZABLE_FILE_TYPES as readonly string[]).includes(type);

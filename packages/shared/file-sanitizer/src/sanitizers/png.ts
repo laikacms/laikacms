@@ -1,17 +1,18 @@
 /**
  * PNG file sanitizer
  *
- * PNG has a simple chunk-based structure that's easy to safely modify:
+ * PNG has a simple chunk-based structure:
  * - 8-byte signature
  * - Sequence of chunks, each with: length (4 bytes), type (4 bytes), data, CRC (4 bytes)
  *
- * We use a WHITELIST approach - only safe chunks are preserved.
- * Metadata chunks (tEXt, zTXt, iTXt, tIME, eXIf) are stripped.
+ * Uses a BLOCKLIST approach - only strips chunks known to contain
+ * privacy-sensitive metadata (tEXt, zTXt, iTXt, tIME, eXIf).
+ * All other chunks including unknown ones are preserved.
  */
 
 import { CorruptedFileError } from '@laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
-import { PNG_METADATA_CHUNKS, SAFE_PNG_CHUNKS } from '../types.js';
+import { PNG_METADATA_CHUNKS } from '../types.js';
 import { concatBytes, readUint32BE, sliceBytes } from '../utils/binary.js';
 
 // PNG signature: 89 50 4E 47 0D 0A 1A 0A
@@ -115,15 +116,9 @@ export class PngSanitizer implements FileSanitizer {
       if (chunkType === 'IHDR') hasIHDR = true;
       if (chunkType === 'IEND') hasIEND = true;
 
-      // Decide whether to keep this chunk (WHITELIST approach)
-      let keepChunk;
-
-      if (SAFE_PNG_CHUNKS.has(chunkType)) {
-        // Safe chunk - keep it
-        keepChunk = true;
-      } else if (PNG_METADATA_CHUNKS.has(chunkType)) {
-        // Metadata chunk - always strip
-        keepChunk = false;
+      // Decide whether to strip this chunk (BLOCKLIST approach)
+      if (PNG_METADATA_CHUNKS.has(chunkType)) {
+        // Known metadata chunk - strip it
         strippedMetadata.strippedChunks?.push(chunkType);
 
         // Track what kind of metadata was stripped
@@ -134,13 +129,7 @@ export class PngSanitizer implements FileSanitizer {
           strippedMetadata.hadTimestamps = true;
         }
       } else {
-        // Unknown chunk - strip it (not in whitelist)
-        keepChunk = false;
-        strippedMetadata.strippedChunks?.push(chunkType);
-      }
-
-      if (keepChunk) {
-        // Copy the entire chunk (length + type + data + CRC)
+        // Keep everything else (critical, ancillary, and unknown chunks)
         outputChunks.push(sliceBytes(data, offset, chunkEnd));
       }
 

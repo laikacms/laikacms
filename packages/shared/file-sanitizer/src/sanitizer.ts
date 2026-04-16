@@ -2,7 +2,9 @@
  * Main file sanitizer
  *
  * Orchestrates file type detection and sanitization.
- * Uses a WHITELIST approach - only explicitly supported file types are processed.
+ * Uses a BLOCKLIST approach - only strips chunks/segments known to contain
+ * dangerous or privacy-sensitive metadata. Unknown chunks are preserved.
+ * Only explicitly supported file types (PNG, GIF, WebP, JPEG) are processed.
  * Unknown or unsupported files throw errors (unless in ignoreExtensions list).
  *
  * For unsupported file types, dangerous content scanning is performed to detect
@@ -91,7 +93,7 @@ export async function sanitizeFile(
     }
   }
 
-  // Check if file type is in our whitelist
+  // Check if file type is in our supported list
   if (!isSanitizableFileType(detectedType)) {
     // For unsupported types, scan for dangerous content before rejecting
     const scanResult = scanForDangerousContent(data, detectedType);

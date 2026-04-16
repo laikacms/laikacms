@@ -1,5 +1,11 @@
 # @laikacms/file-sanitizer
 
+## 0.1.2
+
+### Patch Changes
+
+- Removed all rules except explicit blacklists rules
+
 ## 0.1.1
 
 ### Patch Changes

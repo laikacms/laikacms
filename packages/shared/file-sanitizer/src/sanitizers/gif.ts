@@ -8,9 +8,9 @@
  * - Extension blocks and image data
  * - Trailer (0x3B)
  *
- * We strip comment extensions (0x21 0xFE) and application extensions (0x21 0xFF)
- * which can contain metadata. We keep graphics control extensions (0x21 0xF9)
- * which are needed for animation.
+ * Uses a BLOCKLIST approach - only strips extensions known to contain
+ * privacy-sensitive metadata (comments, plain text). All other blocks
+ * including application extensions (NETSCAPE2.0 for looping) are preserved.
  */
 
 import { CorruptedFileError } from '@laikacms/core';
@@ -26,9 +26,8 @@ const EXTENSION_INTRODUCER = 0x21;
 
 // Extension labels
 const GRAPHICS_CONTROL_EXTENSION = 0xF9; // Keep - needed for animation
-const COMMENT_EXTENSION = 0xFE; // Strip - contains text metadata
-const APPLICATION_EXTENSION = 0xFF; // Strip - contains app-specific data (like XMP)
-const PLAIN_TEXT_EXTENSION = 0x01; // Strip - contains text
+const COMMENT_EXTENSION = 0xFE; // Strip - may contain text metadata
+const PLAIN_TEXT_EXTENSION = 0x01; // Strip - may contain text metadata
 
 // Image separator
 const IMAGE_SEPARATOR = 0x2C;
@@ -66,6 +65,15 @@ function skipSubBlocks(data: Uint8Array, offset: number): number {
     offset += 1 + blockSize;
   }
   return offset;
+}
+
+/**
+ * Copy sub-blocks from data starting at offset, returning the data and new offset
+ */
+function copySubBlocks(data: Uint8Array, offset: number): { bytes: Uint8Array, newOffset: number } {
+  const start = offset;
+  const end = skipSubBlocks(data, offset);
+  return { bytes: sliceBytes(data, start, end), newOffset: end };
 }
 
 export class GifSanitizer implements FileSanitizer {
@@ -130,7 +138,17 @@ export class GifSanitizer implements FileSanitizer {
 
         const extensionLabel = data[offset + 1];
 
-        if (extensionLabel === GRAPHICS_CONTROL_EXTENSION) {
+        if (extensionLabel === COMMENT_EXTENSION) {
+          // Strip comment extension - may contain personal metadata
+          strippedMetadata.hadTextMetadata = true;
+          strippedMetadata.strippedChunks?.push('Comment');
+          offset = skipSubBlocks(data, offset + 2);
+        } else if (extensionLabel === PLAIN_TEXT_EXTENSION) {
+          // Strip plain text extension - may contain personal metadata
+          strippedMetadata.hadTextMetadata = true;
+          strippedMetadata.strippedChunks?.push('PlainText');
+          offset = skipSubBlocks(data, offset + 2);
+        } else if (extensionLabel === GRAPHICS_CONTROL_EXTENSION) {
           // Keep graphics control extension (needed for animation)
           // Fixed size: introducer (1) + label (1) + block size (1) + data (4) + terminator (1) = 8 bytes
           if (offset + 8 > data.length) {
@@ -138,25 +156,14 @@ export class GifSanitizer implements FileSanitizer {
           }
           outputChunks.push(sliceBytes(data, offset, offset + 8));
           offset += 8;
-        } else if (extensionLabel === COMMENT_EXTENSION) {
-          // Strip comment extension
-          strippedMetadata.hadTextMetadata = true;
-          strippedMetadata.strippedChunks?.push('Comment');
-          offset = skipSubBlocks(data, offset + 2);
-        } else if (extensionLabel === APPLICATION_EXTENSION) {
-          // Strip application extension (may contain XMP, NETSCAPE2.0 for looping, etc.)
-          // We strip all app extensions to be safe - this may affect looping behavior
-          strippedMetadata.strippedChunks?.push('Application');
-          offset = skipSubBlocks(data, offset + 2);
-        } else if (extensionLabel === PLAIN_TEXT_EXTENSION) {
-          // Strip plain text extension
-          strippedMetadata.hadTextMetadata = true;
-          strippedMetadata.strippedChunks?.push('PlainText');
-          offset = skipSubBlocks(data, offset + 2);
         } else {
-          // Unknown extension - strip it (not in whitelist)
-          strippedMetadata.strippedChunks?.push(`Extension_0x${extensionLabel.toString(16)}`);
-          offset = skipSubBlocks(data, offset + 2);
+          // Keep all other extensions (application extensions like NETSCAPE2.0, unknown extensions, etc.)
+          const blockStart = offset;
+          offset += 2; // Skip introducer + label
+          const { bytes: subBlockBytes, newOffset } = copySubBlocks(data, offset);
+          outputChunks.push(sliceBytes(data, blockStart, blockStart + 2)); // introducer + label
+          outputChunks.push(subBlockBytes);
+          offset = newOffset;
         }
       } else if (blockType === IMAGE_SEPARATOR) {
         // Image descriptor - keep it
@@ -195,8 +202,10 @@ export class GifSanitizer implements FileSanitizer {
         offset = skipSubBlocks(data, offset);
         outputChunks.push(sliceBytes(data, imageDataStart, offset));
       } else {
-        // Unknown block type - this shouldn't happen in valid GIF
-        throw new CorruptedFileError(`Unknown GIF block type: 0x${blockType.toString(16)}`);
+        // Unknown block type - keep it rather than rejecting the file
+        // Skip one byte and continue (best-effort tolerance)
+        outputChunks.push(sliceBytes(data, offset, offset + 1));
+        offset += 1;
       }
     }
 

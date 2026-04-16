@@ -2,7 +2,8 @@
  * @laikacms/file-sanitizer
  *
  * A file sanitizer that strips privacy-sensitive metadata from files.
- * Uses a WHITELIST approach - only PNG, GIF, WebP, and JPEG files are supported.
+ * Uses a BLOCKLIST approach - only dangerous metadata chunks are stripped,
+ * everything else is preserved. Supports PNG, GIF, WebP, and JPEG files.
  * All other file types throw an error (unless in ignoreExtensions list).
  *
  * Implements the abstract Sanitizer interface from @laikacms/sanitizer.
@@ -66,13 +67,7 @@ export type {
 } from './types.js';
 
 // Type guards and utilities
-export {
-  ignoredResult,
-  isSanitizableFileType,
-  PNG_METADATA_CHUNKS,
-  SAFE_PNG_CHUNKS,
-  SANITIZABLE_FILE_TYPES,
-} from './types.js';
+export { ignoredResult, isSanitizableFileType, PNG_METADATA_CHUNKS, SANITIZABLE_FILE_TYPES } from './types.js';
 
 // Detection utilities
 export { detectFileType, getMimeType } from './utils/detect.js';

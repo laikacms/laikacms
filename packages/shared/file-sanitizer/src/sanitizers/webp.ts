@@ -7,20 +7,9 @@
  * - WebP signature (4 bytes): "WEBP"
  * - Chunks: each has FourCC (4 bytes), size (4 bytes LE), data (padded to even)
  *
- * We strip metadata chunks (EXIF, XMP) and update the RIFF header size.
- *
- * Safe chunks to keep:
- * - VP8 (lossy image data)
- * - VP8L (lossless image data)
- * - VP8X (extended features header)
- * - ANIM (animation parameters)
- * - ANMF (animation frame)
- * - ALPH (alpha channel)
- * - ICCP (ICC color profile - needed for color accuracy)
- *
- * Metadata chunks to strip:
- * - EXIF (EXIF metadata)
- * - XMP (XMP metadata)
+ * Uses a BLOCKLIST approach - only strips chunks known to contain
+ * privacy-sensitive metadata (EXIF, XMP). All other chunks including
+ * unknown ones are preserved. Updates VP8X flags accordingly.
  */
 
 import { CorruptedFileError } from '@laikacms/core';
@@ -31,21 +20,10 @@ import { concatBytes, readUint32LE, sliceBytes, writeUint32LE } from '../utils/b
 const RIFF_SIGNATURE = new Uint8Array([0x52, 0x49, 0x46, 0x46]); // "RIFF"
 const WEBP_SIGNATURE = new Uint8Array([0x57, 0x45, 0x42, 0x50]); // "WEBP"
 
-// Safe chunks (whitelist)
-const SAFE_CHUNKS = new Set([
-  'VP8 ', // Lossy image data (note: space at end)
-  'VP8L', // Lossless image data
-  'VP8X', // Extended features
-  'ANIM', // Animation parameters
-  'ANMF', // Animation frame
-  'ALPH', // Alpha channel
-  'ICCP', // ICC color profile (needed for color accuracy)
-]);
-
-// Metadata chunks (always stripped)
-const METADATA_CHUNKS = new Set([
-  'EXIF', // EXIF metadata
-  'XMP ', // XMP metadata (note: space at end)
+// Metadata chunks to strip (blocklist)
+const DANGEROUS_CHUNKS = new Set([
+  'EXIF', // EXIF metadata - GPS, camera info, timestamps
+  'XMP ', // XMP metadata - may contain location, author info (note: space at end)
 ]);
 
 /**
@@ -110,31 +88,20 @@ export class WebpSanitizer implements FileSanitizer {
         throw new CorruptedFileError(`Chunk ${fourCC} extends beyond file`);
       }
 
-      // Decide whether to keep this chunk (WHITELIST approach)
-      let keepChunk;
-
-      if (SAFE_CHUNKS.has(fourCC)) {
-        // Safe chunk - keep it
-        keepChunk = true;
-      } else if (METADATA_CHUNKS.has(fourCC)) {
-        // Metadata chunk - always strip
-        keepChunk = false;
+      // Decide whether to strip this chunk (BLOCKLIST approach)
+      if (DANGEROUS_CHUNKS.has(fourCC)) {
+        // Known dangerous metadata chunk - strip it
         strippedMetadata.strippedChunks?.push(fourCC.trim());
 
         if (fourCC === 'EXIF') {
           strippedMetadata.hadTextMetadata = true;
+          strippedMetadata.hadTimestamps = true;
         }
         if (fourCC === 'XMP ') {
           strippedMetadata.hadTextMetadata = true;
         }
       } else {
-        // Unknown chunk - strip it (not in whitelist)
-        keepChunk = false;
-        strippedMetadata.strippedChunks?.push(fourCC.trim());
-      }
-
-      if (keepChunk) {
-        // Copy chunk header + data (including padding)
+        // Keep everything else (VP8, VP8L, VP8X, ANIM, ANMF, ALPH, ICCP, unknown chunks)
         keptChunks.push({
           fourCC,
           data: sliceBytes(data, offset, offset + 8 + paddedSize),
@@ -142,13 +109,6 @@ export class WebpSanitizer implements FileSanitizer {
       }
 
       offset += 8 + paddedSize;
-    }
-
-    // Check we have at least one image data chunk
-    const hasImageData = keptChunks.some(c => c.fourCC === 'VP8 ' || c.fourCC === 'VP8L' || c.fourCC === 'ANMF');
-
-    if (!hasImageData) {
-      throw new CorruptedFileError('No image data found in WebP');
     }
 
     // Build output: RIFF header + WEBP + chunks
@@ -215,33 +175,9 @@ export class WebpSanitizer implements FileSanitizer {
     // bit 4: Alpha
     // bit 5: ICC profile
 
-    // Check what we actually have
-    const hasAnimation = keptChunks.some(c => c.fourCC === 'ANIM' || c.fourCC === 'ANMF');
-    const hasAlpha = keptChunks.some(c => c.fourCC === 'ALPH');
-    const hasICC = keptChunks.some(c => c.fourCC === 'ICCP');
-
     // We always strip XMP and EXIF, so clear those bits
     flags &= ~(1 << 2); // Clear XMP bit
     flags &= ~(1 << 3); // Clear EXIF bit
-
-    // Update other flags based on what's present
-    if (hasAnimation) {
-      flags |= 1 << 1;
-    } else {
-      flags &= ~(1 << 1);
-    }
-
-    if (hasAlpha) {
-      flags |= 1 << 4;
-    } else {
-      flags &= ~(1 << 4);
-    }
-
-    if (hasICC) {
-      flags |= 1 << 5;
-    } else {
-      flags &= ~(1 << 5);
-    }
 
     // Create a copy and update the flags
     const result = new Uint8Array(data);

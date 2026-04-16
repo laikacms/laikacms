@@ -1,30 +1,19 @@
 /**
  * JPEG Sanitizer
  *
- * Strips privacy-sensitive metadata from JPEG files using a WHITELIST approach.
+ * Strips privacy-sensitive metadata from JPEG files using a BLOCKLIST approach.
  *
  * JPEG Structure:
  * - SOI (Start of Image): 0xFFD8
  * - Segments: Each starts with 0xFF followed by marker byte
  * - EOI (End of Image): 0xFFD9
  *
- * Metadata is stored in APP segments:
- * - APP0 (0xFFE0): JFIF - Safe, needed for display
+ * Only strips segments known to contain dangerous/privacy-sensitive data:
  * - APP1 (0xFFE1): EXIF/XMP - Contains GPS, camera info, timestamps - STRIP
- * - APP2 (0xFFE2): ICC Profile - Safe, needed for color accuracy - KEEP
- * - APP3-APP11: Various - STRIP
- * - APP12 (0xFFEC): Picture Info - STRIP
  * - APP13 (0xFFED): IPTC/Photoshop - Contains location, author - STRIP
- * - APP14 (0xFFEE): Adobe - Safe, needed for color - KEEP
- * - APP15 (0xFFEF): Various - STRIP
- * - COM (0xFFFE): Comments - STRIP
+ * - COM (0xFFFE): Comments - May contain personal info - STRIP
  *
- * We keep only:
- * - SOI, EOI (required)
- * - APP0 (JFIF header)
- * - APP2 (ICC profile for color accuracy)
- * - APP14 (Adobe color info)
- * - DQT, DHT, DRI, SOF*, SOS, RST*, and image data (required for display)
+ * All other segments are preserved, including unknown ones.
  */
 
 import { CorruptedFileError } from '@laikacms/core';
@@ -35,14 +24,8 @@ const MARKER_PREFIX = 0xFF;
 const SOI = 0xD8; // Start of Image
 const EOI = 0xD9; // End of Image
 const SOS = 0xDA; // Start of Scan (image data follows)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const APP0 = 0xE0; // JFIF
 const APP1 = 0xE1; // EXIF/XMP - STRIP
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const APP2 = 0xE2; // ICC Profile - KEEP
 const APP13 = 0xED; // IPTC - STRIP
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const APP14 = 0xEE; // Adobe - KEEP
 const COM = 0xFE; // Comment - STRIP
 
 // Markers that don't have length (standalone markers)
@@ -61,61 +44,11 @@ const STANDALONE_MARKERS = new Set([
   0xD7,
 ]);
 
-// Markers to keep (whitelist)
-const SAFE_MARKERS = new Set([
-  // Required markers
-  0xD8, // SOI
-  0xD9, // EOI
-  0xDA, // SOS
-  0xDB, // DQT (Quantization tables)
-  0xC4, // DHT (Huffman tables)
-  0xDD, // DRI (Restart interval)
-  // SOF markers (Start of Frame)
-  0xC0,
-  0xC1,
-  0xC2,
-  0xC3,
-  0xC5,
-  0xC6,
-  0xC7,
-  0xC8,
-  0xC9,
-  0xCA,
-  0xCB,
-  0xCD,
-  0xCE,
-  0xCF,
-  // RST markers (Restart)
-  0xD0,
-  0xD1,
-  0xD2,
-  0xD3,
-  0xD4,
-  0xD5,
-  0xD6,
-  0xD7,
-  // APP markers we keep
-  0xE0, // APP0 (JFIF)
-  0xE2, // APP2 (ICC Profile)
-  0xEE, // APP14 (Adobe)
-]);
-
-// Metadata markers to strip
-const METADATA_MARKERS = new Set([
-  0xE1, // APP1 (EXIF/XMP)
-  0xE3, // APP3
-  0xE4, // APP4
-  0xE5, // APP5
-  0xE6, // APP6
-  0xE7, // APP7
-  0xE8, // APP8
-  0xE9, // APP9
-  0xEA, // APP10
-  0xEB, // APP11
-  0xEC, // APP12
-  0xED, // APP13 (IPTC)
-  0xEF, // APP15
-  0xFE, // COM (Comment)
+// Markers to strip (blocklist) - only privacy-sensitive metadata
+const DANGEROUS_MARKERS = new Set([
+  0xE1, // APP1 (EXIF/XMP) - GPS, camera info, timestamps
+  0xED, // APP13 (IPTC) - location, author, keywords
+  0xFE, // COM (Comment) - may contain personal info
 ]);
 
 /**
@@ -183,9 +116,7 @@ export class JpegSanitizer implements FileSanitizer {
 
       // Handle standalone markers (no length field)
       if (STANDALONE_MARKERS.has(marker)) {
-        if (SAFE_MARKERS.has(marker)) {
-          output.push(MARKER_PREFIX, marker);
-        }
+        output.push(MARKER_PREFIX, marker);
         offset += 2;
         continue;
       }
@@ -255,14 +186,9 @@ export class JpegSanitizer implements FileSanitizer {
         break; // Done processing
       }
 
-      // Decide whether to keep or strip this segment
-      if (SAFE_MARKERS.has(marker)) {
-        // Copy the entire segment
-        for (let i = offset; i < segmentEnd; i++) {
-          output.push(data[i]);
-        }
-      } else if (METADATA_MARKERS.has(marker)) {
-        // Strip this segment
+      // Decide whether to strip this segment (BLOCKLIST approach)
+      if (DANGEROUS_MARKERS.has(marker)) {
+        // Strip this segment - it contains privacy-sensitive metadata
         const markerName = getMarkerName(marker);
         strippedChunks.push(markerName);
 
@@ -279,9 +205,10 @@ export class JpegSanitizer implements FileSanitizer {
           hadTextMetadata = true;
         }
       } else {
-        // Unknown marker - strip it to be safe
-        const markerName = getMarkerName(marker);
-        strippedChunks.push(markerName);
+        // Keep everything else (APP0/JFIF, APP2/ICC, APP14/Adobe, unknown markers, etc.)
+        for (let i = offset; i < segmentEnd; i++) {
+          output.push(data[i]);
+        }
       }
 
       offset = segmentEnd;
