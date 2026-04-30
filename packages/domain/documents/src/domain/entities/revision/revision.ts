@@ -1,10 +1,12 @@
 import { AtomBaseSchema, StorageObjectContentSchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
+import { DocumentLanguage } from '../record/record-language';
 
 export const RevisionSchema = S.toStandardSchemaV1(S.Struct({
   ...AtomBaseSchema.fields,
   type: S.Literal('revision'),
   content: StorageObjectContentSchema,
+  language: DocumentLanguage,
   revision: S.String,
   createdAt: S.String,
 }));

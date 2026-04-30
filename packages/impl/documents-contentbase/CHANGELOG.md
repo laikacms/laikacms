@@ -1,5 +1,16 @@
 # @laikacms/documents-contentbase
 
+## 0.2.0
+
+### Minor Changes
+
+- Add language do documents
+
+### Patch Changes
+
+- Updated dependencies
+  - @laikacms/documents@0.2.0
+
 ## 0.1.1
 
 ### Patch Changes

@@ -75,6 +75,14 @@ See [docs/packages.md](./docs/packages.md) for full list.
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
+## Releasing
+
+```
+pnpm changeset
+pnpm changeset version
+pnpm changeset publish
+```
+
 ## License
 
 MIT

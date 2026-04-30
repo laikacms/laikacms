@@ -1,5 +1,17 @@
 # @laikacms/decap-cms-backend-laika
 
+## 1.0.0
+
+### Minor Changes
+
+- Add language do documents
+
+### Patch Changes
+
+- Updated dependencies
+  - @laikacms/documents@0.2.0
+  - @laikacms/documents-jsonapi-proxy@0.1.2
+
 ## 0.1.1
 
 ### Patch Changes

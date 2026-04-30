@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/contentbase-settings-default",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "type": "module",
   "description": "Default implementation of the contentbase-settings module for Laika CMS.",
   "main": "dist/index.js",
