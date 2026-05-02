@@ -665,7 +665,7 @@ export default function createLaikaBackend(
         if (options.useWorkflow && typeof options.status === 'string' && options.status !== 'published') {
           const newEntry = options.newEntry || options.unpublished === false;
           if (newEntry) {
-            console.log('I dont know what language to use', { dataFile })
+            console.log('I dont know what language to use', { dataFile });
             const result = repo.createUnpublished({
               type: 'unpublished',
               status: options.status || 'draft',
@@ -700,7 +700,7 @@ export default function createLaikaBackend(
           }
         } else {
           // Published document
-          console.log('I dont know what language to use', { dataFile })
+          console.log('I dont know what language to use', { dataFile });
 
           if (options.newEntry) {
             const result = await repo.createDocument({

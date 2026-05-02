@@ -142,7 +142,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       language: result.success.content.language ?? 'und',
       status: 'published',
     };
-    
+
     yield Result.succeed(document);
   }
 
