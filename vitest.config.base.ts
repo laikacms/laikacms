@@ -1,4 +1,4 @@
-import { defineConfig } from "vitest/config";
+import { defineConfig } from 'vitest/config';
 
 /**
  * Shared Vitest baseline. Per-package configs should import and extend this so coverage
@@ -14,26 +14,26 @@ import { defineConfig } from "vitest/config";
  *   });
  */
 export default defineConfig({
-	test: {
-		include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
-		passWithNoTests: false,
-		coverage: {
-			provider: "v8",
-			reporter: ["text", "html", "lcov"],
-			include: ["src/**/*.ts", "src/**/*.tsx"],
-			exclude: [
-				"src/**/*.test.ts",
-				"src/**/*.test.tsx",
-				"src/**/*.spec.ts",
-				"src/**/index.ts",
-				"src/**/*.d.ts",
-			],
-			thresholds: {
-				lines: 80,
-				functions: 80,
-				branches: 75,
-				statements: 80,
-			},
-		},
-	},
+  test: {
+    include: ['src/**/*.test.ts', 'src/**/*.test.tsx'],
+    passWithNoTests: false,
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      include: ['src/**/*.ts', 'src/**/*.tsx'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/*.test.tsx',
+        'src/**/*.spec.ts',
+        'src/**/index.ts',
+        'src/**/*.d.ts',
+      ],
+      thresholds: {
+        lines: 80,
+        functions: 80,
+        branches: 75,
+        statements: 80,
+      },
+    },
+  },
 });

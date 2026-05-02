@@ -34,16 +34,16 @@ These modules are where bugs become CVEs.
   comparisons do not short-circuit, fuzz password hashing parameters, and assert non-determinism
   plus entropy on `random`.
 - **`packages/decap/decap-oauth2`** (27 source files including `passkey/`, `totp/`, OAuth2 flow).
-  Cover PKCE state/nonce handling, TOTP RFC 6238 vectors, replay-attack rejection, passkey
-  challenge verification, and redirect-URI allowlisting.
+  Cover PKCE state/nonce handling, TOTP RFC 6238 vectors, replay-attack rejection, passkey challenge
+  verification, and redirect-URI allowlisting.
 - **`packages/shared/file-sanitizer`** (16 files: jpeg/gif/webp/png sanitizers). Feed real
   EXIF-laden samples and assert metadata is stripped. Add malformed-input/fuzz tests so a crafted
   file cannot crash the parser.
 
 ### 2. Domain contracts
 
-Domain packages define the interfaces every implementation depends on. Drift here breaks
-everything downstream.
+Domain packages define the interfaces every implementation depends on. Drift here breaks everything
+downstream.
 
 - **`packages/domain/storage`** — repository, provider, format, serializer roundtrips, cache
   invalidation rules.
@@ -70,8 +70,8 @@ package and lock in behavior permanently.
 ### 5. JSON:API surface
 
 `packages/shared/json-api`, the four `*-api` packages, and the three `*-jsonapi-proxy` impls all
-share the JSON:API wire format. A single fixture-driven contract test, run against both proxies
-and servers, is enough to catch most regressions.
+share the JSON:API wire format. A single fixture-driven contract test, run against both proxies and
+servers, is enough to catch most regressions.
 
 ### 6. Packages whose `test` script currently lies
 
@@ -88,8 +88,8 @@ suites fail loudly.
   `scripts/validate-packages.ts` is the natural place to require one.
 - **No shared test utilities package.** Worth adding `packages/shared/testing` for fixtures,
   in-memory mocks, and the domain conformance suites mentioned above.
-- **No integration test layer.** Once unit tests exist, add a small e2e harness that boots a
-  `*-api` server against an in-memory impl and exercises real HTTP.
+- **No integration test layer.** Once unit tests exist, add a small e2e harness that boots a `*-api`
+  server against an in-memory impl and exercises real HTTP.
 
 ## Rollout order
 
