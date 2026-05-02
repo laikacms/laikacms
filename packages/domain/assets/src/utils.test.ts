@@ -42,31 +42,21 @@ describe('buildUrl', () => {
     expect(buildUrl(variations, { width: 200 })).toBe('/img/200.png');
   });
 
-  // NOTE: variationScore currently has a bug — the inner `else if (options.width < variation.width)`
-  // branch is unreachable, so pixelUndersize is never recorded. As a result, when no variation is
-  // oversized enough, ranking falls back to insertion order rather than picking the closest size.
-  // The two tests below pin down current (buggy) behavior; see the `.fails` test in
-  // `variationScore` below for a tripwire that flips green if/when the bug is fixed.
-
-  it('returns *some* variation URL even when none is a perfect fit', () => {
-    // Because pixelUndersize is broken, ranking depends only on pixelOversize,
-    // which makes ties common. We only assert that we get one of the inputs back.
+  it('prefers the smallest oversized variation when only oversized options exist', () => {
     const variations = [
-      v({ variant: 'small', url: '/img/100.png', width: 100 }),
       v({ variant: 'mid', url: '/img/300.png', width: 300 }),
       v({ variant: 'big', url: '/img/1000.png', width: 1000 }),
     ];
-    const result = buildUrl(variations, { width: 250 });
-    expect(['/img/100.png', '/img/300.png', '/img/1000.png']).toContain(result);
+    // Both have undersize=0; lower oversize wins, so 300 beats 1000.
+    expect(buildUrl(variations, { width: 250 })).toBe('/img/300.png');
   });
 
-  it('falls back to *some* variation when none is oversized (current behavior)', () => {
+  it('falls back to the closest undersized variation when none is large enough', () => {
     const variations = [
       v({ variant: 'small', url: '/img/100.png', width: 100 }),
       v({ variant: 'mid', url: '/img/200.png', width: 200 }),
     ];
-    const result = buildUrl(variations, { width: 500 });
-    expect(['/img/100.png', '/img/200.png']).toContain(result);
+    expect(buildUrl(variations, { width: 500 })).toBe('/img/200.png');
   });
 });
 
@@ -87,11 +77,10 @@ describe('variationScore', () => {
     expect(score.pixelUndersize).toBe(0);
   });
 
-  // Tripwire: flips to passing if/when the unreachable `else if` branch in
-  // variationScore is fixed. Until then, this asserts the wrong-but-current behavior is wrong.
-  it.fails('records undersize when a fixed variation is smaller than requested', () => {
+  it('records undersize when a fixed variation is smaller than requested', () => {
     const score = variationScore(v({ url: '/img/100.png', width: 100 }), { width: 300 });
     expect(score.pixelUndersize).toBe(200);
+    expect(score.pixelOversize).toBe(0);
   });
 
   it('combines width and height contributions', () => {

@@ -14,5 +14,5 @@
     "types": ["node"]
   },
   "include": ["src", "data", "mappers", "repositories", "schemas", "types"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules", "**/*.test.ts", "**/*.spec.ts"]
 }

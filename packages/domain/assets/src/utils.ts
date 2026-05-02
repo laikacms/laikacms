@@ -40,7 +40,7 @@ export function variationScore(
   } else if (options.width && variation.width) {
     if (variation.width >= options.width) {
       pixelOversize += variation.width - options.width;
-    } else if (options.width < variation.width) {
+    } else {
       pixelUndersize += options.width - variation.width;
     }
   } else if (!options.width && variation.url.includes('{width}')) {
@@ -52,7 +52,7 @@ export function variationScore(
   } else if (options.height && variation.height) {
     if (variation.height >= options.height) {
       pixelOversize += variation.height - options.height;
-    } else if (options.height < variation.height) {
+    } else {
       pixelUndersize += options.height - variation.height;
     }
   } else if (!options.height && variation.url.includes('{height}')) {
