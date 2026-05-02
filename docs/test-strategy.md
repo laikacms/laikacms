@@ -73,12 +73,13 @@ package and lock in behavior permanently.
 share the JSON:API wire format. A single fixture-driven contract test, run against both proxies and
 servers, is enough to catch most regressions.
 
-### 6. Packages whose `test` script currently lies
+### 6. Don't add a `test` script until there are real tests
 
-`crypto`, `file-sanitizer`, `contentbase-settings-ddb`, `contentbase-settings-default`, and
-`documents-contentbase` all declare `"test": "vitest run"` but contain no tests. CI passes
-vacuously. At minimum, add one smoke test per package and pass `--passWithNoTests=false` so empty
-suites fail loudly.
+Several packages used to declare `"test": "vitest run"` with no test files, so CI passed vacuously.
+The fix is not "add a smoke test" — structural smoke tests (asserting a class is a function, that
+methods exist on the prototype, etc.) test TypeScript rather than behavior, never catch real
+regressions, and just get in the way of refactors. The fix is to remove the `test` script until
+there are tests worth running.
 
 ## Repo-wide gaps
 
