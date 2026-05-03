@@ -280,18 +280,47 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       if (path === '' && request.method === 'GET') {
         return json({
           data: {
-            // TODO: Root endpoint - list available endpoints
-            type: 'endpoints',
-            id: 'documents-api',
+            type: 'api-info',
+            id: 'documents',
             attributes: {
+              name: 'Documents API',
+              version: '1.0.0',
               endpoints: [
-                'records',
-                'record-summaries',
-                'published',
-                'unpublished',
-                'unpublished-summaries',
-                'revisions',
-                'operations',
+                {
+                  path: '/records',
+                  methods: ['GET'],
+                  description: 'List full records (published + unpublished view per key)',
+                },
+                {
+                  path: '/record-summaries',
+                  methods: ['GET'],
+                  description: 'List record summaries (lightweight listing)',
+                },
+                {
+                  path: '/published/{key}',
+                  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+                  description: 'Read, create, update, or remove a published document',
+                },
+                {
+                  path: '/unpublished/{key}',
+                  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
+                  description: 'Read, create, update, or remove an unpublished draft',
+                },
+                {
+                  path: '/unpublished-summaries',
+                  methods: ['GET'],
+                  description: 'List unpublished draft summaries',
+                },
+                {
+                  path: '/revisions',
+                  methods: ['GET', 'POST'],
+                  description: 'List or create revisions for a document',
+                },
+                {
+                  path: '/operations',
+                  methods: ['POST'],
+                  description: 'Atomic operations (add/update/remove + publish/unpublish transitions)',
+                },
               ],
             },
           },
