@@ -83,8 +83,10 @@ there are tests worth running.
 
 ## Repo-wide gaps
 
-- **No coverage reporting.** Add `@vitest/coverage-v8`, set thresholds in a shared
-  `vitest.config.ts`, and surface coverage in CI.
+- **Coverage reporting.** `@vitest/coverage-v8` is wired up at the workspace level. Run
+  `pnpm coverage` from the repo root to produce per-package text-summary, lcov, and html reports
+  under each package's `coverage/` directory. Per-package threshold enforcement is not yet on —
+  that's the next coverage step once the test suites are dense enough.
 - **No enforcement that packages opt into tests.** Only 5 of 39 packages declare a `test` script.
   `scripts/validate-packages.ts` is the natural place to require one.
 - **No shared test utilities package.** Worth adding `packages/shared/testing` for fixtures,
@@ -94,11 +96,11 @@ there are tests worth running.
 
 ## Rollout order
 
-1. Wire up `@vitest/coverage-v8` and a shared baseline `vitest.config.ts` template (see
-   `vitest.config.base.ts` at the repo root).
-2. Cover `shared/crypto` and `shared/file-sanitizer`.
+1. ~~Wire up `@vitest/coverage-v8` and a shared baseline `vitest.config.ts` template.~~ ✓
+2. ~~Cover `shared/crypto` and `shared/file-sanitizer`.~~ ✓
 3. Add domain conformance suites in `domain/storage`, `domain/documents`, `domain/assets`.
-4. Run those suites against `storage-fs`, `storage-r2`, `assets-r2`.
-5. Roundtrip tests for all four serializers.
-6. OAuth2 flow tests in `decap-oauth2`.
+4. ~~Run those suites against `storage-fs`, `storage-r2`,~~ `assets-r2`. (FS and R2 covered as
+   datasource integration tests, not yet via shared conformance suite.)
+5. ~~Roundtrip tests for all four serializers.~~ ✓
+6. OAuth2 flow tests in `decap-oauth2` (TOTP done; PKCE / passkey / handler flow still pending).
 7. JSON:API contract tests across `*-api` and `*-jsonapi-proxy`.
