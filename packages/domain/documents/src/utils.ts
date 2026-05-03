@@ -1,15 +1,5 @@
-export const pathToSegments = (path: string) => {
-  const segments = path
-    .split('/')
-    .map(x => x.trim())
-    .filter(x => x.length > 0);
-  return segments;
-};
-
-export const pathCombine = (...segments: string[]) => {
-  const path = segments
-    .map(x => x.trim())
-    .filter(x => x.length > 0)
-    .join('/');
-  return path;
-};
+// `pathToSegments` and `pathCombine` are re-exported from `@laikacms/storage`
+// so the two packages share a single implementation. Document-specific path
+// helpers (if any are added later) belong in this file alongside the
+// re-exports.
+export { pathCombine, pathToSegments } from '@laikacms/storage';
