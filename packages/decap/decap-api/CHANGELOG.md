@@ -1,5 +1,13 @@
 # @laikacms/decap-api
 
+## 0.1.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @laikacms/documents@0.2.0
+  - @laikacms/documents-api@0.1.2
+
 ## 0.1.2
 
 ### Patch Changes

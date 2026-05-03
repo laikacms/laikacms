@@ -15,8 +15,8 @@ import type {
   UnpublishedCreate,
   UnpublishedUpdate,
 } from '@laikacms/documents';
-import { DocumentsRepository, pathToSegments } from '@laikacms/documents';
-import type { StorageObjectContent } from '@laikacms/storage';
+import { DocumentSchema, DocumentsRepository, pathToSegments } from '@laikacms/documents';
+import { type StorageObjectContent, StorageObjectContentSchema } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 const PUBLISHED_STATUS = 'published';
@@ -28,19 +28,31 @@ function failAs<T>(error: LaikaError): LaikaResult<T> {
 export type DocumentModel = {
   key: string,
   depth: number,
-  status: string,
+  status: string | null | undefined,
+  language: string | null | undefined,
   content: string,
   createdAt: string,
   updatedAt: string,
+};
+
+export type DocumentModelStrict = DocumentModel & {
+  status: string,
+  language: string,
 };
 
 export type RevisionModel = {
   key: string,
   depth: number,
   revision: string,
+  language: string | null | undefined,
   content: string,
   createdAt: string,
   updatedAt: string,
+};
+
+export type RevisionModelStrict = RevisionModel & {
+  revision: string,
+  language: string,
 };
 
 export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA> {
@@ -62,11 +74,11 @@ export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CD
   callbacks: {
     documents: {
       insert: (query: {
-        values: DocumentModel,
+        values: DocumentModelStrict,
       }) => Promise<DocumentModel[]>,
       update: (query: {
         where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA,
-        values: Partial<DocumentModel>,
+        values: Partial<DocumentModelStrict>,
       }) => Promise<DocumentModel[]>,
       delete: (query: { where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA }) => Promise<DocumentModel[]>,
       select: (query: {
@@ -78,11 +90,11 @@ export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CD
     },
     revisions: {
       insert: (query: {
-        values: RevisionModel,
+        values: RevisionModelStrict,
       }) => Promise<RevisionModel[]>,
       update: (query: {
         where: RKE | RE | RA,
-        values: Partial<RevisionModel>,
+        values: Partial<RevisionModelStrict>,
       }) => Promise<RevisionModel[]>,
       delete: (query: { where: RKE | RE | RA }) => Promise<RevisionModel[]>,
       select: (query: {
@@ -121,6 +133,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
         key: row.key,
         status: 'published' as const,
         content,
+        language: row.language ?? 'unk',
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
       });
@@ -140,6 +153,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
         key: create.key,
         depth: pathToSegments(create.key).length,
         status: PUBLISHED_STATUS,
+        language: create.language,
         content: JSON.stringify(create.content),
         createdAt: now,
         updatedAt: now,
@@ -155,7 +169,8 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
       where: qb.and(qb.keyEquals(update.key), qb.statusEquals(PUBLISHED_STATUS)),
       values: {
         updatedAt: now,
-        content: JSON.stringify(update.content),
+        ...(update.content ? { content: JSON.stringify(update.content) } : {}),
+        ...(update.language ? { language: update.language } : {}),
       },
     });
     yield* this.getDocument(update.key);
@@ -185,7 +200,8 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
       yield Result.succeed({
         type: 'unpublished' as const,
         key: row.key,
-        status: row.status,
+        status: row.status ?? 'published',
+        language: row.language ?? 'unk',
         content,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
@@ -208,6 +224,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
         key: create.key,
         depth: pathToSegments(create.key).length,
         status: create.status,
+        language: create.language,
         content: JSON.stringify(create.content),
         createdAt: now,
         updatedAt: now,
@@ -221,8 +238,9 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
   ): AsyncGenerator<LaikaResult<Unpublished>> {
     const qb = this.options.documentQueryBuilders;
     const now = new Date().toISOString();
-    const values: Partial<DocumentModel> = {
+    const values: Partial<DocumentModelStrict> = {
       updatedAt: now,
+      language: update.language ?? 'unk',
     };
     if (update.status) values.status = update.status;
     if (update.content) values.content = JSON.stringify(update.content);
@@ -370,6 +388,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
         type: 'revision' as const,
         key: row.key,
         revision: row.revision,
+        language: row.language ?? 'unk',
         content,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
@@ -390,6 +409,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
         key: create.key,
         depth: pathToSegments(create.key).length,
         revision: create.revision,
+        language: create.language,
         content: JSON.stringify(create.content),
         createdAt: now,
         updatedAt: now,
@@ -410,6 +430,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
       type: 'revision-summary' as const,
       key,
       revision: row.revision,
+      language: row.language ?? 'unk',
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     }));

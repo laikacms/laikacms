@@ -7,7 +7,9 @@
   "types": "./dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "dev": "tsc --watch"
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "keywords": [
     "json-api",
@@ -27,7 +29,8 @@
   "devDependencies": {
     "typescript": "^5.7.2",
     "hono": "catalog:server",
-    "@standard-schema/spec": "catalog:schema"
+    "@standard-schema/spec": "catalog:schema",
+    "vitest": "catalog:tools"
   },
   "engines": {
     "node": "22.x",

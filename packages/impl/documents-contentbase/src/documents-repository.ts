@@ -139,6 +139,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       ...result.success,
       key,
       type: 'published',
+      language: result.success.content.language ?? 'und',
       status: 'published',
     };
 
@@ -170,6 +171,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       key: create.key,
       type: 'published',
       status: 'published',
+      language: create.language,
       createdAt: now,
       updatedAt: now,
     };
@@ -253,6 +255,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           ...result.success,
           key,
           type: 'unpublished',
+          language: result.success.content.language ?? 'und',
           status,
         };
         yield Result.succeed(unpublished);
@@ -288,6 +291,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       key: create.key,
       type: 'unpublished',
       status: create.status,
+      language: create.language,
       createdAt: now,
       updatedAt: now,
     };
@@ -465,6 +469,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       key,
       type: 'unpublished',
       status,
+      language: document.language,
       content: document.content,
       createdAt: document.createdAt,
       updatedAt: now,
@@ -521,6 +526,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       key,
       type: 'published',
       status: 'published',
+      language: unpublished.language,
       content: unpublished.content,
       createdAt: unpublished.createdAt,
       updatedAt: now,
@@ -704,6 +710,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     const revisionEntry: Revision = {
       ...result.success,
       createdAt: result.success.createdAt,
+      language: result.success.content.language ?? 'und',
       revision,
       type: 'revision',
       key,
@@ -736,6 +743,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       ...object.success,
       key: create.key,
       revision: create.revision,
+      language: create.language,
       type: 'revision',
       createdAt: now,
       updatedAt: now,
@@ -756,7 +764,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
     const revisionDirectory = pathResult.success;
 
-    const generator = this.storageRepository.listAtomSummaries(revisionDirectory, {
+    const generator = this.storageRepository.listAtoms(revisionDirectory, {
       pagination: options.pagination,
       depth: 1,
     });
@@ -768,13 +776,14 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       }
 
       const summaries = result.success
-        .filter(atom => atom.type === 'object-summary')
+        .filter(atom => atom.type === 'object')
         .map(atom => {
           const revisionName = basename(atom.key);
           return {
             ...atom,
             type: 'revision-summary' as const,
             revision: revisionName,
+            language: atom.content.language ?? 'und',
             key,
           } satisfies RevisionSummary;
         });

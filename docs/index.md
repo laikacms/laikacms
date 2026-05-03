@@ -12,6 +12,7 @@ software designed to work with your own custom or existing user interfaces.
 - [Decap CMS Integration](./decap-integration.md) - Using Decap CMS as a frontend
 - [Deployment](./deployment.md) - Production deployment guides
 - [Security](./SECURITY.md) - Security best practices
+- [Test Strategy](./test-strategy.md) - Coverage gaps and rollout plan
 - [Effect Migration](./EFFECT_MIGRATION.md) - Internal migration guide
 
 ## What is Laika CMS?

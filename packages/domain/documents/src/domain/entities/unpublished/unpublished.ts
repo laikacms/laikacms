@@ -1,5 +1,6 @@
 import { AtomBaseSchema, StorageObjectContentSchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
+import { DocumentLanguage } from '../record/record-language';
 
 /**
  * Unpublished document entity
@@ -17,6 +18,7 @@ export const UnpublishedSchema = S.toStandardSchemaV1(S.Struct({
    * Common values: 'draft', 'pending_review', 'pending_publish', 'archived', 'trash'
    */
   status: S.String,
+  language: DocumentLanguage,
   content: StorageObjectContentSchema,
 }));
 
