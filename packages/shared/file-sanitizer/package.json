@@ -23,8 +23,8 @@
     "@laikacms/sanitizer": "workspace:^"
   },
   "devDependencies": {
-    "typescript": "^5.8.2",
-    "vitest": "^3.0.5"
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
   },
   "keywords": [
     "metadata",
