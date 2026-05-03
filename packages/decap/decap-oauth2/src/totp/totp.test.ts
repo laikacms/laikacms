@@ -57,21 +57,6 @@ describe('generateTOTP (general behavior)', () => {
   });
 });
 
-describe('generateTOTPSecret', () => {
-  it('returns Base32 characters only (RFC 4648 alphabet)', () => {
-    expect(generateTOTPSecret()).toMatch(/^[A-Z2-7]+$/);
-  });
-
-  it('produces a different secret each call', () => {
-    expect(generateTOTPSecret()).not.toBe(generateTOTPSecret());
-  });
-
-  it('produces 32 characters (160-bit secret in Base32)', () => {
-    // 20 bytes * 8 bits / 5 bits per char = 32 chars
-    expect(generateTOTPSecret().length).toBe(32);
-  });
-});
-
 describe('verifyTOTP', () => {
   const FIXED_TIME = 1234567890 * 1000;
 

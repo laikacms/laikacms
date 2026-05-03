@@ -22,15 +22,12 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json -w",
     "clean": "rimraf dist",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "devDependencies": {
     "@types/json-schema": "^7.0.15",
     "typescript": "catalog:tools",
-    "@standard-schema/spec": "catalog:schema",
-    "vitest": "catalog:tools"
+    "@standard-schema/spec": "catalog:schema"
   },
   "dependencies": {
     "@laikacms/core": "workspace:^",

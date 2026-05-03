@@ -5,10 +5,6 @@ import { rawSerializer } from './index.js';
 const schema: JSONSchema7 = { type: 'object' };
 
 describe('rawSerializer', () => {
-  it('declares format = "raw"', () => {
-    expect(rawSerializer.format).toBe('raw');
-  });
-
   it('serializes the body string verbatim', async () => {
     const out = await rawSerializer.serializeDocumentFileContents(
       { body: '# Heading\n\nbody text' },

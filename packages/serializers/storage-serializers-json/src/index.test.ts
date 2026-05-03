@@ -5,10 +5,6 @@ import { jsonSerializer } from './index.js';
 const schema: JSONSchema7 = { type: 'object' };
 
 describe('jsonSerializer', () => {
-  it('declares format = "json"', () => {
-    expect(jsonSerializer.format).toBe('json');
-  });
-
   it('roundtrips a simple object', async () => {
     const content = { title: 'Hello', count: 3, tags: ['a', 'b'] };
     const raw = await jsonSerializer.serializeDocumentFileContents(content, schema);

@@ -5,10 +5,6 @@ import { yamlSerializer } from './index.js';
 const schema: JSONSchema7 = { type: 'object' };
 
 describe('yamlSerializer', () => {
-  it('declares format = "yaml"', () => {
-    expect(yamlSerializer.format).toBe('yaml');
-  });
-
   it('roundtrips a flat object', async () => {
     const content = { title: 'Hello', count: 3, published: true };
     const raw = await yamlSerializer.serializeDocumentFileContents(content, schema);

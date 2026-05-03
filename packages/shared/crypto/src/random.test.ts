@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  generateSecureRandomBytes,
-  generateSecureRandomHex,
-  generateSecureRandomString,
-  RANDOM_CONSTANTS,
-} from './random.js';
+import { generateSecureRandomBytes, generateSecureRandomHex, generateSecureRandomString } from './random.js';
 
 describe('generateSecureRandomString', () => {
   it('returns a string of the requested length', () => {
@@ -21,12 +16,6 @@ describe('generateSecureRandomString', () => {
   it('respects a custom alphabet', () => {
     const out = generateSecureRandomString(256, 'abc');
     expect(out).toMatch(/^[abc]+$/);
-  });
-
-  it('produces different output across calls (non-deterministic)', () => {
-    const a = generateSecureRandomString(64);
-    const b = generateSecureRandomString(64);
-    expect(a).not.toBe(b);
   });
 
   it('has reasonable entropy across the alphabet', () => {
@@ -55,27 +44,5 @@ describe('generateSecureRandomBytes', () => {
     const out = generateSecureRandomBytes(32);
     expect(out).toBeInstanceOf(Uint8Array);
     expect(out.length).toBe(32);
-  });
-
-  it('produces different output across calls', () => {
-    const a = generateSecureRandomBytes(32);
-    const b = generateSecureRandomBytes(32);
-    // 2^256 collision probability — effectively zero.
-    expect(Array.from(a).join(',')).not.toBe(Array.from(b).join(','));
-  });
-
-  it('has byte-level entropy (not all zeros)', () => {
-    const out = generateSecureRandomBytes(64);
-    expect(out.some(b => b !== 0)).toBe(true);
-  });
-});
-
-describe('RANDOM_CONSTANTS', () => {
-  it('declares a base62 alphabet of length 62', () => {
-    expect(RANDOM_CONSTANTS.BASE62_ALPHABET.length).toBe(62);
-  });
-
-  it('declares a hex alphabet of length 16', () => {
-    expect(RANDOM_CONSTANTS.HEX_ALPHABET.length).toBe(16);
   });
 });

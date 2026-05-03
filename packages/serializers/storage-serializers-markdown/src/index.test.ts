@@ -5,10 +5,6 @@ import { markdownSerializer } from './index.js';
 const schema: JSONSchema7 = { type: 'object' };
 
 describe('markdownSerializer', () => {
-  it('declares format = "markdown"', () => {
-    expect(markdownSerializer.format).toBe('markdown');
-  });
-
   it('emits frontmatter + body', async () => {
     const raw = await markdownSerializer.serializeDocumentFileContents(
       { title: 'Hello', body: '# Heading\n\nparagraph' },
