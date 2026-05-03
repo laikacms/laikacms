@@ -1,14 +1,12 @@
 import { serve } from '@hono/node-server';
-import type { DefaultContentBaseSettingsProvider } from '@laikacms/contentbase-settings-default';
+import type { ContentBaseSettingsProvider } from '@laikacms/contentbase-settings';
 import { buildJsonApi } from '../src/index';
 
-type JsonApiDeps = DefaultContentBaseSettingsProvider; // TODO: Add more deps
-
 export function startServer(
-  deps: JsonApiDeps,
+  repo: ContentBaseSettingsProvider,
   port = Number(process.env.PORT) || 4000,
 ) {
-  const app = buildJsonApi(deps);
+  const app = buildJsonApi(repo);
   console.log(`[json-api] Starting server on :${port}`);
   serve({ fetch: app.fetch, port });
   return app;

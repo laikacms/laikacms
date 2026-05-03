@@ -183,7 +183,7 @@ type StorageObjectUpdateBody = S.Schema.Type<typeof StorageObjectUpdateBodySchem
 type AtomicOperation = S.Schema.Type<typeof AtomicOperationSchema>;
 type AtomicOperationsRequest = S.Schema.Type<typeof AtomicOperationsRequestSchema>;
 
-interface StorageApiOptions {
+export interface StorageApiOptions {
   repo: StorageRepository;
   basePath?: string | undefined;
   onError?(error: unknown): void;
