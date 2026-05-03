@@ -27,6 +27,7 @@
     "start": "node --enable-source-maps dist/server.js"
   },
   "dependencies": {
+    "@hono/node-server": "^1.13.8",
     "@laikacms/core": "workspace:^",
     "@laikacms/json-api": "workspace:^",
     "@laikacms/storage": "workspace:^",

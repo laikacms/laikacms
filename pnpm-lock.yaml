@@ -256,6 +256,9 @@ importers:
 
   packages/api/documents-api:
     dependencies:
+      '@hono/node-server':
+        specifier: ^1.13.8
+        version: 1.19.11(hono@4.12.9)
       '@laikacms/core':
         specifier: workspace:^
         version: link:../../shared/core

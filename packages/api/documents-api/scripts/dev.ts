@@ -1,14 +1,11 @@
 import { serve } from '@hono/node-server';
-import type { StorageRepository } from '@laikacms/storage';
-import { buildJsonApi } from '../src/index';
-
-type JsonApiDeps = StorageRepository; // TODO: Add more deps
+import { buildJsonApi, type DocumentsApiOptions } from '../src/index';
 
 export function startServer(
-  deps: JsonApiDeps,
+  options: DocumentsApiOptions,
   port = Number(process.env.PORT) || 4000,
 ) {
-  const app = buildJsonApi(deps);
+  const app = buildJsonApi(options);
   console.log(`[json-api] Starting server on :${port}`);
   serve({ fetch: app.fetch, port });
   return app;

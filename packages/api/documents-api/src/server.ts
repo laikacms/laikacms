@@ -109,7 +109,7 @@ async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<Laik
   return value;
 }
 
-interface DocumentsApiOptions {
+export interface DocumentsApiOptions {
   repo: DocumentsRepository;
   basePath?: string;
   onError?(error: unknown): void;
