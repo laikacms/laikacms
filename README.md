@@ -5,9 +5,9 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/laikacms/laikacms/blob/main/LICENSE"><img src="https://img.shields.io/github/license/laikacms/laikacms" alt="License"></a>
-  <a href="https://github.com/laikacms/laikacms/pulse"><img src="https://img.shields.io/github/commit-activity/m/laikacms/laikacms" alt="Commit Activity"></a>
-  <a href="https://github.com/laikacms/laikacms/commits/main"><img src="https://img.shields.io/github/last-commit/laikacms/laikacms" alt="Last Commit"></a>
+  <a href="https://github.com/laikacms/laikacms/blob/develop/LICENSE"><img src="https://img.shields.io/github/license/laikacms/laikacms" alt="License"></a>
+  <a href="https://github.com/laikacms/laikacms/pulse"><img src="https://img.shields.io/github/commit-activity/m/laikacms/laikacms/develop" alt="Commit Activity"></a>
+  <a href="https://github.com/laikacms/laikacms/commits/develop"><img src="https://img.shields.io/github/last-commit/laikacms/laikacms/develop" alt="Last Commit"></a>
 </p>
 <p align="center">
   <img src="https://img.shields.io/badge/node-22.x-brightgreen" alt="Node.js">
