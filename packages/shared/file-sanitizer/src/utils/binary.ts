@@ -134,6 +134,32 @@ export function sliceBytes(data: Uint8Array, start: number, end?: number): Uint8
 }
 
 /**
+ * Splice out the given byte ranges from `data` and return a new Uint8Array
+ * with those ranges removed. Ranges are `[start, end)` (end exclusive),
+ * must be non-overlapping, and must be supplied in ascending order.
+ *
+ * If `ranges` is empty, the original `data` reference is returned
+ * unchanged — the bytes are not copied.
+ */
+export function spliceOutRanges(
+  data: Uint8Array,
+  ranges: ReadonlyArray<readonly [number, number]>,
+): Uint8Array {
+  if (ranges.length === 0) return data;
+  const totalStripped = ranges.reduce((sum, [s, e]) => sum + (e - s), 0);
+  const output = new Uint8Array(data.length - totalStripped);
+  let outPos = 0;
+  let inPos = 0;
+  for (const [start, end] of ranges) {
+    output.set(data.subarray(inPos, start), outPos);
+    outPos += start - inPos;
+    inPos = end;
+  }
+  output.set(data.subarray(inPos), outPos);
+  return output;
+}
+
+/**
  * Check if data starts with a specific pattern
  */
 export function startsWith(data: Uint8Array, pattern: Uint8Array | readonly number[] | number[]): boolean {

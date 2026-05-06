@@ -61,6 +61,55 @@ function buildPng(extraChunks: number[][] = []): Uint8Array {
   ]);
 }
 
+/** Build a minimal valid GIF89a with the given content blocks (between header+screen descriptor and trailer). */
+function buildGif(contentBlocks: number[][] = []): Uint8Array {
+  const header = [0x47, 0x49, 0x46, 0x38, 0x39, 0x61]; // "GIF89a"
+  // Logical screen descriptor: 1x1, no global color table, packed=0
+  const screenDescriptor = [0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00];
+  const trailer = [0x3b];
+  return new Uint8Array([...header, ...screenDescriptor, ...contentBlocks.flat(), ...trailer]);
+}
+
+/** Build a minimal Comment Extension block: 0x21 0xFE <sub-blocks> 0x00. */
+function gifCommentExtension(text: string): number[] {
+  const bytes = [...text].map(c => c.charCodeAt(0));
+  return [0x21, 0xfe, bytes.length, ...bytes, 0x00];
+}
+
+/** Build a minimal Application Extension block (e.g. NETSCAPE2.0). */
+function gifApplicationExtension(name: string, data: number[]): number[] {
+  const nameBytes = [...name].map(c => c.charCodeAt(0));
+  return [0x21, 0xff, nameBytes.length, ...nameBytes, data.length, ...data, 0x00];
+}
+
+/** Build a WebP RIFF chunk with the given FourCC and payload (auto-padded to even). */
+function webpChunk(fourCC: string, payload: number[]): number[] {
+  const fourCCBytes = [...fourCC].map(c => c.charCodeAt(0));
+  const size = payload.length;
+  const sizeLE = [size & 0xff, (size >> 8) & 0xff, (size >> 16) & 0xff, (size >> 24) & 0xff];
+  const padding = size % 2 === 0 ? [] : [0];
+  return [...fourCCBytes, ...sizeLE, ...payload, ...padding];
+}
+
+/** Build a minimal valid WebP file containing the given chunks. */
+function buildWebp(chunks: number[][]): Uint8Array {
+  const flat = chunks.flat();
+  const fileSize = 4 + flat.length; // "WEBP" + chunks
+  const sizeLE = [fileSize & 0xff, (fileSize >> 8) & 0xff, (fileSize >> 16) & 0xff, (fileSize >> 24) & 0xff];
+  return new Uint8Array([
+    0x52,
+    0x49,
+    0x46,
+    0x46, // "RIFF"
+    ...sizeLE,
+    0x57,
+    0x45,
+    0x42,
+    0x50, // "WEBP"
+    ...flat,
+  ]);
+}
+
 /** Build a minimal JPEG with the given pre-SOS segments and optional post-SOS bytes. */
 function buildJpeg(
   segments: { marker: number, payload: number[] }[],
@@ -144,6 +193,132 @@ describe('sanitizeFile (PNG)', () => {
     const broken = new Uint8Array(png);
     broken[broken.length - 1] ^= 0xff; // flip a byte in the IEND CRC
     await expect(sanitizeFile(broken)).rejects.toThrow();
+  });
+
+  it('returns the original bytes verbatim when there is nothing to strip', async () => {
+    const png = buildPng();
+    const result = await sanitizeFile(png);
+    // Same reference — no allocation, no rewrite.
+    expect(result.data).toBe(png);
+  });
+
+  it('preserves an unknown ancillary chunk byte-for-byte while stripping tEXt', async () => {
+    const tEXt = pngChunk('tEXt', [...'Comment'].map(c => c.charCodeAt(0)).concat(0, 0x68, 0x69));
+    // "prVt" (private ancillary chunk, lowercase first letter = ancillary, lowercase third = unknown vendor)
+    const prVt = pngChunk('prVt', [0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe]);
+    const png = buildPng([tEXt, prVt]);
+    const result = await sanitizeFile(png);
+    // The unknown chunk should still be in the output, untouched.
+    const prVtIndex = png.indexOf(0x70); // 'p'
+    // It's easier to reason about: the unknown chunk's bytes must all appear, contiguous, in the output.
+    expect(result.strippedMetadata.strippedChunks).toEqual(['tEXt']);
+    expect(prVtIndex).toBeGreaterThan(-1);
+    // Find prVt in output too.
+    const outStr = Array.from(result.data);
+    const pIdx = outStr.findIndex((b, i) =>
+      b === 0x70 && outStr[i + 1] === 0x72 && outStr[i + 2] === 0x56 && outStr[i + 3] === 0x74
+    );
+    expect(pIdx).toBeGreaterThan(-1);
+    // Bytes after the type — payload + CRC — match the input verbatim.
+    const prVtLen = 6;
+    for (let i = 0; i < 4 + prVtLen + 4; i++) {
+      expect(result.data[pIdx - 4 + i]).toBe(png[prVtIndex - 4 + i]);
+    }
+  });
+});
+
+describe('sanitizeFile (GIF)', () => {
+  it('strips a Comment Extension and reports it', async () => {
+    const gif = buildGif([gifCommentExtension('hello')]);
+    const result = await sanitizeFile(gif);
+    expect(result.fileType).toBe('gif');
+    expect(result.strippedMetadata.hadTextMetadata).toBe(true);
+    expect(result.strippedMetadata.strippedChunks).toContain('Comment');
+    expect(result.data.length).toBeLessThan(gif.length);
+  });
+
+  it('returns the original bytes verbatim when no comment/plain-text extensions are present', async () => {
+    const gif = buildGif([gifApplicationExtension('NETSCAPE2.0', [0x01, 0x00, 0x00])]);
+    const result = await sanitizeFile(gif);
+    expect(result.data).toBe(gif);
+    expect(result.strippedMetadata.strippedChunks).toEqual([]);
+  });
+
+  it('preserves an Application Extension byte-for-byte while stripping a Comment', async () => {
+    const netscape = gifApplicationExtension('NETSCAPE2.0', [0x01, 0x00, 0x00]);
+    const comment = gifCommentExtension('private');
+    const gif = buildGif([netscape, comment]);
+    const result = await sanitizeFile(gif);
+    expect(result.strippedMetadata.strippedChunks).toEqual(['Comment']);
+    // Application extension fingerprint (NETSCAPE) must survive untouched.
+    const outStr = String.fromCharCode(...result.data);
+    expect(outStr).toContain('NETSCAPE2.0');
+  });
+
+  it('throws on an invalid GIF signature', async () => {
+    await expect(sanitizeFile(new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]))).rejects.toThrow();
+  });
+});
+
+describe('sanitizeFile (WebP)', () => {
+  it('strips an EXIF chunk and flags timestamps + text metadata', async () => {
+    const vp8 = webpChunk('VP8 ', new Array(16).fill(0));
+    const exif = webpChunk('EXIF', [...'EXIF metadata'].map(c => c.charCodeAt(0)));
+    const webp = buildWebp([vp8, exif]);
+    const result = await sanitizeFile(webp);
+    expect(result.fileType).toBe('webp');
+    expect(result.strippedMetadata.hadTextMetadata).toBe(true);
+    expect(result.strippedMetadata.hadTimestamps).toBe(true);
+    expect(result.strippedMetadata.strippedChunks).toContain('EXIF');
+    expect(result.data.length).toBeLessThan(webp.length);
+  });
+
+  it('returns the original bytes verbatim when no EXIF/XMP chunks are present', async () => {
+    const vp8 = webpChunk('VP8 ', new Array(16).fill(0));
+    const iccp = webpChunk('ICCP', [...'fake icc'].map(c => c.charCodeAt(0)));
+    const webp = buildWebp([vp8, iccp]);
+    const result = await sanitizeFile(webp);
+    expect(result.data).toBe(webp);
+    expect(result.strippedMetadata.strippedChunks).toEqual([]);
+  });
+
+  it('clears VP8X EXIF/XMP flag bits only for the chunks actually stripped', async () => {
+    // VP8X header: flags(1) + reserved(3) + canvasW-1(3) + canvasH-1(3) = 10 bytes
+    // Set EXIF (bit 3 = 0x08) and XMP (bit 2 = 0x04) bits.
+    const vp8x = webpChunk('VP8X', [
+      0x0c, // flags: EXIF + XMP set
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+    ]);
+    const vp8 = webpChunk('VP8 ', new Array(16).fill(0));
+    const exif = webpChunk('EXIF', [0xaa, 0xbb]);
+    // Note: NO XMP chunk in this file, just the VP8X flag claiming it.
+    const webp = buildWebp([vp8x, vp8, exif]);
+    const result = await sanitizeFile(webp);
+    // VP8X is at offset 12. Flags byte at offset 12 + 8 = 20.
+    expect(result.data[20]).toBe(0x04); // EXIF bit cleared, XMP bit left alone
+    expect(result.strippedMetadata.strippedChunks).toEqual(['EXIF']);
+  });
+
+  it('updates the RIFF size header after stripping', async () => {
+    const vp8 = webpChunk('VP8 ', new Array(16).fill(0));
+    const exif = webpChunk('EXIF', [...'metadata'].map(c => c.charCodeAt(0)));
+    const webp = buildWebp([vp8, exif]);
+    const result = await sanitizeFile(webp);
+    // RIFF size at bytes 4..7 (little-endian) = output.length - 8
+    const recordedSize = result.data[4] | (result.data[5] << 8) | (result.data[6] << 16) | (result.data[7] << 24);
+    expect(recordedSize).toBe(result.data.length - 8);
+  });
+
+  it('throws on an invalid WebP signature', async () => {
+    await expect(sanitizeFile(new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]))).rejects.toThrow();
   });
 });
 

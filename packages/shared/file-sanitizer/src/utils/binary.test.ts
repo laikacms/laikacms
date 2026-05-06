@@ -10,6 +10,7 @@ import {
   readUint32BE,
   readUint32LE,
   sliceBytes,
+  spliceOutRanges,
   startsWith,
   writeUint16BE,
   writeUint16LE,
@@ -117,6 +118,37 @@ describe('sliceBytes', () => {
     const out = sliceBytes(src, 1, 3);
     out[0] = 99;
     expect(src[1]).toBe(2);
+  });
+});
+
+describe('spliceOutRanges', () => {
+  it('returns the input reference unchanged when no ranges are given', () => {
+    const src = new Uint8Array([1, 2, 3]);
+    expect(spliceOutRanges(src, [])).toBe(src);
+  });
+
+  it('removes a single middle range', () => {
+    const src = new Uint8Array([1, 2, 3, 4, 5]);
+    const out = spliceOutRanges(src, [[1, 3]]);
+    expect(Array.from(out)).toEqual([1, 4, 5]);
+  });
+
+  it('removes multiple non-overlapping ranges', () => {
+    const src = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    const out = spliceOutRanges(src, [[1, 3], [5, 7]]);
+    expect(Array.from(out)).toEqual([0, 3, 4, 7, 8, 9]);
+  });
+
+  it('removes a range at the very end of the buffer', () => {
+    const src = new Uint8Array([1, 2, 3, 4]);
+    const out = spliceOutRanges(src, [[2, 4]]);
+    expect(Array.from(out)).toEqual([1, 2]);
+  });
+
+  it('removes a range at the very start of the buffer', () => {
+    const src = new Uint8Array([1, 2, 3, 4]);
+    const out = spliceOutRanges(src, [[0, 2]]);
+    expect(Array.from(out)).toEqual([3, 4]);
   });
 });
 

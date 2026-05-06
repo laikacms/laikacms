@@ -9,13 +9,17 @@
  * - Trailer (0x3B)
  *
  * Uses a BLOCKLIST approach - only strips extensions known to contain
- * privacy-sensitive metadata (comments, plain text). All other blocks
- * including application extensions (NETSCAPE2.0 for looping) are preserved.
+ * privacy-sensitive metadata (Comment 0xFE, Plain Text 0x01).
+ *
+ * Image data, graphics control extensions, application extensions
+ * (NETSCAPE2.0 looping), unknown extensions, and the trailer are all
+ * copied through verbatim. When nothing dangerous is present the
+ * original Uint8Array reference is returned unchanged.
  */
 
 import { CorruptedFileError } from '@laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
-import { concatBytes, sliceBytes } from '../utils/binary.js';
+import { spliceOutRanges } from '../utils/binary.js';
 
 // GIF signatures
 const GIF87A = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x37, 0x61]); // GIF87a
@@ -35,9 +39,6 @@ const IMAGE_SEPARATOR = 0x2C;
 // Trailer
 const TRAILER = 0x3B;
 
-/**
- * Check if data starts with GIF signature
- */
 function isGifSignature(data: Uint8Array): boolean {
   if (data.length < 6) return false;
 
@@ -53,27 +54,18 @@ function isGifSignature(data: Uint8Array): boolean {
 }
 
 /**
- * Skip sub-blocks (used by extensions and image data)
- * Returns the offset after the block terminator (0x00)
+ * Walk past sub-blocks (used by extensions and image data) and return the
+ * offset just after the block terminator (0x00).
  */
 function skipSubBlocks(data: Uint8Array, offset: number): number {
   while (offset < data.length) {
     const blockSize = data[offset];
     if (blockSize === 0) {
-      return offset + 1; // Skip the terminator
+      return offset + 1;
     }
     offset += 1 + blockSize;
   }
   return offset;
-}
-
-/**
- * Copy sub-blocks from data starting at offset, returning the data and new offset
- */
-function copySubBlocks(data: Uint8Array, offset: number): { bytes: Uint8Array, newOffset: number } {
-  const start = offset;
-  const end = skipSubBlocks(data, offset);
-  return { bytes: sliceBytes(data, start, end), newOffset: end };
 }
 
 export class GifSanitizer implements FileSanitizer {
@@ -88,46 +80,31 @@ export class GifSanitizer implements FileSanitizer {
       throw new CorruptedFileError('Invalid GIF signature');
     }
 
-    const strippedMetadata: StrippedMetadataInfo = {
-      hadTextMetadata: false,
-      hadTimestamps: false,
-      strippedChunks: [],
-    };
-
-    const outputChunks: Uint8Array[] = [];
-
-    // Copy header (6 bytes)
-    outputChunks.push(sliceBytes(data, 0, 6));
-
-    // Copy Logical Screen Descriptor (7 bytes)
     if (data.length < 13) {
       throw new CorruptedFileError('GIF too short for screen descriptor');
     }
-    outputChunks.push(sliceBytes(data, 6, 13));
 
-    // Check for Global Color Table
+    const strippedChunks: string[] = [];
+    const stripRanges: Array<readonly [number, number]> = [];
+    let hadTextMetadata = false;
+
+    // Skip header (6) + logical screen descriptor (7) + optional global color table.
     const packedByte = data[10];
     const hasGlobalColorTable = (packedByte & 0x80) !== 0;
     const globalColorTableSize = hasGlobalColorTable ? 3 * (1 << ((packedByte & 0x07) + 1)) : 0;
 
     let offset = 13;
-
-    // Copy Global Color Table if present
     if (hasGlobalColorTable) {
       if (offset + globalColorTableSize > data.length) {
         throw new CorruptedFileError('GIF truncated in global color table');
       }
-      outputChunks.push(sliceBytes(data, offset, offset + globalColorTableSize));
       offset += globalColorTableSize;
     }
 
-    // Process blocks
     while (offset < data.length) {
       const blockType = data[offset];
 
       if (blockType === TRAILER) {
-        // End of GIF
-        outputChunks.push(new Uint8Array([TRAILER]));
         break;
       }
 
@@ -137,82 +114,62 @@ export class GifSanitizer implements FileSanitizer {
         }
 
         const extensionLabel = data[offset + 1];
+        const extensionStart = offset;
 
-        if (extensionLabel === COMMENT_EXTENSION) {
-          // Strip comment extension - may contain personal metadata
-          strippedMetadata.hadTextMetadata = true;
-          strippedMetadata.strippedChunks?.push('Comment');
+        if (extensionLabel === COMMENT_EXTENSION || extensionLabel === PLAIN_TEXT_EXTENSION) {
+          // Walk past the extension's sub-blocks so we know its full length,
+          // then stage it for surgical removal.
           offset = skipSubBlocks(data, offset + 2);
-        } else if (extensionLabel === PLAIN_TEXT_EXTENSION) {
-          // Strip plain text extension - may contain personal metadata
-          strippedMetadata.hadTextMetadata = true;
-          strippedMetadata.strippedChunks?.push('PlainText');
-          offset = skipSubBlocks(data, offset + 2);
+          stripRanges.push([extensionStart, offset] as const);
+          strippedChunks.push(extensionLabel === COMMENT_EXTENSION ? 'Comment' : 'PlainText');
+          hadTextMetadata = true;
         } else if (extensionLabel === GRAPHICS_CONTROL_EXTENSION) {
-          // Keep graphics control extension (needed for animation)
           // Fixed size: introducer (1) + label (1) + block size (1) + data (4) + terminator (1) = 8 bytes
           if (offset + 8 > data.length) {
             throw new CorruptedFileError('GIF truncated in graphics control extension');
           }
-          outputChunks.push(sliceBytes(data, offset, offset + 8));
           offset += 8;
         } else {
-          // Keep all other extensions (application extensions like NETSCAPE2.0, unknown extensions, etc.)
-          const blockStart = offset;
-          offset += 2; // Skip introducer + label
-          const { bytes: subBlockBytes, newOffset } = copySubBlocks(data, offset);
-          outputChunks.push(sliceBytes(data, blockStart, blockStart + 2)); // introducer + label
-          outputChunks.push(subBlockBytes);
-          offset = newOffset;
+          // Application extension (NETSCAPE2.0, etc.) or unknown — keep verbatim.
+          offset = skipSubBlocks(data, offset + 2);
         }
       } else if (blockType === IMAGE_SEPARATOR) {
-        // Image descriptor - keep it
         if (offset + 10 > data.length) {
           throw new CorruptedFileError('GIF truncated in image descriptor');
         }
 
-        // Copy image descriptor (10 bytes)
-        outputChunks.push(sliceBytes(data, offset, offset + 10));
-
-        // Check for Local Color Table
         const imagePackedByte = data[offset + 9];
         const hasLocalColorTable = (imagePackedByte & 0x80) !== 0;
         const localColorTableSize = hasLocalColorTable ? 3 * (1 << ((imagePackedByte & 0x07) + 1)) : 0;
 
         offset += 10;
 
-        // Copy Local Color Table if present
         if (hasLocalColorTable) {
           if (offset + localColorTableSize > data.length) {
             throw new CorruptedFileError('GIF truncated in local color table');
           }
-          outputChunks.push(sliceBytes(data, offset, offset + localColorTableSize));
           offset += localColorTableSize;
         }
 
-        // Copy LZW minimum code size
         if (offset >= data.length) {
           throw new CorruptedFileError('GIF truncated before LZW data');
         }
-        outputChunks.push(sliceBytes(data, offset, offset + 1));
-        offset += 1;
-
-        // Copy image data sub-blocks
-        const imageDataStart = offset;
+        offset += 1; // LZW minimum code size
         offset = skipSubBlocks(data, offset);
-        outputChunks.push(sliceBytes(data, imageDataStart, offset));
       } else {
-        // Unknown block type - keep it rather than rejecting the file
-        // Skip one byte and continue (best-effort tolerance)
-        outputChunks.push(sliceBytes(data, offset, offset + 1));
+        // Unknown byte — advance one byte and try to keep parsing.
         offset += 1;
       }
     }
 
     return {
-      data: concatBytes(...outputChunks),
+      data: spliceOutRanges(data, stripRanges),
       fileType: 'gif',
-      strippedMetadata,
+      strippedMetadata: {
+        hadTextMetadata,
+        hadTimestamps: false,
+        strippedChunks,
+      } satisfies StrippedMetadataInfo,
       ignored: false,
     };
   }

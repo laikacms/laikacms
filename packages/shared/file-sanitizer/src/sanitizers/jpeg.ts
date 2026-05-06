@@ -25,6 +25,7 @@
 
 import { CorruptedFileError } from '@laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
+import { spliceOutRanges } from '../utils/binary.js';
 
 // JPEG markers
 const MARKER_PREFIX = 0xFF;
@@ -150,30 +151,8 @@ export class JpegSanitizer implements FileSanitizer {
       strippedChunks: strippedChunks.length > 0 ? strippedChunks : undefined,
     };
 
-    if (stripRanges.length === 0) {
-      // Nothing dangerous found — return the original bytes untouched.
-      return {
-        data,
-        fileType: 'jpeg',
-        strippedMetadata,
-        ignored: false,
-      };
-    }
-
-    // Surgical removal: copy everything except the dangerous segment ranges.
-    const totalStripped = stripRanges.reduce((sum, [s, e]) => sum + (e - s), 0);
-    const output = new Uint8Array(data.length - totalStripped);
-    let outPos = 0;
-    let inPos = 0;
-    for (const [start, end] of stripRanges) {
-      output.set(data.subarray(inPos, start), outPos);
-      outPos += start - inPos;
-      inPos = end;
-    }
-    output.set(data.subarray(inPos), outPos);
-
     return {
-      data: output,
+      data: spliceOutRanges(data, stripRanges),
       fileType: 'jpeg',
       strippedMetadata,
       ignored: false,

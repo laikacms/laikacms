@@ -7,13 +7,17 @@
  *
  * Uses a BLOCKLIST approach - only strips chunks known to contain
  * privacy-sensitive metadata (tEXt, zTXt, iTXt, tIME, eXIf).
- * All other chunks including unknown ones are preserved.
+ *
+ * When dangerous chunks are present we splice them out surgically; every
+ * other byte (signature, IHDR, IDAT, IEND, ancillary chunks, unknown
+ * chunks, padding) is copied through verbatim. When nothing dangerous is
+ * present the original Uint8Array reference is returned unchanged.
  */
 
 import { CorruptedFileError } from '@laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
 import { PNG_METADATA_CHUNKS } from '../types.js';
-import { concatBytes, readUint32BE, sliceBytes } from '../utils/binary.js';
+import { readUint32BE, sliceBytes, spliceOutRanges } from '../utils/binary.js';
 
 // PNG signature: 89 50 4E 47 0D 0A 1A 0A
 const PNG_SIGNATURE = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
@@ -64,28 +68,20 @@ export class PngSanitizer implements FileSanitizer {
   }
 
   async sanitize(data: Uint8Array, _options: SanitizeOptions): Promise<SanitizeResult> {
-    // Validate PNG signature
     if (!this.canHandle(data)) {
       throw new CorruptedFileError('Invalid PNG signature');
     }
 
-    const strippedMetadata: StrippedMetadataInfo = {
-      hadTextMetadata: false,
-      hadTimestamps: false,
-      strippedChunks: [],
-    };
-
-    const outputChunks: Uint8Array[] = [];
-
-    // Add PNG signature
-    outputChunks.push(PNG_SIGNATURE);
-
-    let offset = 8; // Skip signature
+    const strippedChunks: string[] = [];
+    const stripRanges: Array<readonly [number, number]> = [];
+    let hadTextMetadata = false;
+    let hadTimestamps = false;
     let hasIHDR = false;
     let hasIEND = false;
 
-    while (offset + 12 <= data.length) { // Minimum chunk size is 12 bytes (4 + 4 + 0 + 4)
-      // Read chunk length
+    let offset = 8; // Skip signature
+
+    while (offset + 12 <= data.length) {
       const chunkLength = readUint32BE(data, offset);
 
       // Sanity check chunk length
@@ -93,50 +89,39 @@ export class PngSanitizer implements FileSanitizer {
         throw new CorruptedFileError('Invalid chunk length');
       }
 
-      // Read chunk type
       const chunkType = readChunkType(data, offset + 4);
-
-      // Calculate chunk end (length + type + data + CRC)
       const chunkEnd = offset + 4 + 4 + chunkLength + 4;
 
       if (chunkEnd > data.length) {
         throw new CorruptedFileError('Chunk extends beyond file');
       }
 
-      // Verify CRC
-      const chunkData = sliceBytes(data, offset + 4, offset + 8 + chunkLength); // type + data
+      // Verify CRC over type + data
+      const chunkData = sliceBytes(data, offset + 4, offset + 8 + chunkLength);
       const storedCRC = readUint32BE(data, offset + 8 + chunkLength);
       const calculatedCRC = crc32(chunkData);
-
       if (storedCRC !== calculatedCRC) {
         throw new CorruptedFileError(`Invalid CRC for chunk ${chunkType}`);
       }
 
-      // Track critical chunks
       if (chunkType === 'IHDR') hasIHDR = true;
       if (chunkType === 'IEND') hasIEND = true;
 
-      // Decide whether to strip this chunk (BLOCKLIST approach)
       if (PNG_METADATA_CHUNKS.has(chunkType)) {
-        // Known metadata chunk - strip it
-        strippedMetadata.strippedChunks?.push(chunkType);
+        strippedChunks.push(chunkType);
+        stripRanges.push([offset, chunkEnd] as const);
 
-        // Track what kind of metadata was stripped
         if (chunkType === 'tEXt' || chunkType === 'zTXt' || chunkType === 'iTXt') {
-          strippedMetadata.hadTextMetadata = true;
+          hadTextMetadata = true;
         }
         if (chunkType === 'tIME') {
-          strippedMetadata.hadTimestamps = true;
+          hadTimestamps = true;
         }
-      } else {
-        // Keep everything else (critical, ancillary, and unknown chunks)
-        outputChunks.push(sliceBytes(data, offset, chunkEnd));
       }
 
       offset = chunkEnd;
     }
 
-    // Validate we have required chunks
     if (!hasIHDR) {
       throw new CorruptedFileError('Missing IHDR chunk');
     }
@@ -145,9 +130,13 @@ export class PngSanitizer implements FileSanitizer {
     }
 
     return {
-      data: concatBytes(...outputChunks),
+      data: spliceOutRanges(data, stripRanges),
       fileType: 'png',
-      strippedMetadata,
+      strippedMetadata: {
+        hadTextMetadata,
+        hadTimestamps,
+        strippedChunks,
+      } satisfies StrippedMetadataInfo,
       ignored: false,
     };
   }
