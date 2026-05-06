@@ -61,8 +61,11 @@ function buildPng(extraChunks: number[][] = []): Uint8Array {
   ]);
 }
 
-/** Build a minimal JPEG with the given pre-SOS segments. */
-function buildJpeg(segments: { marker: number, payload: number[] }[]): Uint8Array {
+/** Build a minimal JPEG with the given pre-SOS segments and optional post-SOS bytes. */
+function buildJpeg(
+  segments: { marker: number, payload: number[] }[],
+  postSos: number[] = [],
+): Uint8Array {
   const out: number[] = [0xff, 0xd8]; // SOI
   for (const { marker, payload } of segments) {
     const len = payload.length + 2;
@@ -71,6 +74,7 @@ function buildJpeg(segments: { marker: number, payload: number[] }[]): Uint8Arra
   // SOS segment with a small payload (length = 8 -> 6 bytes of body) so the
   // total file length stays above the 12-byte detect threshold.
   out.push(0xff, 0xda, 0x00, 0x08, 0, 0, 0, 0, 0, 0);
+  out.push(...postSos);
   out.push(0xff, 0xd9); // EOI
   return new Uint8Array(out);
 }
@@ -169,6 +173,112 @@ describe('sanitizeFile (JPEG)', () => {
     const outStr = String.fromCharCode(...result.data);
     expect(outStr).toContain('JFIF');
     expect(result.strippedMetadata.strippedChunks).toBeUndefined();
+  });
+
+  it('returns the original bytes verbatim when there is nothing to strip', async () => {
+    const jfif = [0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0, 0x48, 0, 0x48, 0, 0];
+    const jpeg = buildJpeg([{ marker: 0xe0, payload: jfif }]);
+    const result = await sanitizeFile(jpeg);
+    // Same reference — we did not allocate or rewrite anything.
+    expect(result.data).toBe(jpeg);
+  });
+
+  it('preserves entropy-coded scan data containing extra markers (progressive JPEGs)', async () => {
+    // Simulate a progressive JPEG: bytes after SOS that include a DHT marker
+    // (0xff 0xc4) followed by another SOS segment. The previous sanitizer
+    // would `break` at the DHT and truncate everything after it.
+    const progressiveTail = [
+      0x12,
+      0x34,
+      0x56, // first scan entropy data
+      0xff,
+      0x00, // escaped 0xff inside entropy data
+      0xff,
+      0xd0, // RST0 marker
+      0x78,
+      0x9a,
+      0xff,
+      0xc4,
+      0x00,
+      0x06,
+      0x11,
+      0x22,
+      0x33,
+      0x44, // DHT segment (length=6)
+      0xff,
+      0xda,
+      0x00,
+      0x08,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0, // second SOS (progressive scan)
+      0xbc,
+      0xde,
+      0xf0, // second scan entropy data
+    ];
+    const jpeg = buildJpeg([], progressiveTail);
+    const result = await sanitizeFile(jpeg);
+    expect(result.data).toEqual(jpeg);
+  });
+
+  it('strips APP1 surgically while preserving everything else byte-for-byte', async () => {
+    const exifPayload = [...'Exif\0\0', 0xaa, 0xbb, 0xcc, 0xdd].map(v => typeof v === 'string' ? v.charCodeAt(0) : v);
+    const jfif = [0x4a, 0x46, 0x49, 0x46, 0x00, 0x01, 0x01, 0x00, 0, 0x48, 0, 0x48, 0, 0];
+    const tail = [0x12, 0x34, 0xff, 0x00, 0xff, 0xd0, 0x56, 0x78];
+    const jpeg = buildJpeg(
+      [{ marker: 0xe0, payload: jfif }, { marker: 0xe1, payload: exifPayload }],
+      tail,
+    );
+    // Find the APP1 segment boundaries in the input.
+    const app1Start = 2 /* SOI */ + 4 + jfif.length; // after SOI + APP0 (FF E0 + len + payload)
+    const app1Length = exifPayload.length + 2;
+    const app1End = app1Start + 2 + app1Length;
+
+    const result = await sanitizeFile(jpeg);
+    // Output = bytes before APP1 + bytes after APP1, untouched.
+    const expected = new Uint8Array(jpeg.length - (app1End - app1Start));
+    expected.set(jpeg.subarray(0, app1Start), 0);
+    expected.set(jpeg.subarray(app1End), app1Start);
+    expect(result.data).toEqual(expected);
+    expect(result.strippedMetadata.strippedChunks).toEqual(['APP1']);
+  });
+
+  it('preserves fill bytes between segments', async () => {
+    // Hand-build a JPEG with fill 0xff bytes before APP0 and before SOS.
+    const jpeg = new Uint8Array([
+      0xff,
+      0xd8, // SOI
+      0xff,
+      0xff,
+      0xff,
+      0xe0,
+      0x00,
+      0x07,
+      0x4a,
+      0x46,
+      0x49,
+      0x46,
+      0x00, // fill + APP0/JFIF (truncated)
+      0xff,
+      0xff,
+      0xda,
+      0x00,
+      0x08,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0, // fill + SOS
+      0xff,
+      0xd9, // EOI
+    ]);
+    const result = await sanitizeFile(jpeg);
+    // Nothing dangerous → original returned.
+    expect(result.data).toBe(jpeg);
   });
 
   it('throws on a missing SOI marker', async () => {
