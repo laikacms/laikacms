@@ -8,10 +8,12 @@
  * - Segments: Each starts with 0xFF followed by marker byte
  * - EOI (End of Image): 0xFFD9
  *
- * Only strips segments known to contain dangerous/privacy-sensitive data:
- * - APP1 (0xFFE1): EXIF/XMP - Contains GPS, camera info, timestamps - STRIP
- * - APP13 (0xFFED): IPTC/Photoshop - Contains location, author - STRIP
- * - COM (0xFFFE): Comments - May contain personal info - STRIP
+ * Stripping rules:
+ * - APP1 (0xFFE1): EXIF/XMP — always stripped (privacy-sensitive by nature)
+ * - APP13 (0xFFED): IPTC/Photoshop — always stripped (location, author)
+ * - COM (0xFFFE): Comments — payload is scanned; only stripped when it
+ *   contains GPS / location / face-recognition patterns. Benign comments
+ *   (tool signatures, captions) are preserved.
  *
  * The walker only inspects segments before the first SOS marker — that's
  * where APPn / COM segments live. Once entropy-coded scan data starts, the
@@ -26,6 +28,7 @@
 import { CorruptedFileError } from '@laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
 import { spliceOutRanges } from '../utils/binary.js';
+import { findDangerousMetadata } from '../utils/metadata-scan.js';
 
 // JPEG markers
 const MARKER_PREFIX = 0xFF;
@@ -33,7 +36,7 @@ const SOI = 0xD8; // Start of Image
 const SOS = 0xDA; // Start of Scan (entropy-coded image data follows)
 const APP1 = 0xE1; // EXIF/XMP - STRIP
 const APP13 = 0xED; // IPTC - STRIP
-const COM = 0xFE; // Comment - STRIP
+const COM = 0xFE; // Comment - scanned, only stripped if dangerous
 
 // Markers that don't have a length field.
 const STANDALONE_MARKERS = new Set([
@@ -51,11 +54,11 @@ const STANDALONE_MARKERS = new Set([
   0xD7,
 ]);
 
-// Markers to strip (blocklist) - only privacy-sensitive metadata
-const DANGEROUS_MARKERS = new Set([
+// Markers that are always stripped — binary metadata containers whose
+// presence implies privacy-sensitive content (EXIF, IPTC).
+const ALWAYS_STRIP_MARKERS = new Set([
   0xE1, // APP1 (EXIF/XMP) - GPS, camera info, timestamps
   0xED, // APP13 (IPTC) - location, author, keywords
-  0xFE, // COM (Comment) - may contain personal info
 ]);
 
 function isJpegSignature(data: Uint8Array): boolean {
@@ -130,14 +133,24 @@ export class JpegSanitizer implements FileSanitizer {
         throw new CorruptedFileError(`Invalid JPEG: segment extends beyond file at offset ${offset}`);
       }
 
-      if (DANGEROUS_MARKERS.has(marker)) {
+      if (ALWAYS_STRIP_MARKERS.has(marker)) {
         strippedChunks.push(getMarkerName(marker));
         stripRanges.push([offset, segmentEnd] as const);
 
         if (marker === APP1) {
           hadTimestamps = true;
           hadTextMetadata = true;
-        } else if (marker === APP13 || marker === COM) {
+        } else if (marker === APP13) {
+          hadTextMetadata = true;
+        }
+      } else if (marker === COM) {
+        // Comments are kept by default — they often hold benign content
+        // like tool signatures or captions. Only strip when the payload
+        // actually contains GPS / location / face-recognition patterns.
+        const payload = data.subarray(offset + 4, segmentEnd);
+        if (findDangerousMetadata(payload).dangerous) {
+          strippedChunks.push(getMarkerName(marker));
+          stripRanges.push([offset, segmentEnd] as const);
           hadTextMetadata = true;
         }
       }

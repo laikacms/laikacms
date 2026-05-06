@@ -5,19 +5,35 @@
  * - 8-byte signature
  * - Sequence of chunks, each with: length (4 bytes), type (4 bytes), data, CRC (4 bytes)
  *
- * Uses a BLOCKLIST approach - only strips chunks known to contain
- * privacy-sensitive metadata (tEXt, zTXt, iTXt, tIME, eXIf).
+ * Stripping rules:
+ * - tIME, eXIf, zTXt: always stripped (timestamps, EXIF binary, opaque
+ *   compressed text)
+ * - tEXt, iTXt: payload is scanned and only stripped when it contains
+ *   GPS / location / face-recognition patterns. Benign text chunks
+ *   (tool attribution, captions, descriptions) are preserved.
  *
- * When dangerous chunks are present we splice them out surgically; every
- * other byte (signature, IHDR, IDAT, IEND, ancillary chunks, unknown
- * chunks, padding) is copied through verbatim. When nothing dangerous is
- * present the original Uint8Array reference is returned unchanged.
+ * When chunks are stripped we splice them out surgically; every other
+ * byte (signature, IHDR, IDAT, IEND, ancillary chunks, unknown chunks,
+ * padding) is copied through verbatim. When nothing is stripped the
+ * original Uint8Array reference is returned unchanged.
  */
 
 import { CorruptedFileError } from '@laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
-import { PNG_METADATA_CHUNKS } from '../types.js';
 import { readUint32BE, sliceBytes, spliceOutRanges } from '../utils/binary.js';
+import { findDangerousMetadata } from '../utils/metadata-scan.js';
+
+// Chunks that are always stripped — privacy-sensitive by structure.
+const ALWAYS_STRIP_CHUNKS = new Set([
+  'tIME', // Last-modification timestamp
+  'eXIf', // EXIF binary blob
+  'zTXt', // Compressed text — opaque, can't be scanned in-place
+]);
+
+// Text chunks that are scanned; only stripped when their payload matches
+// a dangerous pattern. iTXt may carry XMP packets (which can hold GPS or
+// region data) but is just as often a plain caption.
+const SCANNABLE_TEXT_CHUNKS = new Set(['tEXt', 'iTXt']);
 
 // PNG signature: 89 50 4E 47 0D 0A 1A 0A
 const PNG_SIGNATURE = new Uint8Array([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]);
@@ -107,15 +123,22 @@ export class PngSanitizer implements FileSanitizer {
       if (chunkType === 'IHDR') hasIHDR = true;
       if (chunkType === 'IEND') hasIEND = true;
 
-      if (PNG_METADATA_CHUNKS.has(chunkType)) {
+      if (ALWAYS_STRIP_CHUNKS.has(chunkType)) {
         strippedChunks.push(chunkType);
         stripRanges.push([offset, chunkEnd] as const);
 
-        if (chunkType === 'tEXt' || chunkType === 'zTXt' || chunkType === 'iTXt') {
+        if (chunkType === 'zTXt') {
           hadTextMetadata = true;
         }
         if (chunkType === 'tIME') {
           hadTimestamps = true;
+        }
+      } else if (SCANNABLE_TEXT_CHUNKS.has(chunkType)) {
+        const payload = data.subarray(offset + 8, offset + 8 + chunkLength);
+        if (findDangerousMetadata(payload).dangerous) {
+          strippedChunks.push(chunkType);
+          stripRanges.push([offset, chunkEnd] as const);
+          hadTextMetadata = true;
         }
       }
 

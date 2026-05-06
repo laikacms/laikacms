@@ -160,8 +160,11 @@ describe('isSanitizableFileType', () => {
 });
 
 describe('sanitizeFile (PNG)', () => {
-  it('strips a tEXt chunk and reports it', async () => {
-    const tEXt = pngChunk('tEXt', [...'Comment'].map(c => c.charCodeAt(0)).concat(0, 0x68, 0x69));
+  it('strips a tEXt chunk that contains GPS metadata', async () => {
+    const tEXt = pngChunk(
+      'tEXt',
+      [...'Comment'].map(c => c.charCodeAt(0)).concat(0, ...[...'GPSLatitude=1.234'].map(c => c.charCodeAt(0))),
+    );
     const png = buildPng([tEXt]);
     const result = await sanitizeFile(png);
     expect(result.fileType).toBe('png');
@@ -169,6 +172,34 @@ describe('sanitizeFile (PNG)', () => {
     expect(result.strippedMetadata.hadTextMetadata).toBe(true);
     expect(result.strippedMetadata.strippedChunks).toContain('tEXt');
     expect(result.data.length).toBeLessThan(png.length);
+  });
+
+  it('preserves a benign tEXt chunk (e.g. tool attribution)', async () => {
+    const tEXt = pngChunk(
+      'tEXt',
+      [...'Software'].map(c => c.charCodeAt(0)).concat(0, ...[...'Made with Pixelmator Pro'].map(c => c.charCodeAt(0))),
+    );
+    const png = buildPng([tEXt]);
+    const result = await sanitizeFile(png);
+    expect(result.data).toBe(png);
+    expect(result.strippedMetadata.strippedChunks).toEqual([]);
+  });
+
+  it('strips an iTXt chunk that contains face-recognition metadata', async () => {
+    const iTXt = pngChunk(
+      'iTXt',
+      [...'XML:com.adobe.xmp'].map(c => c.charCodeAt(0)).concat(
+        0,
+        0,
+        0,
+        0,
+        0,
+        ...[...'<mwg-rs:Regions/>'].map(c => c.charCodeAt(0)),
+      ),
+    );
+    const png = buildPng([iTXt]);
+    const result = await sanitizeFile(png);
+    expect(result.strippedMetadata.strippedChunks).toContain('iTXt');
   });
 
   it('strips a tIME chunk and flags hadTimestamps', async () => {
@@ -203,17 +234,18 @@ describe('sanitizeFile (PNG)', () => {
   });
 
   it('preserves an unknown ancillary chunk byte-for-byte while stripping tEXt', async () => {
-    const tEXt = pngChunk('tEXt', [...'Comment'].map(c => c.charCodeAt(0)).concat(0, 0x68, 0x69));
+    const tEXt = pngChunk(
+      'tEXt',
+      [...'Comment'].map(c => c.charCodeAt(0)).concat(0, ...[...'GPSLatitude=1.234'].map(c => c.charCodeAt(0))),
+    );
     // "prVt" (private ancillary chunk, lowercase first letter = ancillary, lowercase third = unknown vendor)
     const prVt = pngChunk('prVt', [0xde, 0xad, 0xbe, 0xef, 0xca, 0xfe]);
     const png = buildPng([tEXt, prVt]);
     const result = await sanitizeFile(png);
     // The unknown chunk should still be in the output, untouched.
     const prVtIndex = png.indexOf(0x70); // 'p'
-    // It's easier to reason about: the unknown chunk's bytes must all appear, contiguous, in the output.
     expect(result.strippedMetadata.strippedChunks).toEqual(['tEXt']);
     expect(prVtIndex).toBeGreaterThan(-1);
-    // Find prVt in output too.
     const outStr = Array.from(result.data);
     const pIdx = outStr.findIndex((b, i) =>
       b === 0x70 && outStr[i + 1] === 0x72 && outStr[i + 2] === 0x56 && outStr[i + 3] === 0x74
@@ -228,13 +260,26 @@ describe('sanitizeFile (PNG)', () => {
 });
 
 describe('sanitizeFile (GIF)', () => {
-  it('strips a Comment Extension and reports it', async () => {
-    const gif = buildGif([gifCommentExtension('hello')]);
+  it('strips a Comment Extension that contains GPS metadata', async () => {
+    const gif = buildGif([gifCommentExtension('GPSLatitude=37.4N,GPSLongitude=122.1W')]);
     const result = await sanitizeFile(gif);
     expect(result.fileType).toBe('gif');
     expect(result.strippedMetadata.hadTextMetadata).toBe(true);
     expect(result.strippedMetadata.strippedChunks).toContain('Comment');
     expect(result.data.length).toBeLessThan(gif.length);
+  });
+
+  it('preserves a benign Comment Extension (e.g. tool signature)', async () => {
+    const gif = buildGif([gifCommentExtension('Made with GIMP')]);
+    const result = await sanitizeFile(gif);
+    expect(result.data).toBe(gif);
+    expect(result.strippedMetadata.strippedChunks).toEqual([]);
+  });
+
+  it('preserves a benign Comment Extension that just carries a caption', async () => {
+    const gif = buildGif([gifCommentExtension('A funny dancing cat animation, 2024 edition')]);
+    const result = await sanitizeFile(gif);
+    expect(result.data).toBe(gif);
   });
 
   it('returns the original bytes verbatim when no comment/plain-text extensions are present', async () => {
@@ -244,9 +289,9 @@ describe('sanitizeFile (GIF)', () => {
     expect(result.strippedMetadata.strippedChunks).toEqual([]);
   });
 
-  it('preserves an Application Extension byte-for-byte while stripping a Comment', async () => {
+  it('preserves an Application Extension byte-for-byte while stripping a dangerous Comment', async () => {
     const netscape = gifApplicationExtension('NETSCAPE2.0', [0x01, 0x00, 0x00]);
-    const comment = gifCommentExtension('private');
+    const comment = gifCommentExtension('FaceRegion=person:Alice');
     const gif = buildGif([netscape, comment]);
     const result = await sanitizeFile(gif);
     expect(result.strippedMetadata.strippedChunks).toEqual(['Comment']);
@@ -333,10 +378,19 @@ describe('sanitizeFile (JPEG)', () => {
     expect(result.strippedMetadata.strippedChunks).toContain('APP1');
   });
 
-  it('strips a comment (COM) segment', async () => {
-    const jpeg = buildJpeg([{ marker: 0xfe, payload: [0x68, 0x69] }]);
+  it('strips a COM segment that contains GPS metadata', async () => {
+    const payload = [...'GPSLatitude=37.4'].map(c => c.charCodeAt(0));
+    const jpeg = buildJpeg([{ marker: 0xfe, payload }]);
     const result = await sanitizeFile(jpeg);
     expect(result.strippedMetadata.strippedChunks).toContain('COM');
+  });
+
+  it('preserves a benign COM segment (e.g. tool signature)', async () => {
+    const payload = [...'Made with Pixelmator Pro'].map(c => c.charCodeAt(0));
+    const jpeg = buildJpeg([{ marker: 0xfe, payload }]);
+    const result = await sanitizeFile(jpeg);
+    expect(result.data).toBe(jpeg);
+    expect(result.strippedMetadata.strippedChunks).toBeUndefined();
   });
 
   it('preserves an APP0/JFIF segment', async () => {

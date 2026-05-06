@@ -8,8 +8,10 @@
  * - Extension blocks and image data
  * - Trailer (0x3B)
  *
- * Uses a BLOCKLIST approach - only strips extensions known to contain
- * privacy-sensitive metadata (Comment 0xFE, Plain Text 0x01).
+ * Comment (0xFE) and Plain Text (0x01) extensions can carry either
+ * benign content (tool signatures, captions, attribution) or sensitive
+ * metadata (GPS coordinates, face / region info). Their payloads are
+ * scanned and only stripped when a dangerous pattern is found.
  *
  * Image data, graphics control extensions, application extensions
  * (NETSCAPE2.0 looping), unknown extensions, and the trailer are all
@@ -20,6 +22,7 @@
 import { CorruptedFileError } from '@laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
 import { spliceOutRanges } from '../utils/binary.js';
+import { findDangerousMetadata } from '../utils/metadata-scan.js';
 
 // GIF signatures
 const GIF87A = new Uint8Array([0x47, 0x49, 0x46, 0x38, 0x37, 0x61]); // GIF87a
@@ -117,12 +120,19 @@ export class GifSanitizer implements FileSanitizer {
         const extensionStart = offset;
 
         if (extensionLabel === COMMENT_EXTENSION || extensionLabel === PLAIN_TEXT_EXTENSION) {
-          // Walk past the extension's sub-blocks so we know its full length,
-          // then stage it for surgical removal.
-          offset = skipSubBlocks(data, offset + 2);
-          stripRanges.push([extensionStart, offset] as const);
-          strippedChunks.push(extensionLabel === COMMENT_EXTENSION ? 'Comment' : 'PlainText');
-          hadTextMetadata = true;
+          // Plain Text has a 12-byte fixed header before its sub-blocks; for
+          // Comment the sub-blocks start right after the introducer + label.
+          const subBlockStart = extensionLabel === PLAIN_TEXT_EXTENSION ? offset + 15 : offset + 2;
+          offset = skipSubBlocks(data, subBlockStart);
+          // Comments and plain-text extensions can carry benign content
+          // (tool signatures, captions). Only strip when their payload
+          // actually contains GPS / location / face-recognition patterns.
+          const payload = data.subarray(subBlockStart, offset);
+          if (findDangerousMetadata(payload).dangerous) {
+            stripRanges.push([extensionStart, offset] as const);
+            strippedChunks.push(extensionLabel === COMMENT_EXTENSION ? 'Comment' : 'PlainText');
+            hadTextMetadata = true;
+          }
         } else if (extensionLabel === GRAPHICS_CONTROL_EXTENSION) {
           // Fixed size: introducer (1) + label (1) + block size (1) + data (4) + terminator (1) = 8 bytes
           if (offset + 8 > data.length) {
