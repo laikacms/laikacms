@@ -1120,6 +1120,9 @@ importers:
       typescript:
         specifier: catalog:tools
         version: 6.0.2
+      vitest:
+        specifier: catalog:tools
+        version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@22.19.15)(@vitest/ui@4.1.2)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/shared/crypto:
     dependencies:
@@ -1155,6 +1158,9 @@ importers:
       typescript:
         specifier: catalog:tools
         version: 6.0.2
+      vitest:
+        specifier: catalog:tools
+        version: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@22.19.15)(@vitest/ui@4.1.2)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
   packages/shared/json-api:
     dependencies:
@@ -7660,7 +7666,7 @@ snapshots:
       sirv: 3.0.2
       tinyglobby: 0.2.15
       tinyrainbow: 3.1.0
-      vitest: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@20.19.37)(@vitest/ui@4.1.2)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@20.19.37)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+      vitest: 4.1.2(@opentelemetry/api@1.9.0)(@types/node@22.19.15)(@vitest/ui@4.1.2)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
     optional: true
 
   '@vitest/utils@4.1.2':
