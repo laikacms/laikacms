@@ -22,6 +22,8 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json -w",
     "clean": "rimraf dist",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
@@ -29,6 +31,7 @@
     "@laikacms/i18n": "workspace:^"
   },
   "devDependencies": {
-    "typescript": "catalog:tools"
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
   }
 }
