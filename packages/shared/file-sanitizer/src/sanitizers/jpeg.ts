@@ -8,32 +8,42 @@
  * - Segments: Each starts with 0xFF followed by marker byte
  * - EOI (End of Image): 0xFFD9
  *
- * Only strips segments known to contain dangerous/privacy-sensitive data:
- * - APP1 (0xFFE1): EXIF/XMP - Contains GPS, camera info, timestamps - STRIP
- * - APP13 (0xFFED): IPTC/Photoshop - Contains location, author - STRIP
- * - COM (0xFFFE): Comments - May contain personal info - STRIP
+ * Stripping rules:
+ * - APP1 (0xFFE1): EXIF/XMP — always stripped (privacy-sensitive by nature)
+ * - APP13 (0xFFED): IPTC/Photoshop — always stripped (location, author)
+ * - COM (0xFFFE): Comments — payload is scanned; only stripped when it
+ *   contains GPS / location / face-recognition patterns. Benign comments
+ *   (tool signatures, captions) are preserved.
  *
- * All other segments are preserved, including unknown ones.
+ * The walker only inspects segments before the first SOS marker — that's
+ * where APPn / COM segments live. Once entropy-coded scan data starts, the
+ * rest of the file (including any progressive scans, DHT/DQT segments
+ * between scans, DNL, and EOI) is copied through verbatim. Re-parsing scan
+ * data is what was truncating progressive JPEGs in the previous version.
+ *
+ * If no dangerous segments are found, the original Uint8Array is returned
+ * unchanged — the bytes are not even copied.
  */
 
 import { CorruptedFileError } from '@laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
+import { spliceOutRanges } from '../utils/binary.js';
+import { findDangerousMetadata } from '../utils/metadata-scan.js';
 
 // JPEG markers
 const MARKER_PREFIX = 0xFF;
 const SOI = 0xD8; // Start of Image
-const EOI = 0xD9; // End of Image
-const SOS = 0xDA; // Start of Scan (image data follows)
+const SOS = 0xDA; // Start of Scan (entropy-coded image data follows)
 const APP1 = 0xE1; // EXIF/XMP - STRIP
 const APP13 = 0xED; // IPTC - STRIP
-const COM = 0xFE; // Comment - STRIP
+const COM = 0xFE; // Comment - scanned, only stripped if dangerous
 
-// Markers that don't have length (standalone markers)
+// Markers that don't have a length field.
 const STANDALONE_MARKERS = new Set([
   0xD8, // SOI
   0xD9, // EOI
   0x01, // TEM
-  // RST0-RST7 (0xD0-0xD7)
+  // RST0..RST7
   0xD0,
   0xD1,
   0xD2,
@@ -44,25 +54,19 @@ const STANDALONE_MARKERS = new Set([
   0xD7,
 ]);
 
-// Markers to strip (blocklist) - only privacy-sensitive metadata
-const DANGEROUS_MARKERS = new Set([
+// Markers that are always stripped — binary metadata containers whose
+// presence implies privacy-sensitive content (EXIF, IPTC).
+const ALWAYS_STRIP_MARKERS = new Set([
   0xE1, // APP1 (EXIF/XMP) - GPS, camera info, timestamps
   0xED, // APP13 (IPTC) - location, author, keywords
-  0xFE, // COM (Comment) - may contain personal info
 ]);
 
-/**
- * Check if data starts with JPEG signature (SOI marker)
- */
 function isJpegSignature(data: Uint8Array): boolean {
   return data.length >= 2
     && data[0] === MARKER_PREFIX
     && data[1] === SOI;
 }
 
-/**
- * Read 16-bit big-endian value
- */
 function readUint16BE(data: Uint8Array, offset: number): number {
   return (data[offset] << 8) | data[offset + 1];
 }
@@ -80,24 +84,19 @@ export class JpegSanitizer implements FileSanitizer {
     }
 
     const strippedChunks: string[] = [];
+    const stripRanges: Array<readonly [number, number]> = [];
     let hadTextMetadata = false;
     let hadTimestamps = false;
 
-    // Output buffer - we'll build the sanitized JPEG here
-    const output: number[] = [];
-
-    // Write SOI marker
-    output.push(MARKER_PREFIX, SOI);
-
     let offset = 2; // Skip SOI
 
-    while (offset < data.length) {
-      // Find next marker
+    while (offset < data.length - 1) {
       if (data[offset] !== MARKER_PREFIX) {
         throw new CorruptedFileError(`Invalid JPEG: expected marker at offset ${offset}`);
       }
 
-      // Skip padding bytes (0xFF followed by 0xFF)
+      // Skip JPEG fill bytes — only the last 0xFF before the marker code is
+      // the real introducer. Any leading fill stays in place.
       while (offset < data.length - 1 && data[offset + 1] === MARKER_PREFIX) {
         offset++;
       }
@@ -108,106 +107,51 @@ export class JpegSanitizer implements FileSanitizer {
 
       const marker = data[offset + 1];
 
-      // Handle EOI (End of Image)
-      if (marker === EOI) {
-        output.push(MARKER_PREFIX, EOI);
+      // Stop at SOS. Entropy-coded scan data follows, and progressive JPEGs
+      // interleave more SOS / DHT / DQT segments in between scans — we'd
+      // truncate the file if we tried to parse our way through it.
+      if (marker === SOS) {
         break;
       }
 
-      // Handle standalone markers (no length field)
       if (STANDALONE_MARKERS.has(marker)) {
-        output.push(MARKER_PREFIX, marker);
         offset += 2;
         continue;
       }
 
-      // Read segment length (includes length field itself, but not marker)
       if (offset + 4 > data.length) {
         throw new CorruptedFileError('Invalid JPEG: segment length extends beyond file');
       }
 
       const segmentLength = readUint16BE(data, offset + 2);
-
       if (segmentLength < 2) {
         throw new CorruptedFileError(`Invalid JPEG: segment length too small at offset ${offset}`);
       }
 
       const segmentEnd = offset + 2 + segmentLength;
-
       if (segmentEnd > data.length) {
         throw new CorruptedFileError(`Invalid JPEG: segment extends beyond file at offset ${offset}`);
       }
 
-      // Handle SOS (Start of Scan) - copy everything until EOI
-      if (marker === SOS) {
-        // Copy SOS marker and segment
-        for (let i = offset; i < segmentEnd; i++) {
-          output.push(data[i]);
-        }
+      if (ALWAYS_STRIP_MARKERS.has(marker)) {
+        strippedChunks.push(getMarkerName(marker));
+        stripRanges.push([offset, segmentEnd] as const);
 
-        // Copy all image data until EOI
-        let scanOffset = segmentEnd;
-        while (scanOffset < data.length) {
-          if (data[scanOffset] === MARKER_PREFIX) {
-            // Check if it's a real marker or escaped 0xFF in image data
-            if (scanOffset + 1 < data.length) {
-              const nextByte = data[scanOffset + 1];
-
-              // 0xFF00 is escaped 0xFF in image data
-              if (nextByte === 0x00) {
-                output.push(data[scanOffset], data[scanOffset + 1]);
-                scanOffset += 2;
-                continue;
-              }
-
-              // RST markers can appear in scan data
-              if (nextByte >= 0xD0 && nextByte <= 0xD7) {
-                output.push(data[scanOffset], data[scanOffset + 1]);
-                scanOffset += 2;
-                continue;
-              }
-
-              // EOI marker - we're done
-              if (nextByte === EOI) {
-                output.push(MARKER_PREFIX, EOI);
-                break;
-              }
-
-              // Any other marker - shouldn't happen in valid JPEG
-              // but let's handle it gracefully
-              break;
-            }
-          }
-
-          output.push(data[scanOffset]);
-          scanOffset++;
-        }
-
-        break; // Done processing
-      }
-
-      // Decide whether to strip this segment (BLOCKLIST approach)
-      if (DANGEROUS_MARKERS.has(marker)) {
-        // Strip this segment - it contains privacy-sensitive metadata
-        const markerName = getMarkerName(marker);
-        strippedChunks.push(markerName);
-
-        // Check what kind of metadata this is
         if (marker === APP1) {
-          // APP1 contains EXIF (timestamps, GPS, camera info) or XMP
           hadTimestamps = true;
           hadTextMetadata = true;
         } else if (marker === APP13) {
-          // APP13 contains IPTC (author, location, keywords)
-          hadTextMetadata = true;
-        } else if (marker === COM) {
-          // Comment
           hadTextMetadata = true;
         }
-      } else {
-        // Keep everything else (APP0/JFIF, APP2/ICC, APP14/Adobe, unknown markers, etc.)
-        for (let i = offset; i < segmentEnd; i++) {
-          output.push(data[i]);
+      } else if (marker === COM) {
+        // Comments are kept by default — they often hold benign content
+        // like tool signatures or captions. Only strip when the payload
+        // actually contains GPS / location / face-recognition patterns.
+        const payload = data.subarray(offset + 4, segmentEnd);
+        if (findDangerousMetadata(payload).dangerous) {
+          strippedChunks.push(getMarkerName(marker));
+          stripRanges.push([offset, segmentEnd] as const);
+          hadTextMetadata = true;
         }
       }
 
@@ -221,7 +165,7 @@ export class JpegSanitizer implements FileSanitizer {
     };
 
     return {
-      data: new Uint8Array(output),
+      data: spliceOutRanges(data, stripRanges),
       fileType: 'jpeg',
       strippedMetadata,
       ignored: false,
@@ -229,9 +173,6 @@ export class JpegSanitizer implements FileSanitizer {
   }
 }
 
-/**
- * Get human-readable marker name
- */
 function getMarkerName(marker: number): string {
   if (marker >= 0xE0 && marker <= 0xEF) {
     return `APP${marker - 0xE0}`;
