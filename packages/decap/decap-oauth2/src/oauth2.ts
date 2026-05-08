@@ -1915,6 +1915,16 @@ async function handleResetPassword(
       });
     }
 
+    // Invalidate every existing session for this user. A user resetting their
+    // password is the canonical signal to assume prior tokens may be compromised.
+    if (result.userId) {
+      try {
+        await config.callbacks.logoutAll(result.userId);
+      } catch (err) {
+        config.logger?.error('Failed to invalidate sessions after password reset', err);
+      }
+    }
+
     // Success - show success page
     const successPage = renderResetPasswordSuccessPage({
       baseUrl: url.origin + (config.basePath || ''),
