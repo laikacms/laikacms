@@ -190,6 +190,14 @@ export interface StorageApiOptions {
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
 }
 
+/**
+ * Build a JSON:API handler for the storage repository.
+ *
+ * ⚠️ This handler ships **no authentication**. Wrap it (e.g. with
+ * `@laikacms/decap-api` or a custom middleware that validates a Bearer token)
+ * before exposing it to an untrusted network — otherwise anyone who can reach
+ * `fetch` can read, mutate, and delete storage objects.
+ */
 export function buildJsonApi(options: StorageApiOptions) {
   const { repo, onError, basePath = '' } = options;
 

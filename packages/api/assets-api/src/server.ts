@@ -146,6 +146,14 @@ type JsonApiFolderCreateData = S.Schema.Type<typeof JsonApiFolderCreateSchema>;
 // Server Builder
 // ============================================
 
+/**
+ * Build a JSON:API handler for the assets repository.
+ *
+ * ⚠️ This handler ships **no authentication**. Wrap it (e.g. with
+ * `@laikacms/decap-api` or a custom middleware that validates a Bearer token)
+ * before exposing it to an untrusted network — otherwise anyone who can reach
+ * `fetch` can list, upload, modify, and delete asset binaries.
+ */
 export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
   const { repository, basePath = '/api/assets' } = options;
 

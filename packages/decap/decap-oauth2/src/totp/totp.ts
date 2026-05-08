@@ -86,6 +86,21 @@ export interface OAuthTotpCallbacks {
   storePendingTotpSession(sessionId: string, userId: string, expiresAt: number): Promise<void>;
   /** Get a pending TOTP session */
   getPendingTotpSession(sessionId: string): Promise<{ userId: string } | null>;
+  /**
+   * Delete a pending TOTP session. Called after the session has been consumed
+   * (a TOTP code was successfully verified) so the same session token cannot be
+   * replayed. Optional for backward compatibility — implementations that omit
+   * this rely on natural expiry, which the security audit flags as Medium.
+   */
+  deletePendingTotpSession?(sessionId: string): Promise<void>;
+  /**
+   * Return the most recently consumed TOTP time step for the user, or null if
+   * none has been recorded. Together with `setLastTotpStep` this provides
+   * RFC 6238 §5.2 replay protection. Optional for backward compatibility.
+   */
+  getLastTotpStep?(userId: string): Promise<number | null>;
+  /** Record the time step of a successfully consumed TOTP code. */
+  setLastTotpStep?(userId: string, step: number): Promise<void>;
 }
 
 /**
@@ -259,26 +274,80 @@ export async function verifyTOTP(
   code: string,
   window: number = 1,
 ): Promise<boolean> {
+  const result = await verifyTOTPWithStep(secret, code, window);
+  return result.valid;
+}
+
+/**
+ * Verify a TOTP code and return the matched time step. Callers that wish to
+ * implement RFC 6238 §5.2 replay protection use the returned step to ensure
+ * a code is only accepted once per user.
+ */
+export async function verifyTOTPWithStep(
+  secret: string,
+  code: string,
+  window: number = 1,
+): Promise<{ valid: boolean, step?: number }> {
   // Normalize code
   const normalizedCode = code.replace(/\s/g, '');
   if (normalizedCode.length !== TOTP_DIGITS) {
-    return false;
+    return { valid: false };
   }
 
   const now = Date.now();
+  const currentStep = Math.floor(now / 1000 / TOTP_PERIOD);
 
-  // Check current time step and window
+  // Check current time step and window — iterate the full window even when an
+  // early match is found so total work is constant for the same input length.
+  let matchedStep: number | undefined;
   for (let i = -window; i <= window; i++) {
-    const time = now + (i * TOTP_PERIOD * 1000);
+    const candidateStep = currentStep + i;
+    const time = candidateStep * TOTP_PERIOD * 1000;
     const expectedCode = await generateTOTP(secret, time);
 
-    // Constant-time comparison
     if (await constantTimeEqual(normalizedCode, expectedCode)) {
-      return true;
+      matchedStep = candidateStep;
     }
   }
 
-  return false;
+  return matchedStep === undefined
+    ? { valid: false }
+    : { valid: true, step: matchedStep };
+}
+
+/**
+ * Verify a TOTP code against the OAuth callbacks with RFC 6238 §5.2 replay
+ * protection. If `getLastTotpStep`/`setLastTotpStep` are provided, codes whose
+ * time step is less than or equal to the previously consumed step are rejected.
+ */
+export async function verifyOAuthTOTPWithReplayProtection(
+  userId: string,
+  code: string,
+  callbacks: OAuthTotpCallbacks,
+  options: { window?: number } = {},
+): Promise<{ valid: boolean, replay?: boolean }> {
+  const secret = await callbacks.getTotpSecret(userId);
+  if (!secret) {
+    return { valid: false };
+  }
+
+  const result = await verifyTOTPWithStep(secret, code, options.window ?? 1);
+  if (!result.valid || result.step === undefined) {
+    return { valid: false };
+  }
+
+  if (callbacks.getLastTotpStep) {
+    const last = await callbacks.getLastTotpStep(userId);
+    if (last !== null && result.step <= last) {
+      return { valid: false, replay: true };
+    }
+  }
+
+  if (callbacks.setLastTotpStep) {
+    await callbacks.setLastTotpStep(userId, result.step);
+  }
+
+  return { valid: true };
 }
 
 // ============================================================================

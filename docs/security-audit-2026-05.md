@@ -8,19 +8,20 @@ relevant feature is enabled and exposed to untrusted clients.
 
 ## Summary
 
-| # | Severity | Component               | Issue                                                                         |
-| - | -------- | ----------------------- | ----------------------------------------------------------------------------- |
-| 1 | High     | `decap-oauth2/passkey`  | `userVerification: 'required'` is silently ignored (UV flag never checked)    |
-| 2 | High     | `decap-oauth2`          | Password reset does not invalidate existing OAuth sessions                    |
-| 3 | Medium   | `decap-oauth2/totp`     | TOTP codes can be replayed within the validity window (no last-step tracking) |
-| 4 | Medium   | `decap-oauth2`          | Pending TOTP session is not consumed (re-usable until natural expiry)         |
-| 5 | Medium   | `decap-oauth2`          | Logout endpoint accepts the access token in a `GET` query parameter           |
-| 6 | Medium   | `decap-api`             | API key accepted via `?api_key=` URL query parameter                          |
-| 7 | Medium   | `decap-oauth2`          | Open redirect after TOTP setup verification                                   |
-| 8 | Low      | `*-api` server packages | Built without authentication; documentation does not warn about this          |
+| # | Severity | Component               | Issue                                                                         | Status |
+| - | -------- | ----------------------- | ----------------------------------------------------------------------------- | ------ |
+| 1 | High     | `decap-oauth2/passkey`  | `userVerification: 'required'` is silently ignored (UV flag never checked)    | Fixed  |
+| 2 | High     | `decap-oauth2`          | Password reset does not invalidate existing OAuth sessions                    | Fixed  |
+| 3 | Medium   | `decap-oauth2/totp`     | TOTP codes can be replayed within the validity window (no last-step tracking) | Fixed  |
+| 4 | Medium   | `decap-oauth2`          | Pending TOTP session is not consumed (re-usable until natural expiry)         | Fixed  |
+| 5 | Medium   | `decap-oauth2`          | Logout endpoint accepts the access token in a `GET` query parameter           | Fixed  |
+| 6 | Medium   | `decap-api`             | API key accepted via `?api_key=` URL query parameter                          | Fixed  |
+| 7 | Medium   | `decap-oauth2`          | Open redirect after TOTP setup verification                                   | Fixed  |
+| 8 | Low      | `*-api` server packages | Built without authentication; documentation does not warn about this          | Fixed  |
 
-Findings 1 and 2 are addressed by the changes in this commit. The remainder require API-shape
-changes or design discussion and are documented for follow-up.
+All eight findings are addressed by the commits on the audit branch. Findings 3 and 4 introduce new
+optional callbacks on `OAuthTotpCallbacks` so existing implementations keep working but gain replay
+protection once they wire the new callbacks up.
 
 ---
 
@@ -85,9 +86,11 @@ time step for that user. The current `OAuthTotpCallbacks` has no `getLastTotpTim
 `setLastTotpTimeStep` (or equivalent "code already used") hook, so a leaked TOTP code (logs,
 shoulder-surfing, phishing) can be replayed for up to ~90 seconds (with default `window=1`).
 
-**Fix not applied:** Requires extending the `OAuthTotpCallbacks` interface (or `TOTPCallbacks`),
-which is a public API change. Recommended next step: add `getLastTotpTimeStep(userId)` /
-`setLastTotpTimeStep(userId, step)` callbacks and reject codes with `step <= last`.
+**Fix applied:** `verifyTOTPWithStep` now returns the matched time step alongside the verification
+result, and a new `verifyOAuthTOTPWithReplayProtection` helper consults two new optional callbacks
+on `OAuthTotpCallbacks` — `getLastTotpStep(userId)` and `setLastTotpStep(userId, step)` — to reject
+any code whose step is `<= last`. The callbacks are optional so existing storage adapters compile;
+adapters that wire them in get RFC 6238 §5.2 replay protection automatically.
 
 ---
 
@@ -103,9 +106,10 @@ TOTP setup, 5 minutes for passkey+TOTP). An attacker who steals a `totp_session`
 history, logs, or referer headers — it is passed in URL query strings) and who also captures a valid
 TOTP code (see Finding 3) can mint multiple authorization codes from a single interception.
 
-**Fix not applied:** Requires adding `deletePendingTotpSession(sessionId)` to `OAuthTotpCallbacks`,
-which is a public API change. Recommended fix: add the callback and call it on every code-issuance
-path that consumes a TOTP session.
+**Fix applied:** Added an optional `deletePendingTotpSession(sessionId)` callback to
+`OAuthTotpCallbacks`. `handleAuthorize` now calls it on the success path that issues an
+authorization code from a `(totp_session, totp_code)` pair, so a captured `totp_session` cannot be
+reused for further authorizations.
 
 ---
 
@@ -129,9 +133,10 @@ Access tokens placed in a URL leak through:
 Additionally, because the endpoint is `GET`, it is vulnerable to "logout CSRF" via `<img>` /
 `<link rel="prefetch">` tags (low impact, but a nuisance).
 
-**Recommended fix:** Accept the token via the `Authorization: Bearer …` header (and require `POST`
-for state-changing operations). This is a behavior change for any embedder relying on the GET form —
-left for a coordinated update.
+**Fix applied:** `handleLogout` and `handleLogoutAll` now accept the access token via the
+`Authorization: Bearer …` header. They also accept `POST`. The legacy `?access_token=` query
+parameter is still honored for backward compatibility but emits a `logger.warn` so operators can
+spot remaining callers and migrate them.
 
 ---
 
@@ -144,8 +149,11 @@ const urlApiKey = new URL(request.url).searchParams.get('api_key') || undefined;
 ```
 
 Same class of leak as Finding 5. Industry best practice (OWASP API Security, RFC 6750) is to never
-accept bearer credentials via query string. Recommended fix: remove the `api_key` query parameter
-fallback; require `X-API-Key` or `Authorization: ApiKey …`.
+accept bearer credentials via query string.
+
+**Fix applied:** `authenticateRequest` no longer falls back to the `api_key` URL parameter; it
+requires either the `X-API-Key` header or `Authorization: ApiKey <key>`. When a caller still
+provides `?api_key=…`, the request is treated as unauthenticated and a warning is logged.
 
 ---
 
@@ -168,9 +176,9 @@ attached as a query parameter. An attacker who can lure a user to a crafted setu
 session value delivered to a third-party origin, and can combine it with a guessed/replayed TOTP
 code to complete authorization.
 
-**Recommended fix:** Validate that the `redirect_uri` host matches the original `/oauth2/authorize`
-URL (which `handleAuthorize` already controls when redirecting to setup), or restrict to a
-configured allowlist.
+**Fix applied:** `handleTotpSetupVerify` now resolves the supplied `redirect_uri` against the
+request origin and rejects the request when the resulting URL is on a different origin. Relative
+URLs continue to work because they resolve to the same origin.
 
 ---
 
@@ -191,9 +199,10 @@ with no warning that doing so on a public network exposes the entire content sto
 read/write/delete. The `decap-api` wrapper provides authentication, but a developer following the
 storage-api README literally would deploy an unauthenticated CMS backend.
 
-**Recommended fix:** Add a "⚠️ Authentication" section to each `*-api` package's README explaining
-that the package intentionally has no auth and should be wrapped (e.g. with `decapApi` or a custom
-middleware) before being exposed.
+**Fix applied:** The `storage-api` README gained a prominent "⚠️ Authentication" section, and each of
+the four `buildJsonApi` / `buildAssetsApi` exports (`storage-api`, `documents-api`, `assets-api`,
+`contentbase-api`) now carries a JSDoc warning that surfaces in IDE tooltips when a developer
+reaches for the function.
 
 ---
 

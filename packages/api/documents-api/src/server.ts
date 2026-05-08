@@ -266,6 +266,15 @@ type StateTransitionOp = S.Schema.Type<typeof StateTransitionOpSchema>;
 type UpdateUnpublishedOp = S.Schema.Type<typeof UpdateUnpublishedOpSchema>;
 type RemoveOp = S.Schema.Type<typeof RemoveOpSchema>;
 
+/**
+ * Build a JSON:API handler for the documents repository.
+ *
+ * ⚠️ This handler ships **no authentication**. Wrap it (e.g. with
+ * `@laikacms/decap-api` or a custom middleware that validates a Bearer token)
+ * before exposing it to an untrusted network — otherwise anyone who can reach
+ * `fetch` can read, create, modify, publish, unpublish, and delete documents
+ * and revisions.
+ */
 export function buildJsonApi(options: DocumentsApiOptions) {
   const { repo, onError, basePath = '' } = options;
 
