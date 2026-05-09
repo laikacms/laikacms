@@ -1,6 +1,6 @@
 // PKCE OAuth 2.0 implementation for Decap CMS
 // Security hardened for post-quantum computing resistance
-import { TemplateLiteral as TL, Url } from '@laikacms/core';
+import { Header, TemplateLiteral as TL, Url } from '@laikacms/core';
 import {
   addTimingJitter,
   constantTimeEqual,
@@ -10,7 +10,12 @@ import {
 } from '@laikacms/crypto';
 import { type PasswordResetConfig, requestPasswordReset, resetPassword } from './email/email.js';
 import { type OAuthMessages } from './i18n/index.js';
-import { type OAuthTotpConfig, setupOAuthTOTP, verifyOAuthTOTPSetup, verifyTOTP } from './totp/totp.js';
+import {
+  type OAuthTotpConfig,
+  setupOAuthTOTP,
+  verifyOAuthTOTPSetup,
+  verifyOAuthTOTPWithReplayProtection,
+} from './totp/totp.js';
 
 import type { PasskeyConfig } from './passkey/passkey.js';
 import {
@@ -666,30 +671,28 @@ export async function handleAuthorize(
 
     const userId = pendingSession.userId;
 
-    const secret = await config.totp.callbacks.getTotpSecret(userId);
-    if (!secret) {
+    const totpResult = await verifyOAuthTOTPWithReplayProtection(
+      userId,
+      totpCode,
+      config.totp.callbacks,
+      { window: config.totp.window },
+    );
+
+    if (!totpResult.valid) {
       await addTimingJitter();
       return oauthErrorHtml({
-        error: 'server_error',
-        errorDescription: 'TOTP configuration error',
-        status: 500,
+        error: 'access_denied',
+        errorDescription: totpResult.replay ? 'TOTP code already used' : 'Invalid TOTP code',
+        status: 401,
         messages: config.translations,
         goBackHref: config.loginRedirectUrl || '/',
       });
     }
 
-    // Import TOTP verification from totp module
-    const isValidTotp = await verifyTOTP(secret, totpCode);
-
-    if (!isValidTotp) {
-      await addTimingJitter();
-      return oauthErrorHtml({
-        error: 'access_denied',
-        errorDescription: 'Invalid TOTP code',
-        status: 401,
-        messages: config.translations,
-        goBackHref: config.loginRedirectUrl || '/',
-      });
+    // Pending TOTP session is single-use: delete it now so a stolen
+    // session token cannot be replayed within its natural expiry window.
+    if (config.totp.callbacks.deletePendingTotpSession) {
+      await config.totp.callbacks.deletePendingTotpSession(totpSession);
     }
 
     // TOTP verified - generate authorization code
@@ -1310,13 +1313,29 @@ async function handleTotpSetupVerify(
     return oauthError('access_denied', 'Invalid TOTP code', undefined, 401);
   }
 
-  // TOTP is now verified - redirect back to the authorize endpoint
-  // The redirect_uri should be in the original setup URL
+  // TOTP is now verified - redirect back to the authorize endpoint.
+  // The legitimate redirect_uri is the original /authorize URL on this same
+  // origin. Reject cross-origin redirects so a crafted setup URL cannot
+  // exfiltrate the setup_token (which doubles as the TOTP session token) to
+  // an attacker-controlled host.
   const redirectUri = url.searchParams.get('redirect_uri') || formData.get('redirect_uri')?.toString();
 
   if (redirectUri) {
-    // Parse the redirect URI and add the totp_session parameter
-    const redirectUrl = new URL(redirectUri);
+    let redirectUrl: URL;
+    try {
+      redirectUrl = new URL(redirectUri, url.origin);
+    } catch {
+      return oauthError('invalid_request', 'Invalid redirect_uri', undefined, 400);
+    }
+
+    if (redirectUrl.origin !== url.origin) {
+      config.logger?.warn('Rejected cross-origin redirect after TOTP setup', {
+        from: url.origin,
+        to: redirectUrl.origin,
+      });
+      return oauthError('invalid_request', 'redirect_uri must be on the same origin', undefined, 400);
+    }
+
     redirectUrl.searchParams.set('totp_session', setupToken);
 
     return new Response(null, {
@@ -1915,6 +1934,16 @@ async function handleResetPassword(
       });
     }
 
+    // Invalidate every existing session for this user. A user resetting their
+    // password is the canonical signal to assume prior tokens may be compromised.
+    if (result.userId) {
+      try {
+        await config.callbacks.logoutAll(result.userId);
+      } catch (err) {
+        config.logger?.error('Failed to invalidate sessions after password reset', err);
+      }
+    }
+
     // Success - show success page
     const successPage = renderResetPasswordSuccessPage({
       baseUrl: url.origin + (config.basePath || ''),
@@ -1939,10 +1968,39 @@ async function handleResetPassword(
 }
 
 /**
- * Handle logout from a single session (GET /oauth2/logout)
+ * Extract an OAuth access token from a logout request, preferring the
+ * `Authorization: Bearer …` header to avoid leaking the token through server
+ * logs, browser history, and the `Referer` header. The legacy `access_token`
+ * query string is still accepted but logs a warning.
+ */
+function extractLogoutAccessToken(
+  request: Request,
+  url: URL,
+  config: OAuthConfig,
+): string | null {
+  const headerToken = Header.ExtractAuthorizationBearerToken(request.headers.get('Authorization'));
+  if (headerToken) {
+    return validateInputLength(headerToken, SECURITY_CONSTANTS.MAX_TOKEN_LENGTH);
+  }
+
+  const queryToken = url.searchParams.get('access_token');
+  if (queryToken) {
+    config.logger?.warn(
+      'Logout received access_token via query string; tokens in URLs leak through logs and Referer headers. '
+        + 'Use the Authorization: Bearer header instead.',
+    );
+    return validateInputLength(queryToken, SECURITY_CONSTANTS.MAX_TOKEN_LENGTH);
+  }
+
+  return null;
+}
+
+/**
+ * Handle logout from a single session (GET or POST /oauth2/logout)
  *
- * Requires a valid access token in the query parameter.
- * Invalidates the current session only and returns an HTML success page.
+ * Requires a valid access token. Prefer the `Authorization: Bearer …` header;
+ * the legacy `?access_token=` query string is still honored for backward
+ * compatibility but a warning is logged.
  *
  * @param request - The incoming request
  * @param config - OAuth configuration
@@ -1954,17 +2012,15 @@ export async function handleLogout(
 ): Promise<Response> {
   const url = new URL(request.url);
 
-  // Only allow GET requests
-  if (request.method !== 'GET') {
+  if (request.method !== 'GET' && request.method !== 'POST') {
     return oauthError('invalid_request', 'Method not allowed', undefined, 405);
   }
 
-  // Extract access token from query parameter
-  const accessToken = validateInputLength(url.searchParams.get('access_token'), SECURITY_CONSTANTS.MAX_TOKEN_LENGTH);
+  const accessToken = extractLogoutAccessToken(request, url, config);
   if (!accessToken) {
     return oauthErrorHtml({
       error: 'invalid_request',
-      errorDescription: 'Missing or invalid access_token parameter',
+      errorDescription: 'Missing or invalid access token',
       status: 401,
       messages: config.translations,
       goBackHref: config.loginRedirectUrl || '/',
@@ -2015,10 +2071,11 @@ export async function handleLogout(
 }
 
 /**
- * Handle logout from all sessions (GET /oauth2/logout/all)
+ * Handle logout from all sessions (GET or POST /oauth2/logout/all)
  *
- * Requires a valid access token in the query parameter.
- * Invalidates all sessions for the user (logout everywhere) and returns an HTML success page.
+ * Requires a valid access token. Prefer the `Authorization: Bearer …` header;
+ * the legacy `?access_token=` query string is still honored for backward
+ * compatibility but a warning is logged.
  *
  * @param request - The incoming request
  * @param config - OAuth configuration
@@ -2030,17 +2087,15 @@ export async function handleLogoutAll(
 ): Promise<Response> {
   const url = new URL(request.url);
 
-  // Only allow GET requests
-  if (request.method !== 'GET') {
+  if (request.method !== 'GET' && request.method !== 'POST') {
     return oauthError('invalid_request', 'Method not allowed', undefined, 405);
   }
 
-  // Extract access token from query parameter
-  const accessToken = validateInputLength(url.searchParams.get('access_token'), SECURITY_CONSTANTS.MAX_TOKEN_LENGTH);
+  const accessToken = extractLogoutAccessToken(request, url, config);
   if (!accessToken) {
     return oauthErrorHtml({
       error: 'invalid_request',
-      errorDescription: 'Missing or invalid access_token parameter',
+      errorDescription: 'Missing or invalid access token',
       status: 401,
       messages: config.translations,
       goBackHref: config.loginRedirectUrl || '/',

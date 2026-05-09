@@ -107,11 +107,21 @@ export const decapApi = (options: DecapOptions): DecapApi => {
     const authHeader = request.headers.get('Authorization') || undefined;
     const apiKeyHeader = request.headers.get('X-API-Key') || undefined;
     const apiKeyAuth = authHeader ? Header.ExtractAuthorizationApiKey(authHeader) : undefined;
-    const urlApiKey = new URL(request.url).searchParams.get('api_key') || undefined;
+
+    // Bearer credentials must never be accepted via URL query strings
+    // (RFC 6750 §2.3, OWASP API Security): they leak through server logs,
+    // CDN logs, browser history, and the Referer header. If a caller still
+    // sends `?api_key=…`, surface it as an error rather than honoring it.
+    if (new URL(request.url).searchParams.has('api_key')) {
+      options.logger?.warn(
+        'Rejecting api_key supplied via URL query string. Use the X-API-Key header or '
+          + 'Authorization: ApiKey <key>.',
+      );
+    }
 
     try {
       // Validate and extract API key with length limits
-      const rawApiKey = apiKeyHeader || apiKeyAuth || urlApiKey;
+      const rawApiKey = apiKeyHeader || apiKeyAuth;
       const apiKey = rawApiKey ? validateTokenInput(rawApiKey) : null;
 
       if (rawApiKey && !apiKey) {

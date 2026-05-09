@@ -72,6 +72,14 @@ function respondCollection<T extends CollectionSettings>(
   });
 }
 
+/**
+ * Build a JSON:API handler for the contentbase settings provider.
+ *
+ * ⚠️ This handler ships **no authentication**. Wrap it (e.g. with
+ * `@laikacms/decap-api` or a custom middleware that validates a Bearer token)
+ * before exposing it to an untrusted network — otherwise anyone who can reach
+ * `fetch` can read, mutate, and delete collection settings.
+ */
 export function buildJsonApi(repo: ContentBaseSettingsProvider) {
   const app = new Hono();
 

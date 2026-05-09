@@ -289,7 +289,7 @@ export async function verifyRegistration(
   config: PasskeyConfig,
   credentialName?: string,
 ): Promise<{ success: boolean, credentialId?: string, error?: string }> {
-  const { rpId, origin, callbacks } = config;
+  const { rpId, origin, callbacks, userVerification = 'required' } = config;
 
   try {
     // Decode client data
@@ -342,6 +342,12 @@ export async function verifyRegistration(
     // Verify flags
     if (!parsedAuthData.flags.userPresent) {
       return { success: false, error: 'User presence flag not set' };
+    }
+
+    // RFC: when the relying party requires user verification, the authenticator
+    // must report that user verification was performed (PIN/biometric).
+    if (userVerification === 'required' && !parsedAuthData.flags.userVerified) {
+      return { success: false, error: 'User verification required but not performed' };
     }
 
     // Extract credential data
@@ -465,7 +471,7 @@ export async function verifyAuthentication(
   response: AuthenticationResponse,
   config: PasskeyConfig,
 ): Promise<{ success: boolean, userId?: string, credentialId?: string, error?: string }> {
-  const { rpId, origin, callbacks } = config;
+  const { rpId, origin, callbacks, userVerification = 'required' } = config;
 
   try {
     // Get stored credential
@@ -515,6 +521,13 @@ export async function verifyAuthentication(
     // Verify flags
     if (!parsedAuthData.flags.userPresent) {
       return { success: false, error: 'User presence flag not set' };
+    }
+
+    // When the relying party requires user verification, reject responses where
+    // the authenticator did not perform it. Without this check the configured
+    // `userVerification: 'required'` is a request, not an enforcement.
+    if (userVerification === 'required' && !parsedAuthData.flags.userVerified) {
+      return { success: false, error: 'User verification required but not performed' };
     }
 
     // Verify signature

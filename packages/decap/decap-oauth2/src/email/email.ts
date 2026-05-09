@@ -291,7 +291,7 @@ export async function resetPassword(
   token: string,
   newPassword: string,
   config: PasswordResetConfig,
-): Promise<{ success: boolean, error?: string }> {
+): Promise<{ success: boolean, userId?: string, error?: string }> {
   const { callbacks } = config;
 
   // Validate inputs
@@ -326,5 +326,5 @@ export async function resetPassword(
   // Delete the used token
   await callbacks.deleteResetToken(token);
 
-  return { success: true };
+  return { success: true, userId: resetToken.userId };
 }
