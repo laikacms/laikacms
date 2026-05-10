@@ -6,20 +6,29 @@ why, and in what order.
 
 ## Current state
 
-Vitest 4.x is wired into the workspace catalog and Turbo has a `test` task, but the repo currently
-ships **zero test files** across all 39 packages. Five packages declare a `test` script
-(`vitest run`) — `@laikacms/crypto`, `@laikacms/file-sanitizer`,
-`@laikacms/contentbase-settings-ddb`, `@laikacms/contentbase-settings-default`, and
-`@laikacms/documents-contentbase` — but none of them contain any tests, so the suites pass
-vacuously.
+Vitest 4.x is wired into the workspace catalog and Turbo has a `test` task. Tests now exist for
+several modules under `packages/laikacms/src/shared/crypto/`,
+`packages/laikacms/src/shared/file-sanitizer/`, `packages/aws/src/contentbase-settings-ddb/`,
+`packages/laikacms/src/impl/contentbase-settings-default/`, and
+`packages/laikacms/src/impl/documents-contentbase/`. Coverage across the rest of the codebase is
+still incomplete — see "Where to invest first" below for the remaining priorities.
 
-| Metric                                            | Value |
-| ------------------------------------------------- | ----- |
-| Source files (`.ts`/`.tsx`, excluding `.d.ts`)    | ~241  |
-| Test files (`*.test.*`, `*.spec.*`, `__tests__/`) | 0     |
-| Packages with a `test` script                     | 5     |
-| Packages with actual tests                        | 0     |
-| Coverage tooling configured                       | None  |
+> Note: this document predates the package consolidation that merged the original 39 packages into
+> `laikacms`, `@laikacms/aws`, `@laikacms/decap`, and `@laikacms/github`. References to module paths
+> (e.g. `packages/shared/crypto`) have been updated where they are wrong; the high-level
+> test-rollout guidance is still applicable.
+
+| Metric                                            | Value (snapshot, pre-consolidation) |
+| ------------------------------------------------- | ----------------------------------- |
+| Source files (`.ts`/`.tsx`, excluding `.d.ts`)    | ~241                                |
+| Test files (`*.test.*`, `*.spec.*`, `__tests__/`) | 0                                   |
+| Packages with a `test` script                     | 5                                   |
+| Packages with actual tests                        | 0                                   |
+| Coverage tooling configured                       | None                                |
+
+(These numbers reflect the pre-consolidation state. Today the repo has 4 publishable packages plus
+one private dev-tools package; tests have been added in several locations — re-run `pnpm coverage`
+for the current figures.)
 
 ## Where to invest first
 
@@ -29,27 +38,27 @@ The priorities below are ordered by risk reduction per hour of work.
 
 These modules are where bugs become CVEs.
 
-- **`packages/shared/crypto`** (`constant-time.ts`, `hash.ts`, `password.ts`, `random.ts`,
-  `timing.ts`). Use known-answer test vectors from RFCs/NIST, property-test that constant-time
-  comparisons do not short-circuit, fuzz password hashing parameters, and assert non-determinism
-  plus entropy on `random`.
-- **`packages/decap/decap-oauth2`** (27 source files including `passkey/`, `totp/`, OAuth2 flow).
-  Cover PKCE state/nonce handling, TOTP RFC 6238 vectors, replay-attack rejection, passkey challenge
-  verification, and redirect-URI allowlisting.
-- **`packages/shared/file-sanitizer`** (16 files: jpeg/gif/webp/png sanitizers). Feed real
-  EXIF-laden samples and assert metadata is stripped. Add malformed-input/fuzz tests so a crafted
-  file cannot crash the parser.
+- **`packages/laikacms/src/shared/crypto`** (`constant-time.ts`, `hash.ts`, `password.ts`,
+  `random.ts`, `timing.ts`). Use known-answer test vectors from RFCs/NIST, property-test that
+  constant-time comparisons do not short-circuit, fuzz password hashing parameters, and assert
+  non-determinism plus entropy on `random`.
+- **`packages/decap/src/decap-oauth2`** (27 source files including `passkey/`, `totp/`, OAuth2
+  flow). Cover PKCE state/nonce handling, TOTP RFC 6238 vectors, replay-attack rejection, passkey
+  challenge verification, and redirect-URI allowlisting.
+- **`packages/laikacms/src/shared/file-sanitizer`** (16 files: jpeg/gif/webp/png sanitizers). Feed
+  real EXIF-laden samples and assert metadata is stripped. Add malformed-input/fuzz tests so a
+  crafted file cannot crash the parser.
 
 ### 2. Domain contracts
 
 Domain packages define the interfaces every implementation depends on. Drift here breaks everything
 downstream.
 
-- **`packages/domain/storage`** — repository, provider, format, serializer roundtrips, cache
-  invalidation rules.
-- **`packages/domain/documents`** — revision lifecycle (`revision.ts`, `revision-create.ts`,
-  `revision-summary.ts`) and repository CRUD invariants.
-- **`packages/domain/assets`** — asset URL generation and create/update flows.
+- **`packages/laikacms/src/domain/storage`** — repository, provider, format, serializer roundtrips,
+  cache invalidation rules.
+- **`packages/laikacms/src/domain/documents`** — revision lifecycle (`revision.ts`,
+  `revision-create.ts`, `revision-summary.ts`) and repository CRUD invariants.
+- **`packages/laikacms/src/domain/assets`** — asset URL generation and create/update flows.
 
 The pattern: each domain package should export a **shared conformance test suite** that any
 implementation can re-run against itself. See section 3.
@@ -69,9 +78,9 @@ package and lock in behavior permanently.
 
 ### 5. JSON:API surface
 
-`packages/shared/json-api`, the four `*-api` packages, and the three `*-jsonapi-proxy` impls all
-share the JSON:API wire format. A single fixture-driven contract test, run against both proxies and
-servers, is enough to catch most regressions.
+`packages/laikacms/src/shared/json-api`, the four `*-api` subpaths, and the three `*-jsonapi-proxy`
+impls all share the JSON:API wire format. A single fixture-driven contract test, run against both
+proxies and servers, is enough to catch most regressions.
 
 ### 6. Don't add a `test` script until there are real tests
 
@@ -89,8 +98,8 @@ there are tests worth running.
   that's the next coverage step once the test suites are dense enough.
 - **No enforcement that packages opt into tests.** Only 5 of 39 packages declare a `test` script.
   `scripts/validate-packages.ts` is the natural place to require one.
-- **No shared test utilities package.** Worth adding `packages/shared/testing` for fixtures,
-  in-memory mocks, and the domain conformance suites mentioned above.
+- **No shared test utilities package.** Worth adding `packages/laikacms/src/shared/testing` for
+  fixtures, in-memory mocks, and the domain conformance suites mentioned above.
 - **No integration test layer.** Once unit tests exist, add a small e2e harness that boots a `*-api`
   server against an in-memory impl and exercises real HTTP.
 

@@ -7,8 +7,8 @@
 
 ```typescript
 // src/index.ts
-import { buildJsonApi } from '@laikacms/storage-api';
-import { R2StorageRepository } from '@laikacms/storage-r2';
+import { buildJsonApi } from 'laikacms/storage-api';
+import { R2StorageRepository } from 'laikacms/storage-r2';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -36,26 +36,13 @@ Deploy: `wrangler deploy`
 
 ```typescript
 import { serve } from '@hono/node-server';
-import { buildJsonApi } from '@laikacms/storage-api';
-import { FileSystemStorageRepository } from '@laikacms/storage-fs';
+import { buildJsonApi } from 'laikacms/storage-api';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 
 const repo = new FileSystemStorageRepository({ basePath: './content' });
 const api = buildJsonApi({ repo });
 
 serve({ fetch: api.fetch, port: 3000 });
-```
-
-## AWS Lambda
-
-```typescript
-import { buildJsonApi } from '@laikacms/storage-api';
-import { S3StorageRepository } from '@laikacms/storage-s3';
-import { handle } from 'hono/aws-lambda';
-
-const repo = new S3StorageRepository({ bucket: process.env.BUCKET_NAME });
-const api = buildJsonApi({ repo });
-
-export const handler = handle(api);
 ```
 
 ## Environment Variables

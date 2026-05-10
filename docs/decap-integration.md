@@ -3,20 +3,18 @@
 ## Backend Setup
 
 ```bash
-pnpm add @laikacms/documents @laikacms/documents-api \
-  @laikacms/assets @laikacms/assets-api \
-  @laikacms/storage-r2 @laikacms/assets-r2 hono
+pnpm add laikacms hono
 ```
 
 ```typescript
 // src/index.ts
-import { buildJsonApi as buildAssetsApi } from '@laikacms/assets-api';
-import { R2AssetsRepository } from '@laikacms/assets-r2';
-import { buildJsonApi as buildDocumentsApi } from '@laikacms/documents-api';
-import { DocumentsContentbaseRepository } from '@laikacms/documents-contentbase';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { jwt } from 'hono/jwt';
+import { buildJsonApi as buildAssetsApi } from 'laikacms/assets-api';
+import { R2AssetsRepository } from 'laikacms/assets-r2';
+import { buildJsonApi as buildDocumentsApi } from 'laikacms/documents-api';
+import { DocumentsContentbaseRepository } from 'laikacms/documents-contentbase';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -39,12 +37,12 @@ export default app;
 ## Frontend Setup
 
 ```bash
-pnpm add @laikacms/decap-cms-backend-laika decap-cms-app
+pnpm add @laikacms/decap decap-cms-app
 ```
 
 ```typescript
 // admin/index.tsx
-import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
+import createLaikaBackend from '@laikacms/decap/decap-cms-backend-laika';
 import CMS from 'decap-cms-app';
 
 CMS.registerBackend('laika', createLaikaBackend());
@@ -73,21 +71,22 @@ collections:
 ## OAuth2 Setup
 
 ```bash
-pnpm add @laikacms/decap-oauth2
+pnpm add @laikacms/decap
 ```
 
-Configure your OAuth provider (GitHub, GitLab, etc.) and deploy the OAuth server.
+The OAuth2 server is exposed as the `@laikacms/decap/decap-oauth2` subpath. Configure your OAuth
+provider (GitHub, GitLab, etc.) and deploy the OAuth server.
 
 ## Widgets
 
-| Widget       | Package                                  |
-| ------------ | ---------------------------------------- |
-| AI Chat      | `@laikacms/decap-cms-widget-ai-chat`     |
-| Lucide Icons | `@laikacms/decap-cms-widget-lucide-icon` |
-| Radix Icons  | `@laikacms/decap-cms-widget-radix-icon`  |
+| Widget       | Subpath                                        |
+| ------------ | ---------------------------------------------- |
+| AI Chat      | `@laikacms/decap/decap-cms-widget-ai-chat`     |
+| Lucide Icons | `@laikacms/decap/decap-cms-widget-lucide-icon` |
+| Radix Icons  | `@laikacms/decap/decap-cms-widget-radix-icon`  |
 
 ```typescript
-import { LucideIconPreview, LucideIconWidget } from '@laikacms/decap-cms-widget-lucide-icon';
+import { LucideIconPreview, LucideIconWidget } from '@laikacms/decap/decap-cms-widget-lucide-icon';
 import CMS from 'decap-cms-app';
 
 CMS.registerWidget('lucide-icon', LucideIconWidget, LucideIconPreview);
