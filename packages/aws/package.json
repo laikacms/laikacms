@@ -1,0 +1,75 @@
+{
+  "name": "@laikacms/aws",
+  "version": "0.1.2",
+  "description": "AWS service implementations for Laika CMS (DynamoDB, etc.).",
+  "keywords": [
+    "aws",
+    "dynamodb",
+    "headless-cms"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    "./contentbase-settings-ddb": {
+      "types": "./dist/contentbase-settings-ddb/index.d.ts",
+      "import": "./dist/contentbase-settings-ddb/index.js",
+      "default": "./dist/contentbase-settings-ddb/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "effect": "catalog:default",
+    "json-schema": "catalog:schema",
+    "superjson": "^2.2.6"
+  },
+  "peerDependencies": {
+    "@aws-sdk/client-dynamodb": "catalog:aws",
+    "@aws-sdk/lib-dynamodb": "catalog:aws"
+  },
+  "peerDependenciesMeta": {
+    "@aws-sdk/client-dynamodb": {
+      "optional": true
+    },
+    "@aws-sdk/lib-dynamodb": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@aws-sdk/client-dynamodb": "catalog:aws",
+    "@aws-sdk/lib-dynamodb": "catalog:aws",
+    "@types/json-schema": "catalog:types",
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -1,0 +1,224 @@
+{
+  "name": "@laikacms/decap",
+  "version": "0.1.2",
+  "description": "Decap CMS integrations for Laika CMS: backend, OAuth2, widgets, and AI chat.",
+  "keywords": [
+    "decap-cms",
+    "headless-cms",
+    "oauth2",
+    "widgets"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    "./decap-ai": {
+      "types": "./dist/decap-ai/index.d.ts",
+      "import": "./dist/decap-ai/index.js",
+      "default": "./dist/decap-ai/index.js"
+    },
+    "./decap-ai/tools": {
+      "types": "./dist/decap-ai/tools/index.d.ts",
+      "import": "./dist/decap-ai/tools/index.js",
+      "default": "./dist/decap-ai/tools/index.js"
+    },
+    "./decap-ai/i18n/types": {
+      "types": "./dist/decap-ai/i18n/types.d.ts",
+      "import": "./dist/decap-ai/i18n/types.js",
+      "default": "./dist/decap-ai/i18n/types.js"
+    },
+    "./decap-ai/i18n/en": {
+      "types": "./dist/decap-ai/i18n/en.d.ts",
+      "import": "./dist/decap-ai/i18n/en.js",
+      "default": "./dist/decap-ai/i18n/en.js"
+    },
+    "./decap-ai/i18n/nl": {
+      "types": "./dist/decap-ai/i18n/nl.d.ts",
+      "import": "./dist/decap-ai/i18n/nl.js",
+      "default": "./dist/decap-ai/i18n/nl.js"
+    },
+    "./decap-api": {
+      "types": "./dist/decap-api/index.d.ts",
+      "import": "./dist/decap-api/index.js",
+      "default": "./dist/decap-api/index.js"
+    },
+    "./decap-cms-backend-laika": {
+      "types": "./dist/decap-cms-backend-laika/index.d.ts",
+      "import": "./dist/decap-cms-backend-laika/index.js",
+      "default": "./dist/decap-cms-backend-laika/index.js"
+    },
+    "./decap-cms-editor-component-embedded-entry": {
+      "types": "./dist/decap-cms-editor-component-embedded-entry/index.d.ts",
+      "import": "./dist/decap-cms-editor-component-embedded-entry/index.js",
+      "default": "./dist/decap-cms-editor-component-embedded-entry/index.js"
+    },
+    "./decap-cms-locale-nl": {
+      "types": "./dist/decap-cms-locale-nl/index.d.ts",
+      "import": "./dist/decap-cms-locale-nl/index.js",
+      "default": "./dist/decap-cms-locale-nl/index.js"
+    },
+    "./decap-cms-widget-ai-chat": {
+      "types": "./dist/decap-cms-widget-ai-chat/index.d.ts",
+      "import": "./dist/decap-cms-widget-ai-chat/index.js",
+      "default": "./dist/decap-cms-widget-ai-chat/index.js"
+    },
+    "./decap-cms-widget-ai-chat/i18n/types": {
+      "types": "./dist/decap-cms-widget-ai-chat/i18n/types.d.ts",
+      "import": "./dist/decap-cms-widget-ai-chat/i18n/types.js",
+      "default": "./dist/decap-cms-widget-ai-chat/i18n/types.js"
+    },
+    "./decap-cms-widget-ai-chat/i18n/en": {
+      "types": "./dist/decap-cms-widget-ai-chat/i18n/en.d.ts",
+      "import": "./dist/decap-cms-widget-ai-chat/i18n/en.js",
+      "default": "./dist/decap-cms-widget-ai-chat/i18n/en.js"
+    },
+    "./decap-cms-widget-ai-chat/i18n/nl": {
+      "types": "./dist/decap-cms-widget-ai-chat/i18n/nl.d.ts",
+      "import": "./dist/decap-cms-widget-ai-chat/i18n/nl.js",
+      "default": "./dist/decap-cms-widget-ai-chat/i18n/nl.js"
+    },
+    "./decap-cms-widget-lucide-icon": {
+      "types": "./dist/decap-cms-widget-lucide-icon/index.d.ts",
+      "import": "./dist/decap-cms-widget-lucide-icon/index.js",
+      "default": "./dist/decap-cms-widget-lucide-icon/index.js"
+    },
+    "./decap-cms-widget-radix-icon": {
+      "types": "./dist/decap-cms-widget-radix-icon/index.d.ts",
+      "import": "./dist/decap-cms-widget-radix-icon/index.js",
+      "default": "./dist/decap-cms-widget-radix-icon/index.js"
+    },
+    "./decap-oauth2": {
+      "types": "./dist/decap-oauth2/index.d.ts",
+      "import": "./dist/decap-oauth2/index.js",
+      "default": "./dist/decap-oauth2/index.js"
+    },
+    "./decap-oauth2/i18n": {
+      "types": "./dist/decap-oauth2/i18n/index.d.ts",
+      "import": "./dist/decap-oauth2/i18n/index.js",
+      "default": "./dist/decap-oauth2/i18n/index.js"
+    },
+    "./decap-oauth2/i18n/en": {
+      "types": "./dist/decap-oauth2/i18n/translations/en.d.ts",
+      "import": "./dist/decap-oauth2/i18n/translations/en.js",
+      "default": "./dist/decap-oauth2/i18n/translations/en.js"
+    },
+    "./decap-oauth2/i18n/nl": {
+      "types": "./dist/decap-oauth2/i18n/translations/nl.d.ts",
+      "import": "./dist/decap-oauth2/i18n/translations/nl.js",
+      "default": "./dist/decap-oauth2/i18n/translations/nl.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "@ai-sdk/react": "catalog:ai",
+    "ai": "catalog:ai",
+    "aws-jwt-verify": "catalog:aws",
+    "effect": "catalog:default",
+    "fast-json-patch": "^3.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "jwt-decode": "^4.0.0",
+    "uuid": "^13.0.0",
+    "zod": "^3.25.76"
+  },
+  "peerDependencies": {
+    "@emotion/css": "catalog:legacy",
+    "@emotion/react": "catalog:legacy",
+    "@octokit/rest": "catalog:octokit",
+    "@radix-ui/react-icons": "catalog:icons",
+    "decap-cms-backend-github": "catalog:decap",
+    "decap-cms-core": "catalog:decap",
+    "decap-cms-lib-auth": "catalog:decap",
+    "decap-cms-lib-util": "catalog:decap",
+    "decap-cms-ui-auth": "catalog:decap",
+    "decap-cms-ui-default": "catalog:decap",
+    "lucide-react": "catalog:icons",
+    "react": "catalog:react",
+    "react-dom": "catalog:react",
+    "react-redux": "^7.2.0"
+  },
+  "peerDependenciesMeta": {
+    "@emotion/css": {
+      "optional": true
+    },
+    "@emotion/react": {
+      "optional": true
+    },
+    "@octokit/rest": {
+      "optional": true
+    },
+    "@radix-ui/react-icons": {
+      "optional": true
+    },
+    "decap-cms-backend-github": {
+      "optional": true
+    },
+    "decap-cms-core": {
+      "optional": true
+    },
+    "decap-cms-lib-auth": {
+      "optional": true
+    },
+    "decap-cms-lib-util": {
+      "optional": true
+    },
+    "decap-cms-ui-auth": {
+      "optional": true
+    },
+    "decap-cms-ui-default": {
+      "optional": true
+    },
+    "lucide-react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "react-redux": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/jwt-decode": "^3.1.0",
+    "@types/node": "catalog:types",
+    "@types/react": "catalog:types",
+    "@types/react-dom": "catalog:types",
+    "@types/react-redux": "^7.1.34",
+    "@types/uuid": "^10.0.0",
+    "immutable": "catalog:legacy",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

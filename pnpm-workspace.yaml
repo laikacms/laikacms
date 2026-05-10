@@ -1,15 +1,14 @@
 packages:
-  - "packages/domain/*"
-  - "packages/impl/*"
-  - "packages/api/*"
-  - "packages/serializers/*"
-  - "packages/shared/*"
-  - "packages/decap/*"
+  - "packages/laikacms"
+  - "packages/decap"
+  - "packages/aws"
+  - "packages/github"
   - "packages/tools/*"
+  - "apps/*"
 
 catalogs:
   default:
-    "effect": "^4.0.0-beta.40"
+    "effect": "4.0.0-beta.40"
     "lexical": "^0.42.0"
     "@lexical/rich-text": "^0.42.0"
     "@tailwindcss/vite": "^4.2.2"
@@ -76,6 +75,7 @@ catalogs:
 
   octokit:
     "@octokit/rest": "^22.0.1"
+    "@octokit/auth-app": "^7.1.4"
 
   decap:
     "decap-cms-backend-github": "^3.5.0"

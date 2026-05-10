@@ -1,32 +1,8 @@
 {
-  "name": "laikacms",
-  "version": "0.1.0",
-  "description": "The basis for modern content management.",
-  "keywords": [
-    "headless-cms",
-    "content-management",
-    "jamstack",
-    "react",
-    "typescript"
-  ],
-  "author": {
-    "name": "Sem Postma",
-    "email": "sem@laikacms.com",
-    "url": "https://sem-postma.com"
-  },
-  "homepage": "https://github.com/laikacms/laikacms",
-  "bugs": {
-    "email": "sem@laikacms.com",
-    "url": "https://github.com/laikacms/laikacms/issues"
-  },
+  "private": true,
+  "description": "Laika CMS workspace root.",
   "license": "MIT",
-  "contributors": [],
-  "maintainers": [],
   "repository": "https://github.com/laikacms/laikacms",
-  "funding": {
-    "type": "github",
-    "url": "https://github.com/laikacms/laikacms/sponsors"
-  },
   "scripts": {
     "clean": "rimraf --glob '**/node_modules' '**/dist' '**/.turbo' '**/cdk.out' '**/.tanstack/*' '**/.wrangler/*'",
     "build": "turbo run build",
@@ -34,8 +10,6 @@
     "types": "turbo run types",
     "test": "turbo run test",
     "coverage": "turbo run test -- --coverage --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=html",
-    "link:global": "turbo run link",
-    "scripts:validate-packages": "tsx scripts/validate-packages.ts",
     "lint": "eslint --cache --config eslint.config.mjs .",
     "lint:fix": "eslint --fix --cache --config eslint.config.mjs .",
     "format": "dprint fmt",

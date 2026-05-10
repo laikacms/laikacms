@@ -1,0 +1,64 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "ignoreDeprecations": "6.0",
+    "rootDir": "src",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "types": ["node"],
+    "paths": {
+      "@laikacms/assets-api": ["src/api/assets-api/index.ts"],
+      "@laikacms/contentbase-api": ["src/api/contentbase-api/index.ts"],
+      "@laikacms/documents-api": ["src/api/documents-api/index.ts"],
+      "@laikacms/storage-api": ["src/api/storage-api/index.ts"],
+
+      "@laikacms/assets": ["src/domain/assets/index.ts"],
+      "@laikacms/contentbase-settings": ["src/domain/contentbase-settings/index.ts"],
+      "@laikacms/documents": ["src/domain/documents/index.ts"],
+      "@laikacms/storage": ["src/domain/storage/index.ts"],
+
+      "@laikacms/assets-jsonapi-proxy": ["src/impl/assets-jsonapi-proxy/index.ts"],
+      "@laikacms/assets-r2": ["src/impl/assets-r2/index.ts"],
+      "@laikacms/contentbase-settings-default": ["src/impl/contentbase-settings-default/index.ts"],
+      "@laikacms/documents-contentbase": ["src/impl/documents-contentbase/index.ts"],
+      "@laikacms/documents-drizzle": ["src/impl/documents-drizzle/index.ts"],
+      "@laikacms/documents-jsonapi-proxy": ["src/impl/documents-jsonapi-proxy/index.ts"],
+      "@laikacms/storage-drizzle": ["src/impl/storage-drizzle/index.ts"],
+      "@laikacms/storage-fs": ["src/impl/storage-fs/index.ts"],
+      "@laikacms/storage-jsonapi-proxy": ["src/impl/storage-jsonapi-proxy/index.ts"],
+      "@laikacms/storage-r2": ["src/impl/storage-r2/index.ts"],
+
+      "@laikacms/storage-serializers-json": ["src/serializers/storage-serializers-json/index.ts"],
+      "@laikacms/storage-serializers-markdown": ["src/serializers/storage-serializers-markdown/index.ts"],
+      "@laikacms/storage-serializers-raw": ["src/serializers/storage-serializers-raw/index.ts"],
+      "@laikacms/storage-serializers-yaml": ["src/serializers/storage-serializers-yaml/index.ts"],
+
+      "@laikacms/core": ["src/shared/core/index.ts"],
+      "@laikacms/crypto": ["src/shared/crypto/index.ts"],
+      "@laikacms/file-sanitizer": ["src/shared/file-sanitizer/index.ts"],
+      "@laikacms/i18n": ["src/shared/i18n/index.ts"],
+      "@laikacms/json-api": ["src/shared/json-api/index.ts"],
+      "@laikacms/sanitizer": ["src/shared/sanitizer/index.ts"]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "src/impl/assets-r2/worker-configuration.d.ts"
+  ],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}

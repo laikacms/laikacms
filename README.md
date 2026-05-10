@@ -77,6 +77,11 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Releasing
 
+All public packages (`laikacms`, `@laikacms/aws`, `@laikacms/decap`, `@laikacms/github`) are
+released together at the same version (changesets `fixed` group). Internal `workspace:*` references
+are pinned to the exact version on publish. `@laikacms/dynamodb-local` is `private` and never
+published — its version stays in lockstep with the rest but is not pushed to npm.
+
 ```
 pnpm changeset
 pnpm changeset version

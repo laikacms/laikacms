@@ -1,0 +1,68 @@
+{
+  "name": "@laikacms/github",
+  "version": "0.1.2",
+  "description": "GitHub-backed StorageRepository for Laika CMS. Stores content in a GitHub repository; authenticates as a GitHub App via installation tokens.",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "github",
+    "storage",
+    "octokit"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./storage-gh": {
+      "types": "./dist/storage-gh/index.d.ts",
+      "import": "./dist/storage-gh/index.js",
+      "default": "./dist/storage-gh/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "@octokit/auth-app": "catalog:octokit",
+    "@octokit/rest": "catalog:octokit",
+    "effect": "catalog:default",
+    "minimatch": "^10.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -1,0 +1,236 @@
+{
+  "name": "laikacms",
+  "version": "0.1.2",
+  "description": "The basis for modern content management.",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "jamstack",
+    "typescript"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/laikacms/laikacms/sponsors"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    "./assets-api": {
+      "types": "./dist/api/assets-api/index.d.ts",
+      "import": "./dist/api/assets-api/index.js",
+      "default": "./dist/api/assets-api/index.js"
+    },
+    "./contentbase-api": {
+      "types": "./dist/api/contentbase-api/index.d.ts",
+      "import": "./dist/api/contentbase-api/index.js",
+      "default": "./dist/api/contentbase-api/index.js"
+    },
+    "./documents-api": {
+      "types": "./dist/api/documents-api/index.d.ts",
+      "import": "./dist/api/documents-api/index.js",
+      "default": "./dist/api/documents-api/index.js"
+    },
+    "./storage-api": {
+      "types": "./dist/api/storage-api/index.d.ts",
+      "import": "./dist/api/storage-api/index.js",
+      "default": "./dist/api/storage-api/index.js"
+    },
+    "./assets": {
+      "types": "./dist/domain/assets/index.d.ts",
+      "import": "./dist/domain/assets/index.js",
+      "default": "./dist/domain/assets/index.js"
+    },
+    "./contentbase-settings": {
+      "types": "./dist/domain/contentbase-settings/index.d.ts",
+      "import": "./dist/domain/contentbase-settings/index.js",
+      "default": "./dist/domain/contentbase-settings/index.js"
+    },
+    "./documents": {
+      "types": "./dist/domain/documents/index.d.ts",
+      "import": "./dist/domain/documents/index.js",
+      "default": "./dist/domain/documents/index.js"
+    },
+    "./storage": {
+      "types": "./dist/domain/storage/index.d.ts",
+      "import": "./dist/domain/storage/index.js",
+      "default": "./dist/domain/storage/index.js"
+    },
+    "./assets-jsonapi-proxy": {
+      "types": "./dist/impl/assets-jsonapi-proxy/index.d.ts",
+      "import": "./dist/impl/assets-jsonapi-proxy/index.js",
+      "default": "./dist/impl/assets-jsonapi-proxy/index.js"
+    },
+    "./assets-r2": {
+      "types": "./dist/impl/assets-r2/index.d.ts",
+      "import": "./dist/impl/assets-r2/index.js",
+      "default": "./dist/impl/assets-r2/index.js"
+    },
+    "./contentbase-settings-default": {
+      "types": "./dist/impl/contentbase-settings-default/index.d.ts",
+      "import": "./dist/impl/contentbase-settings-default/index.js",
+      "default": "./dist/impl/contentbase-settings-default/index.js"
+    },
+    "./documents-contentbase": {
+      "types": "./dist/impl/documents-contentbase/index.d.ts",
+      "import": "./dist/impl/documents-contentbase/index.js",
+      "default": "./dist/impl/documents-contentbase/index.js"
+    },
+    "./documents-drizzle": {
+      "types": "./dist/impl/documents-drizzle/index.d.ts",
+      "import": "./dist/impl/documents-drizzle/index.js",
+      "default": "./dist/impl/documents-drizzle/index.js"
+    },
+    "./documents-jsonapi-proxy": {
+      "types": "./dist/impl/documents-jsonapi-proxy/index.d.ts",
+      "import": "./dist/impl/documents-jsonapi-proxy/index.js",
+      "default": "./dist/impl/documents-jsonapi-proxy/index.js"
+    },
+    "./storage-drizzle": {
+      "types": "./dist/impl/storage-drizzle/index.d.ts",
+      "import": "./dist/impl/storage-drizzle/index.js",
+      "default": "./dist/impl/storage-drizzle/index.js"
+    },
+    "./storage-fs": {
+      "types": "./dist/impl/storage-fs/index.d.ts",
+      "import": "./dist/impl/storage-fs/index.js",
+      "default": "./dist/impl/storage-fs/index.js"
+    },
+    "./storage-jsonapi-proxy": {
+      "types": "./dist/impl/storage-jsonapi-proxy/index.d.ts",
+      "import": "./dist/impl/storage-jsonapi-proxy/index.js",
+      "default": "./dist/impl/storage-jsonapi-proxy/index.js"
+    },
+    "./storage-r2": {
+      "types": "./dist/impl/storage-r2/index.d.ts",
+      "import": "./dist/impl/storage-r2/index.js",
+      "default": "./dist/impl/storage-r2/index.js"
+    },
+    "./storage-serializers-json": {
+      "types": "./dist/serializers/storage-serializers-json/index.d.ts",
+      "import": "./dist/serializers/storage-serializers-json/index.js",
+      "default": "./dist/serializers/storage-serializers-json/index.js"
+    },
+    "./storage-serializers-markdown": {
+      "types": "./dist/serializers/storage-serializers-markdown/index.d.ts",
+      "import": "./dist/serializers/storage-serializers-markdown/index.js",
+      "default": "./dist/serializers/storage-serializers-markdown/index.js"
+    },
+    "./storage-serializers-raw": {
+      "types": "./dist/serializers/storage-serializers-raw/index.d.ts",
+      "import": "./dist/serializers/storage-serializers-raw/index.js",
+      "default": "./dist/serializers/storage-serializers-raw/index.js"
+    },
+    "./storage-serializers-yaml": {
+      "types": "./dist/serializers/storage-serializers-yaml/index.d.ts",
+      "import": "./dist/serializers/storage-serializers-yaml/index.js",
+      "default": "./dist/serializers/storage-serializers-yaml/index.js"
+    },
+    "./core": {
+      "types": "./dist/shared/core/index.d.ts",
+      "import": "./dist/shared/core/index.js",
+      "default": "./dist/shared/core/index.js"
+    },
+    "./crypto": {
+      "types": "./dist/shared/crypto/index.d.ts",
+      "import": "./dist/shared/crypto/index.js",
+      "default": "./dist/shared/crypto/index.js"
+    },
+    "./file-sanitizer": {
+      "types": "./dist/shared/file-sanitizer/index.d.ts",
+      "import": "./dist/shared/file-sanitizer/index.js",
+      "default": "./dist/shared/file-sanitizer/index.js"
+    },
+    "./i18n": {
+      "types": "./dist/shared/i18n/index.d.ts",
+      "import": "./dist/shared/i18n/index.js",
+      "default": "./dist/shared/i18n/index.js"
+    },
+    "./i18n/en": {
+      "types": "./dist/shared/i18n/translations/en.d.ts",
+      "import": "./dist/shared/i18n/translations/en.js",
+      "default": "./dist/shared/i18n/translations/en.js"
+    },
+    "./i18n/nl": {
+      "types": "./dist/shared/i18n/translations/nl.d.ts",
+      "import": "./dist/shared/i18n/translations/nl.js",
+      "default": "./dist/shared/i18n/translations/nl.js"
+    },
+    "./json-api": {
+      "types": "./dist/shared/json-api/index.d.ts",
+      "import": "./dist/shared/json-api/index.js",
+      "default": "./dist/shared/json-api/index.js"
+    },
+    "./sanitizer": {
+      "types": "./dist/shared/sanitizer/index.d.ts",
+      "import": "./dist/shared/sanitizer/index.js",
+      "default": "./dist/shared/sanitizer/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@standard-schema/spec": "catalog:schema",
+    "ajv": "catalog:schema",
+    "bcryptjs": "^3.0.2",
+    "effect": "catalog:default",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
+    "json-schema": "catalog:schema",
+    "minimatch": "^10.0.3",
+    "trash": "^9.0.0"
+  },
+  "peerDependencies": {
+    "@cloudflare/workers-types": "*",
+    "@hono/node-server": "catalog:server",
+    "hono": "catalog:server"
+  },
+  "peerDependenciesMeta": {
+    "@cloudflare/workers-types": {
+      "optional": true
+    },
+    "@hono/node-server": {
+      "optional": true
+    },
+    "hono": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250109.0",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/js-yaml": "^4.0.9",
+    "@types/json-schema": "catalog:types",
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "tsc-alias": "^1.8.16",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
