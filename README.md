@@ -23,12 +23,12 @@ backends without rewriting code.
 ## Quick Start
 
 ```bash
-pnpm add @laikacms/core @laikacms/storage @laikacms/storage-api
+pnpm add laikacms
 ```
 
 ```typescript
-import { buildJsonApi } from '@laikacms/storage-api';
-import { FileSystemStorageRepository } from '@laikacms/storage-fs';
+import { buildJsonApi } from 'laikacms/storage-api';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 
 const repo = new FileSystemStorageRepository({ basePath: './content' });
 const api = buildJsonApi({ repo });
@@ -39,8 +39,8 @@ export default { fetch: api.fetch };
 ## Cloudflare Workers
 
 ```typescript
-import { buildJsonApi } from '@laikacms/storage-api';
-import { R2StorageRepository } from '@laikacms/storage-r2';
+import { buildJsonApi } from 'laikacms/storage-api';
+import { R2StorageRepository } from 'laikacms/storage-r2';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -52,15 +52,14 @@ export default {
 
 ## Packages
 
-| Layer          | Packages                                                                      |
-| -------------- | ----------------------------------------------------------------------------- |
-| Domain         | `@laikacms/storage`, `@laikacms/documents`, `@laikacms/assets`                |
-| API            | `@laikacms/storage-api`, `@laikacms/documents-api`, `@laikacms/assets-api`    |
-| Implementation | `@laikacms/storage-r2`, `@laikacms/storage-fs`, `@laikacms/documents-drizzle` |
-| Shared         | `@laikacms/core`, `@laikacms/crypto`, `@laikacms/json-api`                    |
-| Decap          | `@laikacms/decap-cms-backend-laika`, `@laikacms/decap-oauth2`                 |
+| Package            | Description                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laikacms`         | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
+| `@laikacms/aws`    | AWS service implementations (DynamoDB-backed contentbase settings)                                                                                                                    |
+| `@laikacms/decap`  | Decap CMS integrations: backend, OAuth2, widgets, AI chat                                                                                                                             |
+| `@laikacms/github` | GitHub-backed `StorageRepository` (GitHub App auth)                                                                                                                                   |
 
-See [docs/packages.md](./docs/packages.md) for full list.
+See [docs/packages.md](./docs/packages.md) for the full list of subpath exports.
 
 ## Documentation
 
