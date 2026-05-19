@@ -1,0 +1,52 @@
+{
+  "name": "@laikacms/git-gateway",
+  "version": "1.0.0",
+  "description": "Drop-in Netlify git-gateway-compatible HTTP handler. Proxies a fixed GitHub repo through a GitHub App installation token, behind a pluggable Bearer-token verifier. Runtime-agnostic (Hono).",
+  "keywords": [
+    "git-gateway",
+    "netlify",
+    "decap-cms",
+    "github",
+    "cms",
+    "hono"
+  ],
+  "author": "Sem Postma <sem@laikacms.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/laikacms/laikacms",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "peerDependencies": {
+    "hono": "^4.12.9"
+  },
+  "dependencies": {
+    "@octokit/auth-app": "catalog:octokit"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^2.0.2",
+    "@types/node": "catalog:types",
+    "hono": "catalog:server",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
