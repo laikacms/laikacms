@@ -23,8 +23,8 @@
       ],
       "persistent": true
     },
-    "types": {
-      "outputs": ["worker-configuration.d.ts"]
+    "typecheck": {
+      "dependsOn": ["^build"]
     },
     "test": {
       "dependsOn": ["build"]

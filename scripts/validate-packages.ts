@@ -425,7 +425,7 @@ function validateDirectoryPlacement(
   // Validate folder name matches package name
   const folderName = folderPath.split('/').pop();
   if (folderName) {
-    // Handle special case: core-lib folder -> @laikacms/core
+    // Handle special case: core-lib folder -> laikacms/core
     const expectedFolderNames = [name, `${name}-lib`];
     if (!expectedFolderNames.includes(folderName)) {
       // Only warn if significantly different

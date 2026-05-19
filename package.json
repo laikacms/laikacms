@@ -7,7 +7,7 @@
     "clean": "rimraf --glob '**/node_modules' '**/dist' '**/.turbo' '**/cdk.out' '**/.tanstack/*' '**/.wrangler/*'",
     "build": "turbo run build",
     "dev": "turbo watch dev",
-    "types": "turbo run types",
+    "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "coverage": "turbo run test -- --coverage --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=html",
     "lint": "eslint --cache --config eslint.config.mjs .",

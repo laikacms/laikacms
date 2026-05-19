@@ -55,11 +55,18 @@ export default {
 | Package            | Description                                                                                                                                                                           |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `laikacms`         | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
-| `@laikacms/aws`    | AWS service implementations (DynamoDB-backed contentbase settings)                                                                                                                    |
-| `@laikacms/decap`  | Decap CMS integrations: backend, OAuth2, widgets, AI chat                                                                                                                             |
-| `@laikacms/github` | GitHub-backed `StorageRepository` (GitHub App auth)                                                                                                                                   |
+| `@laikacms/aws`         | AWS service implementations (DynamoDB-backed contentbase settings)                                                                                                                    |
+| `@laikacms/decap`       | Decap CMS integrations: backend, OAuth2, widgets, AI chat                                                                                                                             |
+| `@laikacms/git-gateway` | Drop-in Netlify git-gateway-compatible HTTP handler (Decap `backend: git-gateway`)                                                                                                    |
+| `@laikacms/github`      | GitHub-backed `StorageRepository` (GitHub App auth)                                                                                                                                   |
 
 See [docs/packages.md](./docs/packages.md) for the full list of subpath exports.
+
+## Apps
+
+| App             | Description                                                                                                                                                                                                                                                |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laika-gateway` | Hosted multi-tenant Cloudflare Worker. One GitHub App; users install it on their own repo and point Decap CMS at this gateway instead of standing up their own Worker. URL scheme is namespaced (`/github/...`) so other source backends can be added later. See [apps/laika-gateway/README.md](./apps/laika-gateway/README.md). |
 
 ## Documentation
 

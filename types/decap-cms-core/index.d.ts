@@ -462,7 +462,7 @@ declare module 'decap-cms-core' {
     value: string;
   }
 
-  export type CmsBackendClass = any; // TODO: type properly
+  export type CmsBackendClass = new (...args: any[]) => unknown;
 
   export interface CmsRegistryBackend {
     init: (args: any) => CmsBackendClass;
@@ -498,9 +498,12 @@ declare module 'decap-cms-core' {
     globalStyles?: any;
   }
 
-  export type CmsWidgetValueSerializer = any; // TODO: type properly
+  export interface CmsWidgetValueSerializer {
+    serialize?: (value: unknown) => unknown;
+    deserialize?: (value: unknown) => unknown;
+  }
 
-  export type CmsMediaLibraryOptions = any; // TODO: type properly
+  export type CmsMediaLibraryOptions = unknown;
 
   export interface CmsMediaLibrary {
     name: string;
@@ -518,9 +521,9 @@ declare module 'decap-cms-core' {
     }) => any;
   }
 
-  export type CmsEventListenerOptions = any; // TODO: type properly
+  export type CmsEventListenerOptions = Record<string, unknown>;
 
-  export type CmsLocalePhrases = any; // TODO: type properly
+  export type CmsLocalePhrases = string | { [key: string]: CmsLocalePhrases };
 
   export type Formatter = {
     fromFile(content: string): unknown;

@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "effect-ts-anti-patterns": {
+      "source": "mrevanzak/effect-ts-skills",
+      "sourceType": "github",
+      "skillPath": "effect-ts-anti-patterns/SKILL.md",
+      "computedHash": "e0e431b4fedbd6119c277998b12b9e9146b1e7b1a966411617eb304f0d843271"
+    },
+    "effect-ts-concurrency": {
+      "source": "mrevanzak/effect-ts-skills",
+      "sourceType": "github",
+      "skillPath": "effect-ts-concurrency/SKILL.md",
+      "computedHash": "05af210e240fbedefe13d69fb500cbbfb17299da3c02bcb11ad2cb817c281993"
+    },
+    "effect-ts-errors": {
+      "source": "mrevanzak/effect-ts-skills",
+      "sourceType": "github",
+      "skillPath": "effect-ts-errors/SKILL.md",
+      "computedHash": "79edc764659340acb473618e96956ec2fa10356f1e303d336ac09feb43ef83b9"
+    },
+    "effect-ts-fundamentals": {
+      "source": "mrevanzak/effect-ts-skills",
+      "sourceType": "github",
+      "skillPath": "effect-ts-fundamentals/SKILL.md",
+      "computedHash": "58f2c1391be2e9453985c745868d69ba4aa4ed663d1ee0fcbc444c5a2a89789e"
+    },
+    "effect-ts-resources": {
+      "source": "mrevanzak/effect-ts-skills",
+      "sourceType": "github",
+      "skillPath": "effect-ts-resources/SKILL.md",
+      "computedHash": "82078eb45f19052ceadd0c2fd26c09022b720c83899c4bcea15a8ecc359e75e1"
+    }
+  }
+}

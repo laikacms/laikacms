@@ -1,14 +1,17 @@
 packages:
   - "packages/laikacms"
   - "packages/decap"
+  - "packages/decap-ai"
   - "packages/aws"
   - "packages/github"
+  - "packages/git-gateway"
   - "packages/tools/*"
   - "apps/*"
 
 catalogs:
   default:
-    "effect": "4.0.0-beta.40"
+    "effect": "4.0.0-beta.66"
+    "@effect/platform-node": "4.0.0-beta.66"
     "lexical": "^0.42.0"
     "@lexical/rich-text": "^0.42.0"
     "@tailwindcss/vite": "^4.2.2"

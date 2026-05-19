@@ -14,13 +14,14 @@ export default tseslint.config(
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'warn',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_', varsIgnorePattern: '^_', destructuredArrayIgnorePattern: '^_' }],
       // 'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
   {
     ignores: [
       '**/dist/**',
+      '**/dist-test/**',
       '**/node_modules/**',
       '**/.turbo/**',
       '**/cdk.out/**',
@@ -28,6 +29,7 @@ export default tseslint.config(
       '**/tmp/**',
       '**/coverage/**',
       '**/build/**',
+      '**/worker-configuration.d.ts',
       'types/**',
     ],
   },

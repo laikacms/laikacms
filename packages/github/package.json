@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/github",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "GitHub-backed StorageRepository for Laika CMS. Stores content in a GitHub repository; authenticates as a GitHub App via installation tokens.",
   "keywords": [
     "headless-cms",
@@ -46,7 +46,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest"
   },
   "dependencies": {

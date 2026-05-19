@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/aws",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "AWS service implementations for Laika CMS (DynamoDB, etc.).",
   "keywords": [
     "aws",
@@ -39,7 +39,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:watch": "vitest"
   },
   "dependencies": {
