@@ -1,0 +1,11 @@
+name = "laika-gateway"
+main = "src/index.ts"
+compatibility_date = "2026-02-24"
+compatibility_flags = ["nodejs_compat"]
+
+# All secrets live in .dev.vars (local) / `wrangler secret put` (prod):
+#   GITHUB_APP_ID                  — numeric app id
+#   GITHUB_APP_PRIVATE_KEY         — PEM (newlines as literal `\n` accepted)
+#   GITHUB_APP_CLIENT_ID           — public; used by the SPA PKCE redirect
+#   GITHUB_APP_CLIENT_SECRET       — needed for the token-exchange POST
+#   PUBLIC_URL                     — origin of this gateway (no trailing slash)

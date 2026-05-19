@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/laika-gateway",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Hosted multi-tenant gateway for the laika Decap CMS backend. One GitHub App, many repos — users install the App on their own repo and point Decap CMS at this gateway instead of standing up their own Worker.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --noEmit -p tsconfig.json",
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "wrangler types && tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@laikacms/decap": "workspace:*",
+    "@laikacms/github": "workspace:*",
+    "@octokit/auth-app": "catalog:octokit",
+    "@octokit/rest": "catalog:octokit",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "catalog:tools",
+    "wrangler": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
