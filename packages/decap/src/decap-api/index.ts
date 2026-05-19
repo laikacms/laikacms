@@ -175,10 +175,6 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       }
 
       // All other endpoints require authentication
-      const authHeader = request.headers.get('Authorization') || undefined;
-      const apiKeyHeader = request.headers.get('X-API-Key') || undefined;
-      const apiKeyAuth = authHeader ? Header.ExtractAuthorizationApiKey(authHeader) : undefined;
-
       const authenticated = await authenticateRequest(request);
       if (authenticated instanceof Response) {
         return authenticated;
@@ -190,7 +186,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
 
         // Return user data (excluding sensitive fields like passwordHash)
         // The user is responsible for not passing in sensitive data, except for the passwordHash
-        const { passwordHash, ...safeUserData } = user;
+        const { passwordHash: _passwordHash, ...safeUserData } = user;
 
         return new Response(
           JSON.stringify({

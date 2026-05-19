@@ -257,8 +257,9 @@ export function generatePasskeyScript(
         if (window.PublicKeyCredential.isConditionalMediationAvailable) {
           window.PublicKeyCredential.isConditionalMediationAvailable().then(function(available) {
             if (available) {
-              authenticateWithPasskey(embeddedOpts, false).catch(function(err) {
-                console.log('Conditional passkey auth not completed:', err.message);
+              authenticateWithPasskey(embeddedOpts, false).catch(function() {
+                // Conditional passkey auth often "fails" because the user dismissed
+                // or doesn't have one set up — that's normal, swallow silently.
               });
             } else {
               attemptAutoLogin();
@@ -280,10 +281,10 @@ export function generatePasskeyScript(
             form.insertBefore(autoLoginDiv, form.firstChild);
           }
           
-          authenticateWithPasskey(embeddedOpts, true).catch(function(err) {
+          authenticateWithPasskey(embeddedOpts, true).catch(function() {
             var indicator = document.getElementById('passkey-auto-login');
             if (indicator) indicator.remove();
-            console.log('Auto passkey login not completed:', err.message);
+            // Auto-login can fail for benign reasons (no passkey, user cancelled) — stay quiet.
           });
         }, 100);
       }

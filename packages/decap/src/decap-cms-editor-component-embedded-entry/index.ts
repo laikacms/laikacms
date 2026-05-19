@@ -12,7 +12,7 @@ export interface EmbeddedEntryMetadata {
   publishDate?: string;
   tags?: string[];
   category?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface EmbeddedEntryData {
@@ -50,13 +50,10 @@ export interface EmbeddedEntryField {
   }>;
 }
 
-const isEmbeddedEntryData = (data: any): data is EmbeddedEntryData => {
-  return (
-    data
-    && typeof data === 'object'
-    && typeof data.collection === 'string'
-    && typeof data.entry === 'string'
-  );
+const isEmbeddedEntryData = (data: unknown): data is EmbeddedEntryData => {
+  if (!data || typeof data !== 'object') return false;
+  const d = data as Record<string, unknown>;
+  return typeof d.collection === 'string' && typeof d.entry === 'string';
 };
 
 const embeddedEntry: EditorComponentOptions = {
@@ -68,7 +65,7 @@ const embeddedEntry: EditorComponentOptions = {
       entry: match[2],
     },
   toBlock: ({ collection, entry }: EmbeddedEntryData) => `{{< embedded-entry "${collection}" "${entry}" >}}`,
-  toPreview: (data: any) => {
+  toPreview: (data: unknown) => {
     if (!isEmbeddedEntryData(data)) throw new Error('Invalid data for Embedded Entry component');
     const { collection, entry } = data;
 

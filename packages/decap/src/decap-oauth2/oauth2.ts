@@ -40,11 +40,11 @@ import { renderTotpVerificationPage } from './templates/totp-verification-page.j
 export type { AuthorizationPageOptions } from './templates/authorization-page.js';
 
 interface Logger {
-  debug(...args: any[]): void;
-  info(...args: any[]): void;
-  warn(...args: any[]): void;
-  error(...args: any[]): void;
-  fatal(...args: any[]): void;
+  debug(...args: unknown[]): void;
+  info(...args: unknown[]): void;
+  warn(...args: unknown[]): void;
+  error(...args: unknown[]): void;
+  fatal(...args: unknown[]): void;
 }
 
 export {
@@ -553,6 +553,7 @@ export async function handleAuthorize(
             'Content-Type': 'text/html',
             'X-Content-Type-Options': 'nosniff',
             'X-Frame-Options': 'DENY',
+            'Cache-Control': 'no-store',
             'Content-Security-Policy': csp,
           },
         });
@@ -643,6 +644,7 @@ export async function handleAuthorize(
         'Content-Type': 'text/html',
         'X-Content-Type-Options': 'nosniff',
         'X-Frame-Options': 'DENY',
+        'Cache-Control': 'no-store',
         'Content-Security-Policy': csp,
       },
     });
@@ -859,6 +861,7 @@ export async function handleAuthorize(
           'Content-Type': 'text/html',
           'X-Content-Type-Options': 'nosniff',
           'X-Frame-Options': 'DENY',
+          'Cache-Control': 'no-store',
           'Content-Security-Policy': csp,
         },
       });
@@ -1262,6 +1265,7 @@ async function handleTotpSetupPage(
       'Content-Type': 'text/html',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
+      'Cache-Control': 'no-store',
       'Content-Security-Policy': "default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:",
     },
   });
@@ -1349,7 +1353,7 @@ async function handleTotpSetupVerify(
   // If no redirect_uri, show success message
   return new Response('TOTP setup complete. You can close this window.', {
     status: 200,
-    headers: { 'Content-Type': 'text/plain' },
+    headers: { 'Content-Type': 'text/plain', 'Cache-Control': 'no-store' },
   });
 }
 
@@ -1408,6 +1412,7 @@ async function handlePasskeySetupPage(
       'Content-Type': 'text/html',
       'X-Content-Type-Options': 'nosniff',
       'X-Frame-Options': 'DENY',
+      'Cache-Control': 'no-store',
       'Content-Security-Policy':
         "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'",
     },

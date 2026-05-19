@@ -71,8 +71,9 @@ class PKCEAuthenticationPage extends Component<PKCEAuthPageProps, PKCEAuthPageSt
         this.setState({ loginError: err.toString() });
         return;
       }
-      (data as any).token = (data as any).id_token; // Force usage of id_token as token
-      if (data) {
+      if (data && typeof data === 'object') {
+        const tokenData = data as { token?: string, id_token?: string };
+        tokenData.token = tokenData.id_token; // Force usage of id_token as token
         this.props.onLogin(data);
       }
     });
@@ -93,8 +94,9 @@ class PKCEAuthenticationPage extends Component<PKCEAuthPageProps, PKCEAuthPageSt
         this.setState({ loginError: err.toString() });
         return;
       }
-      (data as any).token = (data as any).id_token; // Force usage of id_token as token
-      if (data) {
+      if (data && typeof data === 'object') {
+        const tokenData = data as { token?: string, id_token?: string };
+        tokenData.token = tokenData.id_token; // Force usage of id_token as token
         this.props.onLogin(data);
       }
     });

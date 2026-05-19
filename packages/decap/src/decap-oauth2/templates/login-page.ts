@@ -212,9 +212,8 @@ export function generateWebAuthnScript(
       window.PublicKeyCredential.isConditionalMediationAvailable().then(function(available) {
         if (available) {
           // Use conditional UI - browser will show passkey option in autofill
-          authenticateWithPasskey(embeddedOpts, false).catch(function(err) {
-            // Silent fail for conditional mediation - user can still click button
-            console.log('Conditional passkey auth not completed:', err.message);
+          authenticateWithPasskey(embeddedOpts, false).catch(function() {
+            // Silent fail for conditional mediation - user can still click button.
           });
         } else {
           // Fallback: attempt immediate authentication
@@ -239,13 +238,11 @@ export function generateWebAuthnScript(
         loginForm.insertBefore(autoLoginDiv, loginForm.firstChild);
       }
       
-      authenticateWithPasskey(embeddedOpts, true).catch(function(err) {
-        // Remove auto-login indicator on failure
+      authenticateWithPasskey(embeddedOpts, true).catch(function() {
+        // Remove auto-login indicator on failure — user can still click the
+        // button or fall back to password.
         var indicator = document.getElementById('passkey-auto-login');
         if (indicator) indicator.remove();
-        
-        // Only log, don't alert - user can manually click button or use password
-        console.log('Auto passkey login not completed:', err.message);
       });
     }, 100);
   }

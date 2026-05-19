@@ -110,7 +110,6 @@ export const IconControl: React.FC<IconControlProps> = props => {
             }}
           >
             {filteredIcons.map(iconName => {
-              console.log('rendering icon', iconName);
               return (
                 <div
                   key={iconName}
