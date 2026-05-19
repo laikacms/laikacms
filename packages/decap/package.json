@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/decap",
-  "version": "0.1.2",
-  "description": "Decap CMS integrations for Laika CMS: backend, OAuth2, widgets, and AI chat.",
+  "version": "1.0.0",
+  "description": "Decap CMS integrations for Laika CMS: backend, OAuth2, widgets. AI chat lives in @laikacms/decap-ai.",
   "keywords": [
     "decap-cms",
     "headless-cms",
@@ -29,35 +29,15 @@
     "CHANGELOG.md"
   ],
   "exports": {
-    "./decap-ai": {
-      "types": "./dist/decap-ai/index.d.ts",
-      "import": "./dist/decap-ai/index.js",
-      "default": "./dist/decap-ai/index.js"
-    },
-    "./decap-ai/tools": {
-      "types": "./dist/decap-ai/tools/index.d.ts",
-      "import": "./dist/decap-ai/tools/index.js",
-      "default": "./dist/decap-ai/tools/index.js"
-    },
-    "./decap-ai/i18n/types": {
-      "types": "./dist/decap-ai/i18n/types.d.ts",
-      "import": "./dist/decap-ai/i18n/types.js",
-      "default": "./dist/decap-ai/i18n/types.js"
-    },
-    "./decap-ai/i18n/en": {
-      "types": "./dist/decap-ai/i18n/en.d.ts",
-      "import": "./dist/decap-ai/i18n/en.js",
-      "default": "./dist/decap-ai/i18n/en.js"
-    },
-    "./decap-ai/i18n/nl": {
-      "types": "./dist/decap-ai/i18n/nl.d.ts",
-      "import": "./dist/decap-ai/i18n/nl.js",
-      "default": "./dist/decap-ai/i18n/nl.js"
-    },
     "./decap-api": {
       "types": "./dist/decap-api/index.d.ts",
       "import": "./dist/decap-api/index.js",
       "default": "./dist/decap-api/index.js"
+    },
+    "./decap-config-types": {
+      "types": "./dist/decap-config-types/index.d.ts",
+      "import": "./dist/decap-config-types/index.js",
+      "default": "./dist/decap-config-types/index.js"
     },
     "./decap-cms-backend-laika": {
       "types": "./dist/decap-cms-backend-laika/index.d.ts",
@@ -73,26 +53,6 @@
       "types": "./dist/decap-cms-locale-nl/index.d.ts",
       "import": "./dist/decap-cms-locale-nl/index.js",
       "default": "./dist/decap-cms-locale-nl/index.js"
-    },
-    "./decap-cms-widget-ai-chat": {
-      "types": "./dist/decap-cms-widget-ai-chat/index.d.ts",
-      "import": "./dist/decap-cms-widget-ai-chat/index.js",
-      "default": "./dist/decap-cms-widget-ai-chat/index.js"
-    },
-    "./decap-cms-widget-ai-chat/i18n/types": {
-      "types": "./dist/decap-cms-widget-ai-chat/i18n/types.d.ts",
-      "import": "./dist/decap-cms-widget-ai-chat/i18n/types.js",
-      "default": "./dist/decap-cms-widget-ai-chat/i18n/types.js"
-    },
-    "./decap-cms-widget-ai-chat/i18n/en": {
-      "types": "./dist/decap-cms-widget-ai-chat/i18n/en.d.ts",
-      "import": "./dist/decap-cms-widget-ai-chat/i18n/en.js",
-      "default": "./dist/decap-cms-widget-ai-chat/i18n/en.js"
-    },
-    "./decap-cms-widget-ai-chat/i18n/nl": {
-      "types": "./dist/decap-cms-widget-ai-chat/i18n/nl.d.ts",
-      "import": "./dist/decap-cms-widget-ai-chat/i18n/nl.js",
-      "default": "./dist/decap-cms-widget-ai-chat/i18n/nl.js"
     },
     "./decap-cms-widget-lucide-icon": {
       "types": "./dist/decap-cms-widget-lucide-icon/index.d.ts",
@@ -135,11 +95,8 @@
   },
   "dependencies": {
     "laikacms": "workspace:*",
-    "@ai-sdk/react": "catalog:ai",
-    "ai": "catalog:ai",
     "aws-jwt-verify": "catalog:aws",
     "effect": "catalog:default",
-    "fast-json-patch": "^3.1.1",
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",
     "uuid": "^13.0.0",

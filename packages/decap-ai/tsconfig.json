@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "strict": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "ignoreDeprecations": "6.0",
+    "rootDir": "src",
+    "outDir": "dist",
+    "baseUrl": ".",
+    "types": ["node"],
+    "typeRoots": ["../../types", "./node_modules/@types", "../../node_modules/@types"],
+    "paths": {
+      "decap-cms-core": ["../../types/decap-cms-core/index.d.ts"],
+      "decap-cms-core/*": ["../../types/decap-cms-core/*"],
+      "decap-cms-lib-util": ["../../types/decap-cms-lib-util/index.d.ts"],
+      "decap-cms-lib-util/*": ["../../types/decap-cms-lib-util/*"],
+      "decap-cms-ui-default": ["../../types/decap-cms-ui-default/index.d.ts"],
+      "decap-cms-ui-default/*": ["../../types/decap-cms-ui-default/*"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ]
+}

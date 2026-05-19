@@ -48,17 +48,21 @@ function generateSessionTitle(message: string): string {
  * Extract text content from a UIMessage (v3 format with parts array)
  * Falls back to content string for backwards compatibility
  */
-function getMessageText(message: any): string | undefined {
+function getMessageText(message: unknown): string | undefined {
+  if (!message || typeof message !== 'object') return undefined;
+  const m = message as { parts?: unknown, content?: unknown };
   // New v3 format: parts array with { type: 'text', text: string }
-  if (message.parts && Array.isArray(message.parts)) {
-    const textParts = message.parts
-      .filter((part: any) => part.type === 'text')
-      .map((part: any) => part.text);
+  if (Array.isArray(m.parts)) {
+    const textParts = m.parts
+      .filter((part): part is { type: 'text', text: string } =>
+        !!part && typeof part === 'object' && (part as { type?: unknown }).type === 'text'
+        && typeof (part as { text?: unknown }).text === 'string')
+      .map(part => part.text);
     return textParts.length > 0 ? textParts.join('') : undefined;
   }
   // Old format: content string
-  if (typeof message.content === 'string') {
-    return message.content;
+  if (typeof m.content === 'string') {
+    return m.content;
   }
   return undefined;
 }
@@ -91,7 +95,7 @@ export function decapAi(config: DecapAiConfig): DecapAi {
   async function handleChat(request: Request, user: User): Promise<Response> {
     if (request.method !== 'POST') return errorResponse(t.errors.methodNotAllowed, 405);
 
-    let body: any;
+    let body: unknown;
     try {
       body = await request.json();
     } catch {
@@ -99,15 +103,26 @@ export function decapAi(config: DecapAiConfig): DecapAi {
     }
 
     // Vercel AI SDK format: { messages: [...], sessionId?, document }
-    if (!body.messages || !Array.isArray(body.messages)) {
+    if (!body || typeof body !== 'object') {
+      return errorResponse(t.errors.missingOrInvalidMessage, 400);
+    }
+    const parsedBody = body as {
+      messages?: unknown,
+      sessionId?: string,
+      document?: { slug?: string },
+    };
+    if (!parsedBody.messages || !Array.isArray(parsedBody.messages)) {
       return errorResponse(t.errors.missingOrInvalidMessage, 400);
     }
 
-    const { sessionId, document } = body;
+    const { sessionId, document } = parsedBody;
     if (!document?.slug) return errorResponse(t.errors.missingDocumentContext, 400);
 
     // Get last user message for session title (supports both v3 parts format and legacy content format)
-    const userMessages = body.messages.filter((m: any) => m.role === 'user');
+    const userMessages = parsedBody.messages.filter(
+      (m): m is { role: string } =>
+        !!m && typeof m === 'object' && (m as { role?: unknown }).role === 'user',
+    );
     const lastUserMessage = userMessages[userMessages.length - 1];
     const lastUserMessageText = lastUserMessage ? getMessageText(lastUserMessage) : undefined;
     if (!lastUserMessageText) return errorResponse(t.errors.missingOrInvalidMessage, 400);
@@ -144,7 +159,7 @@ export function decapAi(config: DecapAiConfig): DecapAi {
     // Use Vercel AI SDK's convertToModelMessages - handles tool calls/results automatically
     // Pass tools so it can properly convert tool calls and results
     // ignoreIncompleteToolCalls: false ensures tool results are properly processed
-    const modelMessages = await convertToModelMessages(body.messages, {
+    const modelMessages = await convertToModelMessages(parsedBody.messages, {
       tools,
     });
 
@@ -163,7 +178,7 @@ export function decapAi(config: DecapAiConfig): DecapAi {
 
       // Use SDK's built-in message handling - onFinish receives complete UIMessages
       const response = result.toUIMessageStreamResponse({
-        originalMessages: body.messages,
+        originalMessages: parsedBody.messages,
         onFinish: async ({ messages }) => {
           // messages is the complete conversation including AI response as UIMessage[]
           await config.callbacks.updateSession(session.id, {

@@ -1,6 +1,6 @@
 import { type UIMessage, useChat } from '@ai-sdk/react';
 import { css } from '@emotion/css';
-import { DefaultChatTransport, isTextUIPart, isToolUIPart, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
+import { DefaultChatTransport, lastAssistantMessageIsCompleteWithToolCalls } from 'ai';
 import type { CmsWidgetControlProps } from 'decap-cms-core';
 import type { EditorialWorkflow, Entries, State } from 'decap-cms-core/types/redux';
 import { applyPatch, type Operation } from 'fast-json-patch';
@@ -335,7 +335,7 @@ interface ToolInvocationPartProps {
   output?: unknown;
 }
 
-const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({ toolCallId, toolName, state, output }) => {
+const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({ toolCallId: _toolCallId, toolName, state, output }) => {
   return (
     <div className={toolCallStyles}>
       <div className="tool-name">
@@ -405,8 +405,7 @@ const MessagePart: React.FC<{ part: any, index: number }> = ({ part, index }) =>
 };
 
 const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
-  const { field, fields, locale, entry, widget, config, metadata, dispatch, collection } = props;
-  console.log('AiChatControl props', props);
+  const { field, fields, locale, entry, widget, metadata, dispatch, collection } = props;
 
   // Get messages - use widget messages if provided, otherwise use defaults
   const t = widget.messages ?? en;
@@ -428,7 +427,7 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
   // State
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
-  const [isLoadingSessions, setIsLoadingSessions] = useState(false);
+  const [_isLoadingSessions, setIsLoadingSessions] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [input, setInput] = useState('');
 
@@ -438,8 +437,6 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
     locale,
     defaultLocale,
   ]);
-
-  console.log('Document context for AI', documentContext);
 
   const aiFetch = widget.aiSdk?.fetch || fetch;
 
@@ -474,11 +471,8 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
       const toolCallId = toolCall.toolCallId;
       const args = toolCall.input || toolCall.args || {};
 
-      console.log('Tool call received:', { toolName, toolCallId, args, locale, defaultLocale });
-
       // Use addToolOutput (v3 API) to provide tool results
       const addOutput = (output: any) => {
-        console.log('Adding tool output:', { toolName, toolCallId, output });
         chatHelpers.addToolOutput({
           tool: toolName as any,
           toolCallId,
@@ -496,7 +490,6 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
             locale,
             data: currentData,
           };
-          console.log('getDocumentData result:', result);
           addOutput(result);
           break;
         }
@@ -508,14 +501,11 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
             // Apply JSON Patch operations to get the new document
             const result = applyPatch(currentData, operations, true, false);
 
-            console.log('Update document tool call', { currentData, operations, result });
-
             if (result.newDocument) {
               Object.keys(result.newDocument).forEach(key => {
                 const rawValue = result.newDocument[key];
                 const hasChanges = operations.some(op => op.path.startsWith(`/${key}`));
                 if (!hasChanges) {
-                  console.log(`Field "${key}" has no changes, skipping update`);
                   return;
                 }
                 const thisField = fields?.find(f => f.get('name') === key);
@@ -538,7 +528,6 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
                   locales: (i18nInfoForAction as I18nInfo).locales,
                 };
                 const action = changeDraftField({ field: thisField, value, metadata, entries, i18n });
-                console.log('Dispatching DRAFT_CHANGE_FIELD action:', action);
                 dispatch(action);
               });
 
@@ -617,16 +606,12 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
         const data = await response.json();
         const session = data.session;
 
-        console.log('Loading session:', session);
-
         // Messages are stored in v3 UIMessage format with parts array - use directly
         const chatMessages: UIMessage[] = session.messages.map((m: any) => ({
           id: m.id,
           role: m.role as 'user' | 'assistant',
           parts: m.parts || [],
         }));
-
-        console.log('Loaded messages:', chatMessages);
 
         setMessages(chatMessages);
         setCurrentSessionId(sessionId);
@@ -657,7 +642,7 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
   }, [handleNewSession, loadSession]);
 
   // Custom submit handler
-  const handleFormSubmit = useCallback(async (e: React.FormEvent) => {
+  const handleFormSubmit = useCallback(async (e: React.SyntheticEvent) => {
     e.preventDefault();
     if (!input || !input.trim() || isLoading) return;
 
@@ -665,7 +650,7 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
       // Send message using the new v3 API
       await sendMessage({ text: input });
       setInput('');
-    } catch (err) {
+    } catch {
       setError(t.failedToSendMessage);
     }
   }, [input, isLoading, sendMessage, t.failedToSendMessage]);
@@ -674,7 +659,7 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleFormSubmit(e as any);
+      handleFormSubmit(e);
     }
   }, [handleFormSubmit]);
 

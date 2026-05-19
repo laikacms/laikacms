@@ -9,6 +9,10 @@ export type { AiChatWidgetOptions, DocumentContext, SessionSummary } from './typ
 // i18n exports
 export type { Translation, TranslationKey } from './i18n/types';
 
+// React AI SDK runtime re-exports — keeps consumers off direct `@ai-sdk/react`.
+export { useChat } from '@ai-sdk/react';
+export type { UIMessage } from '@ai-sdk/react';
+
 function Widget(opts: AiChatWidgetOptions) {
   return {
     name: 'ai-chat',
