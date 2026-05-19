@@ -19,7 +19,7 @@
  * original Uint8Array reference is returned unchanged.
  */
 
-import { CorruptedFileError } from '@laikacms/core';
+import { CorruptedFileError } from 'laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
 import { spliceOutRanges } from '../utils/binary.js';
 import { findDangerousMetadata } from '../utils/metadata-scan.js';

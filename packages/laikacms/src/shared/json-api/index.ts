@@ -17,6 +17,8 @@ export {
   parsePaginationQuery,
 } from './pagination.js';
 
+export { paginationCodec } from './pagination-codec.js';
+
 // Export types
 export * from './types.js';
 

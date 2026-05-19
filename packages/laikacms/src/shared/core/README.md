@@ -1,21 +1,21 @@
-# @laikacms/core
+# laikacms/core
 
-[![npm](https://img.shields.io/npm/v/@laikacms/core)](https://www.npmjs.com/package/@laikacms/core)
-[![npm](https://img.shields.io/npm/dm/@laikacms/core)](https://www.npmjs.com/package/@laikacms/core)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/core)](https://bundlephobia.com/result?p=@laikacms/core)
+[![npm](https://img.shields.io/npm/v/laikacms/core)](https://www.npmjs.com/package/laikacms/core)
+[![npm](https://img.shields.io/npm/dm/laikacms/core)](https://www.npmjs.com/package/laikacms/core)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/core)](https://bundlephobia.com/result?p=laikacms/core)
 
 Core types, errors, and utilities for Laika CMS.
 
 ## Installation
 
 ```bash
-pnpm add @laikacms/core
+pnpm add laikacms/core
 ```
 
 ## Usage
 
 ```typescript
-import { InvalidData, LaikaError, LaikaResult, NotFoundError } from '@laikacms/core';
+import { InvalidData, LaikaError, LaikaResult, NotFoundError } from 'laikacms/core';
 ```
 
 ## Error Types

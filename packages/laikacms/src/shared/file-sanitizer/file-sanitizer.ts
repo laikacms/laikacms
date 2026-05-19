@@ -8,17 +8,17 @@ import type {
   SanitizeOptions as AbstractSanitizeOptions,
   Sanitizer,
   SanitizeResult as AbstractSanitizeResult,
-} from '@laikacms/sanitizer';
+} from 'laikacms/sanitizer';
 import { canSanitize, getSupportedFileTypes, sanitizeFile } from './sanitizer.js';
 
 /**
  * File sanitizer implementation that strips privacy-sensitive metadata from files.
  *
- * Implements the abstract Sanitizer interface from @laikacms/sanitizer.
+ * Implements the abstract Sanitizer interface from laikacms/sanitizer.
  *
  * @example
  * ```typescript
- * import { FileSanitizerImpl } from '@laikacms/file-sanitizer';
+ * import { FileSanitizerImpl } from 'laikacms/file-sanitizer';
  *
  * const sanitizer = new FileSanitizerImpl();
  *

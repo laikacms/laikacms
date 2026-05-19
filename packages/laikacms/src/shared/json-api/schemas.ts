@@ -98,12 +98,23 @@ export const JsonApiLinksSchema = S.toStandardSchemaV1(S.Struct({
   next: S.optional(S.String),
 }));
 
-// Cursor Pagination Profile
-// https://jsonapi.org/profiles/ethanresnick/cursor-pagination/
-export const CursorPaginationMetaSchema = S.toStandardSchemaV1(S.Struct({
+// Pagination meta — per JSON:API §8 and the cursor-pagination profile
+// (https://jsonapi.org/profiles/ethanresnick/cursor-pagination/),
+// *navigation* lives in the top-level `links` object, not in `meta`. The
+// only pagination-shaped values that legitimately belong here are
+// aggregate counts that can't be encoded as links:
+//
+//   meta.page = {
+//     total?,          // exact total when the backend supplies one cheaply
+//     estimatedTotal?, // rough total when an exact count is too expensive
+//   }
+//
+// `hasMore` is implicit in the presence/absence of the `next` link;
+// the "current cursor" is implicit in the request URL itself.
+export const PaginationMetaSchema = S.toStandardSchemaV1(S.Struct({
   page: S.optional(S.Struct({
-    cursor: S.optional(S.String),
-    hasMore: S.optional(S.Boolean),
+    total: S.optional(S.Number),
+    estimatedTotal: S.optional(S.Number),
   })),
 }));
 
@@ -112,6 +123,18 @@ export const JsonApiResourceSchema = S.toStandardSchemaV1(S.Struct({
   id: S.String,
   attributes: S.Record(S.String, S.Any),
   relationships: S.optional(S.Record(S.String, S.Any)),
+  /**
+   * Per JSON:API spec, resource-level `meta` is the right home for
+   * protocol / backend-specific information that isn't part of the entity's
+   * primary attributes — e.g. a storage object's `extension` + `revisionId`.
+   */
+  meta: S.optional(S.Record(S.String, S.Any)),
+  /**
+   * Resource-level links per JSON:API spec — at minimum `self`, optionally
+   * `related`. Lets a client navigate from a collection item to its
+   * canonical detail URL without reconstructing the route table.
+   */
+  links: S.optional(S.Record(S.String, S.String)),
 }));
 
 export const JsonApiResponseSchema = S.toStandardSchemaV1(S.Struct({
@@ -123,7 +146,7 @@ export const JsonApiResponseSchema = S.toStandardSchemaV1(S.Struct({
 export const JsonApiCollectionResponseSchema = S.toStandardSchemaV1(S.Struct({
   data: S.Array(JsonApiResourceSchema),
   links: S.optional(JsonApiLinksSchema),
-  meta: S.optional(CursorPaginationMetaSchema),
+  meta: S.optional(PaginationMetaSchema),
   included: S.optional(S.Array(JsonApiResourceSchema)),
 }));
 

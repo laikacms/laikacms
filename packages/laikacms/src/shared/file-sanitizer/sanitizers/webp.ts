@@ -17,7 +17,7 @@
  * Uint8Array reference is returned unchanged.
  */
 
-import { CorruptedFileError } from '@laikacms/core';
+import { CorruptedFileError } from 'laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
 import { readUint32LE, spliceOutRanges, writeUint32LE } from '../utils/binary.js';
 

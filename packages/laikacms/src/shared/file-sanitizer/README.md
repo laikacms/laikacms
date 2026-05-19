@@ -1,8 +1,8 @@
-# @laikacms/file-sanitizer
+# laikacms/file-sanitizer
 
-[![npm](https://img.shields.io/npm/v/@laikacms/file-sanitizer)](https://www.npmjs.com/package/@laikacms/file-sanitizer)
-[![npm](https://img.shields.io/npm/dm/@laikacms/file-sanitizer)](https://www.npmjs.com/package/@laikacms/file-sanitizer)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/file-sanitizer)](https://bundlephobia.com/result?p=@laikacms/file-sanitizer)
+[![npm](https://img.shields.io/npm/v/laikacms/file-sanitizer)](https://www.npmjs.com/package/laikacms/file-sanitizer)
+[![npm](https://img.shields.io/npm/dm/laikacms/file-sanitizer)](https://www.npmjs.com/package/laikacms/file-sanitizer)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/file-sanitizer)](https://bundlephobia.com/result?p=laikacms/file-sanitizer)
 
 Best-effort file sanitization for uploaded content.
 
@@ -16,13 +16,13 @@ Best-effort file sanitization for uploaded content.
 ## Installation
 
 ```bash
-pnpm add @laikacms/file-sanitizer
+pnpm add laikacms/file-sanitizer
 ```
 
 ## Usage
 
 ```typescript
-import { detectFileType, sanitizeFile } from '@laikacms/file-sanitizer';
+import { detectFileType, sanitizeFile } from 'laikacms/file-sanitizer';
 
 const file = await request.blob();
 const result = await sanitizeFile(file);

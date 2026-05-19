@@ -25,7 +25,7 @@
  * unchanged — the bytes are not even copied.
  */
 
-import { CorruptedFileError } from '@laikacms/core';
+import { CorruptedFileError } from 'laikacms/core';
 import type { FileSanitizer, SanitizeOptions, SanitizeResult, StrippedMetadataInfo } from '../types.js';
 import { spliceOutRanges } from '../utils/binary.js';
 import { findDangerousMetadata } from '../utils/metadata-scan.js';

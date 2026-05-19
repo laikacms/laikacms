@@ -1,11 +1,11 @@
-import type { TranslationKey } from '@laikacms/i18n';
 import type * as Cause from 'effect/Cause';
 import * as Result from 'effect/Result';
+import type { TranslationKey } from 'laikacms/i18n';
 
 type ErrorSource = { pointer: string } | { parameter: string };
 
 // Pass the actual error into the cause field.
-export abstract class LaikaError<C extends ErrorCode = any, S extends number = any> extends Error {
+export abstract class LaikaError<C extends ErrorCode = ErrorCode, S extends number = number> extends Error {
   public static TITLE: string; // PUBLIC
   public static STATUS: number; // PUBLIC
   public static CODE: ErrorCode; // PUBLIC
@@ -20,7 +20,7 @@ export abstract class LaikaError<C extends ErrorCode = any, S extends number = a
     options?: {
       translation?: { title?: TranslationKey | undefined, message?: TranslationKey | undefined } | undefined,
       jsonApiSource?: ErrorSource | undefined,
-      cause?: Cause.Cause<any> | unknown, /* PRIVATE */
+      cause?: Cause.Cause<unknown> | unknown, /* PRIVATE */
     },
   ) {
     super(message, options);
@@ -29,7 +29,11 @@ export abstract class LaikaError<C extends ErrorCode = any, S extends number = a
     this.translation = options?.translation; // PUBLIC
     this.code = new.target.CODE as C; // PUBLIC
     this.title = new.target.TITLE; // PUBLIC
-    Object.setPrototypeOf(this, LaikaError.prototype);
+    // Restore the prototype to the *actual* subclass that was constructed
+    // (NotFoundError, BadRequestError, …) — `super(message, options)` clobbers
+    // it on some runtimes when extending Error. Using `LaikaError.prototype`
+    // here used to break every `instanceof NotFoundError` check downstream.
+    Object.setPrototypeOf(this, new.target.prototype);
   }
 
   public toResult() {

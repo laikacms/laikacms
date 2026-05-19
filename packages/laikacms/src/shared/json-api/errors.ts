@@ -1,4 +1,4 @@
-import { ErrorClasses } from '@laikacms/core';
+import { ErrorClasses } from 'laikacms/core';
 import type { JsonApiError } from './types.js';
 import { errorToJsonApiMapper } from './utilities.js';
 

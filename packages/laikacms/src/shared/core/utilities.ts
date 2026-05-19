@@ -103,7 +103,7 @@ export const Paths = {
 };
 
 export const TemplateLiteral = {
-  url: (strings: TemplateStringsArray, ...values: any[]) => {
+  url: (strings: TemplateStringsArray, ...values: unknown[]) => {
     const raw = strings.reduce((acc, str, i) => {
       if (i === values.length) return Url.join(acc, str);
       const segment = String(values[i]);

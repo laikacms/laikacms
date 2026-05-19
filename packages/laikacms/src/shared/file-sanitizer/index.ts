@@ -1,16 +1,16 @@
 /**
- * @laikacms/file-sanitizer
+ * laikacms/file-sanitizer
  *
  * A file sanitizer that strips privacy-sensitive metadata from files.
  * Uses a BLOCKLIST approach - only dangerous metadata chunks are stripped,
  * everything else is preserved. Supports PNG, GIF, WebP, and JPEG files.
  * All other file types throw an error (unless in ignoreExtensions list).
  *
- * Implements the abstract Sanitizer interface from @laikacms/sanitizer.
+ * Implements the abstract Sanitizer interface from laikacms/sanitizer.
  *
  * @example
  * ```typescript
- * import { FileSanitizerImpl, sanitizeFile, canSanitize, getSupportedFileTypes } from '@laikacms/file-sanitizer';
+ * import { FileSanitizerImpl, sanitizeFile, canSanitize, getSupportedFileTypes } from 'laikacms/file-sanitizer';
  *
  * // Using the class (implements Sanitizer interface)
  * const sanitizer = new FileSanitizerImpl();
@@ -42,13 +42,13 @@
  * ```
  */
 
-// Re-export abstract types from @laikacms/sanitizer
+// Re-export abstract types from laikacms/sanitizer
 export type {
   SanitizeOptions as AbstractSanitizeOptions,
   Sanitizer,
   SanitizeResult as AbstractSanitizeResult,
   StrippedMetadataInfo as AbstractStrippedMetadataInfo,
-} from '@laikacms/sanitizer';
+} from 'laikacms/sanitizer';
 
 // Main sanitizer class (implements Sanitizer interface)
 export { FileSanitizerImpl } from './file-sanitizer.js';

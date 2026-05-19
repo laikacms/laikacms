@@ -12,7 +12,7 @@
  * rejecting the file.
  */
 
-import { DangerousFileTypeError, FileTooLargeError, UnsupportedFileTypeError } from '@laikacms/core';
+import { DangerousFileTypeError, FileTooLargeError, UnsupportedFileTypeError } from 'laikacms/core';
 import { GifSanitizer } from './sanitizers/gif.js';
 import { JpegSanitizer } from './sanitizers/jpeg.js';
 import { PngSanitizer } from './sanitizers/png.js';
