@@ -1,13 +1,30 @@
+import * as Effect from 'effect/Effect';
 import * as Result from 'effect/Result';
-import { BadRequestError, EntryAlreadyExistsError, InvalidData, NotFoundError } from 'laikacms/core';
-import type { LaikaError, LaikaResult } from 'laikacms/core';
+
 import {
+  BadRequestError,
+  EntryAlreadyExistsError,
+  InvalidData,
+  type LaikaError,
+  type LaikaResult,
+  LaikaStream,
+  LaikaTask,
+  NotFoundError,
+} from 'laikacms/core';
+import {
+  applyPagination,
   type Atom,
   type AtomSummary,
+  Capabilities,
+  CompatibilityDate,
+  defaultDetermineExtension,
+  type DetermineExtension,
   type Folder,
   type FolderCreate,
+  type ListAtomsDone,
   type ListAtomsOptions,
   pathCombine,
+  type RemoveAtomsDone,
   type StorageObject,
   type StorageObjectContent,
   type StorageObjectCreate,
@@ -16,15 +33,15 @@ import {
   type StorageSerializerRegistry,
 } from 'laikacms/storage';
 import * as minimatch from 'minimatch';
+
 import { GithubDataSource, type GithubDataSourceOptions } from './github-datasource.js';
 
 export interface GithubStorageRepositoryOptions extends GithubDataSourceOptions {
   serializerRegistry: StorageSerializerRegistry;
   defaultFileExtension: string;
-  /** Glob patterns to exclude when listing. Defaults match storage-fs. */
   ignoreList?: string[];
-  /** Optional commit author/committer applied to every write. */
   commitAuthor?: { name: string, email: string };
+  determineExtension?: DetermineExtension;
 }
 
 const DEFAULT_IGNORE_LIST = [
@@ -36,11 +53,11 @@ const DEFAULT_IGNORE_LIST = [
   '**/.laikacms',
 ];
 
-const failAs = <T>(error: LaikaError): LaikaResult<T> => Result.fail(error);
+const liftResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
+  Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
 
 /**
- * StorageRepository backed by a GitHub repository. Mirrors the surface and semantics of
- * `laikacms/storage-fs` so that swapping FS for GitHub is purely a wiring change.
+ * StorageRepository backed by a GitHub repository.
  */
 export class GithubStorageRepository extends StorageRepository {
   private readonly dataSource: GithubDataSource;
@@ -49,6 +66,7 @@ export class GithubStorageRepository extends StorageRepository {
   private readonly availableExtensions: string[];
   private readonly excludeFilter: minimatch.MMRegExp[];
   private readonly commitAuthor?: { name: string, email: string };
+  private readonly determineExtension: DetermineExtension;
 
   constructor(options: GithubStorageRepositoryOptions) {
     super();
@@ -57,6 +75,7 @@ export class GithubStorageRepository extends StorageRepository {
       defaultFileExtension,
       ignoreList = DEFAULT_IGNORE_LIST,
       commitAuthor,
+      determineExtension = defaultDetermineExtension,
       ...dataSourceOptions
     } = options;
 
@@ -64,10 +83,23 @@ export class GithubStorageRepository extends StorageRepository {
     this.defaultFileExtension = defaultFileExtension;
     this.availableExtensions = Object.keys(serializerRegistry);
     this.commitAuthor = commitAuthor;
+    this.determineExtension = determineExtension;
     this.dataSource = new GithubDataSource(dataSourceOptions);
     this.excludeFilter = ignoreList
       .map(p => minimatch.makeRe(p, { dot: true, partial: true }))
       .filter((x): x is minimatch.MMRegExp => x !== false);
+  }
+
+  private resolveExtension(
+    key: string,
+    metadata: StorageObject['metadata'] | undefined,
+  ): string {
+    const requested = this.determineExtension(key, {
+      metadata,
+      defaultExtension: this.defaultFileExtension,
+    });
+    if (requested && this.serializerRegistry[requested]) return requested;
+    return this.defaultFileExtension;
   }
 
   private stripExtension(p: string): string {
@@ -77,7 +109,9 @@ export class GithubStorageRepository extends StorageRepository {
     return p;
   }
 
-  private async resolvePathWithExtension(key: string): Promise<{ path: string, extension: string } | null> {
+  private async resolvePathWithExtension(
+    key: string,
+  ): Promise<{ path: string, extension: string } | null> {
     const base = this.stripExtension(key);
     for (const ext of this.availableExtensions) {
       const candidate = `${base}.${ext}`;
@@ -111,243 +145,275 @@ export class GithubStorageRepository extends StorageRepository {
     return serializer.deserializeDocumentFileContents(content, {});
   }
 
-  // ===== StorageObjects =====
-
-  async *getObject(key: string): AsyncGenerator<LaikaResult<StorageObject>> {
-    const resolved = await this.resolvePathWithExtension(key);
-    if (!resolved) {
-      yield failAs<StorageObject>(new NotFoundError(`The file at ${key} does not exist`));
-      return;
-    }
-
-    const [contentResult, metaResult] = await Promise.all([
-      this.dataSource.getFileContents(resolved.path),
-      this.dataSource.getFileMeta(resolved.path),
-    ]);
-
-    if (Result.isFailure(contentResult)) {
-      yield failAs<StorageObject>(contentResult.failure);
-      return;
-    }
-    if (Result.isFailure(metaResult)) {
-      yield failAs<StorageObject>(metaResult.failure);
-      return;
-    }
-
-    yield Result.succeed(
-      {
-        type: 'object',
-        key: this.stripExtension(resolved.path),
-        createdAt: metaResult.success.createdAt.toISOString(),
-        updatedAt: metaResult.success.updatedAt.toISOString(),
-        content: await this.deserialize(resolved.extension, contentResult.success.content),
-      } satisfies StorageObject,
+  getObject(key: string): LaikaTask.LaikaTask<StorageObject> {
+    return LaikaTask.make<StorageObject>(() =>
+      Effect.gen({ self: this }, function*() {
+        const resolved = yield* Effect.promise(() => this.resolvePathWithExtension(key));
+        if (!resolved) {
+          return yield* Effect.fail(new NotFoundError(`The file at ${key} does not exist`));
+        }
+        const [content, meta] = yield* Effect.all(
+          [
+            liftResult(this.dataSource.getFileContents(resolved.path)),
+            liftResult(this.dataSource.getFileMeta(resolved.path)),
+          ],
+          { concurrency: 2 },
+        );
+        const deserialized = yield* Effect.promise(() => this.deserialize(resolved.extension, content.content));
+        return {
+          type: 'object',
+          key: this.stripExtension(resolved.path),
+          createdAt: meta.createdAt.toISOString(),
+          updatedAt: meta.updatedAt.toISOString(),
+          content: deserialized,
+          metadata: { extension: resolved.extension, revisionId: meta.sha },
+        } satisfies StorageObject;
+      })
     );
   }
 
-  async *createObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
-    if (!create.content) {
-      yield Result.fail(new InvalidData('Object content is required for creation'));
-      return;
-    }
-    const existing = await this.resolvePathWithExtension(create.key);
-    if (existing) {
-      yield Result.fail(
-        new EntryAlreadyExistsError(
-          `An object with key "${create.key}" already exists with extension .${existing.extension}`,
-        ),
-      );
-      return;
-    }
-
-    const ext = this.defaultFileExtension;
-    const serialized = await this.serialize(ext, create.content);
-    const path = `${this.stripExtension(create.key)}.${ext}`;
-
-    const writeResult = await this.dataSource.createOrUpdate(path, serialized, {
-      commitMessage: `Create ${path}`,
-      author: this.commitAuthor,
-    });
-    if (Result.isFailure(writeResult)) {
-      yield failAs<StorageObject>(writeResult.failure);
-      return;
-    }
-
-    yield* this.getObject(create.key);
+  createObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
+    return LaikaTask.make<StorageObject>(() =>
+      Effect.gen({ self: this }, function*() {
+        if (!create.content) {
+          return yield* Effect.fail(new InvalidData('Object content is required for creation'));
+        }
+        const existing = yield* Effect.promise(() => this.resolvePathWithExtension(create.key));
+        if (existing) {
+          return yield* Effect.fail(
+            new EntryAlreadyExistsError(
+              `An object with key "${create.key}" already exists with extension .${existing.extension}`,
+            ),
+          );
+        }
+        const ext = this.resolveExtension(create.key, create.metadata);
+        const serialized = yield* Effect.promise(() => this.serialize(ext, create.content!));
+        const path = `${this.stripExtension(create.key)}.${ext}`;
+        yield* liftResult(
+          this.dataSource.createOrUpdate(path, serialized, {
+            commitMessage: `Create ${path}`,
+            author: this.commitAuthor,
+          }),
+        );
+        return yield* LaikaTask.runValue(this.getObject(create.key));
+      })
+    );
   }
 
-  async *updateObject(update: StorageObjectUpdate): AsyncGenerator<LaikaResult<StorageObject>> {
-    const resolved = await this.resolvePathWithExtension(update.key);
-    if (!resolved) {
-      yield failAs<StorageObject>(new NotFoundError(`The file at ${update.key} does not exist`));
-      return;
-    }
-
-    if (update.content) {
-      const serialized = await this.serialize(resolved.extension, update.content);
-      const writeResult = await this.dataSource.createOrUpdate(resolved.path, serialized, {
-        commitMessage: `Update ${resolved.path}`,
-        author: this.commitAuthor,
-      });
-      if (Result.isFailure(writeResult)) {
-        yield failAs<StorageObject>(writeResult.failure);
-        return;
-      }
-    }
-
-    yield* this.getObject(update.key);
+  updateObject(update: StorageObjectUpdate): LaikaTask.LaikaTask<StorageObject> {
+    return LaikaTask.make<StorageObject>(() =>
+      Effect.gen({ self: this }, function*() {
+        const resolved = yield* Effect.promise(() => this.resolvePathWithExtension(update.key));
+        if (!resolved) {
+          return yield* Effect.fail(new NotFoundError(`The file at ${update.key} does not exist`));
+        }
+        if (update.content) {
+          const serialized = yield* Effect.promise(() => this.serialize(resolved.extension, update.content!));
+          yield* liftResult(
+            this.dataSource.createOrUpdate(resolved.path, serialized, {
+              commitMessage: `Update ${resolved.path}`,
+              author: this.commitAuthor,
+            }),
+          );
+        }
+        return yield* LaikaTask.runValue(this.getObject(update.key));
+      })
+    );
   }
 
-  async *createOrUpdateObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
-    const existing = await this.resolvePathWithExtension(create.key);
-    const ext = existing?.extension ?? this.defaultFileExtension;
-    const path = existing?.path ?? `${this.stripExtension(create.key)}.${ext}`;
-    const serialized = create.content ? await this.serialize(ext, create.content) : '';
-
-    const writeResult = await this.dataSource.createOrUpdate(path, serialized, {
-      commitMessage: `${existing ? 'Update' : 'Create'} ${path}`,
-      author: this.commitAuthor,
-    });
-    if (Result.isFailure(writeResult)) {
-      yield failAs<StorageObject>(writeResult.failure);
-      return;
-    }
-
-    yield* this.getObject(create.key);
+  createOrUpdateObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
+    return LaikaTask.make<StorageObject>(() =>
+      Effect.gen({ self: this }, function*() {
+        // When metadata pins an extension, that's authoritative — don't let a stale
+        // file at a different extension capture the write.
+        const requested = create.metadata?.extension;
+        const metadataExt = requested && this.serializerRegistry[requested] ? requested : undefined;
+        const existing = metadataExt
+          ? null
+          : yield* Effect.promise(() => this.resolvePathWithExtension(create.key));
+        const ext = metadataExt ?? existing?.extension ?? this.resolveExtension(create.key, create.metadata);
+        const path = existing?.path ?? `${this.stripExtension(create.key)}.${ext}`;
+        const serialized = create.content
+          ? yield* Effect.promise(() => this.serialize(ext, create.content!))
+          : '';
+        yield* liftResult(
+          this.dataSource.createOrUpdate(path, serialized, {
+            commitMessage: `${existing ? 'Update' : 'Create'} ${path}`,
+            author: this.commitAuthor,
+          }),
+        );
+        return yield* LaikaTask.runValue(this.getObject(create.key));
+      })
+    );
   }
 
-  // ===== Folders =====
-
-  async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
-    // Listing the directory both validates existence and gives us a baseline.
-    const listing = await this.dataSource.listDirectory(key);
-    if (Result.isFailure(listing)) {
-      yield failAs<Folder>(listing.failure);
-      return;
-    }
-
-    // GitHub doesn't track per-directory timestamps. Approximate with the most recent commit
-    // touching the path; if no commits, fall back to epoch.
-    const now = new Date(0).toISOString();
-    yield Result.succeed({ type: 'folder', key, createdAt: now, updatedAt: now } satisfies Folder);
+  getFolder(key: string): LaikaTask.LaikaTask<Folder> {
+    return LaikaTask.make<Folder>(() =>
+      Effect.gen({ self: this }, function*() {
+        yield* liftResult(this.dataSource.listDirectory(key));
+        const now = new Date(0).toISOString();
+        return { type: 'folder', key, createdAt: now, updatedAt: now } satisfies Folder;
+      })
+    );
   }
 
-  async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
-    // GitHub has no concept of empty directories — emulate by writing a `.keep` placeholder.
-    const keepPath = pathCombine(folderCreate.key, '.keep');
-    const writeResult = await this.dataSource.createOrUpdate(keepPath, '', {
-      commitMessage: `Create directory ${folderCreate.key}`,
-      author: this.commitAuthor,
-    });
-    if (Result.isFailure(writeResult)) {
-      yield failAs<Folder>(writeResult.failure);
-      return;
-    }
-
-    yield* this.getFolder(folderCreate.key);
+  createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
+    return LaikaTask.make<Folder>(() =>
+      Effect.gen({ self: this }, function*() {
+        const keepPath = pathCombine(folderCreate.key, '.keep');
+        yield* liftResult(
+          this.dataSource.createOrUpdate(keepPath, '', {
+            commitMessage: `Create directory ${folderCreate.key}`,
+            author: this.commitAuthor,
+          }),
+        );
+        return yield* LaikaTask.runValue(this.getFolder(folderCreate.key));
+      })
+    );
   }
 
-  // ===== Atoms =====
-
-  async *getAtom(key: string): AsyncGenerator<LaikaResult<Atom>> {
-    try {
-      const type = await this.dataSource.pathType(key);
-      if (type === 'file') yield* this.getObject(key);
-      else yield* this.getFolder(key);
-    } catch (e) {
-      if (e instanceof NotFoundError) {
-        // Treat key as a file path with extension — getObject handles the extension probe.
-        yield* this.getObject(key);
-      } else {
-        yield Result.fail(e instanceof Error ? new BadRequestError(e.message) : new BadRequestError(String(e)));
-      }
-    }
+  getAtom(key: string): LaikaTask.LaikaTask<Atom> {
+    return LaikaTask.make<Atom>(() =>
+      Effect.gen({ self: this }, function*() {
+        const typeResult = yield* Effect.result(
+          Effect.tryPromise({
+            try: () => this.dataSource.pathType(key),
+            catch: e =>
+              e instanceof NotFoundError
+                ? e
+                : e instanceof Error
+                ? new BadRequestError(e.message)
+                : new BadRequestError(String(e)),
+          }),
+        );
+        // pathType failures (incl. NotFound) → probe as file with an extension via getObject.
+        if (typeResult._tag === 'Failure') {
+          return yield* LaikaTask.runValue(this.getObject(key));
+        }
+        if (typeResult.success === 'file') {
+          return yield* LaikaTask.runValue(this.getObject(key));
+        }
+        return yield* LaikaTask.runValue(this.getFolder(key));
+      })
+    );
   }
 
-  listAtomSummaries(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
-    return this.collectAtoms<AtomSummary>(folderKey, options, true);
-  }
-
-  listAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly Atom[]>> {
-    return this.collectAtoms<Atom>(folderKey, options, false);
-  }
-
-  private async *collectAtoms<T extends AtomSummary | Atom>(
+  listAtomSummaries(
     folderKey: string,
-    _options: ListAtomsOptions,
-    summariesOnly: T extends AtomSummary ? true : false,
-  ): AsyncGenerator<LaikaResult<readonly T[]>> {
-    const listing = await this.dataSource.listDirectory(folderKey);
-    if (Result.isFailure(listing)) {
-      yield failAs<readonly T[]>(listing.failure);
-      return;
-    }
-
-    const filtered = listing.success.filter(
-      entry => this.excludeFilter.every(re => !re.test(entry.path)),
+    options: ListAtomsOptions,
+  ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
+    return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const summaries = yield* this.collectFilteredSummaries(folderKey, options);
+        if (summaries.length > 0) yield* emit.dataMany(summaries);
+        return { total: summaries.length };
+      })
     );
+  }
 
-    const summaries: AtomSummary[] = filtered.map(entry => {
-      let key = entry.path;
-      if (entry.type === 'file') {
-        for (const ext of this.availableExtensions) {
-          if (key.endsWith(`.${ext}`)) {
-            key = key.slice(0, -(ext.length + 1));
-            break;
+  listAtoms(
+    folderKey: string,
+    options: ListAtomsOptions,
+  ): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
+    return LaikaStream.make<Atom, ListAtomsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const summaries = yield* this.collectFilteredSummaries(folderKey, options);
+        for (const summary of summaries) {
+          if (summary.type === 'object-summary') {
+            const r = yield* Effect.result(LaikaTask.runValue(this.getObject(summary.key)));
+            if (Result.isFailure(r)) yield* emit.recoverableError(r.failure);
+            else yield* emit.data(r.success);
+          } else {
+            const r = yield* Effect.result(LaikaTask.runValue(this.getFolder(summary.key)));
+            if (Result.isFailure(r)) yield* emit.recoverableError(r.failure);
+            else yield* emit.data(r.success);
           }
         }
-      }
-      return {
-        type: entry.type === 'file' ? 'object-summary' : 'folder-summary',
-        key,
-      };
-    });
-
-    if (summariesOnly) {
-      yield Result.succeed(summaries as unknown as readonly T[]);
-      return;
-    }
-
-    const atoms: T[] = [];
-    for (const summary of summaries) {
-      if (summary.type === 'object-summary') {
-        for await (const r of this.getObject(summary.key)) {
-          if (Result.isSuccess(r)) atoms.push(r.success as unknown as T);
-        }
-      } else {
-        for await (const r of this.getFolder(summary.key)) {
-          if (Result.isSuccess(r)) atoms.push(r.success as unknown as T);
-        }
-      }
-    }
-    yield Result.succeed(atoms as readonly T[]);
+        return { total: summaries.length };
+      })
+    );
   }
 
-  async *removeAtoms(keys: readonly string[]): AsyncGenerator<LaikaResult<readonly string[]>> {
-    const removed: string[] = [];
-
-    for (const key of keys) {
-      const resolved = await this.resolvePathWithExtension(key);
-      if (!resolved) {
-        yield failAs<readonly string[]>(new NotFoundError(`The file at ${key} does not exist`));
-        return;
-      }
-      const meta = await this.dataSource.getFileMeta(resolved.path);
-      if (Result.isFailure(meta)) {
-        yield failAs<readonly string[]>(meta.failure);
-        return;
-      }
-      const deleteResult = await this.dataSource.deleteFile(resolved.path, meta.success.sha, {
-        commitMessage: `Delete ${resolved.path}`,
-        author: this.commitAuthor,
+  private collectFilteredSummaries(
+    folderKey: string,
+    options: ListAtomsOptions,
+  ): Effect.Effect<ReadonlyArray<AtomSummary>, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const listing = yield* liftResult(this.dataSource.listDirectory(folderKey));
+      const filtered = listing.filter(
+        entry => this.excludeFilter.every(re => !re.test(entry.path)),
+      );
+      const summaries: AtomSummary[] = filtered.map(entry => {
+        let key = entry.path;
+        if (entry.type === 'file') {
+          for (const ext of this.availableExtensions) {
+            if (key.endsWith(`.${ext}`)) {
+              key = key.slice(0, -(ext.length + 1));
+              break;
+            }
+          }
+        }
+        return {
+          type: entry.type === 'file' ? 'object-summary' : 'folder-summary',
+          key,
+        };
       });
-      if (Result.isFailure(deleteResult)) {
-        yield failAs<readonly string[]>(deleteResult.failure);
-        return;
-      }
-      removed.push(key);
-    }
+      return applyPagination(summaries, options.pagination);
+    });
+  }
 
-    yield Result.succeed(removed as readonly string[]);
+  removeAtoms(keys: readonly string[]): LaikaStream.LaikaStream<string, RemoveAtomsDone> {
+    return LaikaStream.make<string, RemoveAtomsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        let removed = 0;
+        let skipped = 0;
+        for (const key of keys) {
+          const resolved = yield* Effect.promise(() => this.resolvePathWithExtension(key));
+          if (!resolved) {
+            yield* emit.recoverableError(new NotFoundError(`The file at ${key} does not exist`));
+            skipped += 1;
+            continue;
+          }
+          const metaResult = yield* Effect.result(liftResult(this.dataSource.getFileMeta(resolved.path)));
+          if (Result.isFailure(metaResult)) {
+            yield* emit.recoverableError(metaResult.failure);
+            skipped += 1;
+            continue;
+          }
+          const deleteResult = yield* Effect.result(
+            liftResult(
+              this.dataSource.deleteFile(resolved.path, metaResult.success.sha, {
+                commitMessage: `Delete ${resolved.path}`,
+                author: this.commitAuthor,
+              }),
+            ),
+          );
+          if (Result.isFailure(deleteResult)) {
+            yield* emit.recoverableError(deleteResult.failure);
+            skipped += 1;
+            continue;
+          }
+          yield* emit.data(key);
+          removed += 1;
+        }
+        return { removed, skipped };
+      })
+    );
+  }
+
+  getCapabilities(): LaikaTask.LaikaTask<Capabilities> {
+    return LaikaTask.succeed<Capabilities>({
+      fileExtensions: {
+        supported: true,
+        description: 'Supported file types depend on the serializers provided to this repository.',
+        supportedExtensions: this.serializerRegistry,
+      },
+      pagination: {
+        supported: true,
+        description: 'In-memory slicing over the GitHub tree listing; cursor pagination is not supported.',
+        styles: { offset: true, page: true, cursor: false },
+      },
+      compatibilityDate: CompatibilityDate.make('2024-06-01'),
+    });
   }
 }

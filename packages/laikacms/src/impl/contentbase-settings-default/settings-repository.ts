@@ -1,88 +1,106 @@
+import * as Effect from 'effect/Effect';
+import * as Result from 'effect/Result';
+import type { JSONSchema7 } from 'json-schema';
 import type {
   CollectionSettings,
   ContentBaseSettings,
   DocumentCollectionSettings,
   MediaCollectionSettings,
-} from '@laikacms/contentbase-settings';
-import { ContentBaseSettingsProvider, createDefaultSettingsFile, parseSettings } from '@laikacms/contentbase-settings';
-import type { LaikaError, LaikaResult } from '@laikacms/core';
-import { InvalidData, NotFoundError } from '@laikacms/core';
-import type { StorageRepository } from '@laikacms/storage';
-import * as Result from 'effect/Result';
-import type { JSONSchema7 } from 'json-schema';
+} from 'laikacms/contentbase-settings';
+import { ContentBaseSettingsProvider, createDefaultSettingsFile, parseSettings } from 'laikacms/contentbase-settings';
+import type { LaikaError, LaikaResult } from 'laikacms/core';
+import { InvalidData, LaikaTask, NotFoundError } from 'laikacms/core';
+import type { StorageRepository } from 'laikacms/storage';
 
-/**
- * Helper to convert a failure result to a different type while preserving the error
- */
 function failAs<T>(error: LaikaError): LaikaResult<T> {
   return Result.fail(error);
 }
 
-/**
- * Helper to get the first result from an async generator
- */
-async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<LaikaResult<T>> {
-  for await (const result of gen) {
-    return result;
-  }
-  return Result.fail(new NotFoundError('No result from generator'));
+/** Run a LaikaTask and surface the resolved value as a LaikaResult. */
+async function firstResult<T>(task: LaikaTask.LaikaTask<T>): Promise<LaikaResult<T>> {
+  return Effect.runPromise(Effect.result(LaikaTask.runValue(task)));
 }
 
 const startCase = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
+interface DefaultContentBaseSettingsProviderOptions {
+  storage: StorageRepository;
+}
+
 export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvider {
-  constructor(private readonly storage: StorageRepository) {
+  private readonly storage: StorageRepository;
+
+  constructor(options: DefaultContentBaseSettingsProviderOptions) {
     super();
+    this.storage = options.storage;
+
+    firstResult(this.storage.getCapabilities()).then(Result.getOrThrow).then(capabilities => {
+      if (!capabilities.fileExtensions.supported) {
+        console.warn(
+          `Underlying storage repository for contentbase does not support file extensions. Contentbase requires a classic filesystem structure with folders and .json metadata files.`,
+        );
+      }
+      if (
+        capabilities.fileExtensions.supported
+        && Object.keys(capabilities.fileExtensions.supportedExtensions).includes('json') === false
+      ) {
+        console.warn(
+          `Underlying storage repository for contentbase does not support .json file extension. To keep Contentbase cross-compatible, the storage repository should support .json files for storing contentbase settings and metadata.`,
+        );
+      }
+    });
+  }
+
+  /**
+   * Look up a collection's configured settings. Returns `null` when the collection
+   * isn't present in the settings file — the typed getters below synthesize a
+   * type-appropriate default for that case.
+   */
+  private async getConfiguredCollectionSettings(
+    collection: string,
+  ): Promise<LaikaResult<CollectionSettings | null>> {
+    const settings = await this.getSettings();
+    if (Result.isFailure(settings)) return failAs<CollectionSettings | null>(settings.failure);
+    const collections = settings.success.collections ?? {};
+    return Result.succeed(collections[collection] ?? null);
   }
 
   async getCollectionSettings(collection: string): Promise<LaikaResult<CollectionSettings>> {
-    const settings = await this.getSettings();
-    if (Result.isFailure(settings)) return failAs<CollectionSettings>(settings.failure);
-    const collections = settings.success.collections ?? {};
-    const collectionSettings = collections[collection];
-    if (!collectionSettings) {
-      return Result.succeed({
-        key: collection,
-        type: 'document',
-        name: startCase(collection),
-        directory: collection,
-        trashDirectory: `.contentbase/trash/${collection}`,
-        draftDirectory: `.contentbase/drafts/${collection}`,
-        archiveDirectory: `.contentbase/archive/${collection}`,
-        revisionDirectory: `.contentbase/revisions/${collection}`,
-        recursive: true,
-      } as CollectionSettings);
-    }
-    return Result.succeed(collectionSettings);
+    const configured = await this.getConfiguredCollectionSettings(collection);
+    if (Result.isFailure(configured)) return failAs<CollectionSettings>(configured.failure);
+    return Result.succeed(configured.success ?? defaultDocumentCollectionSettings(collection));
   }
 
   async getDocumentCollectionSettings(collection: string): Promise<LaikaResult<DocumentCollectionSettings>> {
-    const collectionSettings = await this.getCollectionSettings(collection);
-    if (Result.isFailure(collectionSettings)) return failAs<DocumentCollectionSettings>(collectionSettings.failure);
-    console.log('Document collection settings:', collectionSettings);
-    if (collectionSettings.success.type !== 'document') {
+    const configured = await this.getConfiguredCollectionSettings(collection);
+    if (Result.isFailure(configured)) return failAs<DocumentCollectionSettings>(configured.failure);
+    if (configured.success === null) {
+      return Result.succeed(defaultDocumentCollectionSettings(collection));
+    }
+    if (configured.success.type !== 'document') {
       return Result.fail(
         new InvalidData(
-          `Settings for document collection '${collection}' are of type '${collectionSettings.success.type}' not of type 'document'.`,
+          `Settings for document collection '${collection}' are of type '${configured.success.type}' not of type 'document'.`,
         ),
       );
     }
-    return Result.succeed(collectionSettings.success as DocumentCollectionSettings);
+    return Result.succeed(configured.success);
   }
 
   async getMediaCollectionSettings(collection: string): Promise<LaikaResult<MediaCollectionSettings>> {
-    const collectionSettings = await this.getCollectionSettings(collection);
-    if (Result.isFailure(collectionSettings)) {
-      return failAs<MediaCollectionSettings>(collectionSettings.failure);
+    const configured = await this.getConfiguredCollectionSettings(collection);
+    if (Result.isFailure(configured)) return failAs<MediaCollectionSettings>(configured.failure);
+    if (configured.success === null) {
+      return Result.succeed(defaultMediaCollectionSettings(collection));
     }
-    if (collectionSettings.success.type !== 'media') {
+    if (configured.success.type !== 'media') {
       return Result.fail(
         new InvalidData(
-          `Settings for media collection '${collection}' are of type '${collectionSettings.success.type}' not of type 'media'.`,
+          `Settings for media collection '${collection}' are of type '${configured.success.type}' not of type 'media'.`,
         ),
       );
     }
-    return Result.succeed(collectionSettings.success as MediaCollectionSettings);
+    return Result.succeed(configured.success);
   }
 
   async putCollectionSettings(collection: string, settings: CollectionSettings): Promise<LaikaResult<void>> {
@@ -119,18 +137,18 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
   }
 
   async putSettings(settings: ContentBaseSettings): Promise<LaikaResult<void>> {
-    // Update settings file
     const settingsResult = await firstResult(this.storage.createOrUpdateObject({
-      key: `.contentbase/settings.json`,
+      key: SETTINGS_KEY,
       type: 'object',
       content: settings,
+      metadata: { extension: 'json' },
     }));
     if (Result.isFailure(settingsResult)) return failAs<void>(settingsResult.failure);
     return Result.succeed(undefined);
   }
 
   async getCollectionSchema(collection: string): Promise<LaikaResult<JSONSchema7>> {
-    const schema = await firstResult(this.storage.getObject(`.contentbase/schemas/${collection}.json`));
+    const schema = await firstResult(this.storage.getObject(schemaKey(collection)));
     if (Result.isFailure(schema)) return failAs<JSONSchema7>(schema.failure);
     const jsonSchema = schema.success.content as JSONSchema7;
     return Result.succeed(jsonSchema);
@@ -142,9 +160,10 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
   ): Promise<LaikaResult<void>> {
     const result = await firstResult(this.storage.createOrUpdateObject(
       {
-        key: `.contentbase/schemas/${collection}.json`,
+        key: schemaKey(collection),
         type: 'object',
         content: schema,
+        metadata: { extension: 'json' },
       },
     ));
     if (Result.isFailure(result)) return failAs<void>(result.failure);
@@ -152,23 +171,16 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
   }
 
   override getSettings = async (): Promise<LaikaResult<ContentBaseSettings>> => {
-    console.log('get settings called');
-    const settingsFile = await firstResult(this.storage.getObject(`.contentbase/settings.json`));
+    const settingsFile = await firstResult(this.storage.getObject(SETTINGS_KEY));
     if (Result.isFailure(settingsFile)) {
-      console.log('getSettings: failed to get settings file.', settingsFile);
       if (settingsFile.failure.code === NotFoundError.CODE) {
-        // Create default settings file
-        console.log('getSettings: settings file not found, creating default.', settingsFile, {
-          code: settingsFile.failure.code,
-          code2: NotFoundError.CODE,
-        });
         const defaultSettings = createDefaultSettingsFile();
         const createResult = await firstResult(this.storage.createOrUpdateObject({
-          key: `.contentbase/settings.json`,
+          key: SETTINGS_KEY,
           type: 'object',
           content: defaultSettings,
+          metadata: { extension: 'json' },
         }));
-        console.log('getSettings: created default settings file.', createResult);
         if (Result.isFailure(createResult)) return failAs<ContentBaseSettings>(createResult.failure);
         return Result.succeed(defaultSettings);
       }
@@ -180,3 +192,26 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
     return Result.succeed(parsedSettings.success);
   };
 }
+
+const SETTINGS_KEY = '.contentbase/settings';
+const schemaKey = (collection: string) => `.contentbase/schemas/${collection}`;
+
+const defaultDocumentCollectionSettings = (collection: string): DocumentCollectionSettings => ({
+  key: collection,
+  type: 'document',
+  name: startCase(collection),
+  directory: collection,
+  trashDirectory: `.contentbase/trash/${collection}`,
+  draftDirectory: `.contentbase/drafts/${collection}`,
+  archiveDirectory: `.contentbase/archive/${collection}`,
+  revisionDirectory: `.contentbase/revisions/${collection}`,
+  recursive: true,
+});
+
+const defaultMediaCollectionSettings = (collection: string): MediaCollectionSettings => ({
+  key: collection,
+  type: 'media',
+  name: startCase(collection),
+  directory: collection,
+  recursive: true,
+});

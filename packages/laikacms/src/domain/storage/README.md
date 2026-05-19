@@ -1,21 +1,21 @@
-# @laikacms/storage
+# laikacms/storage
 
-[![npm](https://img.shields.io/npm/v/@laikacms/storage)](https://www.npmjs.com/package/@laikacms/storage)
-[![npm](https://img.shields.io/npm/dm/@laikacms/storage)](https://www.npmjs.com/package/@laikacms/storage)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/storage)](https://bundlephobia.com/result?p=@laikacms/storage)
+[![npm](https://img.shields.io/npm/v/laikacms/storage)](https://www.npmjs.com/package/laikacms/storage)
+[![npm](https://img.shields.io/npm/dm/laikacms/storage)](https://www.npmjs.com/package/laikacms/storage)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/storage)](https://bundlephobia.com/result?p=laikacms/storage)
 
 Core storage abstractions for Laika CMS.
 
 ## Installation
 
 ```bash
-pnpm add @laikacms/storage
+pnpm add laikacms/storage
 ```
 
 ## Usage
 
 ```typescript
-import { Atom, StorageObject, StorageRepository } from '@laikacms/storage';
+import { Atom, StorageObject, StorageRepository } from 'laikacms/storage';
 ```
 
 ## Entities
@@ -39,6 +39,6 @@ abstract class StorageRepository {
 
 ## Implementations
 
-- `@laikacms/storage-r2` - Cloudflare R2
-- `@laikacms/storage-fs` - Local filesystem
-- `@laikacms/storage-drizzle` - SQL via Drizzle ORM
+- `laikacms/storage-r2` - Cloudflare R2
+- `laikacms/storage-fs` - Local filesystem
+- `laikacms/storage-drizzle` - SQL via Drizzle ORM

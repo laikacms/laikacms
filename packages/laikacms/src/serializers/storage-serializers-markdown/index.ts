@@ -1,6 +1,6 @@
-import type { StorageFormat, StorageObjectContent, StorageSerializer } from '@laikacms/storage';
 import matter from 'gray-matter';
 import type { JSONSchema7 } from 'json-schema';
+import type { StorageFormat, StorageObjectContent, StorageSerializer } from 'laikacms/storage';
 
 export const markdownSerializer: StorageSerializer<StorageFormat> = {
   format: 'markdown' as StorageFormat,

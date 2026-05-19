@@ -27,13 +27,6 @@ export interface GithubDataSourceOptions {
   userAgent?: string;
 }
 
-interface GithubFile {
-  path: string;
-  sha: string;
-  content: string;
-  encoding: 'base64' | 'utf-8';
-}
-
 interface GithubDirEntry {
   name: string;
   path: string;

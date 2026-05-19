@@ -1,10 +1,14 @@
-import type { LaikaError, LaikaResult } from '@laikacms/core';
-import { InvalidData, NotFoundError } from '@laikacms/core';
+import * as Effect from 'effect/Effect';
+
+import { InvalidData, type LaikaError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type {
   Document,
   DocumentCreate,
+  DocumentUpdate,
+  ListRecordsDone,
   ListRecordsOptions,
   ListRecordSummaries,
+  ListRevisionsDone,
   ListRevisionsOptions,
   Record as DocumentRecord,
   RecordSummary,
@@ -14,16 +18,16 @@ import type {
   Unpublished,
   UnpublishedCreate,
   UnpublishedUpdate,
-} from '@laikacms/documents';
-import { DocumentSchema, DocumentsRepository, pathToSegments } from '@laikacms/documents';
-import { type StorageObjectContent, StorageObjectContentSchema } from '@laikacms/storage';
-import * as Result from 'effect/Result';
+} from 'laikacms/documents';
+import {
+  type DocumentsCapabilities,
+  DocumentsCompatibilityDate,
+  DocumentsRepository,
+  pathToSegments,
+} from 'laikacms/documents';
+import { type StorageObjectContent } from 'laikacms/storage';
 
 const PUBLISHED_STATUS = 'published';
-
-function failAs<T>(error: LaikaError): LaikaResult<T> {
-  return Result.fail(error);
-}
 
 export type DocumentModel = {
   key: string,
@@ -73,9 +77,7 @@ export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CD
   };
   callbacks: {
     documents: {
-      insert: (query: {
-        values: DocumentModelStrict,
-      }) => Promise<DocumentModel[]>,
+      insert: (query: { values: DocumentModelStrict }) => Promise<DocumentModel[]>,
       update: (query: {
         where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA,
         values: Partial<DocumentModelStrict>,
@@ -89,9 +91,7 @@ export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CD
       }) => Promise<DocumentModel[]>,
     },
     revisions: {
-      insert: (query: {
-        values: RevisionModelStrict,
-      }) => Promise<RevisionModel[]>,
+      insert: (query: { values: RevisionModelStrict }) => Promise<RevisionModel[]>,
       update: (query: {
         where: RKE | RE | RA,
         values: Partial<RevisionModelStrict>,
@@ -106,7 +106,16 @@ export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CD
   };
 }
 
-export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /* Revisions */ RKE, RE, RA>
+const parseContent = (raw: string): Effect.Effect<StorageObjectContent, LaikaError> =>
+  Effect.try({
+    try: () => JSON.parse(raw) as StorageObjectContent,
+    catch: e =>
+      new InvalidData(
+        `Invalid JSON content format: ${e instanceof Error ? e.message : 'Unknown error'}`,
+      ),
+  });
+
+export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA>
   extends DocumentsRepository
 {
   constructor(
@@ -115,325 +124,364 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
     super();
   }
 
-  async *getDocument(key: string): AsyncGenerator<LaikaResult<Document>> {
-    const qb = this.options.documentQueryBuilders;
-    const rows = await this.options.callbacks.documents.select({
-      where: qb.and(qb.keyEquals(key), qb.statusEquals(PUBLISHED_STATUS)),
-      limit: 1,
-    });
-    if (rows.length === 0) {
-      yield Result.fail(new NotFoundError(`Document not found: ${key}`));
-      return;
-    }
-    const row = rows[0];
-    try {
-      const content = JSON.parse(row.content) as StorageObjectContent;
-      yield Result.succeed({
-        type: 'published' as const,
-        key: row.key,
-        status: 'published' as const,
-        content,
-        language: row.language ?? 'unk',
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-      });
-    } catch (error) {
-      yield Result.fail(
-        new InvalidData(
-          `Invalid JSON content format: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        ),
-      );
-    }
-  }
-
-  async *createDocument(create: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
-    const now = new Date().toISOString();
-    await this.options.callbacks.documents.insert({
-      values: {
-        key: create.key,
-        depth: pathToSegments(create.key).length,
-        status: PUBLISHED_STATUS,
-        language: create.language,
-        content: JSON.stringify(create.content),
-        createdAt: now,
-        updatedAt: now,
+  getCapabilities(): LaikaTask.LaikaTask<DocumentsCapabilities> {
+    return LaikaTask.succeed<DocumentsCapabilities>({
+      compatibilityDate: DocumentsCompatibilityDate.make('2026-05-11'),
+      pagination: {
+        supported: true,
+        description: 'Backed by SQL OFFSET/LIMIT and page-based windowing.',
+        styles: { offset: true, page: true, cursor: false },
       },
     });
-    yield* this.getDocument(create.key);
   }
 
-  async *updateDocument(update: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
-    const qb = this.options.documentQueryBuilders;
-    const now = new Date().toISOString();
-    await this.options.callbacks.documents.update({
-      where: qb.and(qb.keyEquals(update.key), qb.statusEquals(PUBLISHED_STATUS)),
-      values: {
-        updatedAt: now,
-        ...(update.content ? { content: JSON.stringify(update.content) } : {}),
-        ...(update.language ? { language: update.language } : {}),
-      },
-    });
-    yield* this.getDocument(update.key);
-  }
-
-  async *deleteDocument(key: string): AsyncGenerator<LaikaResult<void>> {
-    const qb = this.options.documentQueryBuilders;
-    await this.options.callbacks.documents.delete({
-      where: qb.keyEquals(key),
-    });
-    yield Result.succeed(undefined);
-  }
-
-  async *getUnpublished(key: string): AsyncGenerator<LaikaResult<Unpublished>> {
-    const qb = this.options.documentQueryBuilders;
-    const rows = await this.options.callbacks.documents.select({
-      where: qb.and(qb.keyEquals(key), qb.statusNotEquals(PUBLISHED_STATUS)),
-      limit: 1,
-    });
-    if (rows.length === 0) {
-      yield Result.fail(new NotFoundError(`Unpublished document not found: ${key}`));
-      return;
-    }
-    const row = rows[0];
-    try {
-      const content = JSON.parse(row.content) as StorageObjectContent;
-      yield Result.succeed({
-        type: 'unpublished' as const,
-        key: row.key,
-        status: row.status ?? 'published',
-        language: row.language ?? 'unk',
-        content,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-      });
-    } catch (error) {
-      yield Result.fail(
-        new InvalidData(
-          `Invalid JSON content format: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        ),
-      );
-    }
-  }
-
-  async *createUnpublished(
-    create: UnpublishedCreate,
-  ): AsyncGenerator<LaikaResult<Unpublished>> {
-    const now = new Date().toISOString();
-    await this.options.callbacks.documents.insert({
-      values: {
-        key: create.key,
-        depth: pathToSegments(create.key).length,
-        status: create.status,
-        language: create.language,
-        content: JSON.stringify(create.content),
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-    yield* this.getUnpublished(create.key);
-  }
-
-  async *updateUnpublished(
-    update: UnpublishedUpdate,
-  ): AsyncGenerator<LaikaResult<Unpublished>> {
-    const qb = this.options.documentQueryBuilders;
-    const now = new Date().toISOString();
-    const values: Partial<DocumentModelStrict> = {
-      updatedAt: now,
-      language: update.language ?? 'unk',
-    };
-    if (update.status) values.status = update.status;
-    if (update.content) values.content = JSON.stringify(update.content);
-    await this.options.callbacks.documents.update({
-      where: qb.and(qb.keyEquals(update.key), qb.statusNotEquals(PUBLISHED_STATUS)),
-      values,
-    });
-    yield* this.getUnpublished(update.key);
-  }
-
-  async *deleteUnpublished(key: string): AsyncGenerator<LaikaResult<void>> {
-    const qb = this.options.documentQueryBuilders;
-    await this.options.callbacks.documents.delete({
-      where: qb.and(qb.keyEquals(key), qb.statusNotEquals(PUBLISHED_STATUS)),
-    });
-    yield Result.succeed(undefined);
-  }
-
-  async *publish(key: string): AsyncGenerator<LaikaResult<Document>> {
-    // Get unpublished first to verify it exists
-    let unpublishedExists = false;
-    for await (const result of this.getUnpublished(key)) {
-      if (Result.isFailure(result)) {
-        yield failAs<Document>(result.failure);
-        return;
-      }
-      unpublishedExists = true;
-    }
-    if (!unpublishedExists) {
-      yield Result.fail(new NotFoundError(`Unpublished document not found: ${key}`));
-      return;
-    }
-
-    const qb = this.options.documentQueryBuilders;
-    const now = new Date().toISOString();
-    await this.options.callbacks.documents.update({
-      where: qb.keyEquals(key),
-      values: {
-        status: PUBLISHED_STATUS,
-        updatedAt: now,
-      },
-    });
-    yield* this.getDocument(key);
-  }
-
-  async *unpublish(key: string, status: string): AsyncGenerator<LaikaResult<Unpublished>> {
-    // Get document first to verify it exists
-    let documentExists = false;
-    for await (const result of this.getDocument(key)) {
-      if (Result.isFailure(result)) {
-        yield failAs<Unpublished>(result.failure);
-        return;
-      }
-      documentExists = true;
-    }
-    if (!documentExists) {
-      yield Result.fail(new NotFoundError(`Document not found: ${key}`));
-      return;
-    }
-
-    const qb = this.options.documentQueryBuilders;
-    const now = new Date().toISOString();
-    await this.options.callbacks.documents.update({
-      where: qb.keyEquals(key),
-      values: {
-        status,
-        updatedAt: now,
-      },
-    });
-    yield* this.getUnpublished(key);
-  }
-
-  private async *listRecordsInternal<
-    SummaryOnly extends boolean,
-    T extends SummaryOnly extends true ? RecordSummary : DocumentRecord,
-  >(
-    options: SummaryOnly extends true ? ListRecordsOptions : ListRecordsOptions,
-    summaryOnly: SummaryOnly,
-  ): AsyncGenerator<LaikaResult<readonly T[]>> {
-    const qb = this.options.documentQueryBuilders;
-    const records: T[] = [];
-
-    const rows = await this.options.callbacks.documents.select({
-      excludeContent: summaryOnly,
-      where: qb.and(...[
-        options.type === 'published' ? qb.statusEquals(PUBLISHED_STATUS) : undefined,
-        options.type === 'unpublished' ? qb.statusNotEquals(PUBLISHED_STATUS) : undefined,
-        options.statuses ? qb.statusIn(options.statuses) : undefined,
-        options.folder ? qb.keyStartsWith(options.folder + '/') : undefined,
-        options.folder ? qb.depthLte(pathToSegments(options.folder).length + options.depth) : undefined,
-      ].filter(x => x !== undefined)),
-      offset: 'offset' in options.pagination ? options.pagination.offset : 0,
-      limit: 'limit' in options.pagination ? options.pagination.limit : 100,
-    });
-    for (const row of rows) {
-      try {
-        records.push({
-          type: options.type === 'published' ? 'published' : options.type === 'unpublished' ? 'unpublished' : 'record',
+  getDocument(key: string): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const qb = this.options.documentQueryBuilders;
+        const rows = yield* Effect.promise(() =>
+          this.options.callbacks.documents.select({
+            where: qb.and(qb.keyEquals(key), qb.statusEquals(PUBLISHED_STATUS)),
+            limit: 1,
+          })
+        );
+        if (rows.length === 0) {
+          return yield* Effect.fail(new NotFoundError(`Document not found: ${key}`));
+        }
+        const row = rows[0]!;
+        const content = yield* parseContent(row.content);
+        return {
+          type: 'published' as const,
           key: row.key,
-          status: PUBLISHED_STATUS,
+          status: 'published' as const,
+          content,
+          language: row.language ?? 'unk',
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
-          ...(summaryOnly ? {} : { content: JSON.parse(row.content) as StorageObjectContent }),
-        } as T);
-      } catch (error) {
-        yield Result.fail(
-          new InvalidData(
-            `Invalid JSON content format for document key "${row.key}": ${
-              error instanceof Error ? error.message : 'Unknown error'
-            }`,
-          ),
-        );
-        return;
-      }
-    }
-    yield Result.succeed(records);
+        };
+      })
+    );
   }
 
-  listRecords(
-    options: ListRecordsOptions,
-  ): AsyncGenerator<LaikaResult<readonly DocumentRecord[]>> {
-    return this.listRecordsInternal(options, false);
+  createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const now = new Date().toISOString();
+        yield* Effect.promise(() =>
+          this.options.callbacks.documents.insert({
+            values: {
+              key: create.key,
+              depth: pathToSegments(create.key).length,
+              status: PUBLISHED_STATUS,
+              language: create.language,
+              content: JSON.stringify(create.content),
+              createdAt: now,
+              updatedAt: now,
+            },
+          })
+        );
+        return yield* LaikaTask.runValue(this.getDocument(create.key));
+      })
+    );
+  }
+
+  updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const qb = this.options.documentQueryBuilders;
+        const now = new Date().toISOString();
+        yield* Effect.promise(() =>
+          this.options.callbacks.documents.update({
+            where: qb.and(qb.keyEquals(update.key), qb.statusEquals(PUBLISHED_STATUS)),
+            values: {
+              updatedAt: now,
+              ...(update.content ? { content: JSON.stringify(update.content) } : {}),
+              ...(update.language ? { language: update.language } : {}),
+            },
+          })
+        );
+        return yield* LaikaTask.runValue(this.getDocument(update.key));
+      })
+    );
+  }
+
+  deleteDocument(key: string): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(() =>
+      Effect.gen({ self: this }, function*() {
+        const qb = this.options.documentQueryBuilders;
+        yield* Effect.promise(() => this.options.callbacks.documents.delete({ where: qb.keyEquals(key) }));
+      })
+    );
+  }
+
+  getUnpublished(key: string): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const qb = this.options.documentQueryBuilders;
+        const rows = yield* Effect.promise(() =>
+          this.options.callbacks.documents.select({
+            where: qb.and(qb.keyEquals(key), qb.statusNotEquals(PUBLISHED_STATUS)),
+            limit: 1,
+          })
+        );
+        if (rows.length === 0) {
+          return yield* Effect.fail(new NotFoundError(`Unpublished document not found: ${key}`));
+        }
+        const row = rows[0]!;
+        const content = yield* parseContent(row.content);
+        return {
+          type: 'unpublished' as const,
+          key: row.key,
+          status: row.status ?? 'published',
+          language: row.language ?? 'unk',
+          content,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+        };
+      })
+    );
+  }
+
+  createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const now = new Date().toISOString();
+        yield* Effect.promise(() =>
+          this.options.callbacks.documents.insert({
+            values: {
+              key: create.key,
+              depth: pathToSegments(create.key).length,
+              status: create.status,
+              language: create.language,
+              content: JSON.stringify(create.content),
+              createdAt: now,
+              updatedAt: now,
+            },
+          })
+        );
+        return yield* LaikaTask.runValue(this.getUnpublished(create.key));
+      })
+    );
+  }
+
+  updateUnpublished(update: UnpublishedUpdate): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const qb = this.options.documentQueryBuilders;
+        const now = new Date().toISOString();
+        const values: Partial<DocumentModelStrict> = {
+          updatedAt: now,
+          language: update.language ?? 'unk',
+        };
+        if (update.status) values.status = update.status;
+        if (update.content) values.content = JSON.stringify(update.content);
+        yield* Effect.promise(() =>
+          this.options.callbacks.documents.update({
+            where: qb.and(qb.keyEquals(update.key), qb.statusNotEquals(PUBLISHED_STATUS)),
+            values,
+          })
+        );
+        return yield* LaikaTask.runValue(this.getUnpublished(update.key));
+      })
+    );
+  }
+
+  deleteUnpublished(key: string): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(() =>
+      Effect.gen({ self: this }, function*() {
+        const qb = this.options.documentQueryBuilders;
+        yield* Effect.promise(() =>
+          this.options.callbacks.documents.delete({
+            where: qb.and(qb.keyEquals(key), qb.statusNotEquals(PUBLISHED_STATUS)),
+          })
+        );
+      })
+    );
+  }
+
+  publish(key: string): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        // Verify unpublished exists
+        yield* LaikaTask.runValue(this.getUnpublished(key));
+        const qb = this.options.documentQueryBuilders;
+        const now = new Date().toISOString();
+        yield* Effect.promise(() =>
+          this.options.callbacks.documents.update({
+            where: qb.keyEquals(key),
+            values: { status: PUBLISHED_STATUS, updatedAt: now },
+          })
+        );
+        return yield* LaikaTask.runValue(this.getDocument(key));
+      })
+    );
+  }
+
+  unpublish(key: string, status: string): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        // Verify document exists
+        yield* LaikaTask.runValue(this.getDocument(key));
+        const qb = this.options.documentQueryBuilders;
+        const now = new Date().toISOString();
+        yield* Effect.promise(() =>
+          this.options.callbacks.documents.update({
+            where: qb.keyEquals(key),
+            values: { status, updatedAt: now },
+          })
+        );
+        return yield* LaikaTask.runValue(this.getUnpublished(key));
+      })
+    );
+  }
+
+  listRecords(options: ListRecordsOptions): LaikaStream.LaikaStream<DocumentRecord, ListRecordsDone> {
+    return this.listRecordsInternal<DocumentRecord>(options, false);
   }
 
   listRecordSummaries(
     options: ListRecordSummaries,
-  ): AsyncGenerator<LaikaResult<readonly RecordSummary[]>> {
-    return this.listRecordsInternal(options, true);
+  ): LaikaStream.LaikaStream<RecordSummary, ListRecordsDone> {
+    return this.listRecordsInternal<RecordSummary>(options, true);
   }
 
-  async *getRevision(key: string, revision: string): AsyncGenerator<LaikaResult<Revision>> {
-    const qb = this.options.revisionQueryBuilders;
-    const rows = await this.options.callbacks.revisions.select({
-      where: qb.and(qb.keyEquals(key), qb.revisionEquals(revision)),
-      limit: 1,
-    });
-    if (rows.length === 0) {
-      yield Result.fail(new NotFoundError(`Revision not found: ${key}/${revision}`));
-      return;
-    }
-    const row = rows[0];
-    try {
-      const content = JSON.parse(row.content) as StorageObjectContent;
-      yield Result.succeed({
-        type: 'revision' as const,
-        key: row.key,
-        revision: row.revision,
-        language: row.language ?? 'unk',
-        content,
-        createdAt: row.createdAt,
-        updatedAt: row.updatedAt,
-      });
-    } catch (error) {
-      yield Result.fail(
-        new InvalidData(
-          `Invalid JSON content format: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        ),
-      );
-    }
+  private listRecordsInternal<T extends DocumentRecord | RecordSummary>(
+    options: ListRecordsOptions,
+    summaryOnly: boolean,
+  ): LaikaStream.LaikaStream<T, ListRecordsDone> {
+    return LaikaStream.make<T, ListRecordsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const qb = this.options.documentQueryBuilders;
+        const rows = yield* Effect.promise(() =>
+          this.options.callbacks.documents.select({
+            excludeContent: summaryOnly,
+            where: qb.and(...[
+              options.type === 'published' ? qb.statusEquals(PUBLISHED_STATUS) : undefined,
+              options.type === 'unpublished' ? qb.statusNotEquals(PUBLISHED_STATUS) : undefined,
+              options.statuses ? qb.statusIn(options.statuses) : undefined,
+              options.folder ? qb.keyStartsWith(options.folder + '/') : undefined,
+              options.folder
+                ? qb.depthLte(pathToSegments(options.folder).length + options.depth)
+                : undefined,
+            ].filter((x): x is NonNullable<typeof x> => x !== undefined)),
+            offset: 'offset' in options.pagination ? options.pagination.offset : 0,
+            limit: 'limit' in options.pagination ? options.pagination.limit : 100,
+          })
+        );
+
+        let emitted = 0;
+        for (const row of rows) {
+          if (summaryOnly) {
+            yield* emit.data({
+              type: options.type === 'published'
+                ? 'published'
+                : options.type === 'unpublished'
+                ? 'unpublished'
+                : 'record',
+              key: row.key,
+              status: PUBLISHED_STATUS,
+              createdAt: row.createdAt,
+              updatedAt: row.updatedAt,
+            } as T);
+            emitted += 1;
+            continue;
+          }
+          const parsed = yield* Effect.result(parseContent(row.content));
+          if (parsed._tag === 'Failure') {
+            yield* emit.recoverableError(parsed.failure);
+            continue;
+          }
+          yield* emit.data({
+            type: options.type === 'published'
+              ? 'published'
+              : options.type === 'unpublished'
+              ? 'unpublished'
+              : 'record',
+            key: row.key,
+            status: PUBLISHED_STATUS,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+            content: parsed.success,
+          } as T);
+          emitted += 1;
+        }
+        return { total: emitted };
+      })
+    );
   }
 
-  async *createRevision(create: RevisionCreate): AsyncGenerator<LaikaResult<Revision>> {
-    const now = new Date().toISOString();
-    await this.options.callbacks.revisions.insert({
-      values: {
-        key: create.key,
-        depth: pathToSegments(create.key).length,
-        revision: create.revision,
-        language: create.language,
-        content: JSON.stringify(create.content),
-        createdAt: now,
-        updatedAt: now,
-      },
-    });
-    yield* this.getRevision(create.key, create.revision);
+  getRevision(key: string, revision: string): LaikaTask.LaikaTask<Revision> {
+    return LaikaTask.make<Revision>(() =>
+      Effect.gen({ self: this }, function*() {
+        const qb = this.options.revisionQueryBuilders;
+        const rows = yield* Effect.promise(() =>
+          this.options.callbacks.revisions.select({
+            where: qb.and(qb.keyEquals(key), qb.revisionEquals(revision)),
+            limit: 1,
+          })
+        );
+        if (rows.length === 0) {
+          return yield* Effect.fail(new NotFoundError(`Revision not found: ${key}/${revision}`));
+        }
+        const row = rows[0]!;
+        const content = yield* parseContent(row.content);
+        return {
+          type: 'revision' as const,
+          key: row.key,
+          revision: row.revision,
+          language: row.language ?? 'unk',
+          content,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+        };
+      })
+    );
   }
 
-  async *listRevisions(
+  createRevision(create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
+    return LaikaTask.make<Revision>(() =>
+      Effect.gen({ self: this }, function*() {
+        const now = new Date().toISOString();
+        yield* Effect.promise(() =>
+          this.options.callbacks.revisions.insert({
+            values: {
+              key: create.key,
+              depth: pathToSegments(create.key).length,
+              revision: create.revision,
+              language: create.language,
+              content: JSON.stringify(create.content),
+              createdAt: now,
+              updatedAt: now,
+            },
+          })
+        );
+        return yield* LaikaTask.runValue(this.getRevision(create.key, create.revision));
+      })
+    );
+  }
+
+  listRevisions(
     key: string,
     _options: ListRevisionsOptions,
-  ): AsyncGenerator<LaikaResult<readonly RevisionSummary[]>> {
-    const qb = this.options.revisionQueryBuilders;
-    const rows = await this.options.callbacks.revisions.select({
-      where: qb.keyEquals(key),
-    });
-    const summaries: RevisionSummary[] = rows.map(row => ({
-      type: 'revision-summary' as const,
-      key,
-      revision: row.revision,
-      language: row.language ?? 'unk',
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-    }));
-    yield Result.succeed(summaries);
+  ): LaikaStream.LaikaStream<RevisionSummary, ListRevisionsDone> {
+    return LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const qb = this.options.revisionQueryBuilders;
+        const rows = yield* Effect.promise(() =>
+          this.options.callbacks.revisions.select({ where: qb.keyEquals(key) })
+        );
+        for (const row of rows) {
+          yield* emit.data({
+            type: 'revision-summary' as const,
+            key,
+            revision: row.revision,
+            language: row.language ?? 'unk',
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
+          });
+        }
+        return { total: rows.length };
+      })
+    );
   }
 }

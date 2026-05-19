@@ -1,8 +1,8 @@
-import type { LaikaResult } from '@laikacms/core';
-import { InternalError, NotFoundError } from '@laikacms/core';
-import type { Key } from '@laikacms/storage';
 import * as Cause from 'effect/Cause';
 import * as Result from 'effect/Result';
+import type { LaikaResult } from 'laikacms/core';
+import { InternalError, NotFoundError } from 'laikacms/core';
+import type { Key } from 'laikacms/storage';
 import type { R2Entry } from '../../domain/entities/r2-object.js';
 
 /**

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { basename, extension, pathCombine, pathToSegments } from './utils.js';
+import { applyPagination, basename, extension, naturalCompare, pathCombine, pathToSegments } from './utils.js';
 
 describe('pathToSegments', () => {
   it('splits a path into its non-empty segments', () => {
@@ -85,5 +85,57 @@ describe('extension', () => {
 
   it('returns "" for an empty path', () => {
     expect(extension('')).toBe('');
+  });
+});
+
+describe('naturalCompare', () => {
+  it('orders bare numeric strings numerically, not lexicographically', () => {
+    expect(['10', '2', '1', '11'].sort(naturalCompare)).toEqual(['1', '2', '10', '11']);
+  });
+
+  it('orders mixed alpha/numeric strings naturally', () => {
+    expect(['file10', 'file2', 'file1'].sort(naturalCompare)).toEqual(['file1', 'file2', 'file10']);
+  });
+
+  it('returns 0 for identical strings', () => {
+    expect(naturalCompare('a', 'a')).toBe(0);
+  });
+
+  it('orders pure alpha strings alphabetically', () => {
+    expect(['banana', 'apple', 'cherry'].sort(naturalCompare)).toEqual(['apple', 'banana', 'cherry']);
+  });
+});
+
+describe('applyPagination', () => {
+  const items = ['a', 'b', 'c', 'd', 'e'];
+
+  it('returns a shallow copy when pagination is undefined', () => {
+    const out = applyPagination(items, undefined);
+    expect(out).toEqual(items);
+    expect(out).not.toBe(items);
+  });
+
+  it('applies offset + limit', () => {
+    expect(applyPagination(items, { offset: 1, limit: 2 })).toEqual(['b', 'c']);
+  });
+
+  it('defaults limit to "rest of list" when omitted', () => {
+    expect(applyPagination(items, { offset: 2 })).toEqual(['c', 'd', 'e']);
+  });
+
+  it('applies page + perPage (1-indexed pages)', () => {
+    expect(applyPagination(items, { page: 1, perPage: 2 })).toEqual(['a', 'b']);
+    expect(applyPagination(items, { page: 2, perPage: 2 })).toEqual(['c', 'd']);
+    expect(applyPagination(items, { page: 3, perPage: 2 })).toEqual(['e']);
+  });
+
+  it('returns a copy for cursor pagination (before/after) since the helper cannot resolve cursors', () => {
+    const out = applyPagination(items, { after: 'b', perPage: 2 });
+    expect(out).toEqual(items);
+    expect(out).not.toBe(items);
+  });
+
+  it('clamps page=1 with no perPage to the whole list', () => {
+    expect(applyPagination(items, { page: 1 })).toEqual(items);
   });
 });

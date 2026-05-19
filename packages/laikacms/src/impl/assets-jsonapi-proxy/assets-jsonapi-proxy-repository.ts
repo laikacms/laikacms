@@ -1,23 +1,34 @@
+import * as Effect from 'effect/Effect';
+
 import {
   type Asset,
   type AssetCreate,
   type AssetMetadata,
+  type AssetsCapabilities,
+  AssetsCompatibilityDate,
   AssetsRepository,
   type AssetUpdate,
   type AssetUrl,
   type AssetVariations,
+  type DeleteAssetsDone,
   type GetResourceOptions,
+  type ListResourcesDone,
   type ListResourcesOptions,
   type Resource,
-} from '@laikacms/assets';
-import type { LaikaError, LaikaResult } from '@laikacms/core';
-import { InternalError, InvalidData } from '@laikacms/core';
-import type { JsonApiCollectionResponse } from '@laikacms/json-api';
-import { type Folder, type FolderCreate } from '@laikacms/storage';
-import * as Result from 'effect/Result';
+} from 'laikacms/assets';
+import {
+  InternalError,
+  InvalidData,
+  type LaikaDone,
+  type LaikaError,
+  LaikaStream,
+  LaikaTask,
+} from 'laikacms/core';
+import type { JsonApiCollectionResponse } from 'laikacms/json-api';
+import { type Folder, type FolderCreate } from 'laikacms/storage';
+
 import {
   parseAsset,
-  parseAssetMetadata,
   parseAssetUrl,
   parseAssetVariations,
   parseFolder,
@@ -27,7 +38,7 @@ import {
 export interface AssetsJsonApiProxyRepositoryOptions {
   baseUrl: string;
   authToken?: string;
-  /** Dynamic token provider - called before each request */
+  /** Dynamic token provider — called before each request. */
   tokenPromise?: () => Promise<string>;
 }
 
@@ -38,18 +49,7 @@ interface JsonApiResource {
 }
 
 /**
- * Helper to convert a failure result to a different type while preserving the error
- */
-function failAs<T>(error: LaikaError): LaikaResult<T> {
-  return Result.fail(error);
-}
-
-/**
- * JSON:API Proxy implementation of AssetsRepository
- *
- * This implementation proxies all assets operations through a JSON:API
- * endpoint, enabling microservice architecture by communicating with
- * packages/apis/assets-api over HTTP.
+ * Proxies all assets operations through a remote JSON:API endpoint.
  */
 export class AssetsJsonApiProxyRepository extends AssetsRepository {
   private readonly baseUrl: string;
@@ -62,7 +62,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
 
   constructor(options: AssetsJsonApiProxyRepositoryOptions) {
     super();
-    this.baseUrl = options.baseUrl.replace(/\/$/, ''); // Remove trailing slash
+    this.baseUrl = options.baseUrl.replace(/\/$/, '');
     this.tokenPromise = options.tokenPromise;
     this.staticHeaders = {
       'Content-Type': 'application/vnd.api+json',
@@ -71,502 +71,482 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     };
   }
 
-  /**
-   * Get headers with dynamic token if tokenPromise is provided
-   */
   private async getHeaders(): Promise<Record<string, string>> {
     if (this.tokenPromise) {
       const token = await this.tokenPromise();
-      return {
-        ...this.staticHeaders,
-        'Authorization': `Bearer ${token}`,
-      };
+      return { ...this.staticHeaders, 'Authorization': `Bearer ${token}` };
     }
     return this.staticHeaders;
   }
 
-  private async handleResponse<T, I = undefined, Data = JsonApiCollectionResponse & { data: T, included?: I[] }>(
-    response: Response,
-  ): Promise<LaikaResult<Data>> {
-    const contentType = response.headers.get('content-type');
-
-    if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-      return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-    }
-
-    const json = await response.json();
-
-    if (!response.ok) {
-      const errors = json.errors || [{ detail: 'Unknown error' }];
-      return Result.fail(
-        new InvalidData(
-          errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-        ),
-      );
-    }
-
-    if (json.errors) {
-      return Result.fail(
-        new InvalidData(
-          json.errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(
-            ', ',
-          ),
-        ),
-      );
-    }
-
-    // Return the full JSON response, not just json.data
-    // The caller expects { data: T, included?: I[] } structure
-    return Result.succeed(json as Data);
-  }
-
-  async *getResource(key: string, options?: GetResourceOptions): AsyncGenerator<LaikaResult<Resource[]>> {
-    try {
-      const headers = await this.getHeaders();
-
-      // Build include query parameter from hints
-      const includeParams: string[] = [];
-      if (options?.hints?.variations) includeParams.push('asset-variation');
-      if (options?.hints?.urls) includeParams.push('asset-url');
-      if (options?.hints?.metadata) includeParams.push('asset-metadata');
-
-      const queryString = includeParams.length > 0 ? `?include=${includeParams.join(',')}` : '';
-
-      const response = await fetch(`${this.baseUrl}/resources/${encodeURIComponent(key)}${queryString}`, {
-        method: 'GET',
-        headers,
-      });
-
-      const result = await this.handleResponse<JsonApiResource, JsonApiResource>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Resource[]>(result.failure);
-        return;
+  private fetchJson<T = Record<string, unknown>>(
+    path: string,
+    init: { method: string, body?: unknown, multipart?: FormData } = { method: 'GET' },
+  ): Effect.Effect<T, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const headers = yield* Effect.promise(() => this.getHeaders());
+      let finalHeaders: Record<string, string> = headers;
+      let body: BodyInit | undefined;
+      if (init.multipart) {
+        const { 'Content-Type': _ct, ...rest } = headers;
+        finalHeaders = rest;
+        body = init.multipart;
+      } else if (init.body !== undefined) {
+        body = JSON.stringify(init.body);
       }
-
-      const resource = parseResource(result.success.data) as Resource;
-
-      this.storeIncludedResources(result.success.included);
-      yield Result.succeed([resource]);
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+      const response = yield* Effect.tryPromise({
+        try: () => fetch(`${this.baseUrl}${path}`, { method: init.method, headers: finalHeaders, body }),
+        catch: e => new InvalidData(`Network error: ${(e as Error).message}`),
+      });
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType?.includes('application/vnd.api+json')
+        || contentType?.includes('application/json');
+      if (!isJson) {
+        // Non-JSON response (often a stack trace on 500). Include the body so
+        // the caller can actually see what went wrong on the server.
+        const bodySnippet = yield* Effect.promise(() =>
+          response.text().then(t => t.slice(0, 500)).catch(() => '<unreadable>')
+        );
+        return yield* Effect.fail(
+          new InvalidData(
+            `${init.method} ${path} → ${response.status} ${response.statusText} `
+              + `(content-type: ${contentType ?? 'none'}): ${bodySnippet}`,
+          ),
+        );
+      }
+      const json = yield* Effect.promise(() => response.json() as Promise<Record<string, unknown>>);
+      if (!response.ok || (Array.isArray(json.errors) && json.errors.length > 0)) {
+        const errors = (Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }]) as Array<
+          { detail?: string, title?: string }
+        >;
+        return yield* Effect.fail(
+          new InvalidData(errors.map(e => e.detail || e.title || 'Unknown error').join(', ')),
+        );
+      }
+      return json as T;
+    });
   }
 
-  storeIncludedResources(included: readonly (JsonApiResource)[] | undefined): void {
+  private fetchVoid(
+    path: string,
+    init: { method: string } = { method: 'GET' },
+  ): Effect.Effect<void, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const headers = yield* Effect.promise(() => this.getHeaders());
+      const response = yield* Effect.tryPromise({
+        try: () => fetch(`${this.baseUrl}${path}`, { method: init.method, headers }),
+        catch: e => new InvalidData(`Network error: ${(e as Error).message}`),
+      });
+      if (!response.ok) {
+        const json = yield* Effect.promise(() => response.json().catch(() => ({}))) as Effect.Effect<
+          { errors?: Array<{ detail?: string, title?: string }> }
+        >;
+        const errors = json.errors || [{ detail: 'Request failed' }];
+        return yield* Effect.fail(
+          new InvalidData(errors.map(e => e.detail || e.title || 'Unknown error').join(', ')),
+        );
+      }
+    });
+  }
+
+  /**
+   * Cached upstream capabilities. The remote assets-api exposes
+   * `GET /capabilities` returning the real backing repo's capabilities, so
+   * we fetch + cache it per repo instance. Falls back to a conservative
+   * default if the upstream doesn't speak the endpoint yet.
+   */
+  private cachedCapabilities?: AssetsCapabilities;
+
+  getCapabilities(): LaikaTask.LaikaTask<AssetsCapabilities> {
+    return LaikaTask.make<AssetsCapabilities>(() =>
+      Effect.gen({ self: this }, function*() {
+        if (this.cachedCapabilities) return this.cachedCapabilities;
+        const r = yield* Effect.result(
+          this.fetchJson<{ data?: { attributes?: AssetsCapabilities } }>('/capabilities'),
+        );
+        if (r._tag === 'Success') {
+          const data = r.success.data?.attributes;
+          if (data) {
+            this.cachedCapabilities = data;
+            return data;
+          }
+        }
+        const fallback: AssetsCapabilities = {
+          compatibilityDate: AssetsCompatibilityDate.make('2026-05-11'),
+          pagination: {
+            supported: true,
+            description: 'JSON:API pagination is forwarded to the remote endpoint.',
+            styles: { offset: true, page: true, cursor: true },
+          },
+        };
+        this.cachedCapabilities = fallback;
+        return fallback;
+      })
+    );
+  }
+
+  private storeIncludedResources(included: readonly JsonApiResource[] | undefined): void {
     if (!included) return;
     for (const item of included) {
-      if (item.type === 'asset-variants') {
+      if (item.type === 'asset-variants' || item.type === 'asset-variation') {
         const variation = parseAssetVariations(item);
         this.variations.set(variation.key, variation);
       } else if (item.type === 'asset-url') {
         const url = parseAssetUrl(item);
         this.urls.set(url.key, url);
-      } else if (item.type === 'metadata' || item.type === 'asset-metadata') {
-        const metadata = parseAssetMetadata(item);
-        this.metadata.set(metadata.key, metadata);
       }
+      // `asset-metadata` is no longer a separate JSON:API resource — the
+      // server inlines it on each asset's `meta` instead. See `cacheMetaFromAsset`.
     }
   }
 
-  async *listResources(folderKey: string, options: ListResourcesOptions): AsyncGenerator<LaikaResult<Resource[]>> {
-    try {
-      const headers = await this.getHeaders();
-
-      // Build query parameters
-      const params = new URLSearchParams();
-
-      // Use folderKey as the prefix filter
-      if (folderKey) {
-        params.set('filter[prefix]', folderKey);
-      }
-
-      // Handle depth for recursive listing (minimum 1)
-      const depth = Math.max(1, options?.depth ?? 1);
-      if (depth > 1) {
-        params.set('filter[depth]', String(depth));
-      }
-
-      // Handle pagination - check which type it is
-      if (options?.pagination) {
-        const pagination = options.pagination;
-        if ('offset' in pagination) {
-          params.set('page[offset]', String(pagination.offset || 0));
-          params.set('page[limit]', String(pagination.limit || 100));
-        } else if ('page' in pagination) {
-          params.set('page[number]', String(pagination.page));
-          if (pagination.perPage) params.set('page[size]', String(pagination.perPage));
-        } else if ('after' in pagination) {
-          if (pagination.after) params.set('page[after]', pagination.after);
-          if (pagination.perPage) params.set('page[size]', String(pagination.perPage));
-        } else if ('before' in pagination) {
-          if (pagination.before) params.set('page[before]', pagination.before);
-          if (pagination.perPage) params.set('page[size]', String(pagination.perPage));
-        }
-      }
-
-      // Build include query parameter from hints
-      const includeParams: string[] = [];
-      if (options?.hints?.variations) includeParams.push('asset-variation');
-      if (options?.hints?.urls) includeParams.push('asset-url');
-      if (options?.hints?.metadata) includeParams.push('asset-metadata');
-      if (includeParams.length > 0) {
-        params.set('include', includeParams.join(','));
-      }
-
-      const queryString = params.toString();
-      const url = `${this.baseUrl}/resources${queryString ? `?${queryString}` : ''}`;
-
-      const response = await fetch(url, {
-        method: 'GET',
-        headers,
-      });
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-        return;
-      }
-
-      const json: JsonApiCollectionResponse = await response.json();
-
-      if (!response.ok || 'errors' in json) {
-        const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
-        yield Result.fail(new InvalidData(errors.map(e => e.detail || e.title || 'Unknown error').join(', ')));
-        return;
-      }
-
-      const resources: Resource[] = json.data.map((item: JsonApiResource) => parseResource(item) as Resource);
-      this.storeIncludedResources(json.included);
-      yield Result.succeed(resources);
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+  /**
+   * The server returns the asset's intrinsic metadata under the resource's
+   * top-level `meta` (per JSON:API spec). Pull it out into the metadata cache
+   * so `getMetadata()` calls can return without an extra round-trip.
+   */
+  private cacheMetaFromAsset(item: JsonApiResource): void {
+    if (item.type !== 'asset') return;
+    const raw = (item as { meta?: unknown }).meta;
+    if (!raw || typeof raw !== 'object') return;
+    this.metadata.set(item.id, {
+      key: item.id,
+      metadata: raw as AssetMetadata['metadata'],
+    });
   }
 
-  async *getAsset(key: string, options?: GetResourceOptions): AsyncGenerator<LaikaResult<Asset>> {
-    for await (const result of this.getResource(key, options)) {
-      if (Result.isFailure(result)) {
-        yield failAs<Asset>(result.failure);
-        return;
-      }
+  getResource(
+    key: string,
+    options?: GetResourceOptions,
+  ): LaikaTask.LaikaTask<ReadonlyArray<Resource>> {
+    return LaikaTask.make<ReadonlyArray<Resource>>(() =>
+      Effect.gen({ self: this }, function*() {
+        const params = new URLSearchParams();
+        const includes: string[] = [];
+        if (options?.hints?.variations) includes.push('variations');
+        if (options?.hints?.urls) includes.push('urls');
+        if (includes.length > 0) params.set('include', includes.join(','));
+        // `meta` is its own query param per JSON:API: `?include=` is reserved
+        // for relationship traversal, and intrinsic metadata isn't a related
+        // resource.
+        if (options?.hints?.metadata) params.set('meta', 'true');
+        const queryString = params.toString();
 
-      const resource = result.success[0];
-      if (!resource || resource.type !== 'asset') {
-        yield Result.fail(new InvalidData(`Expected asset but got ${resource?.type || 'nothing'}`));
-        return;
-      }
-
-      yield Result.succeed(resource as Asset);
-    }
+        const json = yield* this.fetchJson<{ data: JsonApiResource, included?: JsonApiResource[] }>(
+          `/resources/${encodeURIComponent(key)}${queryString ? `?${queryString}` : ''}`,
+        );
+        const resource = parseResource(json.data) as Resource;
+        this.cacheMetaFromAsset(json.data);
+        this.storeIncludedResources(json.included);
+        return [resource];
+      })
+    );
   }
 
-  async *createAsset(create: AssetCreate): AsyncGenerator<LaikaResult<Asset>> {
-    try {
-      const headers = await this.getHeaders();
+  listResources(
+    folderKey: string,
+    options: ListResourcesOptions,
+  ): LaikaStream.LaikaStream<Resource, ListResourcesDone> {
+    return LaikaStream.make<Resource, ListResourcesDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const params = new URLSearchParams();
+        if (folderKey) params.set('filter[prefix]', folderKey);
+        const depth = Math.max(1, options?.depth ?? 1);
+        if (depth > 1) params.set('filter[depth]', String(depth));
 
-      // For binary content, we need to use multipart/form-data
-      const formData = new FormData();
-      formData.append('key', create.key);
-      if (create.mimeType) formData.append('mimeType', create.mimeType);
-      if (create.filename) formData.append('filename', create.filename);
-      if (create.cacheControl) formData.append('cacheControl', create.cacheControl);
-      if (create.customMetadata) {
-        formData.append('customMetadata', JSON.stringify(create.customMetadata));
-      }
-
-      // Handle different content types - convert to ArrayBuffer for Blob compatibility
-      let blobContent: ArrayBuffer;
-
-      if (create.content instanceof ArrayBuffer) {
-        blobContent = create.content;
-      } else if (create.content instanceof Uint8Array) {
-        // Copy to a new ArrayBuffer to avoid SharedArrayBuffer issues
-        blobContent = create.content.slice().buffer as ArrayBuffer;
-      } else if (typeof ReadableStream !== 'undefined' && create.content instanceof ReadableStream) {
-        // For streams, we need to read them first
-        const reader = (create.content as ReadableStream<Uint8Array>).getReader();
-        const chunks: Uint8Array[] = [];
-        let done = false;
-        while (!done) {
-          const readResult = await reader.read();
-          done = readResult.done;
-          if (readResult.value) {
-            chunks.push(readResult.value);
+        if (options?.pagination) {
+          const p = options.pagination;
+          if ('offset' in p) {
+            params.set('page[offset]', String(p.offset || 0));
+            params.set('page[limit]', String(p.limit || 100));
+          } else if ('page' in p) {
+            params.set('page[number]', String(p.page));
+            if (p.perPage) params.set('page[size]', String(p.perPage));
+          } else if ('after' in p) {
+            if (p.after) params.set('page[after]', p.after);
+            if (p.perPage) params.set('page[size]', String(p.perPage));
+          } else if ('before' in p) {
+            if (p.before) params.set('page[before]', p.before);
+            if (p.perPage) params.set('page[size]', String(p.perPage));
           }
         }
-        // Calculate total length
-        const totalLength = chunks.reduce((acc, chunk) => acc + chunk.length, 0);
-        const combined = new Uint8Array(totalLength);
-        let offset = 0;
-        for (const chunk of chunks) {
-          combined.set(chunk, offset);
-          offset += chunk.length;
-        }
-        blobContent = combined.buffer as ArrayBuffer;
-      } else {
-        yield Result.fail(new InvalidData('Unsupported content type'));
-        return;
-      }
 
-      // Use File instead of Blob to preserve the filename
-      const filename = create.filename || create.key.split('/').pop() || 'file';
-      const file = new File([blobContent], filename, { type: create.mimeType });
-      formData.append('file', file, filename);
+        const includes: string[] = [];
+        if (options?.hints?.variations) includes.push('variations');
+        if (options?.hints?.urls) includes.push('urls');
+        if (includes.length > 0) params.set('include', includes.join(','));
+        if (options?.hints?.metadata) params.set('meta', 'true');
 
-      // Remove Content-Type header to let browser set it with boundary
-      const headersWithoutContentType = { ...headers };
-      delete headersWithoutContentType['Content-Type'];
-
-      const response = await fetch(`${this.baseUrl}/resources`, {
-        method: 'POST',
-        headers: headersWithoutContentType,
-        body: formData,
-      });
-
-      const result = await this.handleResponse<JsonApiResource, JsonApiResource>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Asset>(result.failure);
-        return;
-      }
-
-      yield Result.succeed(parseAsset(result.success.data));
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
-  }
-
-  async *updateAsset(update: AssetUpdate): AsyncGenerator<LaikaResult<Asset>> {
-    try {
-      const headers = await this.getHeaders();
-
-      // AssetUpdate only has metadata fields, no content
-      const jsonApiData = {
-        type: 'asset',
-        id: update.key,
-        attributes: {
-          ...(update.mimeType && { mimeType: update.mimeType }),
-          ...(update.customMetadata && { customMetadata: update.customMetadata }),
-          ...(update.cacheControl && { cacheControl: update.cacheControl }),
-        },
-      };
-
-      const response = await fetch(`${this.baseUrl}/resources/${encodeURIComponent(update.key)}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ data: jsonApiData }),
-      });
-
-      const result = await this.handleResponse<JsonApiResource>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Asset>(result.failure);
-        return;
-      }
-
-      yield Result.succeed(parseAsset(result.success.data));
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
-  }
-
-  async *deleteAssets(keys: readonly string[]): AsyncGenerator<LaikaResult<string[]>> {
-    try {
-      const headers = await this.getHeaders();
-      const deletedKeys: string[] = [];
-
-      for (const key of keys) {
-        const response = await fetch(`${this.baseUrl}/resources/${encodeURIComponent(key)}`, {
-          method: 'DELETE',
-          headers,
-        });
-
-        if (response.ok) {
-          deletedKeys.push(key);
-        }
-      }
-
-      yield Result.succeed(deletedKeys);
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
-  }
-
-  async *deleteAsset(key: string): AsyncGenerator<LaikaResult<void>> {
-    try {
-      const headers = await this.getHeaders();
-
-      const response = await fetch(`${this.baseUrl}/resources/${encodeURIComponent(key)}`, {
-        method: 'DELETE',
-        headers,
-      });
-
-      if (!response.ok) {
-        const json = await response.json().catch(() => ({}));
-        const errors = json.errors || [{ detail: 'Failed to delete asset' }];
-        yield Result.fail(
-          new InvalidData(
-            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-          ),
+        const queryString = params.toString();
+        const json = yield* this.fetchJson<JsonApiCollectionResponse>(
+          `/resources${queryString ? `?${queryString}` : ''}`,
         );
-        return;
-      }
 
-      yield Result.succeed(undefined);
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+        let emitted = 0;
+        for (const item of json.data as JsonApiResource[]) {
+          this.cacheMetaFromAsset(item);
+          yield* emit.data(parseResource(item) as Resource);
+          emitted += 1;
+        }
+        this.storeIncludedResources(json.included as JsonApiResource[] | undefined);
+        return { total: emitted };
+      })
+    );
   }
 
-  async *deleteFolder(key: string, recursive?: boolean): AsyncGenerator<LaikaResult<void>> {
-    try {
-      const headers = await this.getHeaders();
+  getAsset(key: string, options?: GetResourceOptions): LaikaTask.LaikaTask<Asset> {
+    return LaikaTask.make<Asset>(() =>
+      Effect.gen({ self: this }, function*() {
+        const resources = yield* LaikaTask.runValue(this.getResource(key, options));
+        const resource = resources[0];
+        if (!resource || resource.type !== 'asset') {
+          return yield* Effect.fail(
+            new InvalidData(`Expected asset but got ${resource?.type || 'nothing'}`),
+          );
+        }
+        return resource as Asset;
+      })
+    );
+  }
 
-      // Build query parameters for recursive deletion
-      const params = new URLSearchParams();
-      if (recursive) {
-        params.set('recursive', 'true');
-      }
-      const queryString = params.toString();
-      const url = `${this.baseUrl}/resources/${encodeURIComponent(key)}${queryString ? `?${queryString}` : ''}`;
+  createAsset(create: AssetCreate): LaikaTask.LaikaTask<Asset> {
+    return LaikaTask.make<Asset>(() =>
+      Effect.gen({ self: this }, function*() {
+        const formData = new FormData();
+        formData.append('key', create.key);
+        if (create.mimeType) formData.append('mimeType', create.mimeType);
+        if (create.filename) formData.append('filename', create.filename);
+        if (create.cacheControl) formData.append('cacheControl', create.cacheControl);
+        if (create.customMetadata) {
+          formData.append('customMetadata', JSON.stringify(create.customMetadata));
+        }
 
-      const response = await fetch(url, {
-        method: 'DELETE',
-        headers,
-      });
+        let blobContent: ArrayBuffer;
+        if (create.content instanceof ArrayBuffer) {
+          blobContent = create.content;
+        } else if (create.content instanceof Uint8Array) {
+          blobContent = create.content.slice().buffer as ArrayBuffer;
+        } else if (typeof ReadableStream !== 'undefined' && create.content instanceof ReadableStream) {
+          blobContent = yield* Effect.promise(async () => {
+            const reader = (create.content as ReadableStream<Uint8Array>).getReader();
+            const chunks: Uint8Array[] = [];
+            let done = false;
+            while (!done) {
+              const r = await reader.read();
+              done = r.done;
+              if (r.value) chunks.push(r.value);
+            }
+            const total = chunks.reduce((a, c) => a + c.length, 0);
+            const combined = new Uint8Array(total);
+            let offset = 0;
+            for (const chunk of chunks) {
+              combined.set(chunk, offset);
+              offset += chunk.length;
+            }
+            return combined.buffer as ArrayBuffer;
+          });
+        } else {
+          return yield* Effect.fail(new InvalidData('Unsupported content type'));
+        }
 
-      if (!response.ok) {
-        const json = await response.json().catch(() => ({}));
-        const errors = json.errors || [{ detail: 'Failed to delete folder' }];
-        yield Result.fail(
-          new InvalidData(
-            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-          ),
+        const filename = create.filename || create.key.split('/').pop() || 'file';
+        const file = new File([blobContent], filename, { type: create.mimeType });
+        formData.append('file', file, filename);
+
+        const json = yield* this.fetchJson<{ data: JsonApiResource }>(
+          `/resources`,
+          { method: 'POST', multipart: formData },
         );
-        return;
-      }
-
-      yield Result.succeed(undefined);
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+        return parseAsset(json.data);
+      })
+    );
   }
 
-  async *getVariations(assets: Asset[]): AsyncGenerator<LaikaResult<AssetVariations[]>> {
-    const results: AssetVariations[] = [];
-    for (const asset of assets) {
-      const variation = this.variations.get(asset.key);
-      if (variation) {
-        results.push(variation);
-      } else {
-        for await (const result of this.getAsset(asset.key, { hints: { variations: true } })) {
-          if (Result.isFailure(result)) {
-            yield failAs<AssetVariations[]>(result.failure);
-            return;
+  updateAsset(update: AssetUpdate): LaikaTask.LaikaTask<Asset> {
+    return LaikaTask.make<Asset>(() =>
+      Effect.gen({ self: this }, function*() {
+        const jsonApiData = {
+          type: 'asset',
+          id: update.key,
+          attributes: {
+            ...(update.mimeType && { mimeType: update.mimeType }),
+            ...(update.customMetadata && { customMetadata: update.customMetadata }),
+            ...(update.cacheControl && { cacheControl: update.cacheControl }),
+          },
+        };
+        const json = yield* this.fetchJson<{ data: JsonApiResource }>(
+          `/resources/${encodeURIComponent(update.key)}`,
+          { method: 'PATCH', body: { data: jsonApiData } },
+        );
+        return parseAsset(json.data);
+      })
+    );
+  }
+
+  deleteAsset(key: string): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(() =>
+      this.fetchVoid(`/resources/${encodeURIComponent(key)}`, { method: 'DELETE' }),
+    );
+  }
+
+  deleteAssets(keys: readonly string[]): LaikaStream.LaikaStream<string, DeleteAssetsDone> {
+    return LaikaStream.make<string, DeleteAssetsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        let removed = 0;
+        let skipped = 0;
+        for (const key of keys) {
+          const r = yield* Effect.result(
+            this.fetchVoid(`/resources/${encodeURIComponent(key)}`, { method: 'DELETE' }),
+          );
+          if (r._tag === 'Failure') {
+            yield* emit.recoverableError(r.failure);
+            skipped += 1;
+            continue;
           }
-          if (!this.variations.has(asset.key)) {
-            yield Result.fail(
+          yield* emit.data(key);
+          removed += 1;
+        }
+        return { removed, skipped };
+      })
+    );
+  }
+
+  deleteFolder(key: string, recursive?: boolean): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(() => {
+      const params = new URLSearchParams();
+      if (recursive) params.set('recursive', 'true');
+      const queryString = params.toString();
+      return this.fetchVoid(
+        `/resources/${encodeURIComponent(key)}${queryString ? `?${queryString}` : ''}`,
+        { method: 'DELETE' },
+      );
+    });
+  }
+
+  getVariations(assets: Asset[]): LaikaStream.LaikaStream<AssetVariations, LaikaDone> {
+    return LaikaStream.make<AssetVariations, LaikaDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        let emitted = 0;
+        for (const asset of assets) {
+          const cached = this.variations.get(asset.key);
+          if (cached) {
+            yield* emit.data(cached);
+            emitted += 1;
+            continue;
+          }
+          // Trigger a getAsset with the hint to populate the cache, then fetch.
+          const r = yield* Effect.result(
+            LaikaTask.runValue(this.getAsset(asset.key, { hints: { variations: true } })),
+          );
+          if (r._tag === 'Failure') {
+            yield* emit.recoverableError(r.failure);
+            continue;
+          }
+          const variation = this.variations.get(asset.key);
+          if (!variation) {
+            yield* emit.recoverableError(
               new InternalError(`Hint for variations was requested but no variations found for asset: ${asset.key}`),
             );
-            return;
+            continue;
           }
-          results.push(this.variations.get(asset.key)!);
+          yield* emit.data(variation);
+          emitted += 1;
         }
-      }
-    }
-    yield Result.succeed(results);
+        return { total: emitted };
+      })
+    );
   }
 
-  async *getUrls(assets: Asset[]): AsyncGenerator<LaikaResult<AssetUrl[]>> {
-    const results: AssetUrl[] = [];
-    for (const asset of assets) {
-      const url = this.urls.get(asset.key);
-      if (url) {
-        results.push(url);
-      } else {
-        for await (const result of this.getAsset(asset.key, { hints: { urls: true } })) {
-          if (Result.isFailure(result)) {
-            yield failAs<AssetUrl[]>(result.failure);
-            return;
+  getUrls(assets: Asset[]): LaikaStream.LaikaStream<AssetUrl, LaikaDone> {
+    return LaikaStream.make<AssetUrl, LaikaDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        let emitted = 0;
+        for (const asset of assets) {
+          const cached = this.urls.get(asset.key);
+          if (cached) {
+            yield* emit.data(cached);
+            emitted += 1;
+            continue;
           }
-          if (!this.urls.has(asset.key)) {
-            yield Result.fail(
+          const r = yield* Effect.result(
+            LaikaTask.runValue(this.getAsset(asset.key, { hints: { urls: true } })),
+          );
+          if (r._tag === 'Failure') {
+            yield* emit.recoverableError(r.failure);
+            continue;
+          }
+          const url = this.urls.get(asset.key);
+          if (!url) {
+            yield* emit.recoverableError(
               new InternalError(`Hint for URLs was requested but no URLs found for asset: ${asset.key}`),
             );
-            return;
+            continue;
           }
-          results.push(this.urls.get(asset.key)!);
+          yield* emit.data(url);
+          emitted += 1;
         }
-      }
-    }
-    yield Result.succeed(results);
+        return { total: emitted };
+      })
+    );
   }
 
-  async *getMetadata(assets: Asset[]): AsyncGenerator<LaikaResult<AssetMetadata[]>> {
-    const results: AssetMetadata[] = [];
-    for (const asset of assets) {
-      const metadataContent = this.metadata.get(asset.key);
-      if (metadataContent) {
-        results.push(metadataContent);
-      } else {
-        for await (const result of this.getAsset(asset.key, { hints: { metadata: true } })) {
-          if (Result.isFailure(result)) {
-            yield failAs<AssetMetadata[]>(result.failure);
-            return;
+  getMetadata(assets: Asset[]): LaikaStream.LaikaStream<AssetMetadata, LaikaDone> {
+    return LaikaStream.make<AssetMetadata, LaikaDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        let emitted = 0;
+        for (const asset of assets) {
+          const cached = this.metadata.get(asset.key);
+          if (cached) {
+            yield* emit.data(cached);
+            emitted += 1;
+            continue;
           }
-          if (!this.metadata.has(asset.key)) {
-            yield Result.fail(
+          const r = yield* Effect.result(
+            LaikaTask.runValue(this.getAsset(asset.key, { hints: { metadata: true } })),
+          );
+          if (r._tag === 'Failure') {
+            yield* emit.recoverableError(r.failure);
+            continue;
+          }
+          const meta = this.metadata.get(asset.key);
+          if (!meta) {
+            yield* emit.recoverableError(
               new InternalError(`Hint for metadata was requested but no metadata found for asset: ${asset.key}`),
             );
-            return;
+            continue;
           }
-          results.push(this.metadata.get(asset.key)!);
+          yield* emit.data(meta);
+          emitted += 1;
         }
-      }
-    }
-    yield Result.succeed(results);
+        return { total: emitted };
+      })
+    );
   }
 
-  async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
-    for await (const result of this.getResource(key)) {
-      if (Result.isFailure(result)) {
-        yield failAs<Folder>(result.failure);
-        return;
-      }
-
-      const resource = result.success[0];
-      if (!resource || resource.type !== 'folder') {
-        yield Result.fail(new InvalidData(`Expected folder but got ${resource?.type || 'nothing'}`));
-        return;
-      }
-
-      yield Result.succeed(resource as Folder);
-    }
+  getFolder(key: string): LaikaTask.LaikaTask<Folder> {
+    return LaikaTask.make<Folder>(() =>
+      Effect.gen({ self: this }, function*() {
+        const resources = yield* LaikaTask.runValue(this.getResource(key));
+        const resource = resources[0];
+        if (!resource || resource.type !== 'folder') {
+          return yield* Effect.fail(
+            new InvalidData(`Expected folder but got ${resource?.type || 'nothing'}`),
+          );
+        }
+        return resource as Folder;
+      })
+    );
   }
 
-  async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
-    try {
-      const headers = await this.getHeaders();
-
-      const jsonApiData = {
-        type: 'folder',
-        id: folderCreate.key,
-        attributes: {},
-      };
-
-      const response = await fetch(`${this.baseUrl}/resources`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ data: jsonApiData }),
-      });
-
-      const result = await this.handleResponse<JsonApiResource>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Folder>(result.failure);
-        return;
-      }
-
-      yield Result.succeed(parseFolder(result.success.data));
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+  createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
+    return LaikaTask.make<Folder>(() =>
+      Effect.gen({ self: this }, function*() {
+        const json = yield* this.fetchJson<{ data: JsonApiResource }>(
+          `/resources`,
+          { method: 'POST', body: { data: { type: 'folder', id: folderCreate.key, attributes: {} } } },
+        );
+        return parseFolder(json.data);
+      })
+    );
   }
 }

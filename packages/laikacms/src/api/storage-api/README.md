@@ -1,8 +1,8 @@
-# @laikacms/storage-api
+# laikacms/storage-api
 
-[![npm](https://img.shields.io/npm/v/@laikacms/storage-api)](https://www.npmjs.com/package/@laikacms/storage-api)
-[![npm](https://img.shields.io/npm/dm/@laikacms/storage-api)](https://www.npmjs.com/package/@laikacms/storage-api)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/storage-api)](https://bundlephobia.com/result?p=@laikacms/storage-api)
+[![npm](https://img.shields.io/npm/v/laikacms/storage-api)](https://www.npmjs.com/package/laikacms/storage-api)
+[![npm](https://img.shields.io/npm/dm/laikacms/storage-api)](https://www.npmjs.com/package/laikacms/storage-api)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/storage-api)](https://bundlephobia.com/result?p=laikacms/storage-api)
 
 JSON:API server for storage operations.
 
@@ -12,7 +12,7 @@ JSON:API server for storage operations.
 and delete storage objects for any caller that can reach its `fetch`. Do **not** expose it to
 untrusted networks directly.
 
-Wrap it with an authentication layer — e.g. [`@laikacms/decap-api`](../../decap/decap-api), which
+Wrap it with an authentication layer — e.g. [`laikacms/decap-api`](../../decap/decap-api), which
 validates a Bearer access token before forwarding to this handler — or provide your own middleware:
 
 ```typescript
@@ -30,13 +30,13 @@ export default {
 ## Installation
 
 ```bash
-pnpm add @laikacms/storage-api
+pnpm add laikacms/storage-api
 ```
 
 ## Usage
 
 ```typescript
-import { buildJsonApi } from '@laikacms/storage-api';
+import { buildJsonApi } from 'laikacms/storage-api';
 
 const api = buildJsonApi({ repo: myStorageRepo });
 

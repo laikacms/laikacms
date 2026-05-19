@@ -1,5 +1,5 @@
-import { StorageFormatSchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
+import { StorageFormatSchema } from 'laikacms/storage';
 
 /**
  * Configuration for an unpublished status

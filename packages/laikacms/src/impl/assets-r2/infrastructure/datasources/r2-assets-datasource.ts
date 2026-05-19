@@ -1,7 +1,7 @@
-import type { LaikaResult } from '@laikacms/core';
-import { ConflictError, InternalError, NotFoundError } from '@laikacms/core';
 import * as Cause from 'effect/Cause';
 import * as Result from 'effect/Result';
+import type { LaikaResult } from 'laikacms/core';
+import { ConflictError, InternalError, NotFoundError } from 'laikacms/core';
 
 /**
  * Entry in an R2 directory listing

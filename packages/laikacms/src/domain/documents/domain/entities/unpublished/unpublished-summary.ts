@@ -1,5 +1,5 @@
-import { AtomBaseSchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
+import { AtomBaseSchema } from 'laikacms/storage';
 import { DocumentLanguage } from '../record/record-language';
 
 /**

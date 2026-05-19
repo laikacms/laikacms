@@ -1,12 +1,11 @@
 import {
   type Asset,
   type AssetCreate,
-  type AssetMetadata,
   type AssetUpdate,
   type AssetUrl,
   type AssetVariations,
-} from '@laikacms/assets';
-import { type Folder, type FolderCreate, type FolderSummary } from '@laikacms/storage';
+} from 'laikacms/assets';
+import { type Folder, type FolderCreate, type FolderSummary } from 'laikacms/storage';
 
 // Re-export common JSON:API utilities
 export {
@@ -17,8 +16,6 @@ export {
   type AtomicOperationsResponse,
   AtomicOperationsResponseSchema,
   buildPaginationLinks,
-  type CursorPaginationMeta,
-  CursorPaginationMetaSchema,
   type JsonApiCollectionResponse,
   JsonApiCollectionResponseSchema,
   JsonApiDeleteMultipleSchema,
@@ -29,7 +26,7 @@ export {
   JsonApiLinksSchema,
   type JsonApiResource,
   parsePaginationQuery,
-} from '@laikacms/json-api';
+} from 'laikacms/json-api';
 
 // ============================================
 // JSON:API Type Definitions
@@ -71,11 +68,8 @@ export interface JsonApiFolderSummary {
   attributes: Omit<FolderSummary, 'key'>;
 }
 
-export interface JsonApiAssetMetadata {
-  type: 'asset-metadata';
-  id: string;
-  attributes: Omit<AssetMetadata, 'key'>;
-}
+// `JsonApiAssetMetadata` was removed — asset metadata is now folded onto
+// `JsonApiAsset.meta` instead of being a separate JSON:API resource type.
 
 export interface JsonApiAssetUrl {
   type: 'asset-url';
@@ -123,10 +117,7 @@ export function folderSummaryToJsonApi(folder: FolderSummary): JsonApiFolderSumm
   return { type: 'folder-summary', id: key, attributes };
 }
 
-export function assetMetadataToJsonApi(metadata: AssetMetadata): JsonApiAssetMetadata {
-  const { key, ...attributes } = metadata;
-  return { type: 'asset-metadata', id: key, attributes };
-}
+// `assetMetadataToJsonApi` removed — see top-of-file note.
 
 export function assetUrlToJsonApi(url: AssetUrl): JsonApiAssetUrl {
   const { key, ...attributes } = url;
@@ -170,14 +161,11 @@ export function folderCreateFromJsonApi(jsonApi: JsonApiFolderCreate): FolderCre
 }
 
 export function folderSummaryFromJsonApi(jsonApi: JsonApiFolderSummary): FolderSummary {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { type: _type, ...rest } = jsonApi.attributes;
   return { key: jsonApi.id, type: 'folder-summary', ...rest } as FolderSummary;
 }
 
-export function assetMetadataFromJsonApi(jsonApi: JsonApiAssetMetadata): AssetMetadata {
-  return { key: jsonApi.id, ...jsonApi.attributes } as AssetMetadata;
-}
+// `assetMetadataFromJsonApi` removed — read `JsonApiAsset.meta` instead.
 
 export function assetUrlFromJsonApi(jsonApi: JsonApiAssetUrl): AssetUrl {
   return { key: jsonApi.id, ...jsonApi.attributes } as AssetUrl;
@@ -195,11 +183,8 @@ export function resourceFromJsonApi(jsonApi: JsonApiAsset | JsonApiFolder): Asse
 }
 
 export function includedFromJsonApi(
-  jsonApi: JsonApiAssetMetadata | JsonApiAssetUrl | JsonApiAssetVariations,
-): AssetMetadata | AssetUrl | AssetVariations {
-  if (jsonApi.type === 'asset-metadata') {
-    return assetMetadataFromJsonApi(jsonApi);
-  }
+  jsonApi: JsonApiAssetUrl | JsonApiAssetVariations,
+): AssetUrl | AssetVariations {
   if (jsonApi.type === 'asset-url') {
     return assetUrlFromJsonApi(jsonApi);
   }
@@ -207,11 +192,8 @@ export function includedFromJsonApi(
 }
 
 export function includedToJsonApi(
-  included: AssetMetadata | AssetUrl | AssetVariations,
-): JsonApiAssetMetadata | JsonApiAssetUrl | JsonApiAssetVariations {
-  if ('mimeType' in included && 'size' in included) {
-    return assetMetadataToJsonApi(included as AssetMetadata);
-  }
+  included: AssetUrl | AssetVariations,
+): JsonApiAssetUrl | JsonApiAssetVariations {
   if ('url' in included) {
     return assetUrlToJsonApi(included as AssetUrl);
   }
@@ -234,11 +216,7 @@ export function isJsonApiFolder(
   return jsonApi.type === 'folder';
 }
 
-export function isJsonApiAssetMetadata(
-  jsonApi: { type: string, id: string, attributes?: Record<string, unknown> },
-): jsonApi is JsonApiAssetMetadata {
-  return jsonApi.type === 'asset-metadata';
-}
+// `isJsonApiAssetMetadata` removed — no separate resource type to guard.
 
 export function isJsonApiAssetUrl(
   jsonApi: { type: string, id: string, attributes?: Record<string, unknown> },
@@ -286,12 +264,7 @@ export function parseFolder(jsonApi: GenericJsonApiResource): Folder {
   return { key: jsonApi.id, type: 'folder', ...jsonApi.attributes } as Folder;
 }
 
-/**
- * Parse a generic JSON:API resource into AssetMetadata
- */
-export function parseAssetMetadata(jsonApi: GenericJsonApiResource): AssetMetadata {
-  return { key: jsonApi.id, ...jsonApi.attributes } as AssetMetadata;
-}
+// `parseAssetMetadata` removed — read `JsonApiAsset.meta` instead.
 
 /**
  * Parse a generic JSON:API resource into AssetUrl

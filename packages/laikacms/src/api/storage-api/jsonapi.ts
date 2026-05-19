@@ -1,3 +1,4 @@
+import * as S from 'effect/Schema';
 import type {
   Atom,
   AtomSummary,
@@ -8,8 +9,7 @@ import type {
   StorageObjectCreate,
   StorageObjectSummary,
   StorageObjectUpdate,
-} from '@laikacms/storage';
-import * as S from 'effect/Schema';
+} from 'laikacms/storage';
 
 // Re-export common JSON:API utilities
 export {
@@ -20,8 +20,6 @@ export {
   type AtomicOperationsResponse,
   AtomicOperationsResponseSchema,
   buildPaginationLinks,
-  type CursorPaginationMeta,
-  CursorPaginationMetaSchema,
   type JsonApiCollectionResponse,
   JsonApiCollectionResponseSchema,
   JsonApiDeleteMultipleSchema,
@@ -32,25 +30,35 @@ export {
   JsonApiLinksSchema,
   type JsonApiResource,
   parsePaginationQuery,
-} from '@laikacms/json-api';
+} from 'laikacms/json-api';
 
 // JSON:API resource types
+//
+// Storage objects carry a `metadata` field at the domain level (extension,
+// revisionId, plus backend-specific keys). Per JSON:API spec we route that
+// to the resource's top-level `meta` member rather than burying it inside
+// `attributes`. The To/From converters below handle the lift/drop so the
+// domain `metadata` field stays available on `StorageObject` while the wire
+// format uses `meta`.
 export interface JsonApiStorageObject {
   type: 'object';
   id: string;
-  attributes: Omit<StorageObject, 'key'>;
+  attributes: Omit<StorageObject, 'key' | 'metadata'>;
+  meta?: NonNullable<StorageObject['metadata']>;
 }
 
 export interface JsonApiStorageObjectCreate {
   type: 'object';
   id: string;
-  attributes: Omit<StorageObjectCreate, 'key'>;
+  attributes: Omit<StorageObjectCreate, 'key' | 'metadata'>;
+  meta?: NonNullable<StorageObjectCreate['metadata']>;
 }
 
 export interface JsonApiStorageObjectUpdate {
   type: 'object';
   id: string;
-  attributes: Omit<StorageObjectUpdate, 'key'>;
+  attributes: Omit<StorageObjectUpdate, 'key' | 'metadata'>;
+  meta?: NonNullable<StorageObjectUpdate['metadata']>;
 }
 
 export interface JsonApiFolder {
@@ -79,18 +87,18 @@ export interface JsonApiFolderSummary {
 
 // To JSON:API converters
 export function storageObjectToJsonApi(obj: StorageObject): JsonApiStorageObject {
-  const { key, ...attributes } = obj;
-  return { type: 'object', id: key, attributes };
+  const { key, metadata, ...attributes } = obj;
+  return { type: 'object', id: key, attributes, ...(metadata ? { meta: metadata } : {}) };
 }
 
 export function storageObjectCreateToJsonApi(obj: StorageObjectCreate): JsonApiStorageObjectCreate {
-  const { key, ...attributes } = obj;
-  return { type: 'object', id: key, attributes };
+  const { key, metadata, ...attributes } = obj;
+  return { type: 'object', id: key, attributes, ...(metadata ? { meta: metadata } : {}) };
 }
 
 export function storageObjectUpdateToJsonApi(obj: StorageObjectUpdate): JsonApiStorageObjectUpdate {
-  const { key, ...attributes } = obj;
-  return { type: 'object', id: key, attributes };
+  const { key, metadata, ...attributes } = obj;
+  return { type: 'object', id: key, attributes, ...(metadata ? { meta: metadata } : {}) };
 }
 
 export function folderToJsonApi(folder: Folder): JsonApiFolder {
@@ -115,15 +123,27 @@ export function folderSummaryToJsonApi(folder: FolderSummary): JsonApiFolderSumm
 
 // From JSON:API converters
 export function storageObjectFromJsonApi(jsonApi: JsonApiStorageObject): StorageObject {
-  return { key: jsonApi.id, ...jsonApi.attributes } as StorageObject;
+  return {
+    key: jsonApi.id,
+    ...jsonApi.attributes,
+    ...(jsonApi.meta ? { metadata: jsonApi.meta } : {}),
+  } as StorageObject;
 }
 
 export function storageObjectCreateFromJsonApi(jsonApi: JsonApiStorageObjectCreate): StorageObjectCreate {
-  return { key: jsonApi.id, ...jsonApi.attributes } as StorageObjectCreate;
+  return {
+    key: jsonApi.id,
+    ...jsonApi.attributes,
+    ...(jsonApi.meta ? { metadata: jsonApi.meta } : {}),
+  } as StorageObjectCreate;
 }
 
 export function storageObjectUpdateFromJsonApi(jsonApi: JsonApiStorageObjectUpdate): StorageObjectUpdate {
-  return { key: jsonApi.id, ...jsonApi.attributes } as StorageObjectUpdate;
+  return {
+    key: jsonApi.id,
+    ...jsonApi.attributes,
+    ...(jsonApi.meta ? { metadata: jsonApi.meta } : {}),
+  } as StorageObjectUpdate;
 }
 
 export function folderFromJsonApi(jsonApi: JsonApiFolder): Folder {
@@ -168,6 +188,42 @@ export function atomFromJsonApi(jsonApi: JsonApiAtom): Atom {
   return folderFromJsonApi(jsonApi);
 }
 
+/**
+ * Decorate a converted resource with `links.self` per JSON:API spec. The
+ * type→URL mapping lives here because converters themselves are pathless.
+ *
+ * Summaries inherit the URL of their full counterpart
+ * (`object-summary` → `/objects/{key}`) so a list client can follow into
+ * detail without code-level knowledge of route names.
+ */
+export function withSelfLink<R extends { type: string, id: string, links?: Record<string, string> }>(
+  resource: R,
+  basePath: string,
+): R {
+  const path = selfPathFor(resource.type, resource.id);
+  if (!path) return resource;
+  return {
+    ...resource,
+    links: { ...(resource.links ?? {}), self: `${basePath}${path}` },
+  };
+}
+
+const selfPathFor = (type: string, id: string): string | undefined => {
+  const encoded = encodeURIComponent(id);
+  switch (type) {
+    case 'object':
+    case 'object-summary':
+      return `/objects/${encoded}`;
+    case 'folder':
+    case 'folder-summary':
+      return `/folders/${encoded}`;
+    case 'storage-capabilities':
+      return `/capabilities`;
+    default:
+      return undefined;
+  }
+};
+
 export function atomSummaryFromJsonApi(jsonApi: JsonApiAtomSummary): AtomSummary {
   if (jsonApi.type === 'object-summary') {
     return storageObjectSummaryFromJsonApi(jsonApi);
@@ -180,18 +236,21 @@ export const JsonApiStorageObjectSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('object'),
   id: S.String,
   attributes: S.Record(S.String, S.Unknown),
+  meta: S.optional(S.Record(S.String, S.Unknown)),
 }));
 
 export const JsonApiStorageObjectCreateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('object'),
   id: S.String,
   attributes: S.Record(S.String, S.Unknown),
+  meta: S.optional(S.Record(S.String, S.Unknown)),
 }));
 
 export const JsonApiStorageObjectUpdateSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('object'),
   id: S.String,
   attributes: S.Record(S.String, S.Unknown),
+  meta: S.optional(S.Record(S.String, S.Unknown)),
 }));
 
 export const JsonApiFolderSchema = S.toStandardSchemaV1(S.Struct({

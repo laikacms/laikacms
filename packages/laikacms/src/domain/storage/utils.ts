@@ -41,3 +41,34 @@ export const extension = (path: string) => {
   }
   return base.slice(lastDotIndex + 1);
 };
+
+import type { Pagination } from 'laikacms/core';
+
+/**
+ * Numeric-aware string comparator. Sorts `["1", "2", "10"]` rather than the
+ * lexicographic `["1", "10", "2"]`. Used by storage listings so consumers see a
+ * stable, human-friendly order regardless of the underlying store's native order
+ * (FS returns directory order, R2 returns lexicographic).
+ */
+const naturalCollator = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' });
+
+export const naturalCompare = (a: string, b: string): number => naturalCollator.compare(a, b);
+
+/**
+ * In-memory pagination helper for storage impls that don't natively paginate (FS, R2
+ * directory listings). Supports `offset`/`limit` and `page`/`perPage`; cursor forms
+ * (`before`/`after`) fall back to returning the full list.
+ */
+export const applyPagination = <T>(items: readonly T[], pagination: Pagination | undefined): T[] => {
+  if (!pagination) return [...items];
+  if ('offset' in pagination) {
+    const limit = pagination.limit ?? items.length;
+    return items.slice(pagination.offset, pagination.offset + limit);
+  }
+  if ('page' in pagination) {
+    const perPage = pagination.perPage ?? items.length;
+    const offset = Math.max(0, (pagination.page - 1) * perPage);
+    return items.slice(offset, offset + perPage);
+  }
+  return [...items];
+};

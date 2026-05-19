@@ -1,6 +1,6 @@
 {
   "name": "laikacms",
-  "version": "0.1.2",
+  "version": "1.0.0",
   "description": "The basis for modern content management.",
   "keywords": [
     "headless-cms",
@@ -73,15 +73,30 @@
       "import": "./dist/domain/storage/index.js",
       "default": "./dist/domain/storage/index.js"
     },
+    "./assets-contentbase": {
+      "types": "./dist/impl/assets-contentbase/index.d.ts",
+      "import": "./dist/impl/assets-contentbase/index.js",
+      "default": "./dist/impl/assets-contentbase/index.js"
+    },
     "./assets-jsonapi-proxy": {
       "types": "./dist/impl/assets-jsonapi-proxy/index.d.ts",
       "import": "./dist/impl/assets-jsonapi-proxy/index.js",
       "default": "./dist/impl/assets-jsonapi-proxy/index.js"
     },
+    "./assets-obsidian": {
+      "types": "./dist/impl/assets-obsidian/index.d.ts",
+      "import": "./dist/impl/assets-obsidian/index.js",
+      "default": "./dist/impl/assets-obsidian/index.js"
+    },
     "./assets-r2": {
       "types": "./dist/impl/assets-r2/index.d.ts",
       "import": "./dist/impl/assets-r2/index.js",
       "default": "./dist/impl/assets-r2/index.js"
+    },
+    "./contentbase-settings-decap": {
+      "types": "./dist/impl/contentbase-settings-decap/index.d.ts",
+      "import": "./dist/impl/contentbase-settings-decap/index.js",
+      "default": "./dist/impl/contentbase-settings-decap/index.js"
     },
     "./contentbase-settings-default": {
       "types": "./dist/impl/contentbase-settings-default/index.d.ts",
@@ -102,6 +117,11 @@
       "types": "./dist/impl/documents-jsonapi-proxy/index.d.ts",
       "import": "./dist/impl/documents-jsonapi-proxy/index.js",
       "default": "./dist/impl/documents-jsonapi-proxy/index.js"
+    },
+    "./documents-obsidian": {
+      "types": "./dist/impl/documents-obsidian/index.d.ts",
+      "import": "./dist/impl/documents-obsidian/index.js",
+      "default": "./dist/impl/documents-obsidian/index.js"
     },
     "./storage-drizzle": {
       "types": "./dist/impl/storage-drizzle/index.d.ts",
@@ -187,7 +207,7 @@
   "scripts": {
     "clean": "rimraf dist .turbo",
     "build": "tsc -p tsconfig.json && tsc-alias -p tsconfig.json",
-    "dev": "tsc -p tsconfig.json --watch",
+    "dev": "tsc -p tsconfig.json --watch & tsc-alias -p tsconfig.json --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest"

@@ -1,5 +1,5 @@
-import { AtomBaseSchema, StorageObjectContentSchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
+import { AtomBaseSchema, StorageObjectContentSchema } from 'laikacms/storage';
 
 /**
  * Asset extends StorageObject with a different type discriminator.

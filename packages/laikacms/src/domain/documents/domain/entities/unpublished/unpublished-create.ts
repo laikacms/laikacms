@@ -1,5 +1,5 @@
-import { StorageObjectContentSchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
+import { StorageObjectContentSchema } from 'laikacms/storage';
 import { DocumentLanguage } from '../record/record-language';
 
 /**

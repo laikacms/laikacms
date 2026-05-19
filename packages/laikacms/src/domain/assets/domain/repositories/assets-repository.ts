@@ -1,10 +1,11 @@
-import type { Folder, FolderCreate, Key, Pagination } from '@laikacms/storage';
+import type { Folder, FolderCreate, Key } from 'laikacms/storage';
 
-import type { LaikaResult } from '@laikacms/core';
+import type { LaikaDone, LaikaStream, LaikaTask, Pagination } from 'laikacms/core';
 import type {
   Asset,
   AssetCreate,
   AssetMetadata,
+  AssetsCapabilities,
   AssetUpdate,
   AssetUrl,
   AssetVariations,
@@ -13,179 +14,85 @@ import type {
 
 /**
  * Hints for prefetching related data.
- *
- * On the domain level, these are called "hints" to indicate they are
- * suggestions for what data to prefetch. The API layer (JSON:API) may
- * expose these as `?include=asset-metadata,asset-url,asset-variation`.
  */
 export interface FetchHints {
-  /**
-   * Prefetch variation URLs.
-   * Maps to getVariations() method.
-   */
   variations?: boolean;
-
-  /**
-   * Prefetch access URLs.
-   * Maps to getUrls() method.
-   */
   urls?: boolean;
-
-  /**
-   * Prefetch full metadata.
-   * Maps to getMetadata() method.
-   */
   metadata?: boolean;
 }
 
-/**
- * Options for getting a single resource.
- */
 export interface GetResourceOptions {
-  /**
-   * Hints for prefetching related data.
-   */
   hints?: FetchHints;
 }
 
-/**
- * Options for listing resources.
- */
 export interface ListResourcesOptions {
   pagination: Pagination;
-
   depth: number;
-
-  /**
-   * Hints for prefetching related data.
-   */
   hints?: FetchHints;
 }
 
-type ResultStream<T> = AsyncGenerator<LaikaResult<T>>;
+export type ListResourcesDone = LaikaDone;
+
+export interface DeleteAssetsDone extends LaikaDone {
+  readonly removed: number;
+  readonly skipped: number;
+}
 
 /**
  * Abstract repository for managing binary assets (images, files, media).
  *
- * This abstraction provides a unified `/resources` endpoint pattern where:
- * - Resources are either Assets (files) or Folders
- * - Related data (metadata, variations, URLs) can be included via `?include=`
- *
- * Key design decisions:
- *
- * 1. **Asset extends StorageObject pattern**: Asset adds a type discriminator.
- *    The content field is inherited from StorageObject.
- *
- * 2. **Decoupled related data**: Variations, URLs, and metadata are fetched via
- *    dedicated methods that can be called independently or included via
- *    the `include` option on get/list operations.
- *
- * 3. **JSON:API includes**: Use `?include=asset-metadata,asset-url,asset-variation`
- *    to request related data in a single request.
- *
- * 4. **Discriminated metadata**: Asset metadata uses a discriminated union based
- *    on 'kind' (image, video, audio, document, binary) for type-safe access.
- *
- * 5. **Simple createAsset**: Multipart uploads and chunking are implementation
- *    details handled internally.
- *
- * 6. **Resource union type**: Resource is Asset | Folder.
+ * Single-result operations return LaikaTask; multi-item operations return
+ * LaikaStream with typed Done values. Recoverable errors (per-item failures
+ * during bulk operations) surface via the stream's metadata channel.
  */
 export abstract class AssetsRepository {
-  // ============================================
+  abstract getCapabilities(): LaikaTask.LaikaTask<AssetsCapabilities>;
+
   // Resource Operations (unified endpoint)
-  // ============================================
 
   /**
    * Get a resource (asset or folder) by key.
-   *
-   * Use `hints` option to request related data to be prefetched:
-   * - `hints.metadata` - Prefetch asset metadata
-   * - `hints.urls` - Prefetch access URLs
-   * - `hints.variations` - Prefetch variation URLs
-   *
-   * @param key The resource key
-   * @param options Options including hints for prefetching
+   * Returns an array because a single key may resolve to multiple resources
+   * (e.g. variations included via hints).
    */
-  abstract getResource(key: string, options?: GetResourceOptions): ResultStream<Resource[]>;
+  abstract getResource(
+    key: string,
+    options?: GetResourceOptions,
+  ): LaikaTask.LaikaTask<ReadonlyArray<Resource>>;
 
-  /**
-   * List all resources (assets and folders) in a folder.
-   *
-   * Use `hints` option to request related data to be prefetched for all assets:
-   * - `hints.metadata` - Prefetch asset metadata
-   * - `hints.urls` - Prefetch access URLs
-   * - `hints.variations` - Prefetch variation URLs
-   *
-   * @param folderKey The folder to list
-   * @param options Pagination and hints for prefetching
-   */
   abstract listResources(
     folderKey: string,
     options: ListResourcesOptions,
-  ): ResultStream<Resource[]>;
+  ): LaikaStream.LaikaStream<Resource, ListResourcesDone>;
 
-  // ============================================
   // Asset Operations
-  // ============================================
+
+  abstract getAsset(key: string, options?: GetResourceOptions): LaikaTask.LaikaTask<Asset>;
+  abstract createAsset(create: AssetCreate): LaikaTask.LaikaTask<Asset>;
+  abstract updateAsset(update: AssetUpdate): LaikaTask.LaikaTask<Asset>;
+  abstract deleteAsset(key: Key): LaikaTask.LaikaTask<void>;
 
   /**
-   * Get a single asset by key.
-   *
-   * @param key The asset key
-   * @param options Options including hints for prefetching
+   * Delete multiple assets. Emits each successfully-removed key as data;
+   * per-key failures surface as recoverable errors.
    */
-  abstract getAsset(key: string, options?: GetResourceOptions): ResultStream<Asset>;
+  abstract deleteAssets(keys: readonly Key[]): LaikaStream.LaikaStream<Key, DeleteAssetsDone>;
 
   /**
-   * Create a new asset.
-   *
-   * The implementation handles all upload complexity internally:
-   * - Small files may be uploaded in a single request
-   * - Large files may use multipart uploads (S3, R2)
-   * - Streaming uploads may use resumable protocols (Google Drive)
+   * Compute variation URLs for the given assets, one entry per asset.
+   * Per-asset failures (e.g. unsupported format) surface as recoverable errors.
    */
-  abstract createAsset(create: AssetCreate): ResultStream<Asset>;
+  abstract getVariations(
+    assets: Asset[],
+  ): LaikaStream.LaikaStream<AssetVariations, LaikaDone>;
 
-  /**
-   * Update an asset's metadata.
-   */
-  abstract updateAsset(update: AssetUpdate): ResultStream<Asset>;
+  abstract getUrls(assets: Asset[]): LaikaStream.LaikaStream<AssetUrl, LaikaDone>;
 
-  /**
-   * Delete an asset.
-   */
-  abstract deleteAsset(key: Key): ResultStream<void>;
+  abstract getMetadata(assets: Asset[]): LaikaStream.LaikaStream<AssetMetadata, LaikaDone>;
 
-  /**
-   * Delete multiple assets.
-   * Yields results in batches for progress tracking.
-   */
-  abstract deleteAssets(keys: readonly Key[]): ResultStream<Key[]>;
-
-  abstract getVariations(assets: Asset[]): ResultStream<AssetVariations[]>;
-
-  abstract getUrls(assets: Asset[]): ResultStream<AssetUrl[]>;
-
-  abstract getMetadata(assets: Asset[]): ResultStream<AssetMetadata[]>;
-
-  // ============================================
   // Folder Operations
-  // ============================================
 
-  /**
-   * Get folder metadata.
-   */
-  abstract getFolder(key: Key): ResultStream<Folder>;
-
-  /**
-   * Create a new folder.
-   */
-  abstract createFolder(folderCreate: FolderCreate): ResultStream<Folder>;
-
-  /**
-   * Delete a folder.
-   * @param recursive If true, delete all contents. If false, fail if not empty.
-   */
-  abstract deleteFolder(key: string, recursive?: boolean): ResultStream<void>;
+  abstract getFolder(key: Key): LaikaTask.LaikaTask<Folder>;
+  abstract createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder>;
+  abstract deleteFolder(key: string, recursive?: boolean): LaikaTask.LaikaTask<void>;
 }

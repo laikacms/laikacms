@@ -1,13 +1,25 @@
-import type { LaikaError, LaikaResult } from '@laikacms/core';
-import { IllegalStateException, InternalError, InvalidData } from '@laikacms/core';
+import * as Effect from 'effect/Effect';
+
+import {
+  IllegalStateException,
+  InternalError,
+  InvalidData,
+  type LaikaError,
+  LaikaStream,
+  LaikaTask,
+} from 'laikacms/core';
 import {
   type Document,
   type DocumentCreate,
+  type DocumentsCapabilities,
+  DocumentsCompatibilityDate,
   DocumentsRepository,
   type DocumentUpdate,
+  type ListRecordsDone,
   type ListRecordsOptions,
+  type ListRevisionsDone,
   type ListRevisionsOptions,
-  type Record,
+  type Record as DocumentRecord,
   type RecordSummary,
   type Revision,
   type RevisionCreate,
@@ -15,7 +27,7 @@ import {
   type Unpublished,
   type UnpublishedCreate,
   type UnpublishedUpdate,
-} from '@laikacms/documents';
+} from 'laikacms/documents';
 import {
   documentCreateToJsonApi,
   documentFromJsonApi,
@@ -35,28 +47,19 @@ import {
   unpublishedSummaryFromJsonApi,
   type UnpublishedSummaryJsonApi,
   unpublishedUpdateToJsonApi,
-} from '@laikacms/documents-api';
-import { errorFromResponse } from '@laikacms/json-api';
-import * as Result from 'effect/Result';
-import { paginationCodec } from './pagination-codec.js';
+} from 'laikacms/documents-api';
 
-function failAs<T>(error: LaikaError): LaikaResult<T> {
-  return Result.fail(error);
-}
+import { paginationCodec } from '../../shared/json-api/pagination-codec.js';
 
 export interface DocumentsJsonApiProxyRepositoryOptions {
   baseUrl: string;
   authToken?: string;
-  /** Dynamic token provider - called before each request */
+  /** Dynamic token provider — called before each request. */
   tokenPromise?: () => Promise<string>;
 }
 
 /**
- * JSON:API Proxy implementation of DocumentsRepository
- *
- * This implementation proxies all document operations through a JSON:API
- * endpoint, enabling microservice architecture by communicating with
- * packages/apis/documents-api over HTTP.
+ * Proxies all document operations through a remote JSON:API endpoint.
  */
 export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   private readonly baseUrl: string;
@@ -65,631 +68,412 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
   constructor(options: DocumentsJsonApiProxyRepositoryOptions) {
     super();
-    this.baseUrl = options.baseUrl.replace(/\/$/, ''); // Remove trailing slash
+    this.baseUrl = options.baseUrl.replace(/\/$/, '');
     this.tokenPromise = options.tokenPromise;
     this.staticHeaders = {
       'Content-Type': 'application/vnd.api+json',
       Accept: 'application/vnd.api+json',
-      ...(options.authToken
-        ? { Authorization: `Bearer ${options.authToken}` }
-        : {}),
+      ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
     };
   }
 
-  /**
-   * Get headers with dynamic token if tokenPromise is provided
-   */
   private async getHeaders(): Promise<HeadersInit> {
     if (this.tokenPromise) {
       const token = await this.tokenPromise();
-      return {
-        ...this.staticHeaders,
-        Authorization: `Bearer ${token}`,
-      };
+      return { ...this.staticHeaders, Authorization: `Bearer ${token}` };
     }
     return this.staticHeaders;
   }
 
-  private async handleResponse<T>(response: Response): Promise<LaikaResult<T>> {
-    const contentType = response.headers.get('content-type');
-
-    if (
-      !contentType?.includes('application/vnd.api+json')
-      && !contentType?.includes('application/json')
-    ) {
-      return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-    }
-
-    const json = await response.json();
-
-    if (!response.ok) {
-      const errorResult = await errorFromResponse(response);
-      return Result.fail(new InvalidData(errorResult.message));
-    }
-
-    if ('errors' in json && Array.isArray(json.errors)) {
-      return Result.fail(
-        new InvalidData(
-          json.errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(
-            ', ',
-          ),
-        ),
-      );
-    }
-
-    return Result.succeed(json.data as T);
+  /** Execute an HTTP request and return the JSON:API resource or fail. */
+  private fetchResource<T>(
+    path: string,
+    init: { method: string, body?: unknown } = { method: 'GET' },
+  ): Effect.Effect<T, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const json = yield* this.fetchJson(path, init);
+      return json.data as T;
+    });
   }
 
-  private async handleVoidResponse(response: Response): Promise<LaikaResult<void>> {
-    const contentType = response.headers.get('content-type');
-
-    if (
-      !contentType?.includes('application/vnd.api+json')
-      && !contentType?.includes('application/json')
-    ) {
-      return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-    }
-
-    const json = await response.json();
-
-    if (!response.ok) {
-      const errors = 'errors' in json && Array.isArray(json.errors)
-        ? json.errors
-        : [{ detail: 'Unknown error' }];
-      return Result.fail(
-        new InvalidData(
-          errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-        ),
-      );
-    }
-
-    if ('errors' in json && Array.isArray(json.errors)) {
-      return Result.fail(
-        new InvalidData(
-          json.errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(
-            ', ',
+  /** Execute an HTTP request and return the parsed JSON. */
+  private fetchJson(
+    path: string,
+    init: { method: string, body?: unknown } = { method: 'GET' },
+  ): Effect.Effect<{ data?: unknown, errors?: unknown[] } & Record<string, unknown>, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const headers = yield* Effect.promise(() => this.getHeaders());
+      const response = yield* Effect.tryPromise({
+        try: () =>
+          fetch(`${this.baseUrl}${path}`, {
+            method: init.method,
+            headers,
+            body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+          }),
+        catch: e => new InternalError((e as Error).message),
+      });
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType?.includes('application/vnd.api+json')
+        || contentType?.includes('application/json');
+      if (!isJson) {
+        const bodySnippet = yield* Effect.promise(() =>
+          response.text().then(t => t.slice(0, 500)).catch(() => '<unreadable>')
+        );
+        return yield* Effect.fail(
+          new InvalidData(
+            `${init.method} ${path} → ${response.status} ${response.statusText} `
+              + `(content-type: ${contentType ?? 'none'}): ${bodySnippet}`,
           ),
-        ),
-      );
-    }
+        );
+      }
+      const json = yield* Effect.promise(() => response.json() as Promise<Record<string, unknown>>);
+      if (!response.ok || (Array.isArray(json.errors) && json.errors.length > 0)) {
+        const errors = (Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }]) as Array<
+          { detail?: string, title?: string }
+        >;
+        return yield* Effect.fail(
+          new InvalidData(errors.map(e => e.detail || e.title || 'Unknown error').join(', ')),
+        );
+      }
+      return json as { data?: unknown, errors?: unknown[] } & Record<string, unknown>;
+    });
+  }
 
-    return Result.succeed(undefined);
+  /** Issue a void/DELETE request and verify the response is OK. */
+  private fetchVoid(
+    path: string,
+    init: { method: string, body?: unknown } = { method: 'GET' },
+  ): Effect.Effect<void, LaikaError> {
+    return Effect.asVoid(this.fetchJson(path, init));
+  }
+
+  /**
+   * Cached upstream capabilities. The remote documents-api exposes
+   * `GET /capabilities` returning the real backing repo's capabilities, so
+   * we fetch + cache it per repo instance. Falls back to a conservative
+   * default if the upstream doesn't speak the endpoint yet.
+   */
+  private cachedCapabilities?: DocumentsCapabilities;
+
+  getCapabilities(): LaikaTask.LaikaTask<DocumentsCapabilities> {
+    return LaikaTask.make<DocumentsCapabilities>(() =>
+      Effect.gen({ self: this }, function*() {
+        if (this.cachedCapabilities) return this.cachedCapabilities;
+        const r = yield* Effect.result(this.fetchJson('/capabilities'));
+        if (r._tag === 'Success') {
+          const data = (r.success.data as { attributes?: DocumentsCapabilities } | undefined)
+            ?.attributes;
+          if (data) {
+            this.cachedCapabilities = data;
+            return data;
+          }
+        }
+        const fallback: DocumentsCapabilities = {
+          compatibilityDate: DocumentsCompatibilityDate.make('2026-05-11'),
+          pagination: {
+            supported: true,
+            description: 'JSON:API pagination is forwarded to the remote endpoint.',
+            styles: { offset: true, page: true, cursor: true },
+          },
+        };
+        this.cachedCapabilities = fallback;
+        return fallback;
+      })
+    );
   }
 
   // ===== RECORDS =====
 
-  /**
-   * List full record objects with content
-   */
-  listRecords(
-    options: ListRecordsOptions,
-  ): AsyncGenerator<LaikaResult<readonly Record[]>> {
-    return this.listFullRecords(options);
+  listRecords(options: ListRecordsOptions): LaikaStream.LaikaStream<DocumentRecord, ListRecordsDone> {
+    return LaikaStream.make<DocumentRecord, ListRecordsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const params = paginationCodec.encode(options.pagination);
+        if (options.type) params.set('filter[type]', options.type);
+        params.set('filter[depth]', '' + options.depth);
+        params.set('filter[folder]', options.folder);
+
+        const json = yield* this.fetchJson(`/records?${params}`);
+        const collection = json as unknown as JsonApiCollectionResponse;
+
+        let emitted = 0;
+        for (const item of collection.data) {
+          const decoded = yield* Effect.result(
+            Effect.try({
+              try: (): DocumentRecord => {
+                switch (item.type) {
+                  case 'published':
+                    return documentFromJsonApi(item as DocumentJsonApi) as DocumentRecord;
+                  case 'unpublished':
+                    return unpublishedFromJsonApi(item as UnpublishedJsonApi) as DocumentRecord;
+                  case 'revision':
+                    return revisionFromJsonApi(item as RevisionJsonApi) as unknown as DocumentRecord;
+                  case 'folder':
+                    return undefined as unknown as DocumentRecord; // skipped below
+                  default:
+                    throw new IllegalStateException('Unknown record type: ' + item.type);
+                }
+              },
+              catch: e => new InvalidData((e as Error).message),
+            }),
+          );
+          if (decoded._tag === 'Failure') {
+            yield* emit.recoverableError(decoded.failure);
+            continue;
+          }
+          if (decoded.success === undefined) continue; // folder entry
+          yield* emit.data(decoded.success);
+          emitted += 1;
+        }
+        return { total: emitted };
+      })
+    );
   }
 
-  /**
-   * List record summaries (without content) for efficient listing
-   */
   listRecordSummaries(
     options: ListRecordsOptions,
-  ): AsyncGenerator<LaikaResult<readonly RecordSummary[]>> {
-    return this.listRecordSummariesInternal(options);
-  }
+  ): LaikaStream.LaikaStream<RecordSummary, ListRecordsDone> {
+    return LaikaStream.make<RecordSummary, ListRecordsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const params = paginationCodec.encode(options.pagination);
+        if (options.type) params.set('filter[type]', options.type);
+        params.set('filter[depth]', '' + options.depth);
+        params.set('filter[folder]', options.folder);
 
-  private async *listFullRecords(
-    options: ListRecordsOptions,
-  ): AsyncGenerator<LaikaResult<readonly Record[]>> {
-    try {
-      const params = paginationCodec.encode(options.pagination);
-      if (options.type) {
-        params.set('filter[type]', options.type);
-      }
-      params.set('filter[depth]', '' + options.depth);
-      params.set('filter[folder]', options.folder);
+        const json = yield* this.fetchJson(`/record-summaries?${params}`);
+        const collection = json as unknown as JsonApiCollectionResponse;
 
-      const headers = await this.getHeaders();
-      const response = await fetch(`${this.baseUrl}/records?${params}`, {
-        method: 'GET',
-        headers,
-      });
-
-      const contentType = response.headers.get('content-type');
-      if (
-        !contentType?.includes('application/vnd.api+json')
-        && !contentType?.includes('application/json')
-      ) {
-        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-        return;
-      }
-
-      const json: JsonApiCollectionResponse = await response.json();
-
-      if (!response.ok || ('errors' in json && Array.isArray(json.errors))) {
-        const errors = 'errors' in json && Array.isArray(json.errors)
-          ? json.errors
-          : [{ detail: 'Unknown error' }];
-        yield Result.fail(
-          new InvalidData(
-            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-          ),
-        );
-        return;
-      }
-
-      // Parse each item based on its type
-      const items: Record[] = [];
-      for (const item of json.data) {
-        try {
-          let record: Record;
-          switch (item.type) {
-            case 'published':
-              record = documentFromJsonApi(item as DocumentJsonApi) as Record;
-              break;
-            case 'unpublished':
-              record = unpublishedFromJsonApi(item as UnpublishedJsonApi) as Record;
-              break;
-            case 'revision':
-              record = revisionFromJsonApi(item as RevisionJsonApi) as unknown as Record;
-              break;
-            case 'folder':
-              continue;
-            default:
-              throw new IllegalStateException('Unknown record type: ' + item.type);
+        let emitted = 0;
+        for (const item of collection.data) {
+          const decoded = yield* Effect.result(
+            Effect.try({
+              try: (): RecordSummary | undefined => {
+                switch (item.type) {
+                  case 'published':
+                  case 'published-summary':
+                    return documentSummaryFromJsonApi(item as DocumentSummaryJsonApi) as RecordSummary;
+                  case 'unpublished':
+                  case 'unpublished-summary':
+                    return unpublishedSummaryFromJsonApi(item as UnpublishedSummaryJsonApi) as RecordSummary;
+                  case 'revision':
+                  case 'revision-summary':
+                    return revisionSummaryFromJsonApi(item as RevisionSummaryJsonApi) as unknown as RecordSummary;
+                  case 'folder':
+                    return undefined;
+                  default:
+                    throw new IllegalStateException('Unknown record type: ' + item.type);
+                }
+              },
+              catch: e => new InvalidData((e as Error).message),
+            }),
+          );
+          if (decoded._tag === 'Failure') {
+            yield* emit.recoverableError(decoded.failure);
+            continue;
           }
-          items.push(record);
-        } catch (error) {
-          yield Result.fail(new InvalidData((error as Error).message));
-          return;
+          if (decoded.success === undefined) continue;
+          yield* emit.data(decoded.success);
+          emitted += 1;
         }
-      }
-
-      yield Result.succeed(items);
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
-  }
-
-  private async *listRecordSummariesInternal(
-    options: ListRecordsOptions,
-  ): AsyncGenerator<LaikaResult<readonly RecordSummary[]>> {
-    try {
-      const params = paginationCodec.encode(options.pagination);
-      if (options.type) {
-        params.set('filter[type]', options.type);
-      }
-      params.set('filter[depth]', '' + options.depth);
-      params.set('filter[folder]', options.folder);
-
-      const headers = await this.getHeaders();
-      const response = await fetch(`${this.baseUrl}/record-summaries?${params}`, {
-        method: 'GET',
-        headers,
-      });
-
-      const contentType = response.headers.get('content-type');
-      if (
-        !contentType?.includes('application/vnd.api+json')
-        && !contentType?.includes('application/json')
-      ) {
-        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-        return;
-      }
-
-      const json: JsonApiCollectionResponse = await response.json();
-
-      if (!response.ok || ('errors' in json && Array.isArray(json.errors))) {
-        const errors = 'errors' in json && Array.isArray(json.errors)
-          ? json.errors
-          : [{ detail: 'Unknown error' }];
-        yield Result.fail(
-          new InvalidData(
-            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-          ),
-        );
-        return;
-      }
-
-      // Parse each item based on its type
-      const items: RecordSummary[] = [];
-      for (const item of json.data) {
-        try {
-          let summary: RecordSummary;
-          switch (item.type) {
-            case 'published':
-            case 'published-summary':
-              summary = documentSummaryFromJsonApi(item as DocumentSummaryJsonApi) as RecordSummary;
-              break;
-            case 'unpublished':
-            case 'unpublished-summary':
-              summary = unpublishedSummaryFromJsonApi(item as UnpublishedSummaryJsonApi) as RecordSummary;
-              break;
-            case 'revision':
-            case 'revision-summary':
-              summary = revisionSummaryFromJsonApi(item as RevisionSummaryJsonApi) as unknown as RecordSummary;
-              break;
-            case 'folder':
-              continue;
-            default:
-              throw new IllegalStateException('Unknown record type: ' + item.type);
-          }
-          items.push(summary);
-        } catch (error) {
-          yield Result.fail(new InvalidData((error as Error).message));
-          return;
-        }
-      }
-
-      yield Result.succeed(items);
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+        return { total: emitted };
+      })
+    );
   }
 
   // ===== DOCUMENTS (PUBLISHED) =====
-  async *getDocument(key: string): AsyncGenerator<LaikaResult<Document>> {
-    try {
-      const headers = await this.getHeaders();
-      const response = await fetch(
-        `${this.baseUrl}/published/${encodeURIComponent(key)}`,
-        { method: 'GET', headers },
-      );
 
-      const result = await this.handleResponse<DocumentJsonApi>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Document>(result.failure);
-        return;
-      }
-
-      try {
-        const document = documentFromJsonApi(result.success);
-        yield Result.succeed(document);
-      } catch (error) {
-        yield Result.fail(new InvalidData((error as Error).message));
-      }
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  getDocument(key: string): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<DocumentJsonApi>(
+          `/published/${encodeURIComponent(key)}`,
+        );
+        return yield* Effect.try({
+          try: () => documentFromJsonApi(raw),
+          catch: e => new InvalidData((e as Error).message),
+        });
+      })
+    );
   }
 
-  async *createDocument(create: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
-    try {
-      const jsonApiData = documentCreateToJsonApi(create);
-      console.log('Creating document with JSON:API data:', jsonApiData);
-      const headers = await this.getHeaders();
-
-      const response = await fetch(`${this.baseUrl}/published`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ data: jsonApiData }),
-      });
-
-      const result = await this.handleResponse<DocumentJsonApi>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Document>(result.failure);
-        return;
-      }
-
-      try {
-        const document = documentFromJsonApi(result.success);
-        yield Result.succeed(document);
-      } catch (error) {
-        yield Result.fail(new InvalidData((error as Error).message));
-      }
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<DocumentJsonApi>(
+          `/published`,
+          { method: 'POST', body: { data: documentCreateToJsonApi(create) } },
+        );
+        return yield* Effect.try({
+          try: () => documentFromJsonApi(raw),
+          catch: e => new InvalidData((e as Error).message),
+        });
+      })
+    );
   }
 
-  async *updateDocument(update: DocumentUpdate): AsyncGenerator<LaikaResult<Document>> {
-    try {
-      const jsonApiData = documentUpdateToJsonApi(update);
-      const headers = await this.getHeaders();
-
-      const response = await fetch(
-        `${this.baseUrl}/published/${encodeURIComponent(update.key)}`,
-        {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ data: jsonApiData }),
-        },
-      );
-
-      const result = await this.handleResponse<DocumentJsonApi>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Document>(result.failure);
-        return;
-      }
-
-      try {
-        const document = documentFromJsonApi(result.success);
-        yield Result.succeed(document);
-      } catch (error) {
-        yield Result.fail(new InvalidData((error as Error).message));
-      }
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<DocumentJsonApi>(
+          `/published/${encodeURIComponent(update.key)}`,
+          { method: 'PATCH', body: { data: documentUpdateToJsonApi(update) } },
+        );
+        return yield* Effect.try({
+          try: () => documentFromJsonApi(raw),
+          catch: e => new InvalidData((e as Error).message),
+        });
+      })
+    );
   }
 
-  async *deleteDocument(key: string): AsyncGenerator<LaikaResult<void>> {
-    try {
-      const headers = await this.getHeaders();
-      const response = await fetch(
-        `${this.baseUrl}/published/${encodeURIComponent(key)}`,
-        { method: 'DELETE', headers },
-      );
-
-      yield await this.handleVoidResponse(response);
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  deleteDocument(key: string): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(() =>
+      this.fetchVoid(`/published/${encodeURIComponent(key)}`, { method: 'DELETE' }),
+    );
   }
 
   // ===== UNPUBLISHED =====
-  async *getUnpublished(key: string): AsyncGenerator<LaikaResult<Unpublished>> {
-    try {
-      const headers = await this.getHeaders();
-      const response = await fetch(
-        `${this.baseUrl}/unpublished/${encodeURIComponent(key)}`,
-        { method: 'GET', headers },
-      );
 
-      const result = await this.handleResponse<UnpublishedJsonApi>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Unpublished>(result.failure);
-        return;
-      }
-
-      try {
-        const unpublished = unpublishedFromJsonApi(result.success);
-        yield Result.succeed(unpublished);
-      } catch (error) {
-        yield Result.fail(new InvalidData((error as Error).message));
-      }
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  getUnpublished(key: string): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<UnpublishedJsonApi>(
+          `/unpublished/${encodeURIComponent(key)}`,
+        );
+        return yield* Effect.try({
+          try: () => unpublishedFromJsonApi(raw),
+          catch: e => new InvalidData((e as Error).message),
+        });
+      })
+    );
   }
 
-  async *createUnpublished(
-    create: UnpublishedCreate,
-  ): AsyncGenerator<LaikaResult<Unpublished>> {
-    try {
-      const jsonApiData = unpublishedCreateToJsonApi(create);
-      const headers = await this.getHeaders();
-
-      const response = await fetch(`${this.baseUrl}/unpublished`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ data: jsonApiData }),
-      });
-
-      const result = await this.handleResponse<UnpublishedJsonApi>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Unpublished>(result.failure);
-        return;
-      }
-
-      try {
-        const unpublished = unpublishedFromJsonApi(result.success);
-        yield Result.succeed(unpublished);
-      } catch (error) {
-        yield Result.fail(new InvalidData((error as Error).message));
-      }
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<UnpublishedJsonApi>(
+          `/unpublished`,
+          { method: 'POST', body: { data: unpublishedCreateToJsonApi(create) } },
+        );
+        return yield* Effect.try({
+          try: () => unpublishedFromJsonApi(raw),
+          catch: e => new InvalidData((e as Error).message),
+        });
+      })
+    );
   }
 
-  async *updateUnpublished(
-    update: UnpublishedUpdate,
-  ): AsyncGenerator<LaikaResult<Unpublished>> {
-    try {
-      const jsonApiData = unpublishedUpdateToJsonApi(update);
-      const headers = await this.getHeaders();
-
-      const response = await fetch(
-        `${this.baseUrl}/unpublished/${encodeURIComponent(update.key)}`,
-        {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify({ data: jsonApiData }),
-        },
-      );
-
-      const result = await this.handleResponse<UnpublishedJsonApi>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Unpublished>(result.failure);
-        return;
-      }
-
-      try {
-        const unpublished = unpublishedFromJsonApi(result.success);
-        yield Result.succeed(unpublished);
-      } catch (error) {
-        yield Result.fail(new InvalidData((error as Error).message));
-      }
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  updateUnpublished(update: UnpublishedUpdate): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<UnpublishedJsonApi>(
+          `/unpublished/${encodeURIComponent(update.key)}`,
+          { method: 'PATCH', body: { data: unpublishedUpdateToJsonApi(update) } },
+        );
+        return yield* Effect.try({
+          try: () => unpublishedFromJsonApi(raw),
+          catch: e => new InvalidData((e as Error).message),
+        });
+      })
+    );
   }
 
-  async *deleteUnpublished(key: string): AsyncGenerator<LaikaResult<void>> {
-    try {
-      const headers = await this.getHeaders();
-      const response = await fetch(
-        `${this.baseUrl}/unpublished/${encodeURIComponent(key)}`,
-        { method: 'DELETE', headers },
-      );
-
-      yield await this.handleVoidResponse(response);
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  deleteUnpublished(key: string): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(() =>
+      this.fetchVoid(`/unpublished/${encodeURIComponent(key)}`, { method: 'DELETE' }),
+    );
   }
 
-  async *publish(key: string): AsyncGenerator<LaikaResult<Document>> {
-    try {
-      const headers = await this.getHeaders();
-      const response = await fetch(
-        `${this.baseUrl}/unpublished/${encodeURIComponent(key)}/publish`,
-        { method: 'POST', headers },
-      );
-
-      const result = await this.handleResponse<DocumentJsonApi>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Document>(result.failure);
-        return;
-      }
-
-      try {
-        const document = documentFromJsonApi(result.success);
-        yield Result.succeed(document);
-      } catch (error) {
-        yield Result.fail(new InvalidData((error as Error).message));
-      }
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  publish(key: string): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<DocumentJsonApi>(
+          `/unpublished/${encodeURIComponent(key)}/publish`,
+          { method: 'POST' },
+        );
+        return yield* Effect.try({
+          try: () => documentFromJsonApi(raw),
+          catch: e => new InvalidData((e as Error).message),
+        });
+      })
+    );
   }
 
-  async *unpublish(key: string, status: string): AsyncGenerator<LaikaResult<Unpublished>> {
-    try {
-      const headers = await this.getHeaders();
-      const response = await fetch(
-        `${this.baseUrl}/published/${encodeURIComponent(key)}/unpublish`,
-        {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({
-            data: {
-              type: 'unpublished',
-              attributes: { status },
-            },
-          }),
-        },
-      );
-
-      const result = await this.handleResponse<UnpublishedJsonApi>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Unpublished>(result.failure);
-        return;
-      }
-
-      try {
-        const unpublished = unpublishedFromJsonApi(result.success);
-        yield Result.succeed(unpublished);
-      } catch (error) {
-        yield Result.fail(new InvalidData((error as Error).message));
-      }
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  unpublish(key: string, status: string): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<UnpublishedJsonApi>(
+          `/published/${encodeURIComponent(key)}/unpublish`,
+          {
+            method: 'POST',
+            body: { data: { type: 'unpublished', attributes: { status } } },
+          },
+        );
+        return yield* Effect.try({
+          try: () => unpublishedFromJsonApi(raw),
+          catch: e => new InvalidData((e as Error).message),
+        });
+      })
+    );
   }
 
   // ===== REVISIONS =====
-  async *getRevision(key: string, revision: string): AsyncGenerator<LaikaResult<Revision>> {
-    try {
-      const headers = await this.getHeaders();
-      const response = await fetch(
-        `${this.baseUrl}/revisions/${encodeURIComponent(key)}/${encodeURIComponent(revision)}`,
-        { method: 'GET', headers },
-      );
 
-      const result = await this.handleResponse<RevisionJsonApi>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Revision>(result.failure);
-        return;
-      }
-
-      try {
-        const rev = revisionFromJsonApi(result.success);
-        yield Result.succeed(rev);
-      } catch (error) {
-        yield Result.fail(new InvalidData((error as Error).message));
-      }
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  getRevision(key: string, revision: string): LaikaTask.LaikaTask<Revision> {
+    return LaikaTask.make<Revision>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<RevisionJsonApi>(
+          `/revisions/${encodeURIComponent(key)}/${encodeURIComponent(revision)}`,
+        );
+        return yield* Effect.try({
+          try: () => revisionFromJsonApi(raw),
+          catch: e => new InvalidData((e as Error).message),
+        });
+      })
+    );
   }
 
-  async *createRevision(create: RevisionCreate): AsyncGenerator<LaikaResult<Revision>> {
-    try {
-      const jsonApiData = revisionCreateToJsonApi(create);
-      const headers = await this.getHeaders();
-
-      const response = await fetch(`${this.baseUrl}/revisions`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ data: jsonApiData }),
-      });
-
-      const result = await this.handleResponse<RevisionJsonApi>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Revision>(result.failure);
-        return;
-      }
-
-      try {
-        const rev = revisionFromJsonApi(result.success);
-        yield Result.succeed(rev);
-      } catch (error) {
-        yield Result.fail(new InvalidData((error as Error).message));
-      }
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+  createRevision(create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
+    return LaikaTask.make<Revision>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<RevisionJsonApi>(
+          `/revisions`,
+          { method: 'POST', body: { data: revisionCreateToJsonApi(create) } },
+        );
+        return yield* Effect.try({
+          try: () => revisionFromJsonApi(raw),
+          catch: e => new InvalidData((e as Error).message),
+        });
+      })
+    );
   }
 
-  async *listRevisions(
+  listRevisions(
     key: string,
     options: ListRevisionsOptions,
-  ): AsyncGenerator<LaikaResult<readonly RevisionSummary[]>> {
-    try {
-      const params = paginationCodec.encode(options.pagination);
-      const headers = await this.getHeaders();
+  ): LaikaStream.LaikaStream<RevisionSummary, ListRevisionsDone> {
+    return LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const params = paginationCodec.encode(options.pagination);
+        const json = yield* this.fetchJson(`/revisions/${encodeURIComponent(key)}?${params}`);
+        const collection = json as unknown as JsonApiCollectionResponse;
 
-      const response = await fetch(
-        `${this.baseUrl}/revisions/${encodeURIComponent(key)}?${params}`,
-        { method: 'GET', headers },
-      );
-
-      const contentType = response.headers.get('content-type');
-      if (
-        !contentType?.includes('application/vnd.api+json')
-        && !contentType?.includes('application/json')
-      ) {
-        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-        return;
-      }
-
-      const json: JsonApiCollectionResponse = await response.json();
-
-      if (!response.ok || ('errors' in json && Array.isArray(json.errors))) {
-        const errors = 'errors' in json && Array.isArray(json.errors)
-          ? json.errors
-          : [{ detail: 'Unknown error' }];
-        yield Result.fail(
-          new InvalidData(
-            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-          ),
-        );
-        return;
-      }
-
-      const items: RevisionSummary[] = [];
-      for (const item of json.data) {
-        try {
-          const summary = revisionSummaryFromJsonApi(item as RevisionSummaryJsonApi);
-          items.push(summary);
-        } catch {
-          // Skip invalid items
+        let emitted = 0;
+        for (const item of collection.data) {
+          const decoded = yield* Effect.result(
+            Effect.try({
+              try: () => revisionSummaryFromJsonApi(item as RevisionSummaryJsonApi),
+              catch: e => new InvalidData((e as Error).message),
+            }),
+          );
+          if (decoded._tag === 'Failure') {
+            yield* emit.recoverableError(decoded.failure);
+            continue;
+          }
+          yield* emit.data(decoded.success);
+          emitted += 1;
         }
-      }
-
-      yield Result.succeed(items);
-    } catch (error) {
-      yield Result.fail(new InternalError((error as Error).message));
-    }
+        return { total: emitted };
+      })
+    );
   }
 }

@@ -1,3 +1,4 @@
+import * as S from 'effect/Schema';
 import {
   type Document,
   type DocumentCreate,
@@ -10,8 +11,8 @@ import {
   type UnpublishedCreate,
   type UnpublishedSummary,
   type UnpublishedUpdate,
-} from '@laikacms/documents';
-import { fromJsonApi, toJsonApi } from '@laikacms/json-api';
+} from 'laikacms/documents';
+import { fromJsonApi, toJsonApi } from 'laikacms/json-api';
 import {
   type Folder,
   type FolderCreate,
@@ -20,11 +21,10 @@ import {
   type StorageObjectCreate,
   type StorageObjectSummary,
   type StorageObjectUpdate,
-} from '@laikacms/storage';
-import * as S from 'effect/Schema';
+} from 'laikacms/storage';
 
 // Re-export common JSON:API utilities
-export { fromJsonApi, type JsonApiCollectionResponse, type JsonApiError, toJsonApi } from '@laikacms/json-api';
+export { fromJsonApi, type JsonApiCollectionResponse, type JsonApiError, toJsonApi } from 'laikacms/json-api';
 
 // ===== JSON:API RESOURCE TYPES =====
 

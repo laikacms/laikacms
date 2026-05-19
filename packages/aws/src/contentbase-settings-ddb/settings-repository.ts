@@ -173,7 +173,6 @@ export class DynamoDBContentBaseSettingsProvider extends ContentBaseSettingsProv
     if (Result.isFailure(collectionSettings)) {
       return failAs<DocumentCollectionSettings>(collectionSettings.failure);
     }
-    console.log('Document collection settings:', collectionSettings);
     if (collectionSettings.success.type !== 'document') {
       return Result.fail(
         new InvalidData(

@@ -1,16 +1,21 @@
-import type { LaikaError, LaikaResult } from '@laikacms/core';
-import { InvalidData } from '@laikacms/core';
+import * as Effect from 'effect/Effect';
+
+import { ErrorCodeToClassMap, InvalidData, type LaikaError, LaikaStream, LaikaTask } from 'laikacms/core';
 import {
   type Atom,
   type AtomSummary,
+  Capabilities,
+  CompatibilityDate,
   type Folder,
   type FolderCreate,
+  type ListAtomsDone,
   type ListAtomsOptions,
+  type RemoveAtomsDone,
   type StorageObject,
   type StorageObjectCreate,
   type StorageObjectUpdate,
   StorageRepository,
-} from '@laikacms/storage';
+} from 'laikacms/storage';
 import {
   atomFromJsonApi,
   atomSummaryFromJsonApi,
@@ -28,27 +33,19 @@ import {
   storageObjectCreateToJsonApi,
   storageObjectFromJsonApi,
   storageObjectUpdateToJsonApi,
-} from '@laikacms/storage-api';
-import * as Result from 'effect/Result';
-import { paginationCodec } from './pagination-codec.js';
+} from 'laikacms/storage-api';
 
-function failAs<T>(error: LaikaError): LaikaResult<T> {
-  return Result.fail(error);
-}
+import { paginationCodec } from '../../shared/json-api/pagination-codec.js';
 
 export interface StorageJsonApiProxyRepositoryOptions {
   baseUrl: string;
   authToken?: string;
-  /** Dynamic token provider - called before each request */
+  /** Dynamic token provider — called before each request. */
   tokenPromise?: () => Promise<string>;
 }
 
 /**
- * JSON:API Proxy implementation of StorageRepository
- *
- * This implementation proxies all storage operations through a JSON:API
- * endpoint, enabling microservice architecture by communicating with
- * packages/apis/storage-api over HTTP.
+ * Proxies all storage operations through a remote JSON:API endpoint.
  */
 export class StorageJsonApiProxyRepository extends StorageRepository {
   private readonly baseUrl: string;
@@ -57,7 +54,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
 
   constructor(options: StorageJsonApiProxyRepositoryOptions) {
     super();
-    this.baseUrl = options.baseUrl.replace(/\/$/, ''); // Remove trailing slash
+    this.baseUrl = options.baseUrl.replace(/\/$/, '');
     this.tokenPromise = options.tokenPromise;
     this.staticHeaders = {
       'Content-Type': 'application/vnd.api+json',
@@ -66,407 +63,307 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
     };
   }
 
-  /**
-   * Get headers with dynamic token if tokenPromise is provided
-   */
   private async getHeaders(): Promise<HeadersInit> {
     if (this.tokenPromise) {
       const token = await this.tokenPromise();
-      return {
-        ...this.staticHeaders,
-        'Authorization': `Bearer ${token}`,
-      };
+      return { ...this.staticHeaders, 'Authorization': `Bearer ${token}` };
     }
     return this.staticHeaders;
   }
 
-  private async handleResponse<T>(response: Response): Promise<LaikaResult<T>> {
-    const contentType = response.headers.get('content-type');
+  /** Execute an HTTP request and return the JSON:API resource or fail. */
+  private fetchResource<T>(
+    path: string,
+    init: { method: string, body?: unknown } = { method: 'GET' },
+  ): Effect.Effect<T, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const json = yield* this.fetchJson(path, init);
+      return json.data as T;
+    });
+  }
 
-    if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-      return Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-    }
-
-    const json = await response.json();
-
-    if (!response.ok) {
-      const errors = json.errors || [{ detail: 'Unknown error' }];
-      return Result.fail(
-        new InvalidData(
-          errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-        ),
+  /** Execute an HTTP request and return the parsed JSON. */
+  private fetchJson(
+    path: string,
+    init: { method: string, body?: unknown } = { method: 'GET' },
+  ): Effect.Effect<{ data?: unknown, errors?: unknown[] } & Record<string, unknown>, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const headers = yield* Effect.promise(() => this.getHeaders());
+      const response = yield* Effect.promise(() =>
+        fetch(`${this.baseUrl}${path}`, {
+          method: init.method,
+          headers,
+          body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+        })
       );
-    }
-
-    if (json.errors) {
-      return Result.fail(
-        new InvalidData(
-          json.errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(
-            ', ',
+      const contentType = response.headers.get('content-type');
+      const isJson = contentType?.includes('application/vnd.api+json')
+        || contentType?.includes('application/json');
+      if (!isJson) {
+        const bodySnippet = yield* Effect.promise(() =>
+          response.text().then(t => t.slice(0, 500)).catch(() => '<unreadable>')
+        );
+        return yield* Effect.fail(
+          new InvalidData(
+            `${init.method} ${path} → ${response.status} ${response.statusText} `
+              + `(content-type: ${contentType ?? 'none'}): ${bodySnippet}`,
           ),
-        ),
-      );
-    }
-
-    return Result.succeed(json.data as T);
+        );
+      }
+      const json = yield* Effect.promise(() => response.json() as Promise<Record<string, unknown>>);
+      if (!response.ok || (Array.isArray(json.errors) && json.errors.length > 0)) {
+        const errors = (Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }]) as Array<
+          { detail?: string, title?: string, code?: string }
+        >;
+        const detail = errors.map(e => e.detail || e.title || 'Unknown error').join(', ');
+        // Use the first error's `code` to reconstruct the original LaikaError
+        // subclass (NotFoundError, ValidationError, ...) so consumers can
+        // `instanceof` against them. Fall back to InvalidData if the code is
+        // unknown or absent.
+        const firstCode = errors[0]?.code;
+        const ErrorCtor = firstCode
+          ? (ErrorCodeToClassMap as Record<string, new (msg: string) => LaikaError>)[firstCode]
+          : undefined;
+        return yield* Effect.fail(
+          ErrorCtor ? new ErrorCtor(detail) : new InvalidData(detail),
+        );
+      }
+      return json as { data?: unknown, errors?: unknown[] } & Record<string, unknown>;
+    });
   }
 
-  async *getObject(key: string): AsyncGenerator<LaikaResult<StorageObject>> {
-    try {
-      const headers = await this.getHeaders();
-      const response = await fetch(`${this.baseUrl}/objects/${encodeURIComponent(key)}`, {
-        method: 'GET',
-        headers,
-      });
-
-      const result = await this.handleResponse<JsonApiStorageObject>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<StorageObject>(result.failure);
-        return;
-      }
-
-      console.log('getObject - result.success (JSON:API resource):', JSON.stringify(result.success, null, 2));
-
-      // Validate and parse from JSON:API format to domain format
-      try {
-        const validated = decodeJsonApiStorageObject(result.success);
-        const domainObject = storageObjectFromJsonApi(validated as JsonApiStorageObject);
-        console.log('getObject - parsed (domain object):', JSON.stringify(domainObject, null, 2));
-        yield Result.succeed(domainObject);
-      } catch (e: unknown) {
-        const error = e as { message?: string };
-        console.error('getObject - parsing errors:', error);
-        yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
-        return;
-      }
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+  private decodeStorageObject(raw: unknown): Effect.Effect<StorageObject, LaikaError> {
+    return Effect.try({
+      try: () => storageObjectFromJsonApi(decodeJsonApiStorageObject(raw) as JsonApiStorageObject),
+      catch: e => new InvalidData((e as { message?: string }).message ?? 'Invalid JSON:API response'),
+    });
   }
 
-  async *updateObject(update: StorageObjectUpdate): AsyncGenerator<LaikaResult<StorageObject>> {
-    try {
-      // Transform to JSON:API format
-      const jsonApiData = storageObjectUpdateToJsonApi(update);
-      const headers = await this.getHeaders();
-
-      const response = await fetch(`${this.baseUrl}/objects/${encodeURIComponent(update.key)}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify({ data: jsonApiData }),
-      });
-
-      const result = await this.handleResponse<JsonApiStorageObject>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<StorageObject>(result.failure);
-        return;
-      }
-
-      // Validate and parse from JSON:API format to domain format
-      try {
-        const validated = decodeJsonApiStorageObject(result.success);
-        yield Result.succeed(storageObjectFromJsonApi(validated as JsonApiStorageObject));
-      } catch (e: unknown) {
-        const error = e as { message?: string };
-        yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
-        return;
-      }
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+  private decodeFolder(raw: unknown): Effect.Effect<Folder, LaikaError> {
+    return Effect.try({
+      try: () => folderFromJsonApi(decodeJsonApiFolder(raw) as JsonApiFolder),
+      catch: e => new InvalidData((e as { message?: string }).message ?? 'Invalid JSON:API response'),
+    });
   }
 
-  async *createObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
-    try {
-      // Transform to JSON:API format
-      const jsonApiData = storageObjectCreateToJsonApi(create);
-      const headers = await this.getHeaders();
-
-      const response = await fetch(`${this.baseUrl}/atoms`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ data: jsonApiData }),
-      });
-
-      const result = await this.handleResponse<JsonApiStorageObject>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<StorageObject>(result.failure);
-        return;
-      }
-
-      // Validate and parse from JSON:API format to domain format
-      try {
-        const validated = decodeJsonApiStorageObject(result.success);
-        yield Result.succeed(storageObjectFromJsonApi(validated as JsonApiStorageObject));
-      } catch (e: unknown) {
-        const error = e as { message?: string };
-        yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
-        return;
-      }
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+  getObject(key: string): LaikaTask.LaikaTask<StorageObject> {
+    return LaikaTask.make<StorageObject>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<JsonApiStorageObject>(
+          `/objects/${encodeURIComponent(key)}`,
+        );
+        return yield* this.decodeStorageObject(raw);
+      })
+    );
   }
 
-  async *createOrUpdateObject(create: StorageObjectCreate): AsyncGenerator<LaikaResult<StorageObject>> {
-    // Try to get the object first
-    let existing: LaikaResult<StorageObject> | undefined;
-    for await (const result of this.getObject(create.key)) {
-      existing = result;
-    }
-
-    if (existing && Result.isSuccess(existing)) {
-      // Object exists, update it
-      yield* this.updateObject({ ...create, key: create.key });
-    } else {
-      // Object doesn't exist, create it
-      yield* this.createObject(create);
-    }
+  updateObject(update: StorageObjectUpdate): LaikaTask.LaikaTask<StorageObject> {
+    return LaikaTask.make<StorageObject>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<JsonApiStorageObject>(
+          `/objects/${encodeURIComponent(update.key)}`,
+          { method: 'PATCH', body: { data: storageObjectUpdateToJsonApi(update) } },
+        );
+        return yield* this.decodeStorageObject(raw);
+      })
+    );
   }
 
-  async *getFolder(key: string): AsyncGenerator<LaikaResult<Folder>> {
-    try {
-      const headers = await this.getHeaders();
-      const response = await fetch(`${this.baseUrl}/folders/${encodeURIComponent(key)}`, {
-        method: 'GET',
-        headers,
-      });
-
-      const result = await this.handleResponse<JsonApiFolder>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Folder>(result.failure);
-        return;
-      }
-
-      // Validate and parse from JSON:API format to domain format
-      try {
-        const validated = decodeJsonApiFolder(result.success);
-        yield Result.succeed(folderFromJsonApi(validated as JsonApiFolder));
-      } catch (e: unknown) {
-        const error = e as { message?: string };
-        yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
-        return;
-      }
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+  createObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
+    return LaikaTask.make<StorageObject>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<JsonApiStorageObject>(
+          `/objects`,
+          { method: 'POST', body: { data: storageObjectCreateToJsonApi(create) } },
+        );
+        return yield* this.decodeStorageObject(raw);
+      })
+    );
   }
 
-  listAtoms(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly Atom[]>> {
-    return this.listFullAtoms(folderKey, options);
+  createOrUpdateObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
+    return LaikaTask.make<StorageObject>(() =>
+      Effect.gen({ self: this }, function*() {
+        const existing = yield* Effect.result(LaikaTask.runValue(this.getObject(create.key)));
+        if (existing._tag === 'Success') {
+          return yield* LaikaTask.runValue(
+            this.updateObject({
+              key: create.key,
+              content: create.content,
+              metadata: create.metadata,
+            }),
+          );
+        }
+        return yield* LaikaTask.runValue(this.createObject(create));
+      })
+    );
   }
 
-  listAtomSummaries(folderKey: string, options: ListAtomsOptions): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
-    return this.listAtomSummariesInternal(folderKey, options);
+  getFolder(key: string): LaikaTask.LaikaTask<Folder> {
+    return LaikaTask.make<Folder>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<JsonApiFolder>(
+          `/folders/${encodeURIComponent(key)}`,
+        );
+        return yield* this.decodeFolder(raw);
+      })
+    );
   }
 
-  private async *listFullAtoms(
+  createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
+    return LaikaTask.make<Folder>(() =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResource<JsonApiFolder>(
+          `/atoms`,
+          { method: 'POST', body: { data: folderCreateToJsonApi(folderCreate) } },
+        );
+        return yield* this.decodeFolder(raw);
+      })
+    );
+  }
+
+  getAtom(key: string): LaikaTask.LaikaTask<Atom> {
+    return LaikaTask.make<Atom>(() =>
+      Effect.gen({ self: this }, function*() {
+        const asObject = yield* Effect.result(LaikaTask.runValue(this.getObject(key)));
+        if (asObject._tag === 'Success') return asObject.success;
+        return yield* LaikaTask.runValue(this.getFolder(key));
+      })
+    );
+  }
+
+  listAtoms(
     folderKey: string,
     options: ListAtomsOptions,
-  ): AsyncGenerator<LaikaResult<readonly Atom[]>> {
-    try {
-      const params = paginationCodec.encode(options.pagination);
-
-      const url = folderKey
-        ? `${this.baseUrl}/atoms/${encodeURIComponent(folderKey)}?${params}`
-        : `${this.baseUrl}/atoms?${params}`;
-
-      const headers = await this.getHeaders();
-      const response = await fetch(url, {
-        method: 'GET',
-        headers,
-      });
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-        return;
-      }
-
-      const json: JsonApiCollectionResponse = await response.json();
-
-      console.log('ListAtoms response JSON:', json);
-
-      if (!response.ok || 'errors' in json) {
-        const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
-        yield Result.fail(
-          new InvalidData(
-            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-          ),
-        );
-        return;
-      }
-
-      const items: Atom[] = [];
-      for (const item of json.data) {
-        try {
-          const validated = decodeJsonApiAtom(item);
-          items.push(atomFromJsonApi(validated as JsonApiAtom));
-        } catch (e: unknown) {
-          const error = e as { message?: string };
-          yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
-          return;
+  ): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
+    return LaikaStream.make<Atom, ListAtomsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const params = paginationCodec.encode(options.pagination);
+        const path = folderKey
+          ? `/atoms/${encodeURIComponent(folderKey)}?${params}`
+          : `/atoms?${params}`;
+        const json = yield* this.fetchJson(path);
+        const collection = json as unknown as JsonApiCollectionResponse;
+        let emitted = 0;
+        for (const item of collection.data) {
+          const decoded = yield* Effect.result(
+            Effect.try({
+              try: () => atomFromJsonApi(decodeJsonApiAtom(item) as JsonApiAtom),
+              catch: e => new InvalidData((e as { message?: string }).message ?? 'Invalid JSON:API response'),
+            }),
+          );
+          if (decoded._tag === 'Failure') {
+            yield* emit.recoverableError(decoded.failure);
+          } else {
+            yield* emit.data(decoded.success);
+            emitted += 1;
+          }
         }
-      }
-
-      yield Result.succeed(items);
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+        return { total: emitted };
+      })
+    );
   }
 
-  private async *listAtomSummariesInternal(
+  listAtomSummaries(
     folderKey: string,
     options: ListAtomsOptions,
-  ): AsyncGenerator<LaikaResult<readonly AtomSummary[]>> {
-    try {
-      const params = paginationCodec.encode(options.pagination);
-
-      const url = folderKey
-        ? `${this.baseUrl}/atom-summaries/${encodeURIComponent(folderKey)}?${params}`
-        : `${this.baseUrl}/atom-summaries?${params}`;
-
-      const headers = await this.getHeaders();
-      const response = await fetch(url, {
-        method: 'GET',
-        headers,
-      });
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-        return;
-      }
-
-      const json: JsonApiCollectionResponse = await response.json();
-
-      console.log('ListAtomSummaries response JSON:', json);
-
-      if (!response.ok || 'errors' in json) {
-        const errors = 'errors' in json && Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }];
-        yield Result.fail(
-          new InvalidData(
-            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-          ),
-        );
-        return;
-      }
-
-      const items: AtomSummary[] = [];
-      for (const item of json.data) {
-        try {
-          const validated = decodeJsonApiAtomSummary(item);
-          items.push(atomSummaryFromJsonApi(validated as JsonApiAtomSummary));
-        } catch (e: unknown) {
-          const error = e as { message?: string };
-          yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
-          return;
+  ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
+    return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const params = paginationCodec.encode(options.pagination);
+        const path = folderKey
+          ? `/atom-summaries/${encodeURIComponent(folderKey)}?${params}`
+          : `/atom-summaries?${params}`;
+        const json = yield* this.fetchJson(path);
+        const collection = json as unknown as JsonApiCollectionResponse;
+        let emitted = 0;
+        for (const item of collection.data) {
+          const decoded = yield* Effect.result(
+            Effect.try({
+              try: () => atomSummaryFromJsonApi(decodeJsonApiAtomSummary(item) as JsonApiAtomSummary),
+              catch: e => new InvalidData((e as { message?: string }).message ?? 'Invalid JSON:API response'),
+            }),
+          );
+          if (decoded._tag === 'Failure') {
+            yield* emit.recoverableError(decoded.failure);
+          } else {
+            yield* emit.data(decoded.success);
+            emitted += 1;
+          }
         }
-      }
-
-      yield Result.succeed(items);
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+        return { total: emitted };
+      })
+    );
   }
 
-  async *createFolder(folderCreate: FolderCreate): AsyncGenerator<LaikaResult<Folder>> {
-    try {
-      // Transform to JSON:API format
-      const jsonApiData = folderCreateToJsonApi(folderCreate);
-      const headers = await this.getHeaders();
-
-      const response = await fetch(`${this.baseUrl}/atoms`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ data: jsonApiData }),
-      });
-
-      const result = await this.handleResponse<JsonApiFolder>(response);
-      if (Result.isFailure(result)) {
-        yield failAs<Folder>(result.failure);
-        return;
-      }
-
-      // Validate and parse from JSON:API format to domain format
-      try {
-        const validated = decodeJsonApiFolder(result.success);
-        yield Result.succeed(folderFromJsonApi(validated as JsonApiFolder));
-      } catch (e: unknown) {
-        const error = e as { message?: string };
-        yield Result.fail(new InvalidData(error.message ?? 'Invalid JSON:API response'));
-        return;
-      }
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
-  }
-
-  async *getAtom(key: string): AsyncGenerator<LaikaResult<Atom>> {
-    // Try to get as object first, then as folder
-    let objectResult: LaikaResult<StorageObject> | undefined;
-    for await (const result of this.getObject(key)) {
-      objectResult = result;
-    }
-
-    if (objectResult && Result.isSuccess(objectResult)) {
-      yield objectResult;
-      return;
-    }
-
-    yield* this.getFolder(key);
-  }
-
-  async *removeAtoms(keys: readonly string[]): AsyncGenerator<LaikaResult<readonly string[]>> {
-    try {
-      // Build atomic operations for removal
-      const operations = keys.map(key => ({
-        op: 'remove' as const,
-        ref: {
-          type: 'atom' as const,
-          id: key,
-        },
-      }));
-
-      const headers = await this.getHeaders();
-      const response = await fetch(`${this.baseUrl}/operations`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ 'atomic:operations': operations }),
-      });
-
-      const contentType = response.headers.get('content-type');
-      if (!contentType?.includes('application/vnd.api+json') && !contentType?.includes('application/json')) {
-        yield Result.fail(new InvalidData(`Expected JSON:API response, got ${contentType}`));
-        return;
-      }
-
-      const json = await response.json();
-
-      if (!response.ok) {
-        const errors = json.errors || [{ detail: 'Unknown error' }];
-        yield Result.fail(
-          new InvalidData(
-            errors.map((e: { detail?: string, title?: string }) => e.detail || e.title || 'Unknown error').join(', '),
-          ),
-        );
-        return;
-      }
-
-      // Extract successfully removed keys
-      const removedKeys: string[] = [];
-      const results = json['atomic:results'] || [];
-
-      for (let i = 0; i < results.length; i++) {
-        const result = results[i];
-        if (!result.errors) {
-          removedKeys.push(keys[i]);
+  removeAtoms(keys: readonly string[]): LaikaStream.LaikaStream<string, RemoveAtomsDone> {
+    return LaikaStream.make<string, RemoveAtomsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const operations = keys.map(key => ({
+          op: 'remove' as const,
+          ref: { type: 'atom' as const, id: key },
+        }));
+        const json = yield* this.fetchJson(`/operations`, {
+          method: 'POST',
+          body: { 'atomic:operations': operations },
+        });
+        const results = (json['atomic:results'] as Array<{ errors?: unknown }> | undefined) ?? [];
+        let removed = 0;
+        let skipped = 0;
+        for (let i = 0; i < results.length; i++) {
+          if (results[i]!.errors) {
+            yield* emit.recoverableError(new InvalidData(`Failed to remove "${keys[i]}"`));
+            skipped += 1;
+          } else {
+            yield* emit.data(keys[i]!);
+            removed += 1;
+          }
         }
-      }
+        return { removed, skipped };
+      })
+    );
+  }
 
-      yield Result.succeed(removedKeys);
-    } catch (error) {
-      yield Result.fail(new InvalidData(`Network error: ${(error as Error).message}`));
-    }
+  /**
+   * Cached upstream capabilities. The remote storage-api exposes
+   * `GET /capabilities` returning the real capabilities of the backing
+   * repository (filesystem vs R2 vs GitHub, etc.), so we fetch + cache it
+   * per repo instance. Falls back to a safe minimal default if the upstream
+   * doesn't speak the endpoint yet.
+   */
+  private cachedCapabilities?: Capabilities;
+
+  getCapabilities(): LaikaTask.LaikaTask<Capabilities> {
+    return LaikaTask.make<Capabilities>(() =>
+      Effect.gen({ self: this }, function*() {
+        if (this.cachedCapabilities) return this.cachedCapabilities;
+        const r = yield* Effect.result(this.fetchJson('/capabilities'));
+        if (r._tag === 'Success') {
+          const data = (r.success.data as { attributes?: Capabilities } | undefined)?.attributes;
+          if (data) {
+            this.cachedCapabilities = data;
+            return data;
+          }
+        }
+        // Upstream may be an older server without /capabilities — bail to a
+        // conservative default that says "pagination is whatever the remote
+        // supports, file extensions are handled remotely".
+        const fallback: Capabilities = {
+          compatibilityDate: CompatibilityDate.make('2026-05-11'),
+          fileExtensions: {
+            supported: false,
+            description:
+              'Upstream storage-api did not expose /capabilities. File-extension support is delegated to the remote.',
+          },
+          pagination: {
+            supported: true,
+            description: 'JSON:API pagination is forwarded to the remote endpoint.',
+            styles: { offset: true, page: true, cursor: true },
+          },
+        };
+        this.cachedCapabilities = fallback;
+        return fallback;
+      })
+    );
   }
 }

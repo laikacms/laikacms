@@ -1,5 +1,6 @@
 import * as Result from 'effect/Result';
 import * as fs from 'fs/promises';
+import { NotFoundError } from 'laikacms/core';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -194,7 +195,7 @@ describe('FileSystemDataSource.isDir', () => {
 
   it('throws NotFoundError for a missing path', async () => {
     const ds = new FileSystemDataSource([], '');
-    await expect(ds.isDir(tmpDir, 'missing')).rejects.toThrow(/does not exist/);
+    await expect(ds.isDir(tmpDir, 'missing')).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 

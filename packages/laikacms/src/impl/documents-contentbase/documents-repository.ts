@@ -1,16 +1,23 @@
-import type { ContentBaseSettingsProvider } from '@laikacms/contentbase-settings';
-import type { LaikaError, LaikaResult } from '@laikacms/core';
-import { BadRequestError, InvalidData, NotFoundError } from '@laikacms/core';
+import * as Effect from 'effect/Effect';
+import * as Result from 'effect/Result';
+
+import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
+import type { LaikaDone, LaikaError, LaikaResult } from 'laikacms/core';
+import { BadRequestError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type {
+  ListRecordsDone,
   ListRecordsOptions,
   ListRecordSummaries,
+  ListRevisionsDone,
   ListRevisionsOptions,
   RecordSummary,
   RevisionSummary,
-} from '@laikacms/documents';
+} from 'laikacms/documents';
 import {
   type Document,
   type DocumentCreate,
+  type DocumentsCapabilities,
+  DocumentsCompatibilityDate,
   DocumentsRepository,
   type DocumentUpdate,
   type Record,
@@ -19,27 +26,22 @@ import {
   type Unpublished,
   type UnpublishedCreate,
   type UnpublishedUpdate,
-} from '@laikacms/documents';
-import type { StorageRepository } from '@laikacms/storage';
-import { basename, pathCombine, pathToSegments } from '@laikacms/storage';
-import * as Result from 'effect/Result';
+} from 'laikacms/documents';
+import type { StorageRepository } from 'laikacms/storage';
+import { basename, pathCombine, pathToSegments } from 'laikacms/storage';
 
 /**
- * Helper to convert a failure result to a different type while preserving the error
+ * Lift a Promise<LaikaResult<A>> into Effect<A, LaikaError> — bridges the
+ * private path helpers (which still return Promise<Result>) into Effect.gen.
  */
-function failAs<T>(error: LaikaError): LaikaResult<T> {
-  return Result.fail(error);
-}
+const liftPromiseResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
+  Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
 
-/**
- * Helper to get the first result from an async generator
- */
-async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<LaikaResult<T>> {
-  for await (const result of gen) {
-    return result;
-  }
-  return Result.fail(new NotFoundError('No result from generator'));
-}
+/** Run a LaikaStream and collect data into a flat array. */
+const collectStreamData = <A, D extends LaikaDone, R>(
+  stream: LaikaStream.LaikaStream<A, D, R>,
+): Effect.Effect<ReadonlyArray<A>, LaikaError, R> =>
+  Effect.map(LaikaStream.runCollect(stream), r => r.data);
 
 export class ContentBaseDocumentsRepository extends DocumentsRepository {
   constructor(
@@ -49,56 +51,49 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     super();
   }
 
+  getCapabilities(): LaikaTask.LaikaTask<DocumentsCapabilities> {
+    return LaikaTask.make<DocumentsCapabilities>(() =>
+      Effect.gen({ self: this }, function*() {
+        const caps = yield* LaikaTask.runValue(this.storageRepository.getCapabilities());
+        return {
+          compatibilityDate: DocumentsCompatibilityDate.make('2026-05-11'),
+          pagination: caps.pagination,
+        };
+      })
+    );
+  }
+
   /**
-   * Split a document key into its collection prefix and the remainder. Keys are always
-   * `<collection>/<rest>`; the collection is the first path segment and corresponds to
-   * a configured `DocumentCollectionSettings`. The remainder is everything after — it may
-   * be empty (the collection root) or contain further nested segments.
+   * Split a document key into its collection prefix and the remainder.
    */
   private parseKey(key: string): { collection: string, remainder: string } {
     const segments = pathToSegments(key);
-    if (segments.length === 0) {
-      return { collection: '', remainder: '' };
-    }
+    if (segments.length === 0) return { collection: '', remainder: '' };
     const [collection, ...rest] = segments;
     return { collection, remainder: rest.length > 0 ? pathCombine(...rest) : '' };
   }
 
-  /**
-   * Get the storage path for a document by looking up its collection's directory in settings.
-   */
   private async getDocumentPath(key: string): Promise<LaikaResult<string>> {
     const { collection, remainder } = this.parseKey(key);
     if (!collection) {
       return Result.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
     }
     const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
-    if (Result.isFailure(settings)) {
-      return failAs<string>(settings.failure);
-    }
+    if (Result.isFailure(settings)) return Result.fail(settings.failure);
     const directory = settings.success.directory ?? collection;
     return Result.succeed(remainder ? pathCombine(directory, remainder) : directory);
   }
 
-  /**
-   * Get the storage path for an unpublished document with a specific status
-   */
-  private async getUnpublishedPath(
-    key: string,
-    status: string,
-  ): Promise<LaikaResult<string>> {
+  private async getUnpublishedPath(key: string, status: string): Promise<LaikaResult<string>> {
     const { collection, remainder } = this.parseKey(key);
     if (!collection) {
       return Result.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
     }
     const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
-    if (Result.isFailure(settings)) {
-      return failAs<string>(settings.failure);
-    }
+    if (Result.isFailure(settings)) return Result.fail(settings.failure);
 
     const unpublishedStatuses = settings.success.unpublishedStatuses || {};
     const statusConfig = unpublishedStatuses[status];
-
     if (!statusConfig) {
       return Result.fail(
         new BadRequestError(
@@ -108,40 +103,22 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       );
     }
 
-    // Path format: .contentbase/[collection]/[status.directory]/[remainder]
     const basePath = `.contentbase/${collection}/${statusConfig.directory}`;
     return Result.succeed(remainder ? pathCombine(basePath, remainder) : basePath);
   }
 
-  /**
-   * Get the storage path for a revision
-   */
-  private async getRevisionPath(
-    key: string,
-    revision?: string,
-  ): Promise<LaikaResult<string>> {
+  private async getRevisionPath(key: string, revision?: string): Promise<LaikaResult<string>> {
     const { collection, remainder } = this.parseKey(key);
     if (!collection) {
       return Result.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
     }
     const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
-    if (Result.isFailure(settings)) {
-      return failAs<string>(settings.failure);
-    }
-
+    if (Result.isFailure(settings)) return Result.fail(settings.failure);
     const revisionDirectory = settings.success.revisionDirectory || `.contentbase/${collection}/revisions`;
     const basePath = remainder ? pathCombine(revisionDirectory, remainder) : revisionDirectory;
-
-    if (revision) {
-      return Result.succeed(pathCombine(basePath, revision));
-    }
-    return Result.succeed(basePath);
+    return Result.succeed(revision ? pathCombine(basePath, revision) : basePath);
   }
 
-  /**
-   * Convert a full storage path back to a logical key by stripping the collection's
-   * directory prefix and re-attaching the collection name.
-   */
   private extractKeyFromPath(fullPath: string, directory: string, collection: string): string {
     const stripped = fullPath.startsWith(directory) ? fullPath.substring(directory.length) : fullPath;
     const segments = pathToSegments(stripped);
@@ -150,693 +127,453 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
   // ===== DOCUMENTS (PUBLISHED) =====
 
-  async *getDocument(key: string): AsyncGenerator<LaikaResult<Document>> {
-    const pathResult = await this.getDocumentPath(key);
-    if (Result.isFailure(pathResult)) {
-      yield failAs<Document>(pathResult.failure);
-      return;
-    }
-
-    const result = await firstResult(this.storageRepository.getObject(pathResult.success));
-    if (Result.isFailure(result)) {
-      yield failAs<Document>(result.failure);
-      return;
-    }
-
-    const document: Document = {
-      ...result.success,
-      key,
-      type: 'published',
-      language: result.success.content.language ?? 'und',
-      status: 'published',
-    };
-
-    yield Result.succeed(document);
+  getDocument(key: string): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const path = yield* liftPromiseResult(this.getDocumentPath(key));
+        const obj = yield* LaikaTask.runValue(this.storageRepository.getObject(path));
+        return {
+          ...obj,
+          key,
+          type: 'published' as const,
+          language: obj.content.language ?? 'und',
+          status: 'published' as const,
+        };
+      })
+    );
   }
 
-  async *createDocument(create: DocumentCreate): AsyncGenerator<LaikaResult<Document>> {
-    const pathResult = await this.getDocumentPath(create.key);
-    if (Result.isFailure(pathResult)) {
-      yield failAs<Document>(pathResult.failure);
-      return;
-    }
-
-    const now = new Date().toISOString();
-
-    const object = await firstResult(this.storageRepository.createObject({
-      type: 'object',
-      key: pathResult.success,
-      content: create.content,
-    }));
-
-    if (Result.isFailure(object)) {
-      yield failAs<Document>(object.failure);
-      return;
-    }
-
-    const document: Document = {
-      ...object.success,
-      key: create.key,
-      type: 'published',
-      status: 'published',
-      language: create.language,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    yield Result.succeed(document);
+  createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const path = yield* liftPromiseResult(this.getDocumentPath(create.key));
+        const obj = yield* LaikaTask.runValue(this.storageRepository.createObject({
+          type: 'object',
+          key: path,
+          content: create.content,
+        }));
+        const now = new Date().toISOString();
+        return {
+          ...obj,
+          key: create.key,
+          type: 'published' as const,
+          status: 'published' as const,
+          language: create.language,
+          createdAt: now,
+          updatedAt: now,
+        };
+      })
+    );
   }
 
-  async *updateDocument(update: DocumentUpdate): AsyncGenerator<LaikaResult<Document>> {
-    const pathResult = await this.getDocumentPath(update.key);
-    if (Result.isFailure(pathResult)) {
-      yield failAs<Document>(pathResult.failure);
-      return;
-    }
-
-    // Get existing document to preserve createdAt
-    const existingResult = await firstResult(this.getDocument(update.key));
-    if (Result.isFailure(existingResult)) {
-      yield failAs<Document>(existingResult.failure);
-      return;
-    }
-
-    const existing = existingResult.success;
-    const newContent = update.content ?? existing.content;
-
-    const result = await firstResult(this.storageRepository.updateObject({
-      key: pathResult.success,
-      content: newContent,
-    }));
-    if (Result.isFailure(result)) {
-      yield failAs<Document>(result.failure);
-      return;
-    }
-
-    const document: Document = {
-      ...existing,
-      content: newContent,
-      updatedAt: new Date().toISOString(),
-    };
-
-    yield Result.succeed(document);
+  updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const path = yield* liftPromiseResult(this.getDocumentPath(update.key));
+        const existing = yield* LaikaTask.runValue(this.getDocument(update.key));
+        const newContent = update.content ?? existing.content;
+        yield* LaikaTask.runValue(this.storageRepository.updateObject({
+          key: path,
+          content: newContent,
+        }));
+        return {
+          ...existing,
+          content: newContent,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
   }
 
-  async *deleteDocument(key: string): AsyncGenerator<LaikaResult<void>> {
-    // Get paths
-    const documentPath = await this.getDocumentPath(key);
-    if (Result.isFailure(documentPath)) {
-      yield failAs<void>(documentPath.failure);
-      return;
-    }
-
-    // Permanently delete the document
-    for await (const result of this.storageRepository.removeAtoms([documentPath.success])) {
-      if (Result.isFailure(result)) {
-        yield failAs<void>(result.failure);
-        return;
-      }
-    }
-
-    yield Result.succeed(undefined);
+  deleteDocument(key: string): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(() =>
+      Effect.gen({ self: this }, function*() {
+        const path = yield* liftPromiseResult(this.getDocumentPath(key));
+        yield* collectStreamData(this.storageRepository.removeAtoms([path]));
+      })
+    );
   }
 
   // ===== UNPUBLISHED =====
 
-  async *getUnpublished(key: string): AsyncGenerator<LaikaResult<Unpublished>> {
-    const { collection, remainder } = this.parseKey(key);
-    if (!collection) {
-      yield Result.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
-      return;
-    }
-    const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
-    if (Result.isFailure(settings)) {
-      yield failAs<Unpublished>(settings.failure);
-      return;
-    }
+  getUnpublished(key: string): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const { collection, remainder } = this.parseKey(key);
+        if (!collection) {
+          return yield* Effect.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
+        }
+        const settings = yield* liftPromiseResult(
+          this.settingsProvider.getDocumentCollectionSettings(collection),
+        );
+        const unpublishedStatuses = settings.unpublishedStatuses || {};
 
-    const unpublishedStatuses = settings.success.unpublishedStatuses || {};
+        for (const [status, statusConfig] of Object.entries(unpublishedStatuses)) {
+          const basePath = `.contentbase/${collection}/${statusConfig.directory}`;
+          const fullPath = remainder ? pathCombine(basePath, remainder) : basePath;
+          const r = yield* Effect.result(LaikaTask.runValue(this.storageRepository.getObject(fullPath)));
+          if (Result.isSuccess(r)) {
+            return {
+              ...r.success,
+              key,
+              type: 'unpublished' as const,
+              language: r.success.content.language ?? 'und',
+              status,
+            };
+          }
+        }
+        return yield* Effect.fail(
+          new NotFoundError(`Unpublished document '${key}' not found in collection '${collection}'`),
+        );
+      })
+    );
+  }
 
-    // Try each status directory to find the unpublished document
-    for (const [status, statusConfig] of Object.entries(unpublishedStatuses)) {
-      const basePath = `.contentbase/${collection}/${statusConfig.directory}`;
-      const fullPath = remainder ? pathCombine(basePath, remainder) : basePath;
-
-      const result = await firstResult(this.storageRepository.getObject(fullPath));
-      if (Result.isSuccess(result)) {
-        const unpublished: Unpublished = {
-          ...result.success,
-          key,
-          type: 'unpublished',
-          language: result.success.content.language ?? 'und',
-          status,
+  createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const path = yield* liftPromiseResult(this.getUnpublishedPath(create.key, create.status));
+        const obj = yield* LaikaTask.runValue(this.storageRepository.createObject({
+          type: 'object',
+          key: path,
+          content: create.content,
+        }));
+        const now = new Date().toISOString();
+        return {
+          ...obj,
+          key: create.key,
+          type: 'unpublished' as const,
+          status: create.status,
+          language: create.language,
+          createdAt: now,
+          updatedAt: now,
         };
-        yield Result.succeed(unpublished);
-        return;
-      }
-    }
-
-    yield Result.fail(new NotFoundError(`Unpublished document '${key}' not found in collection '${collection}'`));
+      })
+    );
   }
 
-  async *createUnpublished(create: UnpublishedCreate): AsyncGenerator<LaikaResult<Unpublished>> {
-    const pathResult = await this.getUnpublishedPath(create.key, create.status);
-    if (Result.isFailure(pathResult)) {
-      yield failAs<Unpublished>(pathResult.failure);
-      return;
-    }
+  updateUnpublished(update: UnpublishedUpdate): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const existing = yield* LaikaTask.runValue(this.getUnpublished(update.key));
+        const newContent = update.content || existing.content;
 
-    const now = new Date().toISOString();
+        if (update.status && update.status !== existing.status) {
+          return yield* LaikaTask.runValue(this.updateUnpublishedStatus(update.key, update.status));
+        }
 
-    const object = await firstResult(this.storageRepository.createObject({
-      type: 'object',
-      key: pathResult.success,
-      content: create.content,
-    }));
-
-    if (Result.isFailure(object)) {
-      yield failAs<Unpublished>(object.failure);
-      return;
-    }
-
-    const unpublished: Unpublished = {
-      ...object.success,
-      key: create.key,
-      type: 'unpublished',
-      status: create.status,
-      language: create.language,
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    yield Result.succeed(unpublished);
+        const path = yield* liftPromiseResult(this.getUnpublishedPath(update.key, existing.status));
+        yield* LaikaTask.runValue(this.storageRepository.updateObject({
+          key: path,
+          content: newContent,
+        }));
+        return {
+          ...existing,
+          content: newContent,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
   }
 
-  async *updateUnpublished(update: UnpublishedUpdate): AsyncGenerator<LaikaResult<Unpublished>> {
-    // Get the existing unpublished document
-    const existingResult = await firstResult(this.getUnpublished(update.key));
-    if (Result.isFailure(existingResult)) {
-      yield failAs<Unpublished>(existingResult.failure);
-      return;
-    }
+  /** Move an unpublished document to a different status directory. */
+  private updateUnpublishedStatus(key: string, newStatus: string): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const existing = yield* LaikaTask.runValue(this.getUnpublished(key));
+        const oldPath = yield* liftPromiseResult(this.getUnpublishedPath(key, existing.status));
+        const newPath = yield* liftPromiseResult(this.getUnpublishedPath(key, newStatus));
 
-    const existing = existingResult.success;
-    const newContent = update.content || existing.content;
+        yield* LaikaTask.runValue(this.storageRepository.createObject({
+          type: 'object',
+          key: newPath,
+          content: existing.content,
+        }));
+        yield* collectStreamData(this.storageRepository.removeAtoms([oldPath]));
 
-    // If status is changing, we need to move the file
-    if (update.status && update.status !== existing.status) {
-      yield* this.updateUnpublishedStatus(update.key, update.status);
-      return;
-    }
-
-    // Just update content in place
-    const pathResult = await this.getUnpublishedPath(update.key, existing.status);
-    if (Result.isFailure(pathResult)) {
-      yield failAs<Unpublished>(pathResult.failure);
-      return;
-    }
-
-    const result = await firstResult(this.storageRepository.updateObject({
-      key: pathResult.success,
-      content: newContent,
-    }));
-    if (Result.isFailure(result)) {
-      yield failAs<Unpublished>(result.failure);
-      return;
-    }
-
-    const unpublished: Unpublished = {
-      ...existing,
-      content: newContent,
-      updatedAt: new Date().toISOString(),
-    };
-
-    yield Result.succeed(unpublished);
+        return {
+          ...existing,
+          status: newStatus,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
   }
 
-  /**
-   * Update the status of an unpublished document (moves it to a different directory)
-   */
-  private async *updateUnpublishedStatus(key: string, newStatus: string): AsyncGenerator<LaikaResult<Unpublished>> {
-    // Get the existing unpublished document
-    const existingResult = await firstResult(this.getUnpublished(key));
-    if (Result.isFailure(existingResult)) {
-      yield failAs<Unpublished>(existingResult.failure);
-      return;
-    }
-
-    const existing = existingResult.success;
-
-    // Get paths
-    const oldPath = await this.getUnpublishedPath(key, existing.status);
-    if (Result.isFailure(oldPath)) {
-      yield failAs<Unpublished>(oldPath.failure);
-      return;
-    }
-
-    const newPath = await this.getUnpublishedPath(key, newStatus);
-    if (Result.isFailure(newPath)) {
-      yield failAs<Unpublished>(newPath.failure);
-      return;
-    }
-
-    const now = new Date().toISOString();
-
-    // Create in new location
-    const createResult = await firstResult(this.storageRepository.createObject({
-      type: 'object',
-      key: newPath.success,
-      content: existing.content,
-    }));
-    if (Result.isFailure(createResult)) {
-      yield failAs<Unpublished>(createResult.failure);
-      return;
-    }
-
-    // Remove from old location
-    for await (const result of this.storageRepository.removeAtoms([oldPath.success])) {
-      if (Result.isFailure(result)) {
-        yield failAs<Unpublished>(result.failure);
-        return;
-      }
-    }
-
-    const unpublished: Unpublished = {
-      ...existing,
-      status: newStatus,
-      updatedAt: now,
-    };
-
-    yield Result.succeed(unpublished);
+  deleteUnpublished(key: string): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(() =>
+      Effect.gen({ self: this }, function*() {
+        const existing = yield* LaikaTask.runValue(this.getUnpublished(key));
+        const path = yield* liftPromiseResult(this.getUnpublishedPath(key, existing.status));
+        yield* collectStreamData(this.storageRepository.removeAtoms([path]));
+      })
+    );
   }
 
-  async *deleteUnpublished(key: string): AsyncGenerator<LaikaResult<void>> {
-    // Get the existing unpublished document to find its status
-    const existingResult = await firstResult(this.getUnpublished(key));
-    if (Result.isFailure(existingResult)) {
-      yield failAs<void>(existingResult.failure);
-      return;
-    }
+  unpublish(key: string, status: string): LaikaTask.LaikaTask<Unpublished> {
+    return LaikaTask.make<Unpublished>(() =>
+      Effect.gen({ self: this }, function*() {
+        const document = yield* LaikaTask.runValue(this.getDocument(key));
+        const documentPath = yield* liftPromiseResult(this.getDocumentPath(key));
+        const unpublishedPath = yield* liftPromiseResult(this.getUnpublishedPath(key, status));
 
-    const pathResult = await this.getUnpublishedPath(key, existingResult.success.status);
-    if (Result.isFailure(pathResult)) {
-      yield failAs<void>(pathResult.failure);
-      return;
-    }
+        yield* LaikaTask.runValue(this.storageRepository.createObject({
+          type: 'object',
+          key: unpublishedPath,
+          content: document.content,
+        }));
+        yield* collectStreamData(this.storageRepository.removeAtoms([documentPath]));
 
-    for await (const result of this.storageRepository.removeAtoms([pathResult.success])) {
-      if (Result.isFailure(result)) {
-        yield failAs<void>(result.failure);
-        return;
-      }
-    }
-
-    yield Result.succeed(undefined);
+        return {
+          key,
+          type: 'unpublished' as const,
+          status,
+          language: document.language,
+          content: document.content,
+          createdAt: document.createdAt,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
   }
 
-  async *unpublish(key: string, status: string): AsyncGenerator<LaikaResult<Unpublished>> {
-    // Get the document
-    const documentResult = await firstResult(this.getDocument(key));
-    if (Result.isFailure(documentResult)) {
-      yield failAs<Unpublished>(documentResult.failure);
-      return;
-    }
+  publish(key: string): LaikaTask.LaikaTask<Document> {
+    return LaikaTask.make<Document>(() =>
+      Effect.gen({ self: this }, function*() {
+        const unpublished = yield* LaikaTask.runValue(this.getUnpublished(key));
+        const unpublishedPath = yield* liftPromiseResult(this.getUnpublishedPath(key, unpublished.status));
+        const documentPath = yield* liftPromiseResult(this.getDocumentPath(key));
 
-    const document = documentResult.success;
+        yield* LaikaTask.runValue(this.storageRepository.createObject({
+          type: 'object',
+          key: documentPath,
+          content: unpublished.content,
+        }));
+        yield* collectStreamData(this.storageRepository.removeAtoms([unpublishedPath]));
 
-    // Get paths
-    const documentPath = await this.getDocumentPath(key);
-    if (Result.isFailure(documentPath)) {
-      yield failAs<Unpublished>(documentPath.failure);
-      return;
-    }
-
-    const unpublishedPath = await this.getUnpublishedPath(key, status);
-    if (Result.isFailure(unpublishedPath)) {
-      yield failAs<Unpublished>(unpublishedPath.failure);
-      return;
-    }
-
-    const now = new Date().toISOString();
-
-    // Write to unpublished location
-    const createResult = await firstResult(this.storageRepository.createObject({
-      type: 'object',
-      key: unpublishedPath.success,
-      content: document.content,
-    }));
-    if (Result.isFailure(createResult)) {
-      yield failAs<Unpublished>(createResult.failure);
-      return;
-    }
-
-    // Remove from documents
-    for await (const result of this.storageRepository.removeAtoms([documentPath.success])) {
-      if (Result.isFailure(result)) {
-        yield failAs<Unpublished>(result.failure);
-        return;
-      }
-    }
-
-    const unpublished: Unpublished = {
-      key,
-      type: 'unpublished',
-      status,
-      language: document.language,
-      content: document.content,
-      createdAt: document.createdAt,
-      updatedAt: now,
-    };
-
-    yield Result.succeed(unpublished);
-  }
-
-  async *publish(key: string): AsyncGenerator<LaikaResult<Document>> {
-    // Get the unpublished document
-    const unpublishedResult = await firstResult(this.getUnpublished(key));
-    if (Result.isFailure(unpublishedResult)) {
-      yield failAs<Document>(unpublishedResult.failure);
-      return;
-    }
-
-    const unpublished = unpublishedResult.success;
-
-    // Get paths
-    const unpublishedPath = await this.getUnpublishedPath(key, unpublished.status);
-    if (Result.isFailure(unpublishedPath)) {
-      yield failAs<Document>(unpublishedPath.failure);
-      return;
-    }
-
-    const documentPath = await this.getDocumentPath(key);
-    if (Result.isFailure(documentPath)) {
-      yield failAs<Document>(documentPath.failure);
-      return;
-    }
-
-    const now = new Date().toISOString();
-
-    // Write to documents
-    const createResult = await firstResult(this.storageRepository.createObject({
-      type: 'object',
-      key: documentPath.success,
-      content: unpublished.content,
-    }));
-    if (Result.isFailure(createResult)) {
-      yield failAs<Document>(createResult.failure);
-      return;
-    }
-
-    // Remove from unpublished
-    for await (const result of this.storageRepository.removeAtoms([unpublishedPath.success])) {
-      if (Result.isFailure(result)) {
-        yield failAs<Document>(result.failure);
-        return;
-      }
-    }
-
-    const document: Document = {
-      key,
-      type: 'published',
-      status: 'published',
-      language: unpublished.language,
-      content: unpublished.content,
-      createdAt: unpublished.createdAt,
-      updatedAt: now,
-    };
-
-    yield Result.succeed(document);
+        return {
+          key,
+          type: 'published' as const,
+          status: 'published' as const,
+          language: unpublished.language,
+          content: unpublished.content,
+          createdAt: unpublished.createdAt,
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
   }
 
   // ===== RECORDS (LIST ALL TYPES) =====
 
-  /**
-   * Private helper to list records with configurable output type.
-   *
-   * `options.folder` is interpreted as the collection name (its first path segment) plus an
-   * optional sub-path. The collection's directory is taken from settings; the optional
-   * sub-path is appended to scope listing within the collection.
-   */
-  private async *listRecordsInternal<T extends 'full' | 'summary'>(
+  listRecords(options: ListRecordsOptions): LaikaStream.LaikaStream<Record, ListRecordsDone> {
+    return this.listRecordsInternal<Record>(options, 'full');
+  }
+
+  listRecordSummaries(
+    options: ListRecordSummaries,
+  ): LaikaStream.LaikaStream<RecordSummary, ListRecordsDone> {
+    return this.listRecordsInternal<RecordSummary>(options, 'summary');
+  }
+
+  private listRecordsInternal<T extends Record | RecordSummary>(
     options: ListRecordsOptions,
-    mode: T,
-  ): AsyncGenerator<LaikaResult<readonly (T extends 'full' ? Record : RecordSummary)[]>> {
-    if (!options.folder) {
-      yield Result.fail(
-        new BadRequestError('listRecords requires `folder` (the collection name) to identify which collection to list'),
-      );
-      return;
-    }
-    const { collection, remainder: subFolder } = this.parseKey(options.folder);
-    if (!collection) {
-      yield Result.fail(new BadRequestError(`folder '${options.folder}' is missing a collection prefix`));
-      return;
-    }
-    const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
-    if (Result.isFailure(settings)) {
-      yield failAs<readonly (T extends 'full' ? Record : RecordSummary)[]>(settings.failure);
-      return;
-    }
+    mode: 'full' | 'summary',
+  ): LaikaStream.LaikaStream<T, ListRecordsDone> {
+    return LaikaStream.make<T, ListRecordsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        if (!options.folder) {
+          return yield* Effect.fail(
+            new BadRequestError(
+              'listRecords requires `folder` (the collection name) to identify which collection to list',
+            ),
+          );
+        }
+        const { collection, remainder: subFolder } = this.parseKey(options.folder);
+        if (!collection) {
+          return yield* Effect.fail(
+            new BadRequestError(`folder '${options.folder}' is missing a collection prefix`),
+          );
+        }
+        const settings = yield* liftPromiseResult(
+          this.settingsProvider.getDocumentCollectionSettings(collection),
+        );
 
-    // List documents if requested
-    if (options.type === 'published' || options.type === undefined) {
-      const directory = settings.success.directory ?? collection;
-      const folderPath = subFolder ? pathCombine(directory, subFolder) : directory;
+        let total = 0;
 
-      const listOptions = {
-        pagination: options.pagination,
-        depth: options.depth,
-      };
+        // Published
+        if (options.type === 'published' || options.type === undefined) {
+          const directory = settings.directory ?? collection;
+          const folderPath = subFolder ? pathCombine(directory, subFolder) : directory;
+          const listOptions = { pagination: options.pagination, depth: options.depth };
 
-      if (mode === 'full') {
-        for await (const atoms of this.storageRepository.listAtoms(folderPath, listOptions)) {
-          if (Result.isFailure(atoms)) {
-            yield failAs<readonly (T extends 'full' ? Record : RecordSummary)[]>(atoms.failure);
-            continue;
-          }
-
-          const items = atoms.success
-            .filter(atom => atom.type === 'object')
-            .map(atom => {
-              const key = this.extractKeyFromPath(atom.key, directory, collection);
-              return {
+          if (mode === 'full') {
+            const atoms = yield* collectStreamData(
+              this.storageRepository.listAtoms(folderPath, listOptions),
+            );
+            for (const atom of atoms) {
+              if (atom.type !== 'object') continue;
+              const k = this.extractKeyFromPath(atom.key, directory, collection);
+              yield* emit.data({
                 ...atom,
-                key,
+                key: k,
                 type: 'published' as const,
                 status: 'published' as const,
-              };
-            });
-
-          yield Result.succeed(items as any) as any;
-        }
-      } else {
-        for await (const atoms of this.storageRepository.listAtomSummaries(folderPath, listOptions)) {
-          if (Result.isFailure(atoms)) {
-            yield failAs<readonly (T extends 'full' ? Record : RecordSummary)[]>(atoms.failure);
-            continue;
-          }
-
-          const items = atoms.success
-            .filter(atom => atom.type === 'object-summary')
-            .map(atom => {
-              const key = this.extractKeyFromPath(atom.key, directory, collection);
-              return {
+              } as unknown as T);
+              total += 1;
+            }
+          } else {
+            const summaries = yield* collectStreamData(
+              this.storageRepository.listAtomSummaries(folderPath, listOptions),
+            );
+            for (const atom of summaries) {
+              if (atom.type !== 'object-summary') continue;
+              const k = this.extractKeyFromPath(atom.key, directory, collection);
+              yield* emit.data({
                 ...atom,
-                key,
+                key: k,
                 type: 'published-summary' as const,
                 status: 'published' as const,
-              };
-            });
-
-          yield Result.succeed(items as any) as any;
-        }
-      }
-    }
-
-    // List unpublished if requested
-    if (options.type === 'unpublished' || options.type === undefined) {
-      const unpublishedStatuses = settings.success.unpublishedStatuses || {};
-      const statusesToList = options.statuses || Object.keys(unpublishedStatuses);
-
-      for (const status of statusesToList) {
-        const statusConfig = unpublishedStatuses[status];
-        if (!statusConfig) continue;
-
-        const basePath = `.contentbase/${collection}/${statusConfig.directory}`;
-        const folderPath = subFolder ? pathCombine(basePath, subFolder) : basePath;
-
-        const listOptions = {
-          pagination: options.pagination,
-          depth: options.depth,
-        };
-
-        if (mode === 'full') {
-          for await (const atoms of this.storageRepository.listAtoms(folderPath, listOptions)) {
-            if (Result.isFailure(atoms)) {
-              // Ignore not found errors for unpublished directories that don't exist yet
-              if (atoms.failure.code === NotFoundError.CODE) continue;
-              yield failAs<readonly (T extends 'full' ? Record : RecordSummary)[]>(atoms.failure);
-              continue;
+              } as unknown as T);
+              total += 1;
             }
+          }
+        }
 
-            const items = atoms.success
-              .filter(atom => atom.type === 'object')
-              .map(atom => {
-                const key = this.extractKeyFromPath(atom.key, basePath, collection);
-                return {
+        // Unpublished
+        if (options.type === 'unpublished' || options.type === undefined) {
+          const unpublishedStatuses = settings.unpublishedStatuses || {};
+          const statusesToList = options.statuses || Object.keys(unpublishedStatuses);
+
+          for (const status of statusesToList) {
+            const statusConfig = unpublishedStatuses[status];
+            if (!statusConfig) continue;
+
+            const basePath = `.contentbase/${collection}/${statusConfig.directory}`;
+            const folderPath = subFolder ? pathCombine(basePath, subFolder) : basePath;
+            const listOptions = { pagination: options.pagination, depth: options.depth };
+
+            if (mode === 'full') {
+              const r = yield* Effect.result(
+                collectStreamData(this.storageRepository.listAtoms(folderPath, listOptions)),
+              );
+              if (Result.isFailure(r)) {
+                // Ignore NotFound for status dirs that don't exist yet.
+                if (r.failure.code !== NotFoundError.CODE) yield* emit.recoverableError(r.failure);
+                continue;
+              }
+              for (const atom of r.success) {
+                if (atom.type !== 'object') continue;
+                const k = this.extractKeyFromPath(atom.key, basePath, collection);
+                yield* emit.data({
                   ...atom,
-                  key,
+                  key: k,
                   type: 'unpublished' as const,
                   status,
-                };
-              });
-
-            yield Result.succeed(items as any) as any;
-          }
-        } else {
-          for await (const atoms of this.storageRepository.listAtomSummaries(folderPath, listOptions)) {
-            if (Result.isFailure(atoms)) {
-              // Ignore not found errors for unpublished directories that don't exist yet
-              if (atoms.failure.code === NotFoundError.CODE) continue;
-              yield failAs<readonly (T extends 'full' ? Record : RecordSummary)[]>(atoms.failure);
-              continue;
-            }
-
-            const items = atoms.success
-              .filter(atom => atom.type === 'object-summary')
-              .map(atom => {
-                const key = this.extractKeyFromPath(atom.key, basePath, collection);
-                return {
+                } as unknown as T);
+                total += 1;
+              }
+            } else {
+              const r = yield* Effect.result(
+                collectStreamData(this.storageRepository.listAtomSummaries(folderPath, listOptions)),
+              );
+              if (Result.isFailure(r)) {
+                if (r.failure.code !== NotFoundError.CODE) yield* emit.recoverableError(r.failure);
+                continue;
+              }
+              for (const atom of r.success) {
+                if (atom.type !== 'object-summary') continue;
+                const k = this.extractKeyFromPath(atom.key, basePath, collection);
+                yield* emit.data({
                   ...atom,
-                  key,
+                  key: k,
                   type: 'unpublished-summary' as const,
                   status,
-                };
-              });
-
-            yield Result.succeed(items as any) as any;
+                } as unknown as T);
+                total += 1;
+              }
+            }
           }
         }
-      }
-    }
-  }
 
-  /**
-   * List full record objects with content
-   */
-  async *listRecords(options: ListRecordsOptions): AsyncGenerator<LaikaResult<readonly Record[]>> {
-    yield* this.listRecordsInternal(options, 'full');
-  }
-
-  /**
-   * List record summaries (without content) for efficient listing
-   */
-  async *listRecordSummaries(options: ListRecordSummaries): AsyncGenerator<LaikaResult<readonly RecordSummary[]>> {
-    yield* this.listRecordsInternal(options, 'summary');
+        return { total };
+      })
+    );
   }
 
   // ===== REVISIONS =====
 
-  async *getRevision(key: string, revision: string): AsyncGenerator<LaikaResult<Revision>> {
-    const pathResult = await this.getRevisionPath(key, revision);
-    if (Result.isFailure(pathResult)) {
-      yield failAs<Revision>(pathResult.failure);
-      return;
-    }
-
-    const result = await firstResult(this.storageRepository.getObject(pathResult.success));
-    if (Result.isFailure(result)) {
-      yield failAs<Revision>(result.failure);
-      return;
-    }
-
-    if (!result.success.createdAt) {
-      yield Result.fail(new InvalidData('Revision is missing createdAt date'));
-      return;
-    }
-
-    const revisionEntry: Revision = {
-      ...result.success,
-      createdAt: result.success.createdAt,
-      language: result.success.content.language ?? 'und',
-      revision,
-      type: 'revision',
-      key,
-    };
-
-    yield Result.succeed(revisionEntry);
+  getRevision(key: string, revision: string): LaikaTask.LaikaTask<Revision> {
+    return LaikaTask.make<Revision>(() =>
+      Effect.gen({ self: this }, function*() {
+        const path = yield* liftPromiseResult(this.getRevisionPath(key, revision));
+        const obj = yield* LaikaTask.runValue(this.storageRepository.getObject(path));
+        if (!obj.createdAt) {
+          return yield* Effect.fail(new InvalidData('Revision is missing createdAt date'));
+        }
+        return {
+          ...obj,
+          createdAt: obj.createdAt,
+          language: obj.content.language ?? 'und',
+          revision,
+          type: 'revision' as const,
+          key,
+        };
+      })
+    );
   }
 
-  async *createRevision(create: RevisionCreate): AsyncGenerator<LaikaResult<Revision>> {
-    const pathResult = await this.getRevisionPath(create.key, create.revision);
-    if (Result.isFailure(pathResult)) {
-      yield failAs<Revision>(pathResult.failure);
-      return;
-    }
-
-    const now = new Date().toISOString();
-
-    const object = await firstResult(this.storageRepository.createObject({
-      type: 'object',
-      key: pathResult.success,
-      content: create.content,
-    }));
-
-    if (Result.isFailure(object)) {
-      yield failAs<Revision>(object.failure);
-      return;
-    }
-
-    const revision: Revision = {
-      ...object.success,
-      key: create.key,
-      revision: create.revision,
-      language: create.language,
-      type: 'revision',
-      createdAt: now,
-      updatedAt: now,
-    };
-
-    yield Result.succeed(revision);
+  createRevision(create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
+    return LaikaTask.make<Revision>(() =>
+      Effect.gen({ self: this }, function*() {
+        const path = yield* liftPromiseResult(this.getRevisionPath(create.key, create.revision));
+        const obj = yield* LaikaTask.runValue(this.storageRepository.createObject({
+          type: 'object',
+          key: path,
+          content: create.content,
+        }));
+        const now = new Date().toISOString();
+        return {
+          ...obj,
+          key: create.key,
+          revision: create.revision,
+          language: create.language,
+          type: 'revision' as const,
+          createdAt: now,
+          updatedAt: now,
+        };
+      })
+    );
   }
 
-  async *listRevisions(
+  listRevisions(
     key: string,
     options: ListRevisionsOptions,
-  ): AsyncGenerator<LaikaResult<readonly RevisionSummary[]>> {
-    const pathResult = await this.getRevisionPath(key);
-    if (Result.isFailure(pathResult)) {
-      yield failAs<readonly RevisionSummary[]>(pathResult.failure);
-      return;
-    }
-
-    const revisionDirectory = pathResult.success;
-
-    const generator = this.storageRepository.listAtoms(revisionDirectory, {
-      pagination: options.pagination,
-      depth: 1,
-    });
-
-    for await (const result of generator) {
-      if (Result.isFailure(result)) {
-        yield failAs<readonly RevisionSummary[]>(result.failure);
-        continue;
-      }
-
-      const summaries = result.success
-        .filter(atom => atom.type === 'object')
-        .map(atom => {
+  ): LaikaStream.LaikaStream<RevisionSummary, ListRevisionsDone> {
+    return LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const revisionDirectory = yield* liftPromiseResult(this.getRevisionPath(key));
+        const atoms = yield* collectStreamData(
+          this.storageRepository.listAtoms(revisionDirectory, {
+            pagination: options.pagination,
+            depth: 1,
+          }),
+        );
+        let emitted = 0;
+        for (const atom of atoms) {
+          if (atom.type !== 'object') continue;
           const revisionName = basename(atom.key);
-          return {
+          yield* emit.data({
             ...atom,
             type: 'revision-summary' as const,
             revision: revisionName,
             language: atom.content.language ?? 'und',
             key,
-          } satisfies RevisionSummary;
-        });
-
-      yield Result.succeed(summaries);
-    }
+          } satisfies RevisionSummary);
+          emitted += 1;
+        }
+        return { total: emitted };
+      })
+    );
   }
 }

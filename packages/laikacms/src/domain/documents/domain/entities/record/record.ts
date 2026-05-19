@@ -1,5 +1,5 @@
-import { FolderSchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
+import { FolderSchema } from 'laikacms/storage';
 import { DocumentSchema } from '../document/document.js';
 import { UnpublishedSchema } from '../unpublished/unpublished.js';
 

@@ -1,4 +1,5 @@
 // Document entities
+export * from './capabilities.js';
 export * from './document/index.js';
 export * from './record/index.js';
 export * from './revision/index.js';
@@ -12,4 +13,4 @@ export {
   FolderSchema,
   type FolderSummary,
   FolderSummarySchema,
-} from '@laikacms/storage';
+} from 'laikacms/storage';

@@ -1,10 +1,10 @@
+import * as S from 'effect/Schema';
 import {
   type CollectionSettings,
   type DocumentCollectionSettings,
   type MediaCollectionSettings,
-} from '@laikacms/contentbase-settings';
-import { fromJsonApi, toJsonApi } from '@laikacms/json-api';
-import * as S from 'effect/Schema';
+} from 'laikacms/contentbase-settings';
+import { fromJsonApi, toJsonApi } from 'laikacms/json-api';
 
 // Re-export common JSON:API utilities
 export {
@@ -14,7 +14,7 @@ export {
   type JsonApiError,
   JsonApiErrorSchema,
   toJsonApi,
-} from '@laikacms/json-api';
+} from 'laikacms/json-api';
 
 // ===== JSON:API RESOURCE TYPES =====
 

@@ -1,21 +1,21 @@
-# @laikacms/documents
+# laikacms/documents
 
-[![npm](https://img.shields.io/npm/v/@laikacms/documents)](https://www.npmjs.com/package/@laikacms/documents)
-[![npm](https://img.shields.io/npm/dm/@laikacms/documents)](https://www.npmjs.com/package/@laikacms/documents)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/documents)](https://bundlephobia.com/result?p=@laikacms/documents)
+[![npm](https://img.shields.io/npm/v/laikacms/documents)](https://www.npmjs.com/package/laikacms/documents)
+[![npm](https://img.shields.io/npm/dm/laikacms/documents)](https://www.npmjs.com/package/laikacms/documents)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/documents)](https://bundlephobia.com/result?p=laikacms/documents)
 
 Document management with editorial workflow support.
 
 ## Installation
 
 ```bash
-pnpm add @laikacms/documents
+pnpm add laikacms/documents
 ```
 
 ## Usage
 
 ```typescript
-import { Document, DocumentsRepository, Unpublished } from '@laikacms/documents';
+import { Document, DocumentsRepository, Unpublished } from 'laikacms/documents';
 ```
 
 ## Entities
@@ -44,5 +44,6 @@ abstract class DocumentsRepository {
 
 ## Implementations
 
-- `@laikacms/documents-drizzle` - SQL via Drizzle ORM
-- `@laikacms/documents-contentbase` - ContentBase storage
+- `laikacms/documents-drizzle` - SQL via Drizzle ORM
+- `laikacms/documents-contentbase` - ContentBase storage
+- `laikacms/documents-obsidian` - Obsidian vault (published state via frontmatter)

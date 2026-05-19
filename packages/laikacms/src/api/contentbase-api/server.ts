@@ -1,10 +1,10 @@
-import type { ContentBaseSettingsProvider } from '@laikacms/contentbase-settings';
-import { type CollectionSettings } from '@laikacms/contentbase-settings';
-import type { LaikaResult } from '@laikacms/core';
-import { NotFoundError } from '@laikacms/core';
 import * as Result from 'effect/Result';
 import { Hono } from 'hono';
 import type { Context } from 'hono';
+import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
+import { type CollectionSettings } from 'laikacms/contentbase-settings';
+import type { LaikaResult } from 'laikacms/core';
+import { NotFoundError } from 'laikacms/core';
 import {
   collectionFromJsonApi,
   type CollectionJsonApi,
@@ -76,7 +76,7 @@ function respondCollection<T extends CollectionSettings>(
  * Build a JSON:API handler for the contentbase settings provider.
  *
  * ⚠️ This handler ships **no authentication**. Wrap it (e.g. with
- * `@laikacms/decap-api` or a custom middleware that validates a Bearer token)
+ * `laikacms/decap-api` or a custom middleware that validates a Bearer token)
  * before exposing it to an untrusted network — otherwise anyone who can reach
  * `fetch` can read, mutate, and delete collection settings.
  */

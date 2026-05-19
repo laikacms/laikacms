@@ -1,5 +1,5 @@
-import { FolderSummarySchema } from '@laikacms/storage';
 import * as S from 'effect/Schema';
+import { FolderSummarySchema } from 'laikacms/storage';
 import { DocumentSummarySchema } from '../document/document-summary.js';
 import { UnpublishedSummarySchema } from '../unpublished/unpublished-summary.js';
 

@@ -1,5 +1,5 @@
-import type { StorageFormat, StorageObjectContent, StorageSerializer } from '@laikacms/storage';
 import type { JSONSchema7 } from 'json-schema';
+import type { StorageFormat, StorageObjectContent, StorageSerializer } from 'laikacms/storage';
 
 export const rawSerializer: StorageSerializer<StorageFormat> = {
   format: 'raw' as StorageFormat,

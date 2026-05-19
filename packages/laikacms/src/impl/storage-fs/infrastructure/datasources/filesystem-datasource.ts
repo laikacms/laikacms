@@ -1,21 +1,22 @@
-import type { LaikaError, LaikaResult } from '@laikacms/core';
-import { DirInsteadOfFile, FileInsteadOfDir, ForbiddenError, InternalError, NotFoundError } from '@laikacms/core';
-import { pathCombine, pathToSegments } from '@laikacms/storage';
 import { exec } from 'child_process';
 import * as Result from 'effect/Result';
 import type { Stats } from 'fs';
 import fs from 'fs/promises';
+import type { LaikaResult } from 'laikacms/core';
+import { DirInsteadOfFile, FileInsteadOfDir, ForbiddenError, InternalError, NotFoundError } from 'laikacms/core';
+import { pathCombine, pathToSegments } from 'laikacms/storage';
 import os from 'os';
 import path from 'path';
 import posixPath from 'path/posix';
 import trash from 'trash';
 import type { DirSub, FileOrDir } from '../../domain/entities/file.js';
+import { mapFsErrorToLaikaError } from './utilities.js';
 
 const ALLOW_RECURSIVE = false;
 
-const get = (obj: any, key: string): any => {
+const get = (obj: unknown, key: string): unknown => {
   if (typeof obj !== 'object' || obj === null) return undefined;
-  return obj ? obj[key] : undefined;
+  return (obj as Record<string, unknown>)[key];
 };
 
 export class FileSystemDataSource {
@@ -29,12 +30,13 @@ export class FileSystemDataSource {
    * This ensures the interface never exposes file extensions.
    */
   private stripExtension(relativePath: string): string {
-    for (const ext of this.availableExtensions) {
-      if (relativePath.endsWith(`.${ext}`)) {
-        return relativePath.slice(0, -(ext.length + 1));
-      }
-    }
-    return relativePath;
+    // for (const ext of this.availableExtensions) {
+    //   if (relativePath.endsWith(`.${ext}`)) {
+    //     return relativePath.slice(0, -(ext.length + 1));
+    //   }
+    // }
+    // return relativePath;
+    return relativePath.includes('.') ? relativePath.slice(0, relativePath.lastIndexOf('.')) : relativePath;
   }
 
   /**
@@ -345,7 +347,8 @@ export class FileSystemDataSource {
       // Check if the directory exists, if not create it
       try {
         await fs.access(dirPath);
-      } catch {
+      } catch (error: unknown) {
+        console.warn(`Directory ${dirPath} does not exist, creating it...`, error);
         await fs.mkdir(dirPath, { recursive: true });
       }
 
@@ -355,18 +358,8 @@ export class FileSystemDataSource {
       // Return path without extension for the interface
       return Result.succeed({ path: pathWithoutExt });
     } catch (error) {
-      console.error(error);
-      if (get(error, 'code') === 'ENOENT') {
-        return Result.fail(new NotFoundError(`The directory at ${dirPath} does not exist`));
-      } else if (get(error, 'code') === 'EACCES') {
-        return Result.fail(new ForbiddenError(`Permission denied for ${fullPath}`));
-      } else {
-        return Result.fail(
-          new InternalError(
-            `Failed to create or update file: ${error instanceof Error ? error.message : String(error)}`,
-          ),
-        );
-      }
+      console.error(error, { fullPath, dirPath });
+      return Result.fail(mapFsErrorToLaikaError(error))
     }
   };
 
@@ -377,11 +370,7 @@ export class FileSystemDataSource {
       return stat.isDirectory();
     } catch (error) {
       console.error(error);
-      if (get(error, 'code') === 'ENOENT') {
-        throw new NotFoundError(`The path at ${relativePath} does not exist`);
-      } else {
-        throw error;
-      }
+      throw mapFsErrorToLaikaError(error);
     }
   };
 
@@ -449,16 +438,8 @@ export class FileSystemDataSource {
         );
       }
     } catch (error) {
-      console.error(error);
-      if (get(error, 'code') === 'ENOENT') {
-        return Result.fail(new NotFoundError(`The directory at ${fullPath} does not exist`));
-      } else {
-        return Result.fail(
-          new InternalError(
-            `Failed to get file system entry: ${error instanceof Error ? error.message : String(error)}`,
-          ),
-        );
-      }
+      console.error(error, { fullPath, type });
+      return Result.fail(mapFsErrorToLaikaError(error));
     }
   };
 
