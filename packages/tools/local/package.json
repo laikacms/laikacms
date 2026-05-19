@@ -1,0 +1,65 @@
+{
+  "name": "@laikacms/local",
+  "version": "1.0.0",
+  "description": "Local-file-backed dev tooling for Laika CMS: a JSON:API storage server (`laika-local serve`) and a config-to-typed-TypeScript codegen (`laika-local types`).",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "laikacms",
+    "storage",
+    "local",
+    "development"
+  ],
+  "author": "Sem Postma <sem@laikacms.com>",
+  "license": "MIT",
+  "homepage": "https://github.com/laikacms/laikacms",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "bin": {
+    "laika-local": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsup && chmod +x dist/cli.js",
+    "dev": "tsup --watch",
+    "start": "node dist/cli.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:default",
+    "@standard-schema/spec": "catalog:schema",
+    "ajv": "catalog:schema",
+    "bcryptjs": "^3.0.2",
+    "effect": "catalog:default",
+    "gray-matter": "^4.0.3",
+    "js-yaml": "^4.1.0",
+    "json-schema": "catalog:schema",
+    "minimatch": "^10.0.3",
+    "trash": "^9.0.0"
+  },
+  "devDependencies": {
+    "@hono/node-server": "^2.0.2",
+    "@types/js-yaml": "^4.0.9",
+    "@types/node": "catalog:types",
+    "hono": "^4.12.18",
+    "laikacms": "workspace:*",
+    "rimraf": "catalog:tools",
+    "tsup": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
