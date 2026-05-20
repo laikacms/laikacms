@@ -1,10 +1,11 @@
 {
   "name": "@laikacms/aws",
   "version": "1.0.0",
-  "description": "AWS service implementations for Laika CMS (DynamoDB, etc.).",
+  "description": "AWS service implementations for Laika CMS (DynamoDB, S3, etc.).",
   "keywords": [
     "aws",
     "dynamodb",
+    "s3",
     "headless-cms"
   ],
   "author": {
@@ -32,6 +33,21 @@
       "types": "./dist/contentbase-settings-ddb/index.d.ts",
       "import": "./dist/contentbase-settings-ddb/index.js",
       "default": "./dist/contentbase-settings-ddb/index.js"
+    },
+    "./storage-s3": {
+      "types": "./dist/storage-s3/index.d.ts",
+      "import": "./dist/storage-s3/index.js",
+      "default": "./dist/storage-s3/index.js"
+    },
+    "./storage-ddb": {
+      "types": "./dist/storage-ddb/index.d.ts",
+      "import": "./dist/storage-ddb/index.js",
+      "default": "./dist/storage-ddb/index.js"
+    },
+    "./assets-s3": {
+      "types": "./dist/assets-s3/index.d.ts",
+      "import": "./dist/assets-s3/index.js",
+      "default": "./dist/assets-s3/index.js"
     }
   },
   "scripts": {
@@ -46,14 +62,19 @@
     "laikacms": "workspace:*",
     "effect": "catalog:default",
     "json-schema": "catalog:schema",
+    "minimatch": "^10.0.3",
     "superjson": "^2.2.6"
   },
   "peerDependencies": {
     "@aws-sdk/client-dynamodb": "catalog:aws",
+    "@aws-sdk/client-s3": "catalog:aws",
     "@aws-sdk/lib-dynamodb": "catalog:aws"
   },
   "peerDependenciesMeta": {
     "@aws-sdk/client-dynamodb": {
+      "optional": true
+    },
+    "@aws-sdk/client-s3": {
       "optional": true
     },
     "@aws-sdk/lib-dynamodb": {
@@ -62,9 +83,11 @@
   },
   "devDependencies": {
     "@aws-sdk/client-dynamodb": "catalog:aws",
+    "@aws-sdk/client-s3": "catalog:aws",
     "@aws-sdk/lib-dynamodb": "catalog:aws",
     "@types/json-schema": "catalog:types",
     "@types/node": "catalog:types",
+    "aws-sdk-client-mock": "catalog:testing",
     "rimraf": "catalog:tools",
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
