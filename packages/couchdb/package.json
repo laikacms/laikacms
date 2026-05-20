@@ -1,0 +1,55 @@
+{
+  "name": "@laikacms/couchdb",
+  "version": "1.0.0",
+  "description": "Apache CouchDB-backed StorageRepository for Laika CMS. Document-oriented store with first-class revisions, Mango selectors, and atomic _bulk_docs. Runtime-agnostic — only depends on `fetch`.",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "couchdb",
+    "cloudant",
+    "nosql",
+    "storage"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "exports": {
+    "./storage-couchdb": {
+      "types": "./dist/storage-couchdb/index.d.ts",
+      "import": "./dist/storage-couchdb/index.js",
+      "default": "./dist/storage-couchdb/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "effect": "catalog:default",
+    "minimatch": "^10.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": { "node": ">=22" }
+}
