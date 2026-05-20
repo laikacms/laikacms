@@ -6,6 +6,7 @@ software designed to work with your own custom or existing user interfaces.
 ## Quick Links
 
 - [Getting Started](./getting-started.md) - Installation and basic usage
+- [Self-Hosting Quickstart (FS + Decap)](./quickstart-fs-decap.md) - Run LaikaCMS locally with filesystem storage and Decap CMS
 - [Architecture](./architecture.md) - How Laika CMS is structured
 - [API Reference](./api-reference.md) - Complete API documentation
 - [Packages](./packages.md) - Overview of all packages
