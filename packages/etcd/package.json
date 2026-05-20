@@ -1,0 +1,56 @@
+{
+  "name": "@laikacms/etcd",
+  "version": "1.0.0",
+  "description": "etcd-backed StorageRepository for Laika CMS. MVCC KV store with hierarchical-prefix scans, base64-encoded wire format, and Txn-based atomic multi-key writes. Runtime-agnostic — only depends on `fetch`.",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "etcd",
+    "kubernetes",
+    "kv-store",
+    "mvcc",
+    "storage"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "exports": {
+    "./storage-etcd": {
+      "types": "./dist/storage-etcd/index.d.ts",
+      "import": "./dist/storage-etcd/index.js",
+      "default": "./dist/storage-etcd/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "effect": "catalog:default",
+    "minimatch": "^10.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": { "node": ">=22" }
+}
