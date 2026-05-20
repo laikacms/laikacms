@@ -14,7 +14,7 @@
 
 - [ ] More Decap CMS widgets
 - [ ] Real-time collaboration
-- [ ] GraphQL API option
+- [ ] GraphQL API option _(under consideration — see [ADR-002](docs/decisions/ADR-002-graphql-api-option.md))_
 - [ ] Capability sharing - bubble capabilities up through the chain of repositories; propagate
       capabilities via documents-api, storage-api, and assets-api to be read via proxy packages.
       _Note: Not currently necessary since Decap doesn't support paging, so everything is downloaded
