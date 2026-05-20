@@ -6,7 +6,6 @@ import type { StorageRepository } from '@laikacms/storage';
 import type {
   Atom,
   AtomSummary,
-  Folder,
   FolderCreate,
   StorageObject,
   StorageObjectCreate,
@@ -21,10 +20,6 @@ import { ContentBaseDocumentsRepository } from './documents-repository.js';
 function makeStorageObject(key: string, content: Record<string, unknown>): StorageObject {
   const now = new Date().toISOString();
   return { type: 'object', key, content, createdAt: now, updatedAt: now };
-}
-
-async function* yieldOne<T>(value: LaikaResult<T>): AsyncGenerator<LaikaResult<T>> {
-  yield value;
 }
 
 function makeMemoryStorage(): StorageRepository {

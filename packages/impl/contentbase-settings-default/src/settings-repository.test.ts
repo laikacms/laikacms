@@ -1,5 +1,4 @@
 import type { ContentBaseSettings } from '@laikacms/contentbase-settings';
-import type { LaikaResult } from '@laikacms/core';
 import { NotFoundError } from '@laikacms/core';
 import type {
   Atom,

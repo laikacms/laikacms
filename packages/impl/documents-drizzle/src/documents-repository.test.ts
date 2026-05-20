@@ -3,13 +3,7 @@ import type { LaikaResult } from '@laikacms/core';
 import * as Result from 'effect/Result';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DrizzleDocumentsRepository } from './documents-repository.js';
-import type {
-  DocumentModel,
-  DocumentModelStrict,
-  DrizzleDocumentsRepositoryOptions,
-  RevisionModel,
-  RevisionModelStrict,
-} from './documents-repository.js';
+import type { DocumentModel, DrizzleDocumentsRepositoryOptions, RevisionModel } from './documents-repository.js';
 
 // ---- in-memory query builders + callbacks ----
 
