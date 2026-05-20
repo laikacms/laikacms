@@ -1,0 +1,55 @@
+{
+  "name": "@laikacms/backblaze",
+  "version": "1.0.0",
+  "description": "Backblaze B2 native API-backed StorageRepository for Laika CMS. Two-phase upload, file versioning, mandatory SHA-1 content verification, and POST-for-everything API. Runtime-agnostic — only depends on `fetch` and Web Crypto.",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "backblaze",
+    "b2",
+    "object-storage",
+    "storage"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "exports": {
+    "./storage-b2": {
+      "types": "./dist/storage-b2/index.d.ts",
+      "import": "./dist/storage-b2/index.js",
+      "default": "./dist/storage-b2/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "effect": "catalog:default",
+    "minimatch": "^10.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": { "node": ">=22" }
+}
