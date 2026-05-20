@@ -22,7 +22,9 @@
   "sideEffects": false,
   "scripts": {
     "dev": "tsc --watch",
-    "build": "tsc"
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "lucide-react": "catalog:icons"
@@ -40,6 +42,7 @@
     "@types/node": "catalog:types",
     "typescript": "catalog:tools",
     "vite": "catalog:tools",
-    "vite-plugin-dts": "catalog:tools"
+    "vite-plugin-dts": "catalog:tools",
+    "vitest": "catalog:tools"
   }
 }
