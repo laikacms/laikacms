@@ -34,6 +34,7 @@ features:
 ## Quick Links
 
 - [Getting Started](./getting-started.md) — Installation and basic usage
+- [Self-Hosting Quickstart (FS + Decap)](./quickstart-fs-decap.md) — Run LaikaCMS locally with filesystem storage and Decap CMS
 - [Architecture](./architecture.md) — How Laika CMS is structured
 - [API Reference](./api-reference.md) — Complete API documentation
 - [Packages](./packages.md) — Overview of all packages
@@ -41,6 +42,7 @@ features:
 - [Deployment](./deployment.md) — Production deployment guides
 - [Security](./SECURITY.md) — Security best practices
 - [Test Strategy](./test-strategy.md) — Coverage gaps and rollout plan
+- [Effect Migration](./EFFECT_MIGRATION.md) — Internal migration guide
 
 ## Architecture Overview
 
