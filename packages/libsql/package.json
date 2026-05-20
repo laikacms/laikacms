@@ -1,0 +1,56 @@
+{
+  "name": "@laikacms/libsql",
+  "version": "1.0.0",
+  "description": "libSQL/Turso-backed StorageRepository for Laika CMS. Distributed SQLite over the hrana HTTP pipeline protocol, with typed argument encoding and conditional batch transactions. Runtime-agnostic — only depends on `fetch`.",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "libsql",
+    "turso",
+    "sqlite",
+    "edge",
+    "storage"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "exports": {
+    "./storage-libsql": {
+      "types": "./dist/storage-libsql/index.d.ts",
+      "import": "./dist/storage-libsql/index.js",
+      "default": "./dist/storage-libsql/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "effect": "catalog:default",
+    "minimatch": "^10.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": { "node": ">=22" }
+}
