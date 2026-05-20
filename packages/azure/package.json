@@ -1,0 +1,68 @@
+{
+  "name": "@laikacms/azure",
+  "version": "1.0.0",
+  "description": "Azure service implementations for Laika CMS (Blob Storage, etc.). Each subpath is independent; `@azure/*` packages are optional peers.",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "azure",
+    "storage"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    "./storage-blob": {
+      "types": "./dist/storage-blob/index.d.ts",
+      "import": "./dist/storage-blob/index.js",
+      "default": "./dist/storage-blob/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "effect": "catalog:default"
+  },
+  "peerDependencies": {
+    "@azure/storage-blob": "catalog:azure"
+  },
+  "peerDependenciesMeta": {
+    "@azure/storage-blob": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@azure/storage-blob": "catalog:azure",
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
