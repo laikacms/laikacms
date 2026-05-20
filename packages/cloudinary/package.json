@@ -1,0 +1,60 @@
+{
+  "name": "@laikacms/cloudinary",
+  "version": "1.0.0",
+  "description": "Cloudinary-backed AssetsRepository for Laika CMS. Real folders, signed uploads, deterministic URL transforms exposed as variations. Runtime-agnostic — only depends on `fetch` and Web Crypto.",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "cloudinary",
+    "assets",
+    "image-cdn"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    "./assets-cloudinary": {
+      "types": "./dist/assets-cloudinary/index.d.ts",
+      "import": "./dist/assets-cloudinary/index.js",
+      "default": "./dist/assets-cloudinary/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "effect": "catalog:default"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
