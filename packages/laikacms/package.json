@@ -143,6 +143,11 @@
       "import": "./dist/impl/storage-r2/index.js",
       "default": "./dist/impl/storage-r2/index.js"
     },
+    "./storage-webdav": {
+      "types": "./dist/impl/storage-webdav/index.d.ts",
+      "import": "./dist/impl/storage-webdav/index.js",
+      "default": "./dist/impl/storage-webdav/index.js"
+    },
     "./storage-serializers-json": {
       "types": "./dist/serializers/storage-serializers-json/index.d.ts",
       "import": "./dist/serializers/storage-serializers-json/index.js",

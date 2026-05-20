@@ -40,6 +40,7 @@
       "laikacms/storage-fs": ["src/impl/storage-fs/index.ts"],
       "laikacms/storage-jsonapi-proxy": ["src/impl/storage-jsonapi-proxy/index.ts"],
       "laikacms/storage-r2": ["src/impl/storage-r2/index.ts"],
+      "laikacms/storage-webdav": ["src/impl/storage-webdav/index.ts"],
 
       "laikacms/storage-serializers-json": ["src/serializers/storage-serializers-json/index.ts"],
       "laikacms/storage-serializers-markdown": ["src/serializers/storage-serializers-markdown/index.ts"],
