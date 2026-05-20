@@ -541,6 +541,43 @@ importers:
         specifier: catalog:tools
         version: 4.5.4(@types/node@22.19.15)(rollup@4.60.0)(typescript@6.0.2)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
 
+  packages/decap/decap-cms-widget-color:
+    dependencies:
+      '@emotion/css':
+        specifier: catalog:legacy
+        version: 11.13.5
+      '@emotion/react':
+        specifier: catalog:legacy
+        version: 11.14.0(@types/react@19.2.14)(react@19.2.4)
+      decap-cms-core:
+        specifier: catalog:decap
+        version: 3.11.0(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(@types/hoist-non-react-statics@3.3.7(@types/react@19.2.14))(@types/node@22.19.15)(@types/react@19.2.14)(decap-cms-editor-component-image@3.2.1(react@19.2.4))(decap-cms-lib-auth@3.0.6(immutable@5.1.5)(lodash@4.17.23)(uuid@13.0.0))(decap-cms-lib-util@3.4.0(immutable@5.1.5)(lodash@4.17.23))(decap-cms-lib-widgets@3.3.0(immutable@5.1.5)(lodash@4.17.23))(decap-cms-ui-default@3.5.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(lodash@4.17.23)(prop-types@15.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(immutable@5.1.5)(lodash@4.17.23)(prop-types@15.8.1)(react-dom@19.2.4(react@19.2.4))(react-immutable-proptypes@2.2.0(immutable@5.1.5))(react@19.2.4)
+      decap-cms-ui-default:
+        specifier: catalog:decap
+        version: 3.5.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.4))(@types/react@19.2.14)(react@19.2.4))(lodash@4.17.23)(prop-types@15.8.1)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      react:
+        specifier: catalog:react
+        version: 19.2.4
+      react-dom:
+        specifier: catalog:react
+        version: 19.2.4(react@19.2.4)
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.15
+      '@types/react':
+        specifier: catalog:types
+        version: 19.2.14
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.2
+      vite:
+        specifier: catalog:tools
+        version: 8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3)
+      vite-plugin-dts:
+        specifier: catalog:tools
+        version: 4.5.4(@types/node@22.19.15)(rollup@4.60.0)(typescript@6.0.2)(vite@8.0.3(@emnapi/core@1.9.1)(@emnapi/runtime@1.9.1)(@types/node@22.19.15)(esbuild@0.27.4)(jiti@2.6.1)(tsx@4.21.0)(yaml@2.8.3))
+
   packages/decap/decap-cms-widget-lucide-icon:
     dependencies:
       '@emotion/css':
