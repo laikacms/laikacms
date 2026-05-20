@@ -1,0 +1,55 @@
+{
+  "name": "@laikacms/arangodb",
+  "version": "1.0.0",
+  "description": "ArangoDB-backed StorageRepository for Laika CMS. Multi-model database with AQL queries, cursor-based responses, and database-in-URL conventions. Runtime-agnostic — only depends on `fetch`.",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "arangodb",
+    "aql",
+    "multi-model",
+    "storage"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "exports": {
+    "./storage-arangodb": {
+      "types": "./dist/storage-arangodb/index.d.ts",
+      "import": "./dist/storage-arangodb/index.js",
+      "default": "./dist/storage-arangodb/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "effect": "catalog:default",
+    "minimatch": "^10.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": { "node": ">=22" }
+}
