@@ -1,0 +1,54 @@
+{
+  "name": "@laikacms/trello",
+  "version": "1.0.0",
+  "description": "Trello-backed StorageRepository for Laika CMS. Board/list/card hierarchy with floating-point `pos` ordering, query-string auth, and soft-delete via `closed`. Runtime-agnostic — only depends on `fetch`.",
+  "keywords": [
+    "headless-cms",
+    "content-management",
+    "trello",
+    "kanban",
+    "storage"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "exports": {
+    "./storage-trello": {
+      "types": "./dist/storage-trello/index.d.ts",
+      "import": "./dist/storage-trello/index.js",
+      "default": "./dist/storage-trello/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --passWithNoTests",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*",
+    "effect": "catalog:default",
+    "minimatch": "^10.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": { "node": ">=22" }
+}
