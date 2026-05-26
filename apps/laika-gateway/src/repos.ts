@@ -1,12 +1,12 @@
 import { GithubStorageRepository } from '@laikacms/github/storage-gh';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { createAppAuth } from '@octokit/auth-app';
+import { Octokit } from '@octokit/rest';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
-import { createAppAuth } from '@octokit/auth-app';
-import { Octokit } from '@octokit/rest';
 
 import type { Env } from './env.js';
 
@@ -31,8 +31,7 @@ const reposCache = new WeakMap<Env, Map<string, Repos>>();
 
 const tenantKey = (t: Tenant) => `${t.owner}/${t.repo}@${t.branch ?? 'main'}`;
 
-const normalizePrivateKey = (raw: string): string =>
-  raw.replace(/\\n/g, '\n').replace(/^"+|"+$/g, '');
+const normalizePrivateKey = (raw: string): string => raw.replace(/\\n/g, '\n').replace(/^"+|"+$/g, '');
 
 /**
  * Resolve the App's installation id for `owner/repo`. Cached per worker

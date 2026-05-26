@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { StorageRepository } from 'laikacms/storage';
+import { describe, expect, it } from 'vitest';
 import { buildJsonApi } from './server.js';
 
 // The handler only consults `repo` for non-root endpoints. For Cache-Control

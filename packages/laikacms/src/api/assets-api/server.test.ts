@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import type { AssetsRepository } from 'laikacms/assets';
+import { describe, expect, it } from 'vitest';
 import { buildAssetsApi } from './server.js';
 
 const stubRepo = {} as AssetsRepository;

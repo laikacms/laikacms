@@ -10,8 +10,7 @@ const TOKEN_TTL_BUFFER_MS = 60_000; // refresh 1 minute before GitHub's expiry
  * arrive with literal `\n` sequences and surrounding quotes — normalize those
  * so consumers can paste a raw PEM into `wrangler secret put` without ceremony.
  */
-const normalizePrivateKey = (raw: string): string =>
-  raw.replace(/\\n/g, '\n').replace(/^"+|"+$/g, '');
+const normalizePrivateKey = (raw: string): string => raw.replace(/\\n/g, '\n').replace(/^"+|"+$/g, '');
 
 /**
  * Mints + caches GitHub App installation tokens. Returns the token (a string)

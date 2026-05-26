@@ -1,10 +1,4 @@
-import {
-  type Asset,
-  type AssetCreate,
-  type AssetUpdate,
-  type AssetUrl,
-  type AssetVariations,
-} from 'laikacms/assets';
+import { type Asset, type AssetCreate, type AssetUpdate, type AssetUrl, type AssetVariations } from 'laikacms/assets';
 import { type Folder, type FolderCreate, type FolderSummary } from 'laikacms/storage';
 
 // Re-export common JSON:API utilities

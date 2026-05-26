@@ -60,7 +60,7 @@ function pascalCase(name: string, fallback: string): string {
   const parts = name
     .split(/[^A-Za-z0-9]+/)
     .filter(Boolean)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1));
+    .map(p => p.charAt(0).toUpperCase() + p.slice(1));
   return parts.length > 0 ? parts.join('') : fallback;
 }
 
@@ -121,7 +121,7 @@ interface DecapConfig {
 
 function emitCollectionTypes(config: DecapConfig): string {
   const collections = Array.isArray(config.collections) ? config.collections : [];
-  const entries: Array<{ raw: string; typeName: string }> = [];
+  const entries: Array<{ raw: string, typeName: string }> = [];
   for (let i = 0; i < collections.length; i++) {
     const c = collections[i] as DecapCollection;
     if (typeof c.name !== 'string') continue;
@@ -131,11 +131,10 @@ function emitCollectionTypes(config: DecapConfig): string {
 
   const perCollection = entries
     .map(
-      ({ raw, typeName }) =>
-        `export type ${typeName} = FieldsToEntry<CollectionByName<'${raw}'>['fields']>;`,
+      ({ raw, typeName }) => `export type ${typeName} = FieldsToEntry<CollectionByName<'${raw}'>['fields']>;`,
     )
     .join('\n');
-  const union = `export type Entry = ${entries.map((e) => e.typeName).join(' | ')};`;
+  const union = `export type Entry = ${entries.map(e => e.typeName).join(' | ')};`;
   return `\n${perCollection}\n\n${union}\n`;
 }
 
@@ -159,11 +158,11 @@ export function serialize(obj: unknown, options: SerializeOptions): string {
   // helper-types block below; the default export still hands out the same
   // value, so consumers can `import config from '…'` exactly as before.
   return (
-    `${header}` +
-    `const config = ${body} as const;\n` +
-    `export default config;\n` +
-    `${HELPER_TYPES}` +
-    `${collectionTypes}`
+    `${header}`
+    + `const config = ${body} as const;\n`
+    + `export default config;\n`
+    + `${HELPER_TYPES}`
+    + `${collectionTypes}`
   );
 }
 
@@ -181,9 +180,9 @@ export async function writeGenerated(
  * absolute input and output paths.
  */
 export async function generateConfig(args: {
-  readonly input: string;
-  readonly output: string;
-}): Promise<{ readonly input: string; readonly output: string }> {
+  readonly input: string,
+  readonly output: string,
+}): Promise<{ readonly input: string, readonly output: string }> {
   const absInput = path.resolve(args.input);
   const absOutput = path.resolve(args.output);
   const obj = await loadConfig(absInput);

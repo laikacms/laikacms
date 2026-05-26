@@ -1,0 +1,18 @@
+name = "decap-cms-laika-app"
+main = "src/server/index.ts"
+compatibility_date = "2026-02-24"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./dist/client"
+binding = "ASSETS"
+not_found_handling = "single-page-application"
+
+# OAuth credentials for the GitHub backend live in Wrangler secrets, not the
+# tracked config. Set them with:
+#
+#   wrangler secret put GITHUB_OAUTH_CLIENT_ID
+#   wrangler secret put GITHUB_OAUTH_CLIENT_SECRET
+#
+# The worker uses them for the `/auth/*` endpoints Decap CMS calls during the
+# GitHub OAuth dance.

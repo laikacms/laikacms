@@ -8,7 +8,7 @@ import type { LaikaMetadata, LaikaProgress } from './laika-types.js';
  */
 export type LaikaElement<A> =
   | LaikaMetadata
-  | { readonly _tag: 'Data'; readonly value: A };
+  | { readonly _tag: 'Data', readonly value: A };
 
 const dataTag = 'Data' as const;
 const recoverableErrorTag = 'RecoverableError' as const;
@@ -28,14 +28,12 @@ export const progress = (progress: LaikaProgress): LaikaElement<never> => ({
 
 export const isData = <A>(
   el: LaikaElement<A>,
-): el is { readonly _tag: 'Data'; readonly value: A } => el._tag === dataTag;
+): el is { readonly _tag: 'Data', readonly value: A } => el._tag === dataTag;
 
 export const isRecoverableError = <A>(
   el: LaikaElement<A>,
-): el is { readonly _tag: 'RecoverableError'; readonly error: LaikaError } =>
-  el._tag === recoverableErrorTag;
+): el is { readonly _tag: 'RecoverableError', readonly error: LaikaError } => el._tag === recoverableErrorTag;
 
 export const isProgress = <A>(
   el: LaikaElement<A>,
-): el is { readonly _tag: 'Progress'; readonly progress: LaikaProgress } =>
-  el._tag === progressTag;
+): el is { readonly _tag: 'Progress', readonly progress: LaikaProgress } => el._tag === progressTag;

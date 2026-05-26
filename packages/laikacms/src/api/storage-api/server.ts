@@ -99,7 +99,8 @@ function respondCollectionWithConverter<T, R extends JsonApiResource>(
 
   // `hasMore` is best-effort: prefer the upstream Done's pagination hint
   // when present, otherwise infer from "more items than requested".
-  const requestedLimit = 'limit' in pagination ? pagination.limit
+  const requestedLimit = 'limit' in pagination
+    ? pagination.limit
     : ('perPage' in pagination ? pagination.perPage : undefined);
   const hasMore = done?.pagination !== undefined
     || (typeof done?.total === 'number' && typeof requestedLimit === 'number'

@@ -16,24 +16,11 @@ import {
   type ListResourcesOptions,
   type Resource,
 } from 'laikacms/assets';
-import {
-  InternalError,
-  InvalidData,
-  type LaikaDone,
-  type LaikaError,
-  LaikaStream,
-  LaikaTask,
-} from 'laikacms/core';
+import { InternalError, InvalidData, type LaikaDone, type LaikaError, LaikaStream, LaikaTask } from 'laikacms/core';
 import type { JsonApiCollectionResponse } from 'laikacms/json-api';
 import { type Folder, type FolderCreate } from 'laikacms/storage';
 
-import {
-  parseAsset,
-  parseAssetUrl,
-  parseAssetVariations,
-  parseFolder,
-  parseResource,
-} from './jsonapi.js';
+import { parseAsset, parseAssetUrl, parseAssetVariations, parseFolder, parseResource } from './jsonapi.js';
 
 export interface AssetsJsonApiProxyRepositoryOptions {
   baseUrl: string;
@@ -384,9 +371,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   }
 
   deleteAsset(key: string): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() =>
-      this.fetchVoid(`/resources/${encodeURIComponent(key)}`, { method: 'DELETE' }),
-    );
+    return LaikaTask.make<void>(() => this.fetchVoid(`/resources/${encodeURIComponent(key)}`, { method: 'DELETE' }));
   }
 
   deleteAssets(keys: readonly string[]): LaikaStream.LaikaStream<string, DeleteAssetsDone> {

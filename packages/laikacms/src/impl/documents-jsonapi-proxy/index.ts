@@ -7,5 +7,5 @@
  * from the client code.
  */
 
-export { DocumentsJsonApiProxyRepository } from './documents-jsonapi-proxy-repository.js';
 export { paginationCodec } from '../../shared/json-api/pagination-codec.js';
+export { DocumentsJsonApiProxyRepository } from './documents-jsonapi-proxy-repository.js';

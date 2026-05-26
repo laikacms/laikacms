@@ -227,9 +227,7 @@ export class R2AssetsRepository extends AssetsRepository {
         }
 
         if (this.sanitizer) {
-          const sanitizeResult = yield* Effect.promise(() =>
-            this.sanitizer!.sanitize(body, {}, create.mimeType),
-          );
+          const sanitizeResult = yield* Effect.promise(() => this.sanitizer!.sanitize(body, {}, create.mimeType));
           body = sanitizeResult.data;
         }
 

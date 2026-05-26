@@ -10,7 +10,4 @@
  * `FileSystemStorageRepository` configured with the markdown serializer.
  */
 
-export {
-  ObsidianDocumentsRepository,
-  type ObsidianDocumentsRepositoryOptions,
-} from './documents-repository.js';
+export { ObsidianDocumentsRepository, type ObsidianDocumentsRepositoryOptions } from './documents-repository.js';

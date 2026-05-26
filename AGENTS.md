@@ -16,25 +16,6 @@ Docs are in `docs/` folder (no separate website). Use relative links:
 - To other docs: `[Architecture](./architecture.md)`
 - To packages: `[storage](../packages/domain/storage)`
 
-## Architecture
-
-```
-packages/
-├── domain/       # Abstract interfaces (NO implementations)
-├── impl/         # Concrete implementations
-├── api/          # HTTP API layers (JSON:API)
-├── shared/       # Shared utilities
-├── serializers/  # Content format serializers
-└── decap/        # Decap CMS integrations
-```
-
-## Layer Rules
-
-- **Domain** packages MUST NOT depend on implementation packages
-- **Implementation** packages depend on domain packages
-- **API** packages depend on domain packages (not implementations)
-- **Shared** packages are utilities that don't fit a specific category
-
 ## Code Style
 
 - Files: `kebab-case.ts`

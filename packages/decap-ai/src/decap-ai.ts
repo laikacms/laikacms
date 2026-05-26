@@ -56,7 +56,8 @@ function getMessageText(message: unknown): string | undefined {
     const textParts = m.parts
       .filter((part): part is { type: 'text', text: string } =>
         !!part && typeof part === 'object' && (part as { type?: unknown }).type === 'text'
-        && typeof (part as { text?: unknown }).text === 'string')
+        && typeof (part as { text?: unknown }).text === 'string'
+      )
       .map(part => part.text);
     return textParts.length > 0 ? textParts.join('') : undefined;
   }
@@ -120,8 +121,7 @@ export function decapAi(config: DecapAiConfig): DecapAi {
 
     // Get last user message for session title (supports both v3 parts format and legacy content format)
     const userMessages = parsedBody.messages.filter(
-      (m): m is { role: string } =>
-        !!m && typeof m === 'object' && (m as { role?: unknown }).role === 'user',
+      (m): m is { role: string } => !!m && typeof m === 'object' && (m as { role?: unknown }).role === 'user',
     );
     const lastUserMessage = userMessages[userMessages.length - 1];
     const lastUserMessageText = lastUserMessage ? getMessageText(lastUserMessage) : undefined;

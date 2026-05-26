@@ -118,11 +118,11 @@ export function assetToJsonApi(
   const advertise = options?.advertiseRelationships;
   const relationships = (advertise?.urls || advertise?.variations)
     ? {
-        ...(advertise.urls ? { urls: { data: { type: 'asset-url' as const, id: key } } } : {}),
-        ...(advertise.variations
-          ? { variations: { data: { type: 'asset-variation' as const, id: key } } }
-          : {}),
-      }
+      ...(advertise.urls ? { urls: { data: { type: 'asset-url' as const, id: key } } } : {}),
+      ...(advertise.variations
+        ? { variations: { data: { type: 'asset-variation' as const, id: key } } }
+        : {}),
+    }
     : undefined;
   const out: JsonApiAsset = { type: 'asset', id: key, attributes };
   if (options?.metadata) out.meta = options.metadata;

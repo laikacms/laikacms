@@ -115,9 +115,7 @@ const parseContent = (raw: string): Effect.Effect<StorageObjectContent, LaikaErr
       ),
   });
 
-export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA>
-  extends DocumentsRepository
-{
+export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA> extends DocumentsRepository {
   constructor(
     private options: DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA>,
   ) {
@@ -467,9 +465,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
     return LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
       Effect.gen({ self: this }, function*() {
         const qb = this.options.revisionQueryBuilders;
-        const rows = yield* Effect.promise(() =>
-          this.options.callbacks.revisions.select({ where: qb.keyEquals(key) })
-        );
+        const rows = yield* Effect.promise(() => this.options.callbacks.revisions.select({ where: qb.keyEquals(key) }));
         for (const row of rows) {
           yield* emit.data({
             type: 'revision-summary' as const,

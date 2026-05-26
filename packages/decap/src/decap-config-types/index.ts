@@ -38,7 +38,7 @@ export interface WidgetTypeMap {
   hidden: string;
   code: string;
   color: string;
-  map: { type: 'Point'; coordinates: [number, number] };
+  map: { type: 'Point', coordinates: [number, number] };
   relation: string;
   object: Record<string, unknown>;
   list: unknown[];
@@ -77,20 +77,20 @@ export type PartialByUndefined<T> =
  *   - `widget: 'select'` with `options` (string list or `{ value }[]`) → union of literal values
  *   - any other widget → looked up in `WidgetTypeMap`, falling back to `DefaultWidgetType`
  */
-export type ExtractFieldType<F> = F extends { widget: infer W; fields: infer Fields }
+export type ExtractFieldType<F> = F extends { widget: infer W, fields: infer Fields }
   ? W extends 'list' ? Fields extends readonly unknown[] ? ExtractFieldsType<Fields>[]
     : unknown[]
   : W extends 'object' ? Fields extends readonly unknown[] ? ExtractFieldsType<Fields>
     : Record<string, unknown>
   : W extends keyof WidgetTypeMap ? WidgetTypeMap[W]
   : DefaultWidgetType
-  : F extends { widget: infer W; field: infer Field }
+  : F extends { widget: infer W, field: infer Field }
     ? W extends 'list' ? Field extends { widget: infer FW } ? FW extends keyof WidgetTypeMap ? WidgetTypeMap[FW][]
         : unknown[]
       : unknown[]
     : W extends keyof WidgetTypeMap ? WidgetTypeMap[W]
     : DefaultWidgetType
-  : F extends { widget: infer W; options: infer Options }
+  : F extends { widget: infer W, options: infer Options }
     ? W extends 'select' ? Options extends readonly { value: infer V }[] ? V
       : Options extends readonly (infer O)[] ? O
       : string

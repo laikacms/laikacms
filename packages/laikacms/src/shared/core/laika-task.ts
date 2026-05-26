@@ -103,8 +103,7 @@ export const make = <A, R = never>(
         >(capacity);
 
         const emit: LaikaTaskEmit = {
-          recoverableError: error =>
-            Effect.asVoid(Queue.offer(queue, recoverableErrorMetadata(error))),
+          recoverableError: error => Effect.asVoid(Queue.offer(queue, recoverableErrorMetadata(error))),
           progress: progress => Effect.asVoid(Queue.offer(queue, progressMetadata(progress))),
         };
 

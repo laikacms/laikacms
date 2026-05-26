@@ -2,23 +2,9 @@ import * as Effect from 'effect/Effect';
 import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
 
-import type {
-  Asset,
-  AssetCreate,
-  AssetMetadata,
-  AssetsRepository,
-  AssetUpdate,
-  FetchHints,
-} from 'laikacms/assets';
+import type { Asset, AssetCreate, AssetMetadata, AssetsRepository, AssetUpdate, FetchHints } from 'laikacms/assets';
 import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
-import {
-  BadRequestError,
-  errorStatus,
-  InternalError,
-  LaikaError,
-  LaikaStream,
-  LaikaTask,
-} from 'laikacms/core';
+import { BadRequestError, errorStatus, InternalError, LaikaError, LaikaStream, LaikaTask } from 'laikacms/core';
 
 /** Convert any caught throw into a LaikaError, preserving LaikaError instances and wrapping defects in InternalError. */
 const toLaikaError = (err: unknown): LaikaError => {
@@ -361,7 +347,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           resourceToJsonApi(r, {
             metadata: r.type === 'asset' ? metadataByKey.get(r.key) : undefined,
             advertiseRelationships: { urls: hints.urls, variations: hints.variations },
-          }),
+          })
         );
 
         if (batchData.length >= paginationOptions.limit) {
@@ -381,10 +367,9 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         // implicit in the presence of `links.next`, and the current cursor
         // is encoded in the request URL itself. `meta.page` only carries
         // aggregate counts the backend supplies.
-        const meta: Record<string, unknown> | undefined =
-          typeof batchDone.total === 'number'
-            ? { page: { total: batchDone.total } }
-            : undefined;
+        const meta: Record<string, unknown> | undefined = typeof batchDone.total === 'number'
+          ? { page: { total: batchDone.total } }
+          : undefined;
 
         return respondCollection(resources, included, links, meta, basePath);
       }

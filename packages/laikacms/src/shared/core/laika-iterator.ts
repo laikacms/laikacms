@@ -1,12 +1,12 @@
 import type * as Arr from 'effect/Array';
 import * as Cause from 'effect/Cause';
 import * as Channel from 'effect/Channel';
+import * as Context from 'effect/Context';
 import * as Effect from 'effect/Effect';
 import * as Exit from 'effect/Exit';
 import * as Pull from 'effect/Pull';
 import * as Result from 'effect/Result';
 import * as Scope from 'effect/Scope';
-import * as Context from 'effect/Context';
 
 import { LaikaError, UnknownError } from 'laikacms/core';
 
@@ -90,7 +90,7 @@ const attachAsyncIteratorInternal = <Elem, Done, R>(
       };
 
       const iterator: AsyncIterator<Arr.NonEmptyReadonlyArray<Elem>, Done> & {
-        [Symbol.asyncIterator]?: () => AsyncIterator<Arr.NonEmptyReadonlyArray<Elem>, Done>;
+        [Symbol.asyncIterator]?: () => AsyncIterator<Arr.NonEmptyReadonlyArray<Elem>, Done>,
       } = {
         async next(): Promise<IteratorResult<Arr.NonEmptyReadonlyArray<Elem>, Done>> {
           if (closed) return { value: undefined as never, done: true };

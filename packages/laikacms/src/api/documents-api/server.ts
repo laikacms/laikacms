@@ -3,14 +3,7 @@ import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
 
 import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
-import {
-  BadRequestError,
-  InternalError,
-  LaikaError,
-  LaikaStream,
-  LaikaTask,
-  NotFoundError,
-} from 'laikacms/core';
+import { BadRequestError, InternalError, LaikaError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { DocumentsRepository } from 'laikacms/documents';
 import type { JsonApiCollectionResponse, JsonApiError, JsonApiResource, JsonApiResponse } from 'laikacms/json-api';
 import { buildPaginationLinks, errorToJsonApiMapper, parsePaginationQuery } from 'laikacms/json-api';
@@ -131,7 +124,8 @@ async function respondCollection<T, R extends JsonApiResource>(
   const pagination = parsePaginationQuery(queryParams);
   const last = items[items.length - 1] as { id?: string, key?: string } | undefined;
   const lastCursor: string | undefined = last?.id ?? last?.key;
-  const requestedLimit = 'limit' in pagination ? pagination.limit
+  const requestedLimit = 'limit' in pagination
+    ? pagination.limit
     : ('perPage' in pagination ? pagination.perPage : undefined);
   const hasMore = typeof requestedLimit === 'number'
     ? items.length === requestedLimit

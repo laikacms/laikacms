@@ -1,0 +1,60 @@
+{
+  "name": "decap-cms-lexical-core",
+  "description": "Lexical-specific bindings for the editor-agnostic @laikacloud/portabletext-core: PT<->Lexical bridge, headless editor, custom blocks subsystem.",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "engines": {
+    "node": "22.x"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "default": "./dist/*.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json -w",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@laikacloud/portabletext-core": "workspace:*",
+    "lexical": "catalog:lexical",
+    "@lexical/code": "catalog:lexical",
+    "@lexical/headless": "catalog:lexical",
+    "@lexical/link": "catalog:lexical",
+    "@lexical/list": "catalog:lexical",
+    "@lexical/rich-text": "catalog:lexical",
+    "@lexical/table": "catalog:lexical",
+    "@lexical/utils": "catalog:lexical",
+    "@portabletext/types": "catalog:portabletext",
+    "@portabletext/toolkit": "catalog:portabletext"
+  },
+  "peerDependencies": {
+    "react": "catalog:react"
+  },
+  "devDependencies": {
+    "@types/react": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:testing"
+  }
+}

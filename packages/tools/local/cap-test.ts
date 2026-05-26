@@ -9,12 +9,12 @@
 // Run: `node cap-test.mjs` from this dir. Spins up a Hono server on 4400,
 // then runs assertions via fetch. Exits non-zero on any mismatch.
 
-import { mkdir, rm, writeFile } from 'node:fs/promises';
-import { Hono } from 'hono';
 import { serve } from '@hono/node-server';
+import { Hono } from 'hono';
+import { mkdir, rm, writeFile } from 'node:fs/promises';
 
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { buildAssetsApi } from 'laikacms/assets-api';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
 import { buildJsonApi as buildDocumentsApi } from 'laikacms/documents-api';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
@@ -33,7 +33,7 @@ await mkdir(`${ROOT}/uploads`, { recursive: true });
 await mkdir(`${ROOT}/.contentbase`, { recursive: true });
 // Pre-seed contentbase settings so the lazy bootstrap doesn't run during the test.
 await writeFile(`${ROOT}/.contentbase/settings.json`, JSON.stringify({ collections: {} }));
-const frontmatter = (n) => `---\ntitle: Post ${n}\nbody: hello ${n}\n---\n`;
+const frontmatter = n => `---\ntitle: Post ${n}\nbody: hello ${n}\n---\n`;
 for (const n of ['001', '002', '003']) {
   await writeFile(`${ROOT}/posts/${n}.md`, frontmatter(n));
 }
@@ -42,7 +42,13 @@ await writeFile(`${ROOT}/uploads/pixel.png`, Buffer.from([137, 80, 78, 71]));
 // --- repo stack ------------------------------------------------------------
 const storage = new FileSystemStorageRepository(
   ROOT,
-  { md: markdownSerializer, markdown: markdownSerializer, yaml: yamlSerializer, yml: yamlSerializer, json: jsonSerializer },
+  {
+    md: markdownSerializer,
+    markdown: markdownSerializer,
+    yaml: yamlSerializer,
+    yml: yamlSerializer,
+    json: jsonSerializer,
+  },
   'md',
 );
 const settings = new DefaultContentBaseSettingsProvider({ storage });
@@ -54,9 +60,9 @@ const documentsApi = buildDocumentsApi({ repo: documents, basePath: '/documents'
 const assetsApi = buildAssetsApi({ repository: assets, basePath: '/assets' });
 
 const app = new Hono();
-app.all('/storage/*', (c) => storageApi.fetch(c.req.raw));
-app.all('/documents/*', (c) => documentsApi.fetch(c.req.raw));
-app.all('/assets/*', (c) => assetsApi.fetch(c.req.raw));
+app.all('/storage/*', c => storageApi.fetch(c.req.raw));
+app.all('/documents/*', c => documentsApi.fetch(c.req.raw));
+app.all('/assets/*', c => assetsApi.fetch(c.req.raw));
 
 const PORT = 4400;
 const server = serve({ fetch: app.fetch, port: PORT }, ({ port }) => {
@@ -66,13 +72,20 @@ const server = serve({ fetch: app.fetch, port: PORT }, ({ port }) => {
 // --- assertions ------------------------------------------------------------
 const base = `http://127.0.0.1:${PORT}`;
 const fails = [];
-const ok = (name) => console.log(`  ok  ${name}`);
-const bad = (name, detail) => { console.log(`  FAIL ${name} — ${detail}`); fails.push(name); };
+const ok = name => console.log(`  ok  ${name}`);
+const bad = (name, detail) => {
+  console.log(`  FAIL ${name} — ${detail}`);
+  fails.push(name);
+};
 
-const get = async (path) => {
+const get = async path => {
   const res = await fetch(`${base}${path}`);
   let body;
-  try { body = await res.json(); } catch { body = null; }
+  try {
+    body = await res.json();
+  } catch {
+    body = null;
+  }
   return { status: res.status, body };
 };
 
@@ -173,7 +186,12 @@ console.log(`  storage.listAtomSummaries → ${sProbe}`);
 console.log('  (probing docs repo directly…)');
 const probe = await Promise.race([
   (async () => {
-    const stream = documents.listRecordSummaries({ folder: 'posts', depth: 1, type: 'published', pagination: { perPage: 10 } });
+    const stream = documents.listRecordSummaries({
+      folder: 'posts',
+      depth: 1,
+      type: 'published',
+      pagination: { perPage: 10 },
+    });
     let count = 0;
     for await (const chunk of stream) {
       for (const el of chunk) if (el._tag === 'Data') count++;
@@ -187,7 +205,7 @@ const dList = await get('/documents/record-summaries?filter%5Bfolder%5D=posts');
 assert('documents record-summaries 200', dList.status === 200, `got ${dList.status}`);
 const dItems = dList.body?.data ?? [];
 assert('documents list has 3 items', dItems.length === 3, `got ${dItems.length}`);
-const allHaveSelf = dItems.every((it) => typeof it.links?.self === 'string' && it.links.self.startsWith('/documents/'));
+const allHaveSelf = dItems.every(it => typeof it.links?.self === 'string' && it.links.self.startsWith('/documents/'));
 assert('every documents item has links.self', allHaveSelf, JSON.stringify(dItems.map(i => i.links)));
 assert(
   'documents collection has links (top-level)',
@@ -214,7 +232,7 @@ assert('assets resources 200', aList.status === 200, `got ${aList.status} ${JSON
 const aItems = aList.body?.data ?? [];
 assert(
   'every assets item has links.self',
-  aItems.every((it) => typeof it.links?.self === 'string' && it.links.self.startsWith('/assets/resources/')),
+  aItems.every(it => typeof it.links?.self === 'string' && it.links.self.startsWith('/assets/resources/')),
   JSON.stringify(aItems.map(i => i.links)),
 );
 

@@ -33,8 +33,8 @@ export interface LaikaProgress {
  * are channel positions, not types.
  */
 export type LaikaMetadata =
-  | { readonly _tag: 'RecoverableError'; readonly error: LaikaError }
-  | { readonly _tag: 'Progress'; readonly progress: LaikaProgress };
+  | { readonly _tag: 'RecoverableError', readonly error: LaikaError }
+  | { readonly _tag: 'Progress', readonly progress: LaikaProgress };
 
 /**
  * Non-empty chunks (Effect chunks are non-empty by construction).

@@ -32,19 +32,23 @@ const app = new Hono<{ Bindings: Env }>();
 // The gateway is multi-tenant: Decap CMS SPAs running on arbitrary tenant
 // domains hit these routes cross-origin. Auth is via Bearer token (never
 // cookies), so wildcard origin + no credentials is the right shape.
-app.use('*', cors({
-  origin: '*',
-  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Authorization', 'Content-Type', 'X-Requested-With'],
-  exposeHeaders: ['Content-Length', 'Content-Type'],
-  maxAge: 86400,
-}));
+app.use(
+  '*',
+  cors({
+    origin: '*',
+    allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowHeaders: ['Authorization', 'Content-Type', 'X-Requested-With'],
+    exposeHeaders: ['Content-Length', 'Content-Type'],
+    maxAge: 86400,
+  }),
+);
 
-app.get('/', c => c.json({
-  service: 'laika-gateway',
-  version: '0.1.2',
-  backends: ['github'],
-}));
+app.get('/', c =>
+  c.json({
+    service: 'laika-gateway',
+    version: '0.1.2',
+    backends: ['github'],
+  }));
 
 app.get('/health', c => c.json({ ok: true }));
 

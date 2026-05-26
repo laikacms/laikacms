@@ -152,7 +152,7 @@ export class WebDavDataSource {
   private async send(
     method: string,
     key: string,
-    init?: { body?: string; headers?: Record<string, string> },
+    init?: { body?: string, headers?: Record<string, string> },
   ): Promise<Response> {
     return this.fetchImpl(this.urlFor(key), {
       method,
@@ -191,7 +191,7 @@ export class WebDavDataSource {
    */
   async resolveExisting(
     key: string,
-  ): Promise<LaikaResult<{ extension: string; resource: WebDavResource } | null>> {
+  ): Promise<LaikaResult<{ extension: string, resource: WebDavResource } | null>> {
     for (const extension of this.availableExtensions) {
       const probe = await this.statResource(`${key}.${extension}`);
       if (Result.isFailure(probe)) return Result.fail(probe.failure);

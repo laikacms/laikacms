@@ -1,5 +1,5 @@
-import { Hono } from 'hono';
 import { decapApi } from '@laikacms/decap/decap-api';
+import { Hono } from 'hono';
 import { AuthenticationError } from 'laikacms/core';
 
 import type { Env } from './env.js';

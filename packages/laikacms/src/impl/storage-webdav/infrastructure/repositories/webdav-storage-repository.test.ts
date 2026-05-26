@@ -22,10 +22,9 @@ const ROOT_PATH = '/dav';
 
 const segmentsOf = (path: string): string[] => path.split('/').filter(s => s.length > 0);
 
-const encodeHref = (path: string): string =>
-  '/' + segmentsOf(path).map(encodeURIComponent).join('/');
+const encodeHref = (path: string): string => '/' + segmentsOf(path).map(encodeURIComponent).join('/');
 
-const buildPropfindXml = (resources: Array<{ path: string; resource: MockResource }>): string => {
+const buildPropfindXml = (resources: Array<{ path: string, resource: MockResource }>): string => {
   const inner = resources
     .map(({ path, resource }) => `
       <d:response>
@@ -48,9 +47,9 @@ const createMockServer = () => {
   const store = new Map<string, MockResource>();
   store.set(ROOT_PATH, { isCollection: true, content: '', ctime: new Date(0), mtime: new Date(0) });
 
-  const directChildrenOf = (path: string): Array<{ path: string; resource: MockResource }> => {
+  const directChildrenOf = (path: string): Array<{ path: string, resource: MockResource }> => {
     const parentSegs = segmentsOf(path);
-    const out: Array<{ path: string; resource: MockResource }> = [];
+    const out: Array<{ path: string, resource: MockResource }> = [];
     for (const [otherPath, resource] of store) {
       if (otherPath === path) continue;
       const segs = segmentsOf(otherPath);
@@ -71,7 +70,7 @@ const createMockServer = () => {
     if (method === 'PROPFIND') {
       if (!resource) return new Response('', { status: 404 });
       const depth = (init?.headers as Record<string, string> | undefined)?.['Depth'] ?? '0';
-      const entries: Array<{ path: string; resource: MockResource }> = [{ path, resource }];
+      const entries: Array<{ path: string, resource: MockResource }> = [{ path, resource }];
       if (depth === '1' && resource.isCollection) entries.push(...directChildrenOf(path));
       return new Response(buildPropfindXml(entries), {
         status: 207,
@@ -139,8 +138,8 @@ const makeRepo = () => {
     {
       md: {
         format: { mediaType: 'text/markdown' } as never,
-        serializeDocumentFileContents: async (content) => String((content as { body?: string }).body ?? ''),
-        deserializeDocumentFileContents: async (raw) => ({ body: raw }),
+        serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+        deserializeDocumentFileContents: async raw => ({ body: raw }),
       },
     },
     'md',

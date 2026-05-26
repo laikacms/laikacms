@@ -29,8 +29,7 @@ import type { Key, StorageObject, StorageObjectContent, StorageRepository } from
 /** Run a LaikaStream to completion and collect its data into a flat array. */
 const collectStreamData = <A, D extends LaikaDone, R>(
   stream: LaikaStream.LaikaStream<A, D, R>,
-): Effect.Effect<ReadonlyArray<A>, LaikaError, R> =>
-  Effect.map(LaikaStream.runCollect(stream), r => r.data);
+): Effect.Effect<ReadonlyArray<A>, LaikaError, R> => Effect.map(LaikaStream.runCollect(stream), r => r.data);
 
 /**
  * Configuration for {@link ObsidianDocumentsRepository}.

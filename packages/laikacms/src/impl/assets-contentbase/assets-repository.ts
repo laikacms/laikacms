@@ -264,8 +264,10 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
     return LaikaTask.make<Asset>(() =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getAssetPath(create.key));
-        if (path.settings.accept && path.settings.accept.length > 0
-          && !path.settings.accept.includes(create.mimeType)) {
+        if (
+          path.settings.accept && path.settings.accept.length > 0
+          && !path.settings.accept.includes(create.mimeType)
+        ) {
           return yield* Effect.fail(
             new BadRequestError(
               `MIME type '${create.mimeType}' is not allowed in collection '${path.settings.key}'. `

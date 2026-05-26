@@ -213,9 +213,7 @@ export class WebDavStorageRepository extends StorageRepository {
           return yield* Effect.fail(new NotFoundError(`No object found at key "${update.key}"`));
         }
         if (update.content) {
-          const serialized = yield* Effect.promise(() =>
-            this.serialize(existing.extension, update.content!)
-          );
+          const serialized = yield* Effect.promise(() => this.serialize(existing.extension, update.content!));
           yield* liftResult(this.dataSource.writeFile(update.key, existing.extension, serialized));
         }
         return yield* LaikaTask.runValue(this.getObject(update.key));
@@ -345,7 +343,7 @@ export class WebDavStorageRepository extends StorageRepository {
     folderKey: string,
     options: ListAtomsOptions,
   ): Effect.Effect<
-    { summaries: ReadonlyArray<AtomSummary>; missingFolder?: LaikaError },
+    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError },
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {

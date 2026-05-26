@@ -1,5 +1,5 @@
-import { isError } from "effect/Predicate";
-import { ErrorCode, ErrorCodeToClassMap, InternalError, LaikaError } from "laikacms/core";
+import { isError } from 'effect/Predicate';
+import { ErrorCode, ErrorCodeToClassMap, InternalError, LaikaError } from 'laikacms/core';
 
 // Common system errors#
 // This is a list of system errors commonly-encountered when writing a Node.js program. For a comprehensive list, see the errno(3) man page.
@@ -89,7 +89,7 @@ const systemErrors = {
     publicMessage: 'Operation timed out',
     laikaCode: 'gateway_timeout',
   },
-} as const satisfies Record<string, { publicMessage: string, laikaCode: ErrorCode }>
+} as const satisfies Record<string, { publicMessage: string, laikaCode: ErrorCode }>;
 
 export const mapFsErrorToLaikaError = (error: unknown): LaikaError => {
   if (isError(error)) {

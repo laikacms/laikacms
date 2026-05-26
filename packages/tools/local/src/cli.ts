@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import path from 'node:path';
 
+import { NodeRuntime, NodeServices } from '@effect/platform-node';
 import * as Effect from 'effect/Effect';
 import * as Layer from 'effect/Layer';
 import { Command, Flag } from 'effect/unstable/cli';
-import { NodeRuntime, NodeServices } from '@effect/platform-node';
 
-import { layerStorageServer } from './server.js';
 import { discoverConfig, generateConfig } from './config-codegen.js';
+import { layerStorageServer } from './server.js';
 import { watchFile } from './watch.js';
 
 // ---------------------------------------------------------------------------
@@ -98,9 +98,9 @@ const generateWatch = Flag.boolean('watch').pipe(
 );
 
 const resolvePaths = (
-  inputFlag: { _tag: 'Some'; value: string } | { _tag: 'None' },
-  outputFlag: { _tag: 'Some'; value: string } | { _tag: 'None' },
-): Effect.Effect<{ input: string; output: string }, Error> =>
+  inputFlag: { _tag: 'Some', value: string } | { _tag: 'None' },
+  outputFlag: { _tag: 'Some', value: string } | { _tag: 'None' },
+): Effect.Effect<{ input: string, output: string }, Error> =>
   Effect.gen(function*() {
     let input: string;
     if (inputFlag._tag === 'Some') {
@@ -135,7 +135,7 @@ const generateCommand = Command.make(
       const paths = yield* resolvePaths(input, output);
       const result = yield* Effect.tryPromise({
         try: () => generateConfig({ input: paths.input, output: paths.output }),
-        catch: (e) => e instanceof Error ? e : new Error(String(e)),
+        catch: e => e instanceof Error ? e : new Error(String(e)),
       });
       yield* Effect.logInfo(
         `laika-local generate: wrote ${result.output} from ${result.input}`,
@@ -159,7 +159,9 @@ const generateCommand = Command.make(
                 `laika-local generate: ${e instanceof Error ? e.message : String(e)}`,
               )
             )
-            .finally(() => { busy = false; });
+            .finally(() => {
+              busy = false;
+            });
         });
         signal.addEventListener('abort', () => dispose());
       });

@@ -359,7 +359,7 @@ export class FileSystemDataSource {
       return Result.succeed({ path: pathWithoutExt });
     } catch (error) {
       console.error(error, { fullPath, dirPath });
-      return Result.fail(mapFsErrorToLaikaError(error))
+      return Result.fail(mapFsErrorToLaikaError(error));
     }
   };
 

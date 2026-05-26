@@ -1,7 +1,7 @@
+import { BadRequestError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import { BadRequestError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ObsidianAssetsRepository } from './assets-repository.js';

@@ -122,7 +122,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
         // unknown or absent.
         const firstCode = errors[0]?.code;
         const ErrorCtor = firstCode
-          ? (ErrorCodeToClassMap as Record<string, new (msg: string) => LaikaError>)[firstCode]
+          ? (ErrorCodeToClassMap as Record<string, new(msg: string) => LaikaError>)[firstCode]
           : undefined;
         return yield* Effect.fail(
           ErrorCtor ? new ErrorCtor(detail) : new InvalidData(detail),

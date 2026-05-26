@@ -34,9 +34,7 @@ export type LaikaChunk<A> = Arr.NonEmptyReadonlyArray<LaikaElement<A>>;
  * terminate the stream without emitting a done value.
  */
 export interface LaikaStream<A, D extends LaikaDone = LaikaDone, R = never>
-  extends
-    Channel.Channel<LaikaChunk<A>, LaikaError, D, unknown, unknown, unknown, R>,
-    AsyncIterable<LaikaChunk<A>, D>
+  extends Channel.Channel<LaikaChunk<A>, LaikaError, D, unknown, unknown, unknown, R>, AsyncIterable<LaikaChunk<A>, D>
 {}
 
 // ---------------------------------------------------------------------------
@@ -74,8 +72,7 @@ export const succeedMany = <A, D extends LaikaDone>(
 };
 
 /** Fails immediately with a fatal LaikaError, never emitting a done value. */
-export const fail = (error: LaikaError): LaikaStream<never, never> =>
-  attachAsyncIterator(Channel.fail(error) as never);
+export const fail = (error: LaikaError): LaikaStream<never, never> => attachAsyncIterator(Channel.fail(error) as never);
 
 /**
  * Lift an Effect producing a single value, optional warnings, and a done value
@@ -147,8 +144,7 @@ export const make = <A, D extends LaikaDone, R = never>(
 
         const emit: LaikaStreamEmit<A> = {
           data: value => Effect.asVoid(Queue.offer(queue, Element.data(value))),
-          recoverableError: error =>
-            Effect.asVoid(Queue.offer(queue, Element.recoverableError(error))),
+          recoverableError: error => Effect.asVoid(Queue.offer(queue, Element.recoverableError(error))),
           progress: progress => Effect.asVoid(Queue.offer(queue, Element.progress(progress))),
           dataMany: values => Effect.asVoid(Queue.offerAll(queue, values.map(Element.data))),
         };

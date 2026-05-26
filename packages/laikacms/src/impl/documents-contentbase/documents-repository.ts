@@ -40,8 +40,7 @@ const liftPromiseResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, Laik
 /** Run a LaikaStream and collect data into a flat array. */
 const collectStreamData = <A, D extends LaikaDone, R>(
   stream: LaikaStream.LaikaStream<A, D, R>,
-): Effect.Effect<ReadonlyArray<A>, LaikaError, R> =>
-  Effect.map(LaikaStream.runCollect(stream), r => r.data);
+): Effect.Effect<ReadonlyArray<A>, LaikaError, R> => Effect.map(LaikaStream.runCollect(stream), r => r.data);
 
 export class ContentBaseDocumentsRepository extends DocumentsRepository {
   constructor(
@@ -563,13 +562,15 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
         for (const atom of atoms) {
           if (atom.type !== 'object') continue;
           const revisionName = basename(atom.key);
-          yield* emit.data({
-            ...atom,
-            type: 'revision-summary' as const,
-            revision: revisionName,
-            language: atom.content.language ?? 'und',
-            key,
-          } satisfies RevisionSummary);
+          yield* emit.data(
+            {
+              ...atom,
+              type: 'revision-summary' as const,
+              revision: revisionName,
+              language: atom.content.language ?? 'und',
+              key,
+            } satisfies RevisionSummary,
+          );
           emitted += 1;
         }
         return { total: emitted };

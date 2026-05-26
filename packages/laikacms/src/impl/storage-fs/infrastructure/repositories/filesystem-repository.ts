@@ -330,7 +330,7 @@ export class FileSystemStorageRepository extends StorageRepository {
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const dirResult = yield* Effect.promise(() =>
-        this.fileSystemDataSource.listFileSystemDirectory(this.rootDirectory, folderKey),
+        this.fileSystemDataSource.listFileSystemDirectory(this.rootDirectory, folderKey)
       );
       if (Result.isFailure(dirResult)) {
         if (dirResult.failure instanceof NotFoundError) {

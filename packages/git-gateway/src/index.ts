@@ -47,7 +47,7 @@
  *   gateway_url: https://your-worker.dev/.netlify/git
  * ```
  */
-import { Hono, type Context, type Next } from 'hono';
+import { type Context, Hono, type Next } from 'hono';
 
 import { InstallationTokenSource, isAllowedGithubPath, proxyToGithub } from './github.js';
 import type { GatewayUser, GitGatewayOptions } from './types.js';

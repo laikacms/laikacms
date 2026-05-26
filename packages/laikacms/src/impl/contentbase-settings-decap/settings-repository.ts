@@ -178,10 +178,10 @@ export class DecapContentBaseSettingsProvider extends ContentBaseSettingsProvide
     const editorialWorkflow = c.publish !== false;
     const unpublishedStatuses: Record<string, UnpublishedStatusConfig> | undefined = editorialWorkflow
       ? {
-          draft: { directory: 'draft', name: 'Draft' },
-          pending_review: { directory: 'pending_review', name: 'Pending Review' },
-          pending_publish: { directory: 'pending_publish', name: 'Pending Publish' },
-        }
+        draft: { directory: 'draft', name: 'Draft' },
+        pending_review: { directory: 'pending_review', name: 'Pending Review' },
+        pending_publish: { directory: 'pending_publish', name: 'Pending Publish' },
+      }
       : undefined;
 
     return {
@@ -351,9 +351,7 @@ function decapFieldToJsonSchema(field: DecapField): JSONSchema7 {
     }
     case 'select': {
       const opts = field.options ?? [];
-      const values = opts.map(o =>
-        typeof o === 'string' || typeof o === 'number' ? o : o.value,
-      );
+      const values = opts.map(o => typeof o === 'string' || typeof o === 'number' ? o : o.value);
       const allString = values.every(v => typeof v === 'string');
       const itemSchema: JSONSchema7 = allString
         ? { type: 'string', enum: values as string[] }

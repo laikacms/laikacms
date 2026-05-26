@@ -1,0 +1,44 @@
+{
+  "name": "@laikacloud/decap-cms-laika-app",
+  "description": "Laika's all-in-one Decap CMS shell \u2014 Decap CMS v4.beta + TanStack Router/Query + Vite + Cloudflare Workers, with both the Lexical and @portabletext/editor widgets pre-registered.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "pnpm run build && wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "types": "wrangler types && tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@laikacloud/portabletext-core": "workspace:*",
+    "decap-cms-widget-lexicaleditor": "workspace:*",
+    "decap-cms-widget-portabletext-editor": "workspace:*",
+    "decap-cms-core": "^3.11.0",
+    "decap-cms-backend-github": "^3.6.0",
+    "decap-cms-widget-string": "^3.2.0",
+    "decap-cms-widget-datetime": "^3.4.1",
+    "decap-cms-locales": "^3.5.1",
+    "hono": "catalog:server",
+    "react": "catalog:react",
+    "react-dom": "catalog:react",
+    "@tanstack/react-router": "catalog:tanstack",
+    "@tanstack/react-query": "catalog:tanstack"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "catalog:tools",
+    "@tanstack/router-plugin": "catalog:tanstack",
+    "@types/react": "catalog:types",
+    "@types/react-dom": "catalog:types",
+    "@vitejs/plugin-react": "catalog:react",
+    "happy-dom": "^20.0.0",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vitest": "catalog:testing",
+    "wrangler": "catalog:tools"
+  }
+}

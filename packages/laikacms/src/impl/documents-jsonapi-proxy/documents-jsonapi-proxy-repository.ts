@@ -326,9 +326,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   deleteDocument(key: string): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() =>
-      this.fetchVoid(`/published/${encodeURIComponent(key)}`, { method: 'DELETE' }),
-    );
+    return LaikaTask.make<void>(() => this.fetchVoid(`/published/${encodeURIComponent(key)}`, { method: 'DELETE' }));
   }
 
   // ===== UNPUBLISHED =====
@@ -378,9 +376,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   deleteUnpublished(key: string): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() =>
-      this.fetchVoid(`/unpublished/${encodeURIComponent(key)}`, { method: 'DELETE' }),
-    );
+    return LaikaTask.make<void>(() => this.fetchVoid(`/unpublished/${encodeURIComponent(key)}`, { method: 'DELETE' }));
   }
 
   publish(key: string): LaikaTask.LaikaTask<Document> {

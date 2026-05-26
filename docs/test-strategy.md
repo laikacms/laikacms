@@ -8,7 +8,8 @@ why, and in what order.
 
 Vitest 4.x is wired into the workspace catalog and Turbo has a `test` task. Tests now exist for
 several modules under `packages/laikacms/src/shared/crypto/`,
-`packages/laikacms/src/shared/file-sanitizer/`, `packages/aws/src/contentbase-settings-ddb/`,
+`packages/laikacms/src/shared/file-sanitizer/`,
+`packages/integrations/aws/src/contentbase-settings-ddb/`,
 `packages/laikacms/src/impl/contentbase-settings-default/`, and
 `packages/laikacms/src/impl/documents-contentbase/`. Coverage across the rest of the codebase is
 still incomplete — see "Where to invest first" below for the remaining priorities.

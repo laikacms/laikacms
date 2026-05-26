@@ -335,7 +335,9 @@ interface ToolInvocationPartProps {
   output?: unknown;
 }
 
-const ToolInvocationPart: React.FC<ToolInvocationPartProps> = ({ toolCallId: _toolCallId, toolName, state, output }) => {
+const ToolInvocationPart: React.FC<ToolInvocationPartProps> = (
+  { toolCallId: _toolCallId, toolName, state, output },
+) => {
   return (
     <div className={toolCallStyles}>
       <div className="tool-name">
