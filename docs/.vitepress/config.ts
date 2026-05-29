@@ -2,8 +2,7 @@ import { defineConfig } from 'vitepress';
 
 export default defineConfig({
   title: 'Laika CMS',
-  description:
-    'Modular, runtime-agnostic content management software for your own custom or existing UIs.',
+  description: 'Modular, runtime-agnostic content management software for your own custom or existing UIs.',
   cleanUrls: true,
   lastUpdated: true,
   themeConfig: {

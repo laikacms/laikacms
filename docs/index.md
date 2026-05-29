@@ -73,7 +73,8 @@ features:
 
 - **GitHub Issues** — For bugs and feature requests
 - **GitHub Discussions** — For questions and discussions
-- **Contributing** — See [CONTRIBUTING.md](https://github.com/laikacms/laikacms/blob/develop/CONTRIBUTING.md)
+- **Contributing** — See
+  [CONTRIBUTING.md](https://github.com/laikacms/laikacms/blob/develop/CONTRIBUTING.md)
 
 ## License
 

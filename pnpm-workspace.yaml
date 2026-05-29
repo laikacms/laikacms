@@ -10,6 +10,7 @@ packages:
   - "packages/tools/*"
   - "packages/portable-text/*"
   - "apps/*"
+  - "docs"
 
 catalogs:
   default:
