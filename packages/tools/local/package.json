@@ -51,6 +51,11 @@
   },
   "devDependencies": {
     "@hono/node-server": "^2.0.2",
+    "@laikacms/github": "workspace:*",
+    "@laikacms/surrealdb": "workspace:*",
+    "@laikacms/trello": "workspace:*",
+    "@laikacms/upstash": "workspace:*",
+    "@laikacms/vercel": "workspace:*",
     "@types/js-yaml": "^4.0.9",
     "@types/node": "catalog:types",
     "hono": "^4.12.18",
@@ -58,6 +63,20 @@
     "rimraf": "catalog:tools",
     "tsup": "catalog:tools",
     "typescript": "catalog:tools"
+  },
+  "peerDependencies": {
+    "@laikacms/github": "1.0.0",
+    "@laikacms/surrealdb": "1.0.0",
+    "@laikacms/trello": "1.0.0",
+    "@laikacms/upstash": "1.0.0",
+    "@laikacms/vercel": "1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@laikacms/github": { "optional": true },
+    "@laikacms/surrealdb": { "optional": true },
+    "@laikacms/trello": { "optional": true },
+    "@laikacms/upstash": { "optional": true },
+    "@laikacms/vercel": { "optional": true }
   },
   "engines": {
     "node": ">=22"
