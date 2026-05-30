@@ -1,6 +1,6 @@
-import { NotFoundError } from '@laikacms/core';
-import type { LaikaResult } from '@laikacms/core';
 import * as Result from 'effect/Result';
+import { NotFoundError } from 'laikacms/core';
+import type { LaikaResult } from 'laikacms/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DrizzleDocumentsRepository } from './documents-repository.js';
 import type { DocumentModel, DrizzleDocumentsRepositoryOptions, RevisionModel } from './documents-repository.js';

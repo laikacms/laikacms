@@ -1,8 +1,9 @@
-import type { ContentBaseSettingsProvider } from '@laikacms/contentbase-settings';
-import type { DocumentCollectionSettings } from '@laikacms/contentbase-settings';
-import type { LaikaResult } from '@laikacms/core';
-import { NotFoundError } from '@laikacms/core';
-import type { StorageRepository } from '@laikacms/storage';
+import * as Result from 'effect/Result';
+import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
+import type { DocumentCollectionSettings } from 'laikacms/contentbase-settings';
+import type { LaikaResult } from 'laikacms/core';
+import { NotFoundError } from 'laikacms/core';
+import type { StorageRepository } from 'laikacms/storage';
 import type {
   Atom,
   AtomSummary,
@@ -10,8 +11,7 @@ import type {
   StorageObject,
   StorageObjectCreate,
   StorageObjectUpdate,
-} from '@laikacms/storage';
-import * as Result from 'effect/Result';
+} from 'laikacms/storage';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { ContentBaseDocumentsRepository } from './documents-repository.js';
 
@@ -273,7 +273,7 @@ describe('ContentBaseDocumentsRepository', () => {
         }),
       );
 
-      const results: LaikaResult<readonly import('@laikacms/documents').Record[]>[] = [];
+      const results: LaikaResult<readonly import('laikacms/documents').Record[]>[] = [];
       for await (const r of repo.listRecords({ folder: '', pagination: { offset: 0, limit: 100 }, depth: 1 })) {
         results.push(r);
       }
