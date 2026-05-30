@@ -5,6 +5,11 @@ import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings'
 import { type CollectionSettings } from 'laikacms/contentbase-settings';
 import type { LaikaResult } from 'laikacms/core';
 import { NotFoundError } from 'laikacms/core';
+
+async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<LaikaResult<T>> {
+  for await (const result of gen) return result;
+  return Result.fail(new NotFoundError('No result'));
+}
 import {
   collectionFromJsonApi,
   type CollectionJsonApi,
@@ -112,7 +117,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
 
   // Collections
   app.get('/collections', async c => {
-    const settings = await repo.getSettings();
+    const settings = await firstResult(repo.getSettings());
     if (Result.isFailure(settings)) {
       return respondError(c, settings);
     }
@@ -123,7 +128,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
 
   app.get('/collections/:key', async c => {
     const key = c.req.param('key');
-    const allSettings = await repo.getSettings();
+    const allSettings = await firstResult(repo.getSettings());
     if (Result.isFailure(allSettings)) {
       return respondError(c, allSettings);
     }
@@ -137,13 +142,13 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
       );
     }
     if (collectionSettings.type === 'document') {
-      const docSettingsResult = await repo.getDocumentCollectionSettings(key);
+      const docSettingsResult = await firstResult(repo.getDocumentCollectionSettings(key));
       if (Result.isFailure(docSettingsResult)) {
         return respondError(c, docSettingsResult);
       }
       return respondResource(c, docSettingsResult, collectionToJsonApi);
     } else if (collectionSettings.type === 'media') {
-      const mediaSettingsResult = await repo.getMediaCollectionSettings(key);
+      const mediaSettingsResult = await firstResult(repo.getMediaCollectionSettings(key));
       if (Result.isFailure(mediaSettingsResult)) {
         return respondError(c, mediaSettingsResult);
       }
@@ -159,13 +164,13 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
       const body = collectionFromJsonApi(validatedData as CollectionJsonApi);
 
       if (body.type === 'document') {
-        const result = await repo.putDocumentCollectionSettings(body.key, body);
+        const result = await firstResult(repo.putDocumentCollectionSettings(body.key, body));
         if (Result.isFailure(result)) {
           return respondError(c, result);
         }
         return c.json({ data: collectionToJsonApi(body) });
       } else if (body.type === 'media') {
-        const result = await repo.putMediaCollectionSettings(body.key, body);
+        const result = await firstResult(repo.putMediaCollectionSettings(body.key, body));
         if (Result.isFailure(result)) {
           return respondError(c, result);
         }
@@ -194,13 +199,13 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
       const bodyWithKey = { ...body, key };
 
       if (bodyWithKey.type === 'document') {
-        const result = await repo.putDocumentCollectionSettings(key, bodyWithKey);
+        const result = await firstResult(repo.putDocumentCollectionSettings(key, bodyWithKey));
         if (Result.isFailure(result)) {
           return respondError(c, result);
         }
         return c.json({ data: collectionToJsonApi(bodyWithKey) });
       } else if (bodyWithKey.type === 'media') {
-        const result = await repo.putMediaCollectionSettings(key, bodyWithKey);
+        const result = await firstResult(repo.putMediaCollectionSettings(key, bodyWithKey));
         if (Result.isFailure(result)) {
           return respondError(c, result);
         }
@@ -220,7 +225,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
 
   app.delete('/collections/:key', async c => {
     const key = c.req.param('key');
-    const allSettings = await repo.getSettings();
+    const allSettings = await firstResult(repo.getSettings());
     if (Result.isFailure(allSettings)) {
       return respondError(c, allSettings);
     }
@@ -239,7 +244,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
       ...allSettings.success,
       collections: remainingCollections,
     };
-    const result = await repo.putSettings(updatedSettings);
+    const result = await firstResult(repo.putSettings(updatedSettings));
     if (Result.isFailure(result)) {
       return respondError(c, result);
     }

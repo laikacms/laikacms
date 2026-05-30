@@ -204,32 +204,43 @@ export class DecapContentBaseSettingsProvider extends ContentBaseSettingsProvide
     return { collections };
   }
 
-  override getSettings = async (): Promise<LaikaResult<ContentBaseSettings>> => {
+  override async *getSettings(): AsyncGenerator<LaikaResult<ContentBaseSettings>> {
     const config = await this.readDecapConfig();
-    if (Result.isFailure(config)) return failAs<ContentBaseSettings>(config.failure);
-    return Result.succeed(this.buildSettings(config.success));
-  };
+    if (Result.isFailure(config)) {
+      yield failAs<ContentBaseSettings>(config.failure);
+      return;
+    }
+    yield Result.succeed(this.buildSettings(config.success));
+  }
 
-  async getDocumentCollectionSettings(
+  async *getDocumentCollectionSettings(
     collection: string,
-  ): Promise<LaikaResult<DocumentCollectionSettings>> {
-    const settings = await this.getSettings();
-    if (Result.isFailure(settings)) return failAs<DocumentCollectionSettings>(settings.failure);
-    const found = settings.success.collections?.[collection];
-    if (!found) return Result.succeed(defaultDocumentCollectionSettings(collection));
+  ): AsyncGenerator<LaikaResult<DocumentCollectionSettings>> {
+    const settingsResult = await this.readDecapConfig();
+    if (Result.isFailure(settingsResult)) {
+      yield failAs<DocumentCollectionSettings>(settingsResult.failure);
+      return;
+    }
+    const settings = this.buildSettings(settingsResult.success);
+    const found = settings.collections?.[collection];
+    if (!found) {
+      yield Result.succeed(defaultDocumentCollectionSettings(collection));
+      return;
+    }
     if (found.type !== 'document') {
-      return Result.fail(
+      yield Result.fail(
         new InvalidData(
           `Settings for document collection '${collection}' are of type '${found.type}' not 'document'.`,
         ),
       );
+      return;
     }
-    return Result.succeed(found);
+    yield Result.succeed(found);
   }
 
-  async getMediaCollectionSettings(
+  async *getMediaCollectionSettings(
     collection: string,
-  ): Promise<LaikaResult<MediaCollectionSettings>> {
+  ): AsyncGenerator<LaikaResult<MediaCollectionSettings>> {
     // Decap collections are documents; media is configured via top-level `media_folder`
     // and is handled by the assets repo's collection-prefix probe, not by a registered
     // media collection. Read the Decap config so we can plumb its `public_folder`
@@ -238,12 +249,18 @@ export class DecapContentBaseSettingsProvider extends ContentBaseSettingsProvide
     // preview (and Decap's per-field media picker hides items it can't preview).
     const configResult = await this.readDecapConfig();
     const defaults = defaultMediaCollectionSettings(collection);
-    if (Result.isFailure(configResult)) return Result.succeed(defaults);
+    if (Result.isFailure(configResult)) {
+      yield Result.succeed(defaults);
+      return;
+    }
 
     const publicFolder = (configResult.success.public_folder ?? '').replace(/\/+$/, '');
-    if (!publicFolder) return Result.succeed(defaults);
+    if (!publicFolder) {
+      yield Result.succeed(defaults);
+      return;
+    }
 
-    return Result.succeed({
+    yield Result.succeed({
       ...defaults,
       // `{filename}` is the last segment of the asset's logical key (see
       // `renderUrlTemplate` in assets-contentbase). For an asset stored under
@@ -254,49 +271,54 @@ export class DecapContentBaseSettingsProvider extends ContentBaseSettingsProvide
     });
   }
 
-  async getCollectionSchema(collection: string): Promise<LaikaResult<JSONSchema7>> {
+  async *getCollectionSchema(collection: string): AsyncGenerator<LaikaResult<JSONSchema7>> {
     const config = await this.readDecapConfig();
-    if (Result.isFailure(config)) return failAs<JSONSchema7>(config.failure);
+    if (Result.isFailure(config)) {
+      yield failAs<JSONSchema7>(config.failure);
+      return;
+    }
     const decapCollection = (config.success.collections ?? []).find(c => c.name === collection);
     if (!decapCollection) {
-      return Result.fail(new NotFoundError(`No Decap collection '${collection}' in config`));
+      yield Result.fail(new NotFoundError(`No Decap collection '${collection}' in config`));
+      return;
     }
     if (!isFolderCollection(decapCollection)) {
-      return Result.fail(
+      yield Result.fail(
         new InvalidData(
           `Decap collection '${collection}' is a 'files' collection — `
             + `its schema isn't a single JSONSchema7.`,
         ),
       );
+      return;
     }
-    return Result.succeed(decapFieldsToJsonSchema(decapCollection.fields));
+    yield Result.succeed(decapFieldsToJsonSchema(decapCollection.fields));
   }
 
   // ===== Read-only writes =====
 
-  async putSettings(_settings: ContentBaseSettings): Promise<LaikaResult<void>> {
-    return readOnly<void>('putSettings');
+  async *putSettings(_settings: ContentBaseSettings): AsyncGenerator<LaikaResult<void>> {
+    yield readOnly<void>('putSettings');
   }
 
-  async putDocumentCollectionSettings(
+  async *putDocumentCollectionSettings(
     _collection: string,
     _settings: DocumentCollectionSettings,
-  ): Promise<LaikaResult<void>> {
-    return readOnly<void>('putDocumentCollectionSettings');
+  ): AsyncGenerator<LaikaResult<void>> {
+    yield readOnly<void>('putDocumentCollectionSettings');
   }
 
-  async putMediaCollectionSettings(
+  async *putMediaCollectionSettings(
     _collection: string,
     _settings: MediaCollectionSettings,
-  ): Promise<LaikaResult<void>> {
-    return readOnly<void>('putMediaCollectionSettings');
+  ): AsyncGenerator<LaikaResult<void>> {
+    yield readOnly<void>('putMediaCollectionSettings');
   }
 
-  async putCollectionSchema(
+  async *putCollectionSchema(
     _collection: string,
     _schema: JSONSchema7,
-  ): Promise<LaikaResult<void>> {
-    return readOnly<void>('putCollectionSchema');
+  ): AsyncGenerator<LaikaResult<void>> {
+    yield readOnly<void>('putCollectionSchema');
   }
 }
 

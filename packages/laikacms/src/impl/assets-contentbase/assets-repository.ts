@@ -28,6 +28,12 @@ import { pathCombine, pathToSegments } from 'laikacms/storage';
 const liftPromiseResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
   Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
 
+/** Drain the first value from an AsyncGenerator<LaikaResult<T>>. */
+async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<LaikaResult<T>> {
+  for await (const result of gen) return result;
+  return Result.fail(new BadRequestError('No result from generator') as LaikaError) as LaikaResult<T>;
+}
+
 /** Encode a Uint8Array to a base64 string. Works in Node and Workers (no Buffer dep). */
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
@@ -99,7 +105,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   private async resolveCollection(
     collection: string,
   ): Promise<LaikaResult<{ directory: string, settings: MediaCollectionSettings }>> {
-    const settings = await this.settingsProvider.getMediaCollectionSettings(collection);
+    const settings = await firstResult(this.settingsProvider.getMediaCollectionSettings(collection));
     if (Result.isFailure(settings)) return Result.fail(settings.failure);
     const directory = settings.success.directory ?? collection;
     return Result.succeed({ directory, settings: settings.success });

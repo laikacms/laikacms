@@ -37,6 +37,17 @@ import { basename, pathCombine, pathToSegments } from 'laikacms/storage';
 const liftPromiseResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
   Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
 
+/**
+ * Drain first value from AsyncGenerator<LaikaResult<A>> and lift into Effect<A, LaikaError>.
+ */
+const liftAsyncGenResult = <A>(gen: AsyncGenerator<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
+  liftPromiseResult(
+    (async () => {
+      for await (const result of gen) return result;
+      return Result.fail(new BadRequestError('No result from generator') as LaikaError) as LaikaResult<A>;
+    })(),
+  );
+
 /** Run a LaikaStream and collect data into a flat array. */
 const collectStreamData = <A, D extends LaikaDone, R>(
   stream: LaikaStream.LaikaStream<A, D, R>,
@@ -77,7 +88,12 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     if (!collection) {
       return Result.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
     }
-    const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
+    let settings: LaikaResult<{ directory?: string }> | undefined;
+    for await (const r of this.settingsProvider.getDocumentCollectionSettings(collection)) {
+      settings = r as LaikaResult<{ directory?: string }>;
+      break;
+    }
+    if (!settings) return Result.fail(new BadRequestError(`No settings for collection '${collection}'`));
     if (Result.isFailure(settings)) return Result.fail(settings.failure);
     const directory = settings.success.directory ?? collection;
     return Result.succeed(remainder ? pathCombine(directory, remainder) : directory);
@@ -88,7 +104,12 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     if (!collection) {
       return Result.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
     }
-    const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
+    let settings: LaikaResult<{ unpublishedStatuses?: { [k: string]: { directory: string } } }> | undefined;
+    for await (const r of this.settingsProvider.getDocumentCollectionSettings(collection)) {
+      settings = r as LaikaResult<{ unpublishedStatuses?: { [k: string]: { directory: string } } }>;
+      break;
+    }
+    if (!settings) return Result.fail(new BadRequestError(`No settings for collection '${collection}'`));
     if (Result.isFailure(settings)) return Result.fail(settings.failure);
 
     const unpublishedStatuses = settings.success.unpublishedStatuses || {};
@@ -111,7 +132,12 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     if (!collection) {
       return Result.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
     }
-    const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
+    let settings: LaikaResult<{ revisionDirectory?: string }> | undefined;
+    for await (const r of this.settingsProvider.getDocumentCollectionSettings(collection)) {
+      settings = r as LaikaResult<{ revisionDirectory?: string }>;
+      break;
+    }
+    if (!settings) return Result.fail(new BadRequestError(`No settings for collection '${collection}'`));
     if (Result.isFailure(settings)) return Result.fail(settings.failure);
     const revisionDirectory = settings.success.revisionDirectory || `.contentbase/${collection}/revisions`;
     const basePath = remainder ? pathCombine(revisionDirectory, remainder) : revisionDirectory;
@@ -202,7 +228,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
         if (!collection) {
           return yield* Effect.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
         }
-        const settings = yield* liftPromiseResult(
+        const settings = yield* liftAsyncGenResult(
           this.settingsProvider.getDocumentCollectionSettings(collection),
         );
         const unpublishedStatuses = settings.unpublishedStatuses || {};
@@ -394,7 +420,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
             new BadRequestError(`folder '${options.folder}' is missing a collection prefix`),
           );
         }
-        const settings = yield* liftPromiseResult(
+        const settings = yield* liftAsyncGenResult(
           this.settingsProvider.getDocumentCollectionSettings(collection),
         );
 

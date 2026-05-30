@@ -17,8 +17,13 @@ function failAs<T>(error: LaikaError): LaikaResult<T> {
 }
 
 /** Run a LaikaTask and surface the resolved value as a LaikaResult. */
-async function firstResult<T>(task: LaikaTask.LaikaTask<T>): Promise<LaikaResult<T>> {
-  return Effect.runPromise(Effect.result(LaikaTask.runValue(task)));
+async function firstResult<T>(task: LaikaTask.LaikaTask<T> | AsyncGenerator<LaikaResult<T>>): Promise<LaikaResult<T>> {
+  if (task && typeof (task as AsyncGenerator<LaikaResult<T>>)[Symbol.asyncIterator] === 'function') {
+    const gen = task as AsyncGenerator<LaikaResult<T>>;
+    for await (const result of gen) return result;
+    return Result.fail(new NotFoundError('No result') as LaikaError) as LaikaResult<T>;
+  }
+  return Effect.runPromise(Effect.result(LaikaTask.runValue(task as LaikaTask.LaikaTask<T>)));
 }
 
 const startCase = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
@@ -51,60 +56,63 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
     });
   }
 
-  /**
-   * Look up a collection's configured settings. Returns `null` when the collection
-   * isn't present in the settings file — the typed getters below synthesize a
-   * type-appropriate default for that case.
-   */
-  private async getConfiguredCollectionSettings(
-    collection: string,
-  ): Promise<LaikaResult<CollectionSettings | null>> {
-    const settings = await this.getSettings();
-    if (Result.isFailure(settings)) return failAs<CollectionSettings | null>(settings.failure);
+  private async getCollectionSettings(collection: string): Promise<LaikaResult<CollectionSettings>> {
+    const settings = await firstResult(this.getSettings());
+    if (Result.isFailure(settings)) return failAs<CollectionSettings>(settings.failure);
     const collections = settings.success.collections ?? {};
-    return Result.succeed(collections[collection] ?? null);
-  }
-
-  async getCollectionSettings(collection: string): Promise<LaikaResult<CollectionSettings>> {
-    const configured = await this.getConfiguredCollectionSettings(collection);
-    if (Result.isFailure(configured)) return failAs<CollectionSettings>(configured.failure);
-    return Result.succeed(configured.success ?? defaultDocumentCollectionSettings(collection));
-  }
-
-  async getDocumentCollectionSettings(collection: string): Promise<LaikaResult<DocumentCollectionSettings>> {
-    const configured = await this.getConfiguredCollectionSettings(collection);
-    if (Result.isFailure(configured)) return failAs<DocumentCollectionSettings>(configured.failure);
-    if (configured.success === null) {
-      return Result.succeed(defaultDocumentCollectionSettings(collection));
+    const collectionSettings = collections[collection];
+    if (!collectionSettings) {
+      return Result.succeed({
+        key: collection,
+        type: 'document',
+        name: startCase(collection),
+        directory: collection,
+        trashDirectory: `.contentbase/trash/${collection}`,
+        draftDirectory: `.contentbase/drafts/${collection}`,
+        archiveDirectory: `.contentbase/archive/${collection}`,
+        revisionDirectory: `.contentbase/revisions/${collection}`,
+        recursive: true,
+      } as CollectionSettings);
     }
-    if (configured.success.type !== 'document') {
-      return Result.fail(
+    return Result.succeed(collectionSettings);
+  }
+
+  async *getDocumentCollectionSettings(collection: string): AsyncGenerator<LaikaResult<DocumentCollectionSettings>> {
+    const collectionSettings = await this.getCollectionSettings(collection);
+    if (Result.isFailure(collectionSettings)) {
+      yield failAs<DocumentCollectionSettings>(collectionSettings.failure);
+      return;
+    }
+    if (collectionSettings.success.type !== 'document') {
+      yield Result.fail(
         new InvalidData(
-          `Settings for document collection '${collection}' are of type '${configured.success.type}' not of type 'document'.`,
+          `Settings for document collection '${collection}' are of type '${collectionSettings.success.type}' not of type 'document'.`,
         ),
       );
+      return;
     }
-    return Result.succeed(configured.success);
+    yield Result.succeed(collectionSettings.success as DocumentCollectionSettings);
   }
 
-  async getMediaCollectionSettings(collection: string): Promise<LaikaResult<MediaCollectionSettings>> {
-    const configured = await this.getConfiguredCollectionSettings(collection);
-    if (Result.isFailure(configured)) return failAs<MediaCollectionSettings>(configured.failure);
-    if (configured.success === null) {
-      return Result.succeed(defaultMediaCollectionSettings(collection));
+  async *getMediaCollectionSettings(collection: string): AsyncGenerator<LaikaResult<MediaCollectionSettings>> {
+    const collectionSettings = await this.getCollectionSettings(collection);
+    if (Result.isFailure(collectionSettings)) {
+      yield failAs<MediaCollectionSettings>(collectionSettings.failure);
+      return;
     }
-    if (configured.success.type !== 'media') {
-      return Result.fail(
+    if (collectionSettings.success.type !== 'media') {
+      yield Result.fail(
         new InvalidData(
-          `Settings for media collection '${collection}' are of type '${configured.success.type}' not of type 'media'.`,
+          `Settings for media collection '${collection}' are of type '${collectionSettings.success.type}' not of type 'media'.`,
         ),
       );
+      return;
     }
-    return Result.succeed(configured.success);
+    yield Result.succeed(collectionSettings.success as MediaCollectionSettings);
   }
 
-  async putCollectionSettings(collection: string, settings: CollectionSettings): Promise<LaikaResult<void>> {
-    const currentSettingsResult = await this.getSettings();
+  private async putCollectionSettings(collection: string, settings: CollectionSettings): Promise<LaikaResult<void>> {
+    const currentSettingsResult = await firstResult(this.getSettings());
     if (Result.isFailure(currentSettingsResult)) {
       return failAs<void>(currentSettingsResult.failure);
     }
@@ -116,48 +124,55 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
         [collection]: settings,
       },
     };
-    const result = await this.putSettings(updatedSettings);
+    const result = await firstResult(this.putSettings(updatedSettings));
     if (Result.isFailure(result)) {
       return failAs<void>(result.failure);
     }
     return Result.succeed(undefined);
   }
 
-  async putMediaCollectionSettings(collection: string, settings: MediaCollectionSettings): Promise<LaikaResult<void>> {
-    const result = this.putCollectionSettings(collection, settings);
-    return result;
+  async *putMediaCollectionSettings(
+    collection: string,
+    settings: MediaCollectionSettings,
+  ): AsyncGenerator<LaikaResult<void>> {
+    yield await this.putCollectionSettings(collection, settings);
   }
 
-  async putDocumentCollectionSettings(
+  async *putDocumentCollectionSettings(
     collection: string,
     settings: DocumentCollectionSettings,
-  ): Promise<LaikaResult<void>> {
-    const result = this.putCollectionSettings(collection, settings);
-    return result;
+  ): AsyncGenerator<LaikaResult<void>> {
+    yield await this.putCollectionSettings(collection, settings);
   }
 
-  async putSettings(settings: ContentBaseSettings): Promise<LaikaResult<void>> {
+  async *putSettings(settings: ContentBaseSettings): AsyncGenerator<LaikaResult<void>> {
     const settingsResult = await firstResult(this.storage.createOrUpdateObject({
       key: SETTINGS_KEY,
       type: 'object',
       content: settings,
       metadata: { extension: 'json' },
     }));
-    if (Result.isFailure(settingsResult)) return failAs<void>(settingsResult.failure);
-    return Result.succeed(undefined);
+    if (Result.isFailure(settingsResult)) {
+      yield failAs<void>(settingsResult.failure);
+      return;
+    }
+    yield Result.succeed(undefined);
   }
 
-  async getCollectionSchema(collection: string): Promise<LaikaResult<JSONSchema7>> {
+  async *getCollectionSchema(collection: string): AsyncGenerator<LaikaResult<JSONSchema7>> {
     const schema = await firstResult(this.storage.getObject(schemaKey(collection)));
-    if (Result.isFailure(schema)) return failAs<JSONSchema7>(schema.failure);
+    if (Result.isFailure(schema)) {
+      yield failAs<JSONSchema7>(schema.failure);
+      return;
+    }
     const jsonSchema = schema.success.content as JSONSchema7;
-    return Result.succeed(jsonSchema);
+    yield Result.succeed(jsonSchema);
   }
 
-  async putCollectionSchema(
+  async *putCollectionSchema(
     collection: string,
     schema: JSONSchema7,
-  ): Promise<LaikaResult<void>> {
+  ): AsyncGenerator<LaikaResult<void>> {
     const result = await firstResult(this.storage.createOrUpdateObject(
       {
         key: schemaKey(collection),
@@ -166,11 +181,14 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
         metadata: { extension: 'json' },
       },
     ));
-    if (Result.isFailure(result)) return failAs<void>(result.failure);
-    return Result.succeed(undefined);
+    if (Result.isFailure(result)) {
+      yield failAs<void>(result.failure);
+      return;
+    }
+    yield Result.succeed(undefined);
   }
 
-  override getSettings = async (): Promise<LaikaResult<ContentBaseSettings>> => {
+  override async *getSettings(): AsyncGenerator<LaikaResult<ContentBaseSettings>> {
     const settingsFile = await firstResult(this.storage.getObject(SETTINGS_KEY));
     if (Result.isFailure(settingsFile)) {
       if (settingsFile.failure.code === NotFoundError.CODE) {
@@ -181,37 +199,25 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
           content: defaultSettings,
           metadata: { extension: 'json' },
         }));
-        if (Result.isFailure(createResult)) return failAs<ContentBaseSettings>(createResult.failure);
-        return Result.succeed(defaultSettings);
+        if (Result.isFailure(createResult)) {
+          yield failAs<ContentBaseSettings>(createResult.failure);
+          return;
+        }
+        yield Result.succeed(defaultSettings);
+        return;
       }
-      return failAs<ContentBaseSettings>(settingsFile.failure);
+      yield failAs<ContentBaseSettings>(settingsFile.failure);
+      return;
     }
 
     const parsedSettings = parseSettings(settingsFile.success.content);
-    if (Result.isFailure(parsedSettings)) return failAs<ContentBaseSettings>(parsedSettings.failure);
-    return Result.succeed(parsedSettings.success);
-  };
+    if (Result.isFailure(parsedSettings)) {
+      yield failAs<ContentBaseSettings>(parsedSettings.failure);
+      return;
+    }
+    yield Result.succeed(parsedSettings.success);
+  }
 }
 
 const SETTINGS_KEY = '.contentbase/settings';
 const schemaKey = (collection: string) => `.contentbase/schemas/${collection}`;
-
-const defaultDocumentCollectionSettings = (collection: string): DocumentCollectionSettings => ({
-  key: collection,
-  type: 'document',
-  name: startCase(collection),
-  directory: collection,
-  trashDirectory: `.contentbase/trash/${collection}`,
-  draftDirectory: `.contentbase/drafts/${collection}`,
-  archiveDirectory: `.contentbase/archive/${collection}`,
-  revisionDirectory: `.contentbase/revisions/${collection}`,
-  recursive: true,
-});
-
-const defaultMediaCollectionSettings = (collection: string): MediaCollectionSettings => ({
-  key: collection,
-  type: 'media',
-  name: startCase(collection),
-  directory: collection,
-  recursive: true,
-});
