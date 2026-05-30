@@ -16,7 +16,7 @@ import type {
   UnpublishedUpdate,
 } from '@laikacms/documents';
 import { DocumentSchema, DocumentsRepository, pathToSegments } from '@laikacms/documents';
-import { StorageObjectContentSchema, type StorageObjectContent } from '@laikacms/storage';
+import { type StorageObjectContent, StorageObjectContentSchema } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 const PUBLISHED_STATUS = 'published';
@@ -38,7 +38,7 @@ export type DocumentModel = {
 export type DocumentModelStrict = DocumentModel & {
   status: string,
   language: string,
-}
+};
 
 export type RevisionModel = {
   key: string,
@@ -53,7 +53,7 @@ export type RevisionModel = {
 export type RevisionModelStrict = RevisionModel & {
   revision: string,
   language: string,
-}
+};
 
 export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA> {
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
