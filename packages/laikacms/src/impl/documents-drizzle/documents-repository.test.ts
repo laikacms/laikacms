@@ -1,6 +1,6 @@
 import * as Result from 'effect/Result';
-import { NotFoundError } from 'laikacms/core';
-import type { LaikaResult } from 'laikacms/core';
+import { LaikaTask, NotFoundError } from 'laikacms/core';
+import type { LaikaError } from 'laikacms/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DrizzleDocumentsRepository } from './documents-repository.js';
 import type { DocumentModel, DrizzleDocumentsRepositoryOptions, RevisionModel } from './documents-repository.js';
@@ -110,9 +110,8 @@ function makeInMemoryOptions(): DrizzleDocumentsRepositoryOptions<
   };
 }
 
-async function firstResult<T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<LaikaResult<T>> {
-  for await (const result of gen) return result;
-  return Result.fail(new NotFoundError('No result from generator'));
+async function resolveTask<T>(task: LaikaTask.LaikaTask<T>): Promise<Result.Result<T, LaikaError>> {
+  return LaikaTask.runPromiseResult(task);
 }
 
 // ---- tests ----
@@ -137,7 +136,7 @@ describe('DrizzleDocumentsRepository', () => {
 
   describe('createDocument', () => {
     it('creates and returns a published document', async () => {
-      const result = await firstResult(
+      const result = await resolveTask(
         repo.createDocument({
           key: 'hello',
           type: 'published',
@@ -158,7 +157,7 @@ describe('DrizzleDocumentsRepository', () => {
 
   describe('getDocument', () => {
     it('retrieves a document that was created', async () => {
-      await firstResult(
+      await resolveTask(
         repo.createDocument({
           key: 'world',
           type: 'published',
@@ -168,7 +167,7 @@ describe('DrizzleDocumentsRepository', () => {
         }),
       );
 
-      const result = await firstResult(repo.getDocument('world'));
+      const result = await resolveTask(repo.getDocument('world'));
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         expect(result.success.key).toBe('world');
@@ -177,7 +176,7 @@ describe('DrizzleDocumentsRepository', () => {
     });
 
     it('returns NotFoundError for a missing document', async () => {
-      const result = await firstResult(repo.getDocument('ghost'));
+      const result = await resolveTask(repo.getDocument('ghost'));
       expect(Result.isFailure(result)).toBe(true);
       if (Result.isFailure(result)) {
         expect(result.failure.code).toBe(NotFoundError.CODE);
@@ -187,7 +186,7 @@ describe('DrizzleDocumentsRepository', () => {
 
   describe('updateDocument', () => {
     it('updates content and returns updated document', async () => {
-      await firstResult(
+      await resolveTask(
         repo.createDocument({
           key: 'editable',
           type: 'published',
@@ -196,7 +195,7 @@ describe('DrizzleDocumentsRepository', () => {
           language: 'en',
         }),
       );
-      const result = await firstResult(
+      const result = await resolveTask(
         repo.updateDocument({
           key: 'editable',
           type: 'published',
@@ -214,20 +213,20 @@ describe('DrizzleDocumentsRepository', () => {
 
   describe('deleteDocument', () => {
     it('deletes a document so it can no longer be retrieved', async () => {
-      await firstResult(
+      await resolveTask(
         repo.createDocument({ key: 'to-delete', type: 'published', status: 'published', content: {}, language: 'en' }),
       );
-      const deleteResult = await firstResult(repo.deleteDocument('to-delete'));
+      const deleteResult = await resolveTask(repo.deleteDocument('to-delete'));
       expect(Result.isSuccess(deleteResult)).toBe(true);
 
-      const getResult = await firstResult(repo.getDocument('to-delete'));
+      const getResult = await resolveTask(repo.getDocument('to-delete'));
       expect(Result.isFailure(getResult)).toBe(true);
     });
   });
 
   describe('createUnpublished / getUnpublished', () => {
     it('creates and retrieves an unpublished document', async () => {
-      const createResult = await firstResult(
+      const createResult = await resolveTask(
         repo.createUnpublished({
           key: 'draft-1',
           type: 'unpublished',
@@ -242,12 +241,12 @@ describe('DrizzleDocumentsRepository', () => {
         expect(createResult.success.type).toBe('unpublished');
       }
 
-      const getResult = await firstResult(repo.getUnpublished('draft-1'));
+      const getResult = await resolveTask(repo.getUnpublished('draft-1'));
       expect(Result.isSuccess(getResult)).toBe(true);
     });
 
     it('returns NotFoundError for missing unpublished document', async () => {
-      const result = await firstResult(repo.getUnpublished('no-draft'));
+      const result = await resolveTask(repo.getUnpublished('no-draft'));
       expect(Result.isFailure(result)).toBe(true);
       if (Result.isFailure(result)) {
         expect(result.failure.code).toBe(NotFoundError.CODE);
@@ -257,7 +256,7 @@ describe('DrizzleDocumentsRepository', () => {
 
   describe('publish workflow', () => {
     it('publishes an unpublished document', async () => {
-      await firstResult(
+      await resolveTask(
         repo.createUnpublished({
           key: 'workflow',
           type: 'unpublished',
@@ -266,7 +265,7 @@ describe('DrizzleDocumentsRepository', () => {
           status: 'draft',
         }),
       );
-      const result = await firstResult(repo.publish('workflow'));
+      const result = await resolveTask(repo.publish('workflow'));
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         expect(result.success.type).toBe('published');
@@ -277,7 +276,7 @@ describe('DrizzleDocumentsRepository', () => {
 
   describe('unpublish workflow', () => {
     it('unpublishes a published document', async () => {
-      await firstResult(
+      await resolveTask(
         repo.createDocument({
           key: 'live-doc',
           type: 'published',
@@ -286,7 +285,7 @@ describe('DrizzleDocumentsRepository', () => {
           language: 'en',
         }),
       );
-      const result = await firstResult(repo.unpublish('live-doc', 'draft'));
+      const result = await resolveTask(repo.unpublish('live-doc', 'draft'));
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         expect(result.success.type).toBe('unpublished');
@@ -297,23 +296,26 @@ describe('DrizzleDocumentsRepository', () => {
 
   describe('listRecords', () => {
     it('lists published documents', async () => {
-      await firstResult(
+      await resolveTask(
         repo.createDocument({ key: 'r1', type: 'published', status: 'published', content: {}, language: 'en' }),
       );
-      await firstResult(
+      await resolveTask(
         repo.createDocument({ key: 'r2', type: 'published', status: 'published', content: {}, language: 'en' }),
       );
 
-      const results: LaikaResult<readonly import('@laikacms/documents').Record[]>[] = [];
+      const docs: import('laikacms/documents').Record[] = [];
       for await (
-        const r of repo.listRecords({ type: 'published', folder: '', pagination: { offset: 0, limit: 100 }, depth: 10 })
+        const chunk of repo.listRecords({
+          type: 'published',
+          folder: '',
+          pagination: { offset: 0, limit: 100 },
+          depth: 10,
+        })
       ) {
-        results.push(r);
+        for (const el of chunk) {
+          if (el._tag === 'Data') docs.push(el.value);
+        }
       }
-
-      const docs = results
-        .filter(r => Result.isSuccess(r))
-        .flatMap(r => (Result.isSuccess(r) ? [...r.success] : []));
 
       expect(docs.length).toBeGreaterThanOrEqual(2);
     });
@@ -321,7 +323,7 @@ describe('DrizzleDocumentsRepository', () => {
 
   describe('createRevision / getRevision / listRevisions', () => {
     it('creates and retrieves a revision', async () => {
-      const createResult = await firstResult(
+      const createResult = await resolveTask(
         repo.createRevision({
           key: 'doc',
           type: 'revision',
@@ -332,7 +334,7 @@ describe('DrizzleDocumentsRepository', () => {
       );
       expect(Result.isSuccess(createResult)).toBe(true);
 
-      const getResult = await firstResult(repo.getRevision('doc', 'v1'));
+      const getResult = await resolveTask(repo.getRevision('doc', 'v1'));
       expect(Result.isSuccess(getResult)).toBe(true);
       if (Result.isSuccess(getResult)) {
         expect(getResult.success.revision).toBe('v1');
@@ -341,26 +343,24 @@ describe('DrizzleDocumentsRepository', () => {
     });
 
     it('returns NotFoundError for a missing revision', async () => {
-      const result = await firstResult(repo.getRevision('doc', 'vXXX'));
+      const result = await resolveTask(repo.getRevision('doc', 'vXXX'));
       expect(Result.isFailure(result)).toBe(true);
     });
 
     it('lists revisions for a key', async () => {
-      await firstResult(
+      await resolveTask(
         repo.createRevision({ key: 'doc', type: 'revision', revision: 'v1', content: {}, language: 'en' }),
       );
-      await firstResult(
+      await resolveTask(
         repo.createRevision({ key: 'doc', type: 'revision', revision: 'v2', content: {}, language: 'en' }),
       );
 
-      const results: LaikaResult<readonly import('@laikacms/documents').RevisionSummary[]>[] = [];
-      for await (const r of repo.listRevisions('doc', { pagination: { offset: 0, limit: 100 } })) {
-        results.push(r);
+      const summaries: import('laikacms/documents').RevisionSummary[] = [];
+      for await (const chunk of repo.listRevisions('doc', { pagination: { offset: 0, limit: 100 } })) {
+        for (const el of chunk) {
+          if (el._tag === 'Data') summaries.push(el.value);
+        }
       }
-
-      const summaries = results
-        .filter(r => Result.isSuccess(r))
-        .flatMap(r => (Result.isSuccess(r) ? [...r.success] : []));
 
       expect(summaries.length).toBe(2);
       expect(summaries.map(s => s.revision)).toContain('v1');
