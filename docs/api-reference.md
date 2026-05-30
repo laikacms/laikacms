@@ -2,27 +2,32 @@
 
 ## Overview
 
-LaikaCMS exposes three HTTP API servers, each following the [JSON:API v1.1](https://jsonapi.org/) specification. All responses use the `application/vnd.api+json` content type.
+LaikaCMS exposes three HTTP API servers, each following the [JSON:API v1.1](https://jsonapi.org/)
+specification. All responses use the `application/vnd.api+json` content type.
 
-| Server | Default Base Path | Purpose |
-| --- | --- | --- |
-| Storage API | configurable | Low-level key/value atom and folder storage |
-| Documents API | configurable | Versioned content with publish/unpublish lifecycle |
-| Assets API | `/api/assets` | Binary file and folder management |
+| Server        | Default Base Path | Purpose                                            |
+| ------------- | ----------------- | -------------------------------------------------- |
+| Storage API   | configurable      | Low-level key/value atom and folder storage        |
+| Documents API | configurable      | Versioned content with publish/unpublish lifecycle |
+| Assets API    | `/api/assets`     | Binary file and folder management                  |
 
 ### JSON:API Conventions
 
 - Single resources are returned as `{ "data": { ... } }`.
 - Collections are returned as `{ "data": [ ... ], "links": { ... }, "meta": { "page": { ... } } }`.
 - Errors are returned as `{ "errors": [ { "status", "code", "detail" } ] }`.
-- Atomic batch operations follow the [JSON:API Atomic Operations](https://jsonapi.org/ext/atomic/) extension: request body is `{ "atomic:operations": [ ... ] }`, response is `{ "atomic:results": [ ... ] }`.
+- Atomic batch operations follow the [JSON:API Atomic Operations](https://jsonapi.org/ext/atomic/)
+  extension: request body is `{ "atomic:operations": [ ... ] }`, response is
+  `{ "atomic:results": [ ... ] }`.
 - Cursor-based pagination is controlled with `page[cursor]` and `page[limit]` query parameters.
 
 ---
 
 ## Storage API
 
-The Storage API manages a flat namespace of **atoms** (objects and folders). Keys are arbitrary path-like strings (e.g. `posts/hello-world`). The API serves the root endpoint for meta-information and then routes on the first path segment.
+The Storage API manages a flat namespace of **atoms** (objects and folders). Keys are arbitrary
+path-like strings (e.g. `posts/hello-world`). The API serves the root endpoint for meta-information
+and then routes on the first path segment.
 
 ### Endpoints
 
@@ -44,8 +49,16 @@ Returns meta-information about the Storage API and its available endpoints.
       "version": "1.0.0",
       "endpoints": [
         { "path": "/atoms/{key}", "methods": ["GET"], "description": "List atoms in a folder" },
-        { "path": "/objects/{key}", "methods": ["POST", "PATCH"], "description": "Create or update storage objects" },
-        { "path": "/operations", "methods": ["POST"], "description": "Atomic operations (add, update, remove)" }
+        {
+          "path": "/objects/{key}",
+          "methods": ["POST", "PATCH"],
+          "description": "Create or update storage objects"
+        },
+        {
+          "path": "/operations",
+          "methods": ["POST"],
+          "description": "Atomic operations (add, update, remove)"
+        }
       ]
     }
   }
@@ -60,16 +73,16 @@ List all atoms (objects and folders) under the given key prefix. Returns full co
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Folder key prefix to list atoms under (e.g. `posts`) |
+| Parameter | Type   | Description                                          |
+| --------- | ------ | ---------------------------------------------------- |
+| `key`     | string | Folder key prefix to list atoms under (e.g. `posts`) |
 
 **Query Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `page[cursor]` | string | — | Cursor for pagination |
-| `page[limit]` | number | 10 | Number of items per page |
+| Parameter      | Type   | Default | Description              |
+| -------------- | ------ | ------- | ------------------------ |
+| `page[cursor]` | string | —       | Cursor for pagination    |
+| `page[limit]`  | number | 10      | Number of items per page |
 
 **Response** — collection of `object` and/or `folder` resources
 
@@ -119,13 +132,14 @@ List all atoms (objects and folders) under the given key prefix. Returns full co
 
 #### GET /atom-summaries/:key
 
-List atom summaries (without full content) under the given key prefix. Useful for listing large collections efficiently.
+List atom summaries (without full content) under the given key prefix. Useful for listing large
+collections efficiently.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Folder key prefix |
+| Parameter | Type   | Description       |
+| --------- | ------ | ----------------- |
+| `key`     | string | Folder key prefix |
 
 **Query Parameters**
 
@@ -200,11 +214,11 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `data.type` | `"object"` | yes | Resource type |
-| `data.id` | string | yes | The key for the new object |
-| `data.attributes.content` | object | no | Arbitrary JSON content (defaults to `{}`) |
+| Field                     | Type       | Required | Description                               |
+| ------------------------- | ---------- | -------- | ----------------------------------------- |
+| `data.type`               | `"object"` | yes      | Resource type                             |
+| `data.id`                 | string     | yes      | The key for the new object                |
+| `data.attributes.content` | object     | no       | Arbitrary JSON content (defaults to `{}`) |
 
 **Response** — `201 Created` with the created object
 
@@ -230,13 +244,14 @@ Content-Type: application/vnd.api+json
 
 #### PATCH /objects/:key
 
-Update an existing storage object. The `id` in the request body must match the `:key` path parameter.
+Update an existing storage object. The `id` in the request body must match the `:key` path
+parameter.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Key of the object to update |
+| Parameter | Type   | Description                 |
+| --------- | ------ | --------------------------- |
+| `key`     | string | Key of the object to update |
 
 **Request Headers**
 
@@ -285,7 +300,9 @@ Content-Type: application/vnd.api+json
 
 #### POST /operations
 
-Execute a batch of atomic operations. Supports adding objects, adding folders, updating objects, and removing atoms. All operations are processed in order; failures for individual operations are surfaced per-entry in the response.
+Execute a batch of atomic operations. Supports adding objects, adding folders, updating objects, and
+removing atoms. All operations are processed in order; failures for individual operations are
+surfaced per-entry in the response.
 
 **Request Headers**
 
@@ -338,15 +355,16 @@ Content-Type: application/vnd.api+json
 
 **Supported operation types**
 
-| `op` | Supported `data.type` / `ref.type` | Description |
-| --- | --- | --- |
-| `add` | `"object"`, `"folder"` | Create a new object or folder |
-| `update` | `"object"` | Update an existing object |
-| `remove` | `"object"`, `"folder"`, `"atom"` | Remove an existing atom |
+| `op`     | Supported `data.type` / `ref.type` | Description                   |
+| -------- | ---------------------------------- | ----------------------------- |
+| `add`    | `"object"`, `"folder"`             | Create a new object or folder |
+| `update` | `"object"`                         | Update an existing object     |
+| `remove` | `"object"`, `"folder"`, `"atom"`   | Remove an existing atom       |
 
 **Response**
 
-Results are returned in the same order as the input operations. Remove operations produce no result entry.
+Results are returned in the same order as the input operations. Remove operations produce no result
+entry.
 
 ```json
 {
@@ -394,23 +412,25 @@ Results are returned in the same order as the input operations. Remove operation
 
 ## Documents API
 
-The Documents API manages content with a publish/unpublish lifecycle. Documents exist in one of two states:
+The Documents API manages content with a publish/unpublish lifecycle. Documents exist in one of two
+states:
 
 - **Published** (`type: "published"`) — live, public content.
-- **Unpublished** (`type: "unpublished"`) — drafts, pending-review, archived, or trashed content distinguished by a `status` string.
+- **Unpublished** (`type: "unpublished"`) — drafts, pending-review, archived, or trashed content
+  distinguished by a `status` string.
 
 Revisions record snapshots of published documents.
 
 ### Resource Types
 
-| JSON:API type | Domain entity | Description |
-| --- | --- | --- |
-| `published` | `Document` | Live published document |
-| `published-summary` | `DocumentSummary` | Published document without content |
-| `unpublished` | `Unpublished` | Draft or otherwise unpublished document |
-| `unpublished-summary` | `UnpublishedSummary` | Unpublished document without content |
-| `revision` | `Revision` | Immutable historical snapshot |
-| `revision-summary` | `RevisionSummary` | Revision without content |
+| JSON:API type         | Domain entity        | Description                             |
+| --------------------- | -------------------- | --------------------------------------- |
+| `published`           | `Document`           | Live published document                 |
+| `published-summary`   | `DocumentSummary`    | Published document without content      |
+| `unpublished`         | `Unpublished`        | Draft or otherwise unpublished document |
+| `unpublished-summary` | `UnpublishedSummary` | Unpublished document without content    |
+| `revision`            | `Revision`           | Immutable historical snapshot           |
+| `revision-summary`    | `RevisionSummary`    | Revision without content                |
 
 ### Endpoints
 
@@ -446,17 +466,18 @@ Returns a list of available endpoint names.
 
 #### GET /records
 
-List all records (published and/or unpublished) with full content. Supports filtering by type, folder, and depth.
+List all records (published and/or unpublished) with full content. Supports filtering by type,
+folder, and depth.
 
 **Query Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `filter[type]` | `"published"` \| `"unpublished"` \| `"all"` | `"published"` | Filter by document state |
-| `filter[folder]` | string | `""` | Folder path to list from |
-| `filter[depth]` | number | `1` | Traversal depth (minimum 1) |
-| `page[cursor]` | string | — | Pagination cursor |
-| `page[limit]` | number | — | Items per page |
+| Parameter        | Type                                        | Default       | Description                 |
+| ---------------- | ------------------------------------------- | ------------- | --------------------------- |
+| `filter[type]`   | `"published"` \| `"unpublished"` \| `"all"` | `"published"` | Filter by document state    |
+| `filter[folder]` | string                                      | `""`          | Folder path to list from    |
+| `filter[depth]`  | number                                      | `1`           | Traversal depth (minimum 1) |
+| `page[cursor]`   | string                                      | —             | Pagination cursor           |
+| `page[limit]`    | number                                      | —             | Items per page              |
 
 **Response** — mixed array of `published` and `unpublished` resources
 
@@ -540,9 +561,9 @@ Get a single published document by key.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Document key (URL-encoded) |
+| Parameter | Type   | Description                |
+| --------- | ------ | -------------------------- |
+| `key`     | string | Document key (URL-encoded) |
 
 **Response**
 
@@ -610,12 +631,12 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `data.type` | `"published"` | yes | Resource type |
-| `data.id` | string | no | Document key. Auto-generated if omitted |
-| `data.attributes.language` | string | yes | BCP 47 language tag (e.g. `"en"`) |
-| `data.attributes.content` | object | no | Arbitrary document content |
+| Field                      | Type          | Required | Description                             |
+| -------------------------- | ------------- | -------- | --------------------------------------- |
+| `data.type`                | `"published"` | yes      | Resource type                           |
+| `data.id`                  | string        | no       | Document key. Auto-generated if omitted |
+| `data.attributes.language` | string        | yes      | BCP 47 language tag (e.g. `"en"`)       |
+| `data.attributes.content`  | object        | no       | Arbitrary document content              |
 
 **Response** — `200 OK` with the created document
 
@@ -647,9 +668,9 @@ Update an existing published document.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Document key (URL-encoded) |
+| Parameter | Type   | Description                |
+| --------- | ------ | -------------------------- |
+| `key`     | string | Document key (URL-encoded) |
 
 **Request Headers**
 
@@ -684,9 +705,9 @@ Delete a published document.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Document key (URL-encoded) |
+| Parameter | Type   | Description                |
+| --------- | ------ | -------------------------- |
+| `key`     | string | Document key (URL-encoded) |
 
 **Response** — `200 OK`
 
@@ -706,9 +727,9 @@ Move a published document to the unpublished state with the given status.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Published document key (URL-encoded) |
+| Parameter | Type   | Description                          |
+| --------- | ------ | ------------------------------------ |
+| `key`     | string | Published document key (URL-encoded) |
 
 **Request Headers**
 
@@ -729,10 +750,10 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `data.type` | `"unpublished"` | yes | Resource type |
-| `data.attributes.status` | string | yes | Target unpublished status (e.g. `"archived"`, `"trash"`) |
+| Field                    | Type            | Required | Description                                              |
+| ------------------------ | --------------- | -------- | -------------------------------------------------------- |
+| `data.type`              | `"unpublished"` | yes      | Resource type                                            |
+| `data.attributes.status` | string          | yes      | Target unpublished status (e.g. `"archived"`, `"trash"`) |
 
 **Response** — resulting unpublished document
 
@@ -764,9 +785,9 @@ Get a single unpublished document by key.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Unpublished document key (URL-encoded) |
+| Parameter | Type   | Description                            |
+| --------- | ------ | -------------------------------------- |
+| `key`     | string | Unpublished document key (URL-encoded) |
 
 **Response**
 
@@ -821,13 +842,13 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `data.type` | `"unpublished"` | yes | Resource type |
-| `data.id` | string | no | Document key. Auto-generated if omitted |
-| `data.attributes.status` | string | yes | Initial status (e.g. `"draft"`) |
-| `data.attributes.language` | string | yes | BCP 47 language tag |
-| `data.attributes.content` | object | no | Arbitrary document content |
+| Field                      | Type            | Required | Description                             |
+| -------------------------- | --------------- | -------- | --------------------------------------- |
+| `data.type`                | `"unpublished"` | yes      | Resource type                           |
+| `data.id`                  | string          | no       | Document key. Auto-generated if omitted |
+| `data.attributes.status`   | string          | yes      | Initial status (e.g. `"draft"`)         |
+| `data.attributes.language` | string          | yes      | BCP 47 language tag                     |
+| `data.attributes.content`  | object          | no       | Arbitrary document content              |
 
 **Response** — created unpublished document (same shape as `GET /unpublished/:key`)
 
@@ -839,9 +860,9 @@ Update an existing unpublished document.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Unpublished document key (URL-encoded) |
+| Parameter | Type   | Description                            |
+| --------- | ------ | -------------------------------------- |
+| `key`     | string | Unpublished document key (URL-encoded) |
 
 **Request Headers**
 
@@ -877,9 +898,9 @@ Delete an unpublished document permanently.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Unpublished document key (URL-encoded) |
+| Parameter | Type   | Description                            |
+| --------- | ------ | -------------------------------------- |
+| `key`     | string | Unpublished document key (URL-encoded) |
 
 **Response** — `200 OK`
 
@@ -899,9 +920,9 @@ Publish an unpublished document. Moves it to published state.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Unpublished document key (URL-encoded) |
+| Parameter | Type   | Description                            |
+| --------- | ------ | -------------------------------------- |
+| `key`     | string | Unpublished document key (URL-encoded) |
 
 **Request Body** — none required
 
@@ -958,13 +979,13 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `data.type` | `"revision"` | yes | Resource type |
-| `data.id` | string | no | Document key. Auto-generated if omitted |
-| `data.attributes.revision` | string | yes | Revision identifier (e.g. a version tag or hash) |
-| `data.attributes.language` | string | yes | BCP 47 language tag |
-| `data.attributes.content` | object | no | Snapshot of the document content |
+| Field                      | Type         | Required | Description                                      |
+| -------------------------- | ------------ | -------- | ------------------------------------------------ |
+| `data.type`                | `"revision"` | yes      | Resource type                                    |
+| `data.id`                  | string       | no       | Document key. Auto-generated if omitted          |
+| `data.attributes.revision` | string       | yes      | Revision identifier (e.g. a version tag or hash) |
+| `data.attributes.language` | string       | yes      | BCP 47 language tag                              |
+| `data.attributes.content`  | object       | no       | Snapshot of the document content                 |
 
 **Response** — created revision
 
@@ -995,16 +1016,16 @@ List revision summaries for a document key.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Document key (URL-encoded) |
+| Parameter | Type   | Description                |
+| --------- | ------ | -------------------------- |
+| `key`     | string | Document key (URL-encoded) |
 
 **Query Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `page[cursor]` | string | — | Pagination cursor |
-| `page[limit]` | number | — | Items per page |
+| Parameter      | Type   | Default | Description       |
+| -------------- | ------ | ------- | ----------------- |
+| `page[cursor]` | string | —       | Pagination cursor |
+| `page[limit]`  | number | —       | Items per page    |
 
 **Response** — collection of `revision-summary` resources
 
@@ -1054,9 +1075,9 @@ Get a single revision by document key and revision identifier.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Document key (URL-encoded) |
+| Parameter    | Type   | Description                         |
+| ------------ | ------ | ----------------------------------- |
+| `key`        | string | Document key (URL-encoded)          |
 | `revisionId` | string | Revision identifier (e.g. `v1.0.0`) |
 
 **Response**
@@ -1084,7 +1105,8 @@ Get a single revision by document key and revision identifier.
 
 #### POST /operations
 
-Execute a batch of atomic operations on documents. Supports adding published or unpublished documents, state transitions (publish/unpublish), content updates, and removals.
+Execute a batch of atomic operations on documents. Supports adding published or unpublished
+documents, state transitions (publish/unpublish), content updates, and removals.
 
 **Request Headers**
 
@@ -1094,13 +1116,13 @@ Content-Type: application/vnd.api+json
 
 **Supported Operations**
 
-| `op` | Required fields | Description |
-| --- | --- | --- |
-| `add` | `data` with `type: "unpublished"` or `"published"` | Create a document |
-| `update` | `data` with `type: "unpublished"` and an `id` | Update unpublished content |
-| `update` | `href: "/publish"`, `ref: { type: "unpublished", id }` | Publish an unpublished document |
-| `update` | `href: "/unpublish"`, `ref: { type: "document", id }`, `data.attributes.status` | Unpublish a published document |
-| `remove` | `ref` with `type: "document"` or `"unpublished"` | Delete a document |
+| `op`     | Required fields                                                                 | Description                     |
+| -------- | ------------------------------------------------------------------------------- | ------------------------------- |
+| `add`    | `data` with `type: "unpublished"` or `"published"`                              | Create a document               |
+| `update` | `data` with `type: "unpublished"` and an `id`                                   | Update unpublished content      |
+| `update` | `href: "/publish"`, `ref: { type: "unpublished", id }`                          | Publish an unpublished document |
+| `update` | `href: "/unpublish"`, `ref: { type: "document", id }`, `data.attributes.status` | Unpublish a published document  |
+| `remove` | `ref` with `type: "document"` or `"unpublished"`                                | Delete a document               |
 
 **Request Body**
 
@@ -1165,7 +1187,8 @@ Content-Type: application/vnd.api+json
 
 **Response**
 
-Results are returned in the same order as the input operations. Remove operations return a `meta` entry.
+Results are returned in the same order as the input operations. Remove operations return a `meta`
+entry.
 
 ```json
 {
@@ -1261,26 +1284,28 @@ Results are returned in the same order as the input operations. Remove operation
 
 ## Assets API
 
-The Assets API manages binary files (assets) and folders. The default base path is `/api/assets`. All routes are mounted under `/resources`.
+The Assets API manages binary files (assets) and folders. The default base path is `/api/assets`.
+All routes are mounted under `/resources`.
 
 ### Resource Types
 
-| JSON:API type | Description |
-| --- | --- |
-| `asset` | A binary file with optional metadata |
-| `folder` | A logical grouping of assets |
-| `asset-metadata` | Detailed metadata for an asset (included resource) |
-| `asset-url` | Public/private access URLs for an asset (included resource) |
+| JSON:API type     | Description                                                               |
+| ----------------- | ------------------------------------------------------------------------- |
+| `asset`           | A binary file with optional metadata                                      |
+| `folder`          | A logical grouping of assets                                              |
+| `asset-metadata`  | Detailed metadata for an asset (included resource)                        |
+| `asset-url`       | Public/private access URLs for an asset (included resource)               |
 | `asset-variation` | Derived variations of an asset, e.g. image thumbnails (included resource) |
 
 ### Included Resources
 
-Pass `?include=<types>` as a comma-separated list to sideload related resources alongside `asset` results:
+Pass `?include=<types>` as a comma-separated list to sideload related resources alongside `asset`
+results:
 
-| Include value | Sideloaded type |
-| --- | --- |
-| `asset-metadata` | `asset-metadata` |
-| `asset-url` | `asset-url` |
+| Include value     | Sideloaded type   |
+| ----------------- | ----------------- |
+| `asset-metadata`  | `asset-metadata`  |
+| `asset-url`       | `asset-url`       |
 | `asset-variation` | `asset-variation` |
 
 ### Endpoints
@@ -1293,13 +1318,13 @@ List all assets and folders under a given folder prefix.
 
 **Query Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
-| `folder` or `filter[prefix]` | string | `""` | Folder key prefix to list |
-| `filter[depth]` or `depth` | number | `1` | Traversal depth (minimum 1) |
-| `page[limit]` | number | `100` | Items per page |
-| `page[cursor]` | string | — | Cursor for pagination |
-| `include` | string | — | Comma-separated list of related types to include |
+| Parameter                    | Type   | Default | Description                                      |
+| ---------------------------- | ------ | ------- | ------------------------------------------------ |
+| `folder` or `filter[prefix]` | string | `""`    | Folder key prefix to list                        |
+| `filter[depth]` or `depth`   | number | `1`     | Traversal depth (minimum 1)                      |
+| `page[limit]`                | number | `100`   | Items per page                                   |
+| `page[cursor]`               | string | —       | Cursor for pagination                            |
+| `include`                    | string | —       | Comma-separated list of related types to include |
 
 **Response** — collection of `asset` and `folder` resources with optional `included`
 
@@ -1371,14 +1396,14 @@ Get a single resource (asset or folder) by key. Supports sideloading related dat
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Resource key (URL-encoded, e.g. `images%2Fhero.jpg`) |
+| Parameter | Type   | Description                                          |
+| --------- | ------ | ---------------------------------------------------- |
+| `key`     | string | Resource key (URL-encoded, e.g. `images%2Fhero.jpg`) |
 
 **Query Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
+| Parameter | Type   | Description                                                       |
+| --------- | ------ | ----------------------------------------------------------------- |
 | `include` | string | Comma-separated: `asset-metadata`, `asset-url`, `asset-variation` |
 
 **Response**
@@ -1466,15 +1491,15 @@ Content-Type: multipart/form-data
 
 **Form Fields**
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `file` | File | yes | Binary file to upload |
-| `key` | string | no | Asset key. Defaults to `file.name` |
-| `mimeType` | string | no | MIME type. Defaults to `file.type` or `application/octet-stream` |
-| `filename` | string | no | Filename. Defaults to `file.name` |
-| `cacheControl` | string | no | `Cache-Control` header value |
-| `customMetadata` | JSON string | no | `Record<string, string>` of custom metadata |
-| `metadata` | JSON string | no | Alternative: JSON object with all the above fields |
+| Field            | Type        | Required | Description                                                      |
+| ---------------- | ----------- | -------- | ---------------------------------------------------------------- |
+| `file`           | File        | yes      | Binary file to upload                                            |
+| `key`            | string      | no       | Asset key. Defaults to `file.name`                               |
+| `mimeType`       | string      | no       | MIME type. Defaults to `file.type` or `application/octet-stream` |
+| `filename`       | string      | no       | Filename. Defaults to `file.name`                                |
+| `cacheControl`   | string      | no       | `Cache-Control` header value                                     |
+| `customMetadata` | JSON string | no       | `Record<string, string>` of custom metadata                      |
+| `metadata`       | JSON string | no       | Alternative: JSON object with all the above fields               |
 
 **Example**
 
@@ -1536,15 +1561,15 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `data.type` | `"asset"` | yes | Resource type |
-| `data.id` | string | yes | Asset key |
-| `data.attributes.mimeType` | string | no | MIME type (default: `application/octet-stream`) |
-| `data.attributes.filename` | string | no | Original filename |
-| `data.attributes.cacheControl` | string | no | Cache-Control header value |
-| `data.attributes.customMetadata` | object | no | `Record<string, string>` |
-| `data.attributes.content` | string | yes | Base64-encoded file content |
+| Field                            | Type      | Required | Description                                     |
+| -------------------------------- | --------- | -------- | ----------------------------------------------- |
+| `data.type`                      | `"asset"` | yes      | Resource type                                   |
+| `data.id`                        | string    | yes      | Asset key                                       |
+| `data.attributes.mimeType`       | string    | no       | MIME type (default: `application/octet-stream`) |
+| `data.attributes.filename`       | string    | no       | Original filename                               |
+| `data.attributes.cacheControl`   | string    | no       | Cache-Control header value                      |
+| `data.attributes.customMetadata` | object    | no       | `Record<string, string>`                        |
+| `data.attributes.content`        | string    | yes      | Base64-encoded file content                     |
 
 ##### Option C: JSON:API — create folder
 
@@ -1585,13 +1610,14 @@ Content-Type: application/vnd.api+json
 
 #### PATCH /resources/:key
 
-Update metadata for an existing asset (MIME type, cache control, or custom metadata). The request body `data.type` must be `"asset"`.
+Update metadata for an existing asset (MIME type, cache control, or custom metadata). The request
+body `data.type` must be `"asset"`.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Asset key (URL-encoded) |
+| Parameter | Type   | Description             |
+| --------- | ------ | ----------------------- |
+| `key`     | string | Asset key (URL-encoded) |
 
 **Request Headers**
 
@@ -1616,12 +1642,12 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `data.type` | `"asset"` | yes | Resource type |
-| `data.attributes.mimeType` | string | no | Updated MIME type |
-| `data.attributes.cacheControl` | string | no | Updated Cache-Control value |
-| `data.attributes.customMetadata` | object | no | Updated `Record<string, string>` |
+| Field                            | Type      | Required | Description                      |
+| -------------------------------- | --------- | -------- | -------------------------------- |
+| `data.type`                      | `"asset"` | yes      | Resource type                    |
+| `data.attributes.mimeType`       | string    | no       | Updated MIME type                |
+| `data.attributes.cacheControl`   | string    | no       | Updated Cache-Control value      |
+| `data.attributes.customMetadata` | object    | no       | Updated `Record<string, string>` |
 
 **Response** — updated `asset` resource (same shape as `GET /resources/:key`)
 
@@ -1633,14 +1659,14 @@ Delete an asset or folder.
 
 **Path Parameters**
 
-| Parameter | Type | Description |
-| --- | --- | --- |
-| `key` | string | Resource key (URL-encoded) |
+| Parameter | Type   | Description                |
+| --------- | ------ | -------------------------- |
+| `key`     | string | Resource key (URL-encoded) |
 
 **Query Parameters**
 
-| Parameter | Type | Default | Description |
-| --- | --- | --- | --- |
+| Parameter   | Type     | Default   | Description                        |
+| ----------- | -------- | --------- | ---------------------------------- |
 | `recursive` | `"true"` | `"false"` | Recursively delete folder contents |
 
 **Response** — `204 No Content` (empty body)
@@ -1665,10 +1691,10 @@ All three APIs return errors in JSON:API error format.
 
 ### Common Error Codes
 
-| HTTP Status | Code | Description |
-| --- | --- | --- |
-| 400 | `INVALID_DATA` | Request body failed schema validation |
-| 400 | `BAD_REQUEST` | Malformed request or unsupported operation |
-| 400 | `validation_error` | Field-level validation failure (Assets API) |
-| 404 | `NOT_FOUND` | Resource does not exist |
-| 500 | `INTERNAL_ERROR` | Unexpected server error |
+| HTTP Status | Code               | Description                                 |
+| ----------- | ------------------ | ------------------------------------------- |
+| 400         | `INVALID_DATA`     | Request body failed schema validation       |
+| 400         | `BAD_REQUEST`      | Malformed request or unsupported operation  |
+| 400         | `validation_error` | Field-level validation failure (Assets API) |
+| 404         | `NOT_FOUND`        | Resource does not exist                     |
+| 500         | `INTERNAL_ERROR`   | Unexpected server error                     |
