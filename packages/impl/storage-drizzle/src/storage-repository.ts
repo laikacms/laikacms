@@ -3,6 +3,7 @@ import { EntryAlreadyExistsError, InvalidData, NotFoundError } from '@laikacms/c
 import type {
   Atom,
   AtomSummary,
+  Capabilities,
   Folder,
   FolderCreate,
   ListAtomsOptions,
@@ -11,7 +12,7 @@ import type {
   StorageObjectCreate,
   StorageObjectUpdate,
 } from '@laikacms/storage';
-import { pathCombine, StorageRepository } from '@laikacms/storage';
+import { defaultCapabilities, pathCombine, StorageRepository } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 /**
@@ -78,6 +79,10 @@ export class DrizzleStorageRepository extends StorageRepository {
 
   private calculateDepth(key: string): number {
     return key.split('/').length;
+  }
+
+  async *getCapabilities(): AsyncGenerator<LaikaResult<Capabilities>> {
+    yield Result.succeed(defaultCapabilities);
   }
 
   async *removeAtoms(

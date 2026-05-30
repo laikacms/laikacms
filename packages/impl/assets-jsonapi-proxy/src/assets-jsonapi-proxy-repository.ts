@@ -13,7 +13,7 @@ import {
 import type { LaikaError, LaikaResult } from '@laikacms/core';
 import { InternalError, InvalidData } from '@laikacms/core';
 import type { JsonApiCollectionResponse } from '@laikacms/json-api';
-import { type Folder, type FolderCreate } from '@laikacms/storage';
+import { type Capabilities, type Folder, type FolderCreate } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 import {
   parseAsset,
@@ -118,6 +118,24 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     // Return the full JSON response, not just json.data
     // The caller expects { data: T, included?: I[] } structure
     return Result.succeed(json as Data);
+  }
+
+  async *getCapabilities(): AsyncGenerator<LaikaResult<Capabilities>> {
+    try {
+      const headers = await this.getHeaders();
+      const response = await fetch(`${this.baseUrl}/capabilities`, {
+        method: 'GET',
+        headers,
+      });
+      if (!response.ok) {
+        yield Result.fail(new InternalError(`Capabilities request failed: ${response.status}`));
+        return;
+      }
+      const data = await response.json() as { data: Capabilities };
+      yield Result.succeed(data.data);
+    } catch (error) {
+      yield Result.fail(new InternalError(String(error)));
+    }
   }
 
   async *getResource(key: string, options?: GetResourceOptions): AsyncGenerator<LaikaResult<Resource[]>> {

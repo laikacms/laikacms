@@ -16,7 +16,12 @@ import type {
   UnpublishedUpdate,
 } from '@laikacms/documents';
 import { DocumentSchema, DocumentsRepository, pathToSegments } from '@laikacms/documents';
-import { type StorageObjectContent, StorageObjectContentSchema } from '@laikacms/storage';
+import {
+  type Capabilities,
+  defaultCapabilities,
+  type StorageObjectContent,
+  StorageObjectContentSchema,
+} from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 const PUBLISHED_STATUS = 'published';
@@ -113,6 +118,10 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, /*
     private options: DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RKE, RE, RA>,
   ) {
     super();
+  }
+
+  async *getCapabilities(): AsyncGenerator<LaikaResult<Capabilities>> {
+    yield Result.succeed(defaultCapabilities);
   }
 
   async *getDocument(key: string): AsyncGenerator<LaikaResult<Document>> {

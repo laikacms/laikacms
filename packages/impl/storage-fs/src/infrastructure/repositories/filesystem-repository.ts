@@ -3,6 +3,7 @@ import { AsyncGenerator, BadRequestError, EntryAlreadyExistsError, InvalidData }
 import type {
   Atom,
   AtomSummary,
+  Capabilities,
   Folder,
   FolderCreate,
   ListAtomsOptions,
@@ -12,7 +13,7 @@ import type {
   StorageObjectUpdate,
   StorageSerializerRegistry,
 } from '@laikacms/storage';
-import { pathCombine, StorageRepository } from '@laikacms/storage';
+import { defaultCapabilities, pathCombine, StorageRepository } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 import * as minimatch from 'minimatch';
 import { FileSystemDataSource } from '../datasources/filesystem-datasource.js';
@@ -99,6 +100,10 @@ export class FileSystemStorageRepository extends StorageRepository {
         `Failed to deserialize content: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  async *getCapabilities(): AsyncGenerator<LaikaResult<Capabilities>> {
+    yield Result.succeed(defaultCapabilities);
   }
 
   async *removeAtoms(

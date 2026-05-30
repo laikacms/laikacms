@@ -20,8 +20,8 @@ import {
   type UnpublishedCreate,
   type UnpublishedUpdate,
 } from '@laikacms/documents';
-import type { StorageRepository } from '@laikacms/storage';
-import { basename, pathCombine, pathToSegments } from '@laikacms/storage';
+import type { Capabilities, StorageRepository } from '@laikacms/storage';
+import { basename, defaultCapabilities, pathCombine, pathToSegments } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 /**
@@ -118,6 +118,10 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   private extractKeyFromPath(fullPath: string, directory: string): string {
     const segments = pathToSegments(fullPath.substring(directory.length));
     return pathCombine(...segments);
+  }
+
+  async *getCapabilities(): AsyncGenerator<LaikaResult<Capabilities>> {
+    yield Result.succeed(defaultCapabilities);
   }
 
   // ===== DOCUMENTS (PUBLISHED) =====

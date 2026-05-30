@@ -37,6 +37,7 @@ import {
   unpublishedUpdateToJsonApi,
 } from '@laikacms/documents-api';
 import { errorFromResponse } from '@laikacms/json-api';
+import type { Capabilities } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 import { paginationCodec } from './pagination-codec.js';
 
@@ -322,6 +323,24 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       yield Result.succeed(items);
     } catch (error) {
       yield Result.fail(new InternalError((error as Error).message));
+    }
+  }
+
+  async *getCapabilities(): AsyncGenerator<LaikaResult<Capabilities>> {
+    try {
+      const headers = await this.getHeaders();
+      const response = await fetch(`${this.baseUrl}/capabilities`, {
+        method: 'GET',
+        headers,
+      });
+      if (!response.ok) {
+        yield Result.fail(new InternalError(`Capabilities request failed: ${response.status}`));
+        return;
+      }
+      const data = await response.json() as { data: Capabilities };
+      yield Result.succeed(data.data);
+    } catch (error) {
+      yield Result.fail(new InternalError(String(error)));
     }
   }
 
