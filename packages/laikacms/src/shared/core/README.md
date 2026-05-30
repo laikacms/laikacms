@@ -34,3 +34,22 @@ type LaikaResult<T> = Result<T, LaikaError>;
 
 Compatible with Effect's Result type internally, but exposed via Standard Schema for
 interoperability with Zod, Valibot, etc.
+
+## Compat helpers (`@laikacms/core/compat`)
+
+Non-Effect wrappers for consuming `AsyncGenerator<LaikaResult<T>>` streams from repository methods.
+
+```typescript
+import { collectStream, runTask } from '@laikacms/core/compat';
+
+// Await the first success, or throw on failure / empty stream
+const object = await runTask(repository.getObject(key));
+
+// Collect all successes into an array, or throw on first failure
+const objects = await collectStream(repository.listObjects(prefix));
+
+// Optional progress callback
+const result = await runTask(repository.putObject(key, data), {
+  onProgress: r => console.log('progress', r),
+});
+```
