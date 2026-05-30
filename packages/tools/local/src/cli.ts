@@ -274,6 +274,7 @@ const parseJsonOptions = (label: string, raw: string): Record<string, unknown> =
   } catch (e) {
     throw new Error(
       `laika-local migrate: --${label}-options is not valid JSON: ${e instanceof Error ? e.message : String(e)}`,
+      { cause: e },
     );
   }
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {

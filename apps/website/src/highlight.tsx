@@ -31,6 +31,6 @@ export function hl(code: string): ReactNode[] {
     );
     last = HL_RE.lastIndex;
   }
-  if (last < code.length) out.push(<span key={i++}>{code.slice(last)}</span>);
+  if (last < code.length) out.push(<span key={i}>{code.slice(last)}</span>);
   return out;
 }

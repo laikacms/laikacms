@@ -1,12 +1,6 @@
 import { useState } from 'react';
 
-import {
-  LAIKA_ASSETS,
-  LAIKA_GROUPS,
-  LAIKA_SERIALIZERS,
-  REPO,
-  type BackendItem,
-} from '../data';
+import { type BackendItem, LAIKA_ASSETS, LAIKA_GROUPS, LAIKA_SERIALIZERS, REPO } from '../data';
 import { BackendIcon } from './icons';
 
 function Tile({ it }: { it: BackendItem }) {
@@ -22,10 +16,8 @@ function Tile({ it }: { it: BackendItem }) {
         {it.name}
       </span>
       <span
-        className={
-          'font-mono text-[11px] transition-opacity duration-150 ' +
-          (hover ? 'opacity-100 text-indigo' : 'opacity-55 text-ink-3')
-        }
+        className={'font-mono text-[11px] transition-opacity duration-150 '
+          + (hover ? 'opacity-100 text-indigo' : 'opacity-55 text-ink-3')}
       >
         {it.sub}
       </span>
@@ -39,10 +31,10 @@ function Group({
   note,
   items,
 }: {
-  label: string;
-  via?: string;
-  note: string;
-  items: BackendItem[];
+  label: string,
+  via?: string,
+  note: string,
+  items: BackendItem[],
 }) {
   return (
     <div>
@@ -58,9 +50,7 @@ function Group({
         <p className="mt-2 text-ink-2 text-[14.5px] max-w-[60ch]">{note}</p>
       </div>
       <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-3">
-        {items.map((it) => (
-          <Tile key={it.name} it={it} />
-        ))}
+        {items.map(it => <Tile key={it.name} it={it} />)}
       </div>
     </div>
   );
@@ -69,9 +59,7 @@ function Group({
 export function Backends() {
   return (
     <div className="mt-12 flex flex-col gap-11">
-      {LAIKA_GROUPS.map((g) => (
-        <Group key={g.id} label={g.label} via={g.via} note={g.note} items={g.items} />
-      ))}
+      {LAIKA_GROUPS.map(g => <Group key={g.id} label={g.label} via={g.via} note={g.note} items={g.items} />)}
 
       <Group
         label="Assets"

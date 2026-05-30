@@ -1,14 +1,6 @@
 import type { ReactNode } from 'react';
 
-import {
-  IconBook,
-  IconCube,
-  IconGlobe,
-  IconPlug,
-  IconScales,
-  IconSpark,
-  IconSwap,
-} from './icons';
+import { IconBook, IconCube, IconGlobe, IconPlug, IconScales, IconSpark, IconSwap } from './icons';
 
 interface Pillar {
   icon: ReactNode;
@@ -67,24 +59,21 @@ export function Features() {
           An open-source content layer you actually own.
         </h2>
         <p className="mt-[22px] text-[clamp(17px,1.5vw,20px)] text-ink-2 max-w-[56ch] leading-[1.55]">
-          Laika CMS is modular, runtime-agnostic content management. The defining idea: the storage
-          backend should be a swappable detail, not an architecture you marry — so it ships with 40+
-          of them, and all of it is yours, under the MIT license.
+          Laika CMS is modular, runtime-agnostic content management. The defining idea: the storage backend should be a
+          swappable detail, not an architecture you marry — so it ships with 40+ of them, and all of it is yours, under
+          the MIT license.
         </p>
 
         <div className="mt-[52px] grid grid-cols-3 max-[920px]:grid-cols-2 max-[620px]:grid-cols-1 gap-[22px]">
-          {PILLARS.map((p) => {
-            const base =
-              'relative px-[26px] py-[28px] border rounded-[14px] bg-surface border-hairline';
+          {PILLARS.map(p => {
+            const base = 'relative px-[26px] py-[28px] border rounded-[14px] bg-surface border-hairline';
             const lead =
               'relative px-[26px] py-[28px] border rounded-[14px] bg-indigo-tint border-[color-mix(in_oklab,var(--color-indigo),white_60%)]';
             return (
               <div className={p.lead ? lead : base} key={p.t}>
                 <span
-                  className={
-                    'inline-grid place-items-center w-11 h-11 rounded-[11px] text-indigo border border-indigo-tint-2 ' +
-                    (p.lead ? 'bg-white' : 'bg-surface')
-                  }
+                  className={'inline-grid place-items-center w-11 h-11 rounded-[11px] text-indigo border border-indigo-tint-2 '
+                    + (p.lead ? 'bg-white' : 'bg-surface')}
                 >
                   {p.icon}
                 </span>

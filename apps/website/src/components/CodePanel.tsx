@@ -22,7 +22,7 @@ export function CodePanel() {
   const b = LAIKA_SWAP[active]!;
 
   useEffect(() => {
-    setPulse((p) => p + 1);
+    setPulse(p => p + 1);
   }, [active]);
 
   const code = `import { buildJsonApi } from "laikacms/storage-api";
@@ -97,7 +97,7 @@ export default { fetch: api.fetch };`;
 }
 
 /** Static (non-interactive) highlighted code block. */
-export function CodeBlock({ code, file }: { code: string; file: string }) {
+export function CodeBlock({ code, file }: { code: string, file: string }) {
   const [copied, copy] = useCopy();
   const lines = code.split('\n');
   return (

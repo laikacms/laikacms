@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import type { BackendIconSpec, GenericSvgKey } from '../data';
 
@@ -77,9 +77,7 @@ export const IconCopy = ({ size = 16 }: { size?: number }) => (
   />
 );
 
-export const IconCheck = ({ size = 16 }: { size?: number }) => (
-  <Icon size={size} d={<path d="m5 13 4 4L19 7" />} />
-);
+export const IconCheck = ({ size = 16 }: { size?: number }) => <Icon size={size} d={<path d="m5 13 4 4L19 7" />} />;
 
 export const IconBolt = ({ size = 16 }: { size?: number }) => (
   <Icon size={size} d={<path d="M13 2 4 14h7l-1 8 9-12h-7l1-8Z" />} />
@@ -225,7 +223,7 @@ const GENERIC: Record<GenericSvgKey, ReactNode> = {
 
 const BICON = 'inline-grid place-items-center w-8 h-8';
 
-export function BackendIcon({ icon, size = 28 }: { icon: BackendIconSpec; size?: number }) {
+export function BackendIcon({ icon, size = 28 }: { icon: BackendIconSpec, size?: number }) {
   const [failed, setFailed] = useState(false);
   if ('svg' in icon) {
     return <span className={`${BICON} text-indigo`}>{GENERIC[icon.svg]}</span>;

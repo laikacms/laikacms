@@ -30,6 +30,7 @@ export default tseslint.config(
       '**/.turbo/**',
       '**/cdk.out/**',
       '**/.wrangler/**',
+      '**/.vendor/**',
       '**/tmp/**',
       '**/coverage/**',
       '**/build/**',

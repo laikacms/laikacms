@@ -34,8 +34,8 @@ export function Docs() {
           Install the package, hand back a fetch.
         </h2>
         <p className="mt-[22px] text-[clamp(17px,1.5vw,20px)] text-ink-2 max-w-[56ch] leading-[1.55]">
-          One package, subpath exports for everything else. Install it, pick a storage repository,
-          and you have a content API you can deploy anywhere.
+          One package, subpath exports for everything else. Install it, pick a storage repository, and you have a
+          content API you can deploy anywhere.
         </p>
 
         <div className="mt-11 grid grid-cols-[1.15fr_0.85fr] max-[880px]:grid-cols-1 gap-10 max-[880px]:gap-[30px] items-start">
@@ -62,10 +62,8 @@ export function Docs() {
             {DOC_LINKS.map(([t, d, href], i, all) => (
               <a
                 key={t}
-                className={
-                  'flex flex-col gap-[3px] px-[22px] py-[18px] relative transition-[background] duration-150 hover:bg-surface-2 group ' +
-                  (i < all.length - 1 ? 'border-b border-hairline' : '')
-                }
+                className={'flex flex-col gap-[3px] px-[22px] py-[18px] relative transition-[background] duration-150 hover:bg-surface-2 group '
+                  + (i < all.length - 1 ? 'border-b border-hairline' : '')}
                 href={DOCS + href}
                 target="_blank"
                 rel="noreferrer"

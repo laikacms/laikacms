@@ -39,9 +39,9 @@ export function Community() {
           40+ backends, two contracts, one content API.
         </h2>
         <p className="mt-[22px] text-[clamp(17px,1.5vw,20px)] text-ink-2 max-w-[56ch] leading-[1.55]">
-          The storage layer is where Laika is most extensible. Every tile below is a real
-          StorageRepository that ships today — buckets, SQL, Git, document stores, search indexes,
-          Notion, a graph database. Adapters are small; an author can add the next one.
+          The storage layer is where Laika is most extensible. Every tile below is a real StorageRepository that ships
+          today — buckets, SQL, Git, document stores, search indexes, Notion, a graph database. Adapters are small; an
+          author can add the next one.
         </p>
 
         <Backends />
@@ -51,7 +51,7 @@ export function Community() {
             Get involved
           </h3>
           <div className="mt-[22px] grid grid-cols-4 max-[880px]:grid-cols-2 gap-4">
-            {CARDS.map((c) => (
+            {CARDS.map(c => (
               <a
                 key={c.t}
                 className="flex gap-3.5 items-start p-[22px] border border-hairline rounded-[14px] bg-surface transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-[3px] hover:border-hairline-2 hover:shadow-[0_14px_30px_-18px_rgba(31,38,95,0.4)]"

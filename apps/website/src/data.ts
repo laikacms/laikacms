@@ -42,7 +42,8 @@ export const LAIKA_GROUPS: BackendGroup[] = [
     id: 'sql',
     label: 'SQL databases',
     via: 'one adapter · laikacms/storage-drizzle',
-    note: 'A single Drizzle-backed repository reaches every SQL dialect Drizzle speaks — eight engines, one line of config.',
+    note:
+      'A single Drizzle-backed repository reaches every SQL dialect Drizzle speaks — eight engines, one line of config.',
     items: [
       { name: 'PostgreSQL', sub: 'pg · postgres.js', icon: { si: 'postgresql' } },
       { name: 'MySQL', sub: 'mysql2', icon: { si: 'mysql' } },
@@ -141,8 +142,9 @@ export const LAIKA_GROUPS: BackendGroup[] = [
   },
 ];
 
-export const LAIKA_ASSETS: { note: string; items: BackendItem[] } = {
-  note: 'Two contracts, same shape. Pair a content store with an asset store — bytes, transforms and URLs — on the backend you already use.',
+export const LAIKA_ASSETS: { note: string, items: BackendItem[] } = {
+  note:
+    'Two contracts, same shape. Pair a content store with an asset store — bytes, transforms and URLs — on the backend you already use.',
   items: [
     { name: 'Cloudinary', sub: '@laikacms/cloudinary', icon: { si: 'cloudinary' } },
     { name: 'Cloudflare Images', sub: '@laikacms/cloudflare', icon: { si: 'cloudflare' } },

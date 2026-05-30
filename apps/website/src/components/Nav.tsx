@@ -6,7 +6,7 @@ import { IconGitHub, Logo } from './icons';
 
 type TabId = '/' | '/docs' | '/community' | '/platform';
 
-const TABS: Array<{ id: TabId; label: string; soon?: boolean }> = [
+const TABS: Array<{ id: TabId, label: string, soon?: boolean }> = [
   { id: '/', label: 'Features' },
   { id: '/docs', label: 'Docs' },
   { id: '/community', label: 'Community' },
@@ -16,7 +16,7 @@ const TABS: Array<{ id: TabId; label: string; soon?: boolean }> = [
 export function Nav() {
   const [scrolled, setScrolled] = useState(false);
   const navigate = useNavigate();
-  const path = useRouterState({ select: (s) => s.location.pathname });
+  const path = useRouterState({ select: s => s.location.pathname });
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -26,12 +26,10 @@ export function Nav() {
 
   return (
     <header
-      className={
-        'sticky top-0 z-50 transition-[background,border-color,backdrop-filter] duration-[250ms] border-b ' +
-        (scrolled
+      className={'sticky top-0 z-50 transition-[background,border-color,backdrop-filter] duration-[250ms] border-b '
+        + (scrolled
           ? 'bg-[color-mix(in_oklab,var(--color-bg),transparent_18%)] backdrop-saturate-[1.4] backdrop-blur-[14px] border-hairline'
-          : 'border-transparent')
-      }
+          : 'border-transparent')}
     >
       <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px] h-[70px] flex items-center justify-between">
         <Link
@@ -50,12 +48,10 @@ export function Nav() {
                 key={id}
                 to={id}
                 role="tab"
-                className={
-                  'font-body text-[15px] font-[450] cursor-pointer px-3.5 py-2 rounded-[9px] inline-flex items-center gap-[7px] whitespace-nowrap transition-[color,background] duration-150 ' +
-                  (active
+                className={'font-body text-[15px] font-[450] cursor-pointer px-3.5 py-2 rounded-[9px] inline-flex items-center gap-[7px] whitespace-nowrap transition-[color,background] duration-150 '
+                  + (active
                     ? 'text-indigo bg-indigo-tint'
-                    : 'text-ink-2 hover:text-ink hover:bg-surface-2')
-                }
+                    : 'text-ink-2 hover:text-ink hover:bg-surface-2')}
               >
                 {label}
                 {soon && (

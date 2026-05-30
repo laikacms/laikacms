@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
 
-import { LAIKA_GROUPS, LAIKA_RUNTIMES, LAIKA_SERIALIZERS, REPO, type BackendItem } from '../data';
+import { type BackendItem, LAIKA_GROUPS, LAIKA_RUNTIMES, LAIKA_SERIALIZERS, REPO } from '../data';
 import { CodePanel } from './CodePanel';
 import { BackendIcon, IconArrow, IconGitHub, IconGlobe } from './icons';
 
@@ -8,7 +8,7 @@ const HERO_LEAD =
   'Laika CMS is modular, runtime-agnostic content management. Define your content once and back it with the filesystem, object storage, a Git repo, any SQL database, Notion, a graph store — 40+ backends in all — served as a JSON:API that runs anywhere fetch runs.';
 
 function allBackends(): BackendItem[] {
-  return LAIKA_GROUPS.flatMap((g) => g.items);
+  return LAIKA_GROUPS.flatMap(g => g.items);
 }
 
 const TAG_DOT_SHADOW = 'shadow-[0_0_0_3px_color-mix(in_oklab,oklch(0.7_0.17_150),transparent_78%)]';
@@ -43,7 +43,7 @@ const RuntimeRow = () => (
       <IconGlobe size={15} /> runs in
     </span>
     <div className="flex gap-[9px] flex-wrap">
-      {LAIKA_RUNTIMES.map((r) => (
+      {LAIKA_RUNTIMES.map(r => (
         <span
           key={r}
           className="text-[13.5px] text-ink-2 px-3 py-1.5 border border-hairline-2 rounded-lg bg-surface"

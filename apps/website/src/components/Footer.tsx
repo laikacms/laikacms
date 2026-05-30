@@ -37,8 +37,7 @@ export function Footer() {
         <div>
           <Logo height={28} />
           <p className="mt-[18px] text-ink-2 text-[14.5px] max-w-[36ch] leading-[1.6]">
-            Modular, runtime-agnostic, open-source content management. The basis for modern content
-            management.
+            Modular, runtime-agnostic, open-source content management. The basis for modern content management.
           </p>
           <span className="block mt-5 text-xs text-ink-3 font-mono">
             MIT · © 2026 Laika CMS contributors

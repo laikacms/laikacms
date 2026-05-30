@@ -21,10 +21,10 @@ export function Platform() {
             without standing up your own.
           </h2>
           <p className="mt-[22px] text-[clamp(16px,1.5vw,19px)] text-ink-2 leading-[1.6] max-w-[60ch]">
-            Today you can self-install <span className="font-mono">laika-gateway</span> — a
-            multi-tenant Cloudflare Worker that points Decap CMS at your own repository. The managed
-            Platform will take that further: one place to provision gateways, manage tenants, and
-            connect backends. Same open core underneath, nothing locked away.
+            Today you can self-install <span className="font-mono">laika-gateway</span>{' '}
+            — a multi-tenant Cloudflare Worker that points Decap CMS at your own repository. The managed Platform will
+            take that further: one place to provision gateways, manage tenants, and connect backends. Same open core
+            underneath, nothing locked away.
           </p>
           <div className="mt-[34px] flex gap-3.5 flex-wrap justify-center">
             <a className={BTN_PRIMARY} href={REPO} target="_blank" rel="noreferrer">
