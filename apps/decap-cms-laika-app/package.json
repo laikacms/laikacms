@@ -10,7 +10,7 @@
     "build": "pnpm run setup:vendor && vite build",
     "preview": "vite preview",
     "deploy": "pnpm run build && wrangler deploy",
-    "typecheck": "pnpm run setup:vendor && tsc --noEmit",
+    "typecheck": "pnpm run build && wrangler types && tsc --noEmit",
     "types": "wrangler types && tsc --noEmit",
     "test": "pnpm run setup:vendor && vitest run"
   },
