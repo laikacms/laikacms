@@ -173,6 +173,11 @@
       "import": "./dist/shared/core/index.js",
       "default": "./dist/shared/core/index.js"
     },
+    "./compat": {
+      "types": "./dist/shared/core/compat.d.ts",
+      "import": "./dist/shared/core/compat.js",
+      "default": "./dist/shared/core/compat.js"
+    },
     "./crypto": {
       "types": "./dist/shared/crypto/index.d.ts",
       "import": "./dist/shared/crypto/index.js",
