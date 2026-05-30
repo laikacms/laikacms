@@ -1,7 +1,7 @@
 {
-  "name": "@laikacms/decap",
+  "name": "@laikacms/decap-integrations",
   "version": "1.0.0",
-  "description": "Decap CMS integrations for Laika CMS: backend, OAuth2, widgets. AI chat lives in @laikacms/decap-ai.",
+  "description": "Decap CMS integrations for Laika CMS: backend, OAuth2, widgets, server adapters. AI chat lives in @laikacms/decap-ai. The Decap CMS shell itself (App, DecapCmsProvider, widgets) lives in the upstream-named `@laikacms/decap` fork.",
   "keywords": [
     "decap-cms",
     "headless-cms",
@@ -33,6 +33,11 @@
       "types": "./dist/decap-api/index.d.ts",
       "import": "./dist/decap-api/index.js",
       "default": "./dist/decap-api/index.js"
+    },
+    "./embedded": {
+      "types": "./dist/embedded/index.d.ts",
+      "import": "./dist/embedded/index.js",
+      "default": "./dist/embedded/index.js"
     },
     "./decap-config-types": {
       "types": "./dist/decap-config-types/index.d.ts",
@@ -100,6 +105,7 @@
     "jsonwebtoken": "^9.0.2",
     "jwt-decode": "^4.0.0",
     "uuid": "^13.0.0",
+    "yaml": "^2.8.0",
     "zod": "^3.25.76"
   },
   "peerDependencies": {
