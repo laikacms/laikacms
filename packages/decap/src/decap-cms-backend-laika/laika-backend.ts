@@ -1,6 +1,9 @@
 import { AccessTokenError, APIError, unsentRequest } from 'decap-cms-lib-util';
 
+import React from 'react';
+
 import PKCEAuthenticationPage from './AuthenticationPage';
+import DevAuthenticationPage from './DevAuthenticationPage';
 
 import type {
   AssetProxy,
@@ -310,6 +313,17 @@ export default function createLaikaBackend(
     unpublishedEntryCache = new DedupeCache<UnpublishedEntry>();
     unpublishedEntriesListCache = new DedupeCache<string[]>();
 
+    /**
+     * Optional pre-shared token for local-dev / same-origin embedded setups.
+     * When set (via `config.backend.dev_token`), the PKCE OAuth dance is
+     * skipped: `authComponent` auto-logs in with this token, `restoreUser`
+     * ignores `sessionStorage` and re-authenticates with it directly.
+     *
+     * The embedded server must be configured to accept the same token —
+     * see `createEmbeddedLaika({ auth: { mode: 'dev', devToken } })`.
+     */
+    devToken?: string;
+
     constructor(config: Config, _options: Record<string, unknown> = {}) {
       this.config = config;
       this.mediaFolder = config.media_folder;
@@ -320,6 +334,7 @@ export default function createLaikaBackend(
 
       this.baseUrl = Url.normalize(config.backend.base_url);
       this.apiUrl = Url.combine(this.baseUrl, config.backend.api_root);
+      this.devToken = (config.backend as { dev_token?: unknown }).dev_token as string | undefined;
     }
 
     isGitBackend() {
@@ -386,12 +401,29 @@ export default function createLaikaBackend(
     }
 
     authComponent(): unknown {
+      if (this.devToken) {
+        const devToken = this.devToken;
+        // Closure-captured dev token so the auth component doesn't need
+        // its own Config plumbing — Decap renders `authComponent()` with
+        // its own prop set.
+        return function DevAuthPageWithToken(props: Record<string, unknown>) {
+          return React.createElement(DevAuthenticationPage, {
+            ...(props as object),
+            devToken,
+          } as never);
+        };
+      }
       return PKCEAuthenticationPage;
     }
 
     private static SESSION_TOKEN_KEY = 'laika_access_token';
 
     restoreUser() {
+      // Dev mode: always use the dev token — ignore whatever happens to be
+      // in sessionStorage from a previous (real) login.
+      if (this.devToken) {
+        return this.authenticate({ token: this.devToken } as Credentials);
+      }
       // Try to restore user from session storage
       const storedToken = typeof sessionStorage !== 'undefined'
         ? sessionStorage.getItem(LaikaBackend.SESSION_TOKEN_KEY)

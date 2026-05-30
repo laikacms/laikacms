@@ -1,4 +1,4 @@
-import { decapApi } from '@laikacms/decap/decap-api';
+import { decapApi } from '@laikacms/decap-integrations/decap-api';
 import { Hono } from 'hono';
 import { AuthenticationError } from 'laikacms/core';
 

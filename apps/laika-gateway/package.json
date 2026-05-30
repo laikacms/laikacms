@@ -11,7 +11,7 @@
     "typecheck": "wrangler types && tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@laikacms/decap": "workspace:*",
+    "@laikacms/decap-integrations": "workspace:*",
     "@laikacms/github": "workspace:*",
     "@octokit/auth-app": "catalog:octokit",
     "@octokit/rest": "catalog:octokit",

@@ -434,7 +434,7 @@ importers:
 
   apps/laika-gateway:
     dependencies:
-      '@laikacms/decap':
+      '@laikacms/decap-integrations':
         specifier: workspace:*
         version: link:../../packages/decap
       '@laikacms/github':
@@ -568,6 +568,9 @@ importers:
       uuid:
         specifier: ^13.0.0
         version: 13.0.2
+      yaml:
+        specifier: ^2.8.0
+        version: 2.8.4
       zod:
         specifier: ^3.25.76
         version: 3.25.76
