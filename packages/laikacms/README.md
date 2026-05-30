@@ -97,6 +97,39 @@ export default {
 Full docs, architecture notes, and deployment guides live in the
 [laikacms repository](https://github.com/laikacms/laikacms).
 
+## Compat helpers — Promise-friendly entry points
+
+`laikacms/core` exports two Promise-friendly wrappers for non-Effect consumers:
+
+- **`runTask(task, options?)`** — runs a `LaikaTask` and resolves with its value.
+- **`collectStream(stream, options?)`** — drains a `LaikaStream` and resolves with
+  `{ items, done }`.
+
+Both accept an optional `onProgress` callback that is called for every `LaikaMetadata` event — both
+`Progress` and `RecoverableError` — as the task/stream runs.
+
+```ts
+import { collectStream, runTask } from 'laikacms/core';
+
+// Task — receive progress events without importing Effect
+const result = await runTask(myTask, {
+  onProgress(meta) {
+    if (meta._tag === 'Progress') console.log(meta.progress.message);
+    if (meta._tag === 'RecoverableError') console.warn(meta.error);
+  },
+});
+
+// Stream — metadata fires live; data is still collected into items
+const { items, done } = await collectStream(myStream, {
+  onProgress(meta) {
+    if (meta._tag === 'Progress') updateProgressBar(meta.progress);
+  },
+});
+```
+
+Omitting `options` (or `onProgress`) falls through to the fast-path `runPromise` /
+`runPromiseCollect` helpers, so there is no overhead when the callback is not needed.
+
 ## License
 
 MIT
