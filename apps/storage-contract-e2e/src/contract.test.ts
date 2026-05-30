@@ -3,5 +3,5 @@ import { InMemoryStorageRepository } from './in-memory-storage-repository.js';
 
 runStorageRepositoryContract({
   name: 'InMemoryStorageRepository',
-  makeRepo: () => new InMemoryStorageRepository(),
+  makeRepo: async () => new InMemoryStorageRepository(),
 });
