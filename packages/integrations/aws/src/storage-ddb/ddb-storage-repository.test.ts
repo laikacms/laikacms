@@ -2,9 +2,13 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { mockClient } from 'aws-sdk-client-mock';
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { DdbStorageRepository } from './ddb-storage-repository.js';
+import { ddbContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(ddbContractCase);
 
 // ---------------------------------------------------------------------------
 // Wire the official aws-sdk-client-mock to an in-memory Map<pk, Map<sk, row>>
