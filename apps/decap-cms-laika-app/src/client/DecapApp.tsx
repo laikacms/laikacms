@@ -21,19 +21,18 @@
  * relation, …) add the corresponding `decap-cms-widget-*` import and one
  * more `CMS.registerWidget(...)` call.
  */
-// `App` and `DecapCmsProvider` are named exports of `decap-cms-core` in
-// the v4.beta source we link against via `pnpm-local-override.json`. The
-// published 3.x `.d.ts` doesn't declare them, so we type-suppress the
-// import shape and reassert it via `unknown` casts where needed.
+// All of the upstream "decap-cms-*" packages are consumed via the
+// single-package fork `@laikacms/decap` (v4.beta branch of
+// laikacms/decap-cms), which exposes them as subpath exports. `App` and
+// `DecapCmsProvider` are named exports of `@laikacms/decap/core`.
 
-// @ts-expect-error -- v4.beta named exports not in published 3.x types
-import { GitHubBackend } from 'decap-cms-backend-github';
-import DecapCmsCore, { App as DecapApp, DecapCmsProvider } from 'decap-cms-core';
-import * as locales from 'decap-cms-locales';
-import DecapCmsWidgetDatetime from 'decap-cms-widget-datetime';
+import { GitHubBackend } from '@laikacms/decap/backend-github';
+import DecapCmsCore, { App as DecapApp, DecapCmsProvider } from '@laikacms/decap/core';
+import * as locales from '@laikacms/decap/locales';
+import DecapCmsWidgetDatetime from '@laikacms/decap/widget-datetime';
+import DecapCmsWidgetString from '@laikacms/decap/widget-string';
 import { Widget as LexicalWidget } from 'decap-cms-widget-lexicaleditor';
 import { Widget as PortabletextEditorWidget } from 'decap-cms-widget-portabletext-editor';
-import DecapCmsWidgetString from 'decap-cms-widget-string';
 import type { ReactNode } from 'react';
 
 import { cmsConfig } from './config';
@@ -73,7 +72,7 @@ function registerOnce(): void {
 export function DecapAdmin(): ReactNode {
   registerOnce();
   return (
-    <DecapCmsProvider config={cmsConfig as Parameters<typeof DecapCmsProvider>[0]['config']}>
+    <DecapCmsProvider config={cmsConfig}>
       <DecapApp />
     </DecapCmsProvider>
   );

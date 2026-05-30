@@ -5,23 +5,19 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "setup:vendor": "node ./scripts/setup-vendor.mjs",
+    "dev": "pnpm run setup:vendor && vite",
+    "build": "pnpm run setup:vendor && vite build",
     "preview": "vite preview",
     "deploy": "pnpm run build && wrangler deploy",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "pnpm run setup:vendor && tsc --noEmit",
     "types": "wrangler types && tsc --noEmit",
-    "test": "vitest run"
+    "test": "pnpm run setup:vendor && vitest run"
   },
   "dependencies": {
     "@laikacloud/portabletext-core": "workspace:*",
     "decap-cms-widget-lexicaleditor": "workspace:*",
     "decap-cms-widget-portabletext-editor": "workspace:*",
-    "decap-cms-core": "^3.11.0",
-    "decap-cms-backend-github": "^3.6.0",
-    "decap-cms-widget-string": "^3.2.0",
-    "decap-cms-widget-datetime": "^3.4.1",
-    "decap-cms-locales": "^3.5.1",
     "hono": "catalog:server",
     "react": "catalog:react",
     "react-dom": "catalog:react",
