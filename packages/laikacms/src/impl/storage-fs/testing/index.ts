@@ -11,13 +11,13 @@ import type { StorageFormat, StorageObjectContent, StorageSerializer } from 'lai
 import type { StorageContractCase } from '../../../domain/storage/testing/contract.js';
 import { FileSystemStorageRepository } from '../infrastructure/repositories/filesystem-repository.js';
 
-const rawSerializer: StorageSerializer<StorageFormat> = {
-  format: 'raw' as StorageFormat,
+const jsonSerializer: StorageSerializer<StorageFormat> = {
+  format: 'json' as StorageFormat,
   async serializeDocumentFileContents(content: StorageObjectContent): Promise<string> {
-    return '' + (content['body'] ?? '');
+    return JSON.stringify(content);
   },
   async deserializeDocumentFileContents(raw: string): Promise<StorageObjectContent> {
-    return { body: raw };
+    return JSON.parse(raw) as StorageObjectContent;
   },
 };
 
@@ -27,8 +27,8 @@ export const storagefsContractCase: StorageContractCase = {
     const tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'laika-fs-contract-'));
     return new FileSystemStorageRepository(
       tmpDir,
-      { raw: rawSerializer },
-      'raw',
+      { json: jsonSerializer },
+      'json',
     );
   },
 };
