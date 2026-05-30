@@ -1,5 +1,5 @@
 import type { LaikaResult } from '@laikacms/core';
-import type { Key, Pagination } from '@laikacms/storage';
+import type { Capabilities, Key, Pagination } from '@laikacms/storage';
 import type {
   Document,
   DocumentCreate,
@@ -31,6 +31,9 @@ export type ListRecordSummaries = ListRecordsOptions;
 type ResultStream<T> = AsyncGenerator<LaikaResult<T>>;
 
 export abstract class DocumentsRepository {
+  // Capabilities
+  abstract getCapabilities(): ResultStream<Capabilities>;
+
   // Records (all states)
   abstract listRecords(options: ListRecordsOptions): ResultStream<readonly Record[]>;
   abstract listRecordSummaries(options: ListRecordSummaries): ResultStream<readonly RecordSummary[]>;

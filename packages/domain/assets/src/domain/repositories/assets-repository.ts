@@ -1,4 +1,4 @@
-import type { Folder, FolderCreate, Key, Pagination } from '@laikacms/storage';
+import type { Capabilities, Folder, FolderCreate, Key, Pagination } from '@laikacms/storage';
 
 import type { LaikaResult } from '@laikacms/core';
 import type {
@@ -92,6 +92,12 @@ type ResultStream<T> = AsyncGenerator<LaikaResult<T>>;
  * 6. **Resource union type**: Resource is Asset | Folder.
  */
 export abstract class AssetsRepository {
+  // ============================================
+  // Capabilities
+  // ============================================
+
+  abstract getCapabilities(): ResultStream<Capabilities>;
+
   // ============================================
   // Resource Operations (unified endpoint)
   // ============================================

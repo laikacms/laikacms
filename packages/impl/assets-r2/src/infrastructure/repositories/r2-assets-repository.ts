@@ -14,7 +14,8 @@ import { AssetsRepository } from '@laikacms/assets';
 import type { LaikaError, LaikaResult } from '@laikacms/core';
 import { BadRequestError, InternalError, NotFoundError } from '@laikacms/core';
 import type { Sanitizer } from '@laikacms/sanitizer';
-import type { Folder, FolderCreate } from '@laikacms/storage';
+import type { Capabilities, Folder, FolderCreate } from '@laikacms/storage';
+import { defaultCapabilities } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 import { R2AssetsDataSource } from '../datasources/r2-assets-datasource.js';
 
@@ -70,6 +71,10 @@ export class R2AssetsRepository extends AssetsRepository {
     const noSanitizer = 'dangerouslyAllowAllFiles' in options && options.dangerouslyAllowAllFiles === true;
     const sanitizer = noSanitizer ? undefined : options.sanitizer as Sanitizer;
     this.sanitizer = 'sanitizer' in options && !noSanitizer ? sanitizer : undefined;
+  }
+
+  async *getCapabilities(): AsyncGenerator<LaikaResult<Capabilities>> {
+    yield Result.succeed(defaultCapabilities);
   }
 
   // ============================================

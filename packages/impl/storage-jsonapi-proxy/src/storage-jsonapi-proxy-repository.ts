@@ -1,8 +1,9 @@
 import type { LaikaError, LaikaResult } from '@laikacms/core';
-import { InvalidData } from '@laikacms/core';
+import { InternalError, InvalidData } from '@laikacms/core';
 import {
   type Atom,
   type AtomSummary,
+  type Capabilities,
   type Folder,
   type FolderCreate,
   type ListAtomsOptions,
@@ -109,6 +110,24 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
     }
 
     return Result.succeed(json.data as T);
+  }
+
+  async *getCapabilities(): AsyncGenerator<LaikaResult<Capabilities>> {
+    try {
+      const headers = await this.getHeaders();
+      const response = await fetch(`${this.baseUrl}/capabilities`, {
+        method: 'GET',
+        headers,
+      });
+      if (!response.ok) {
+        yield Result.fail(new InternalError(`Capabilities request failed: ${response.status}`));
+        return;
+      }
+      const data = await response.json() as { data: Capabilities };
+      yield Result.succeed(data.data);
+    } catch (error) {
+      yield Result.fail(new InternalError(String(error)));
+    }
   }
 
   async *getObject(key: string): AsyncGenerator<LaikaResult<StorageObject>> {

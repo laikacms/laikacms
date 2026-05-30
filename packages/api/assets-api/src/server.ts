@@ -174,6 +174,28 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         variations: includeHints.variations,
       };
 
+      // Route: GET /capabilities
+      if (path === `${basePath}/capabilities` && method === 'GET') {
+        for await (const result of repository.getCapabilities()) {
+          if (Result.isSuccess(result)) {
+            return new Response(JSON.stringify({ data: result.success }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/vnd.api+json' },
+            });
+          }
+          return new Response(
+            JSON.stringify({
+              errors: [{ status: '500', title: result.failure.code, detail: result.failure.message }],
+            }),
+            { status: 500, headers: { 'Content-Type': 'application/vnd.api+json' } },
+          );
+        }
+        return new Response(
+          JSON.stringify({ errors: [{ status: '500', title: 'InternalError', detail: 'No result' }] }),
+          { status: 500, headers: { 'Content-Type': 'application/vnd.api+json' } },
+        );
+      }
+
       // Route: GET /resources
       // List all resources in a folder
       if (path === `${basePath}/resources` && method === 'GET') {

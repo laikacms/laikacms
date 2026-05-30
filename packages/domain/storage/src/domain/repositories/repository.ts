@@ -3,6 +3,7 @@ import type { LaikaResult } from '@laikacms/core';
 import type {
   Atom,
   AtomSummary,
+  Capabilities,
   Folder,
   FolderCreate,
   Pagination,
@@ -20,6 +21,9 @@ export interface ListAtomsOptions {
 type ResultStream<T> = AsyncGenerator<LaikaResult<T>>;
 
 export abstract class StorageRepository {
+  // Capabilities
+  abstract getCapabilities(): ResultStream<Capabilities>;
+
   // Storage Objects (formerly Files)
   abstract getObject(key: Key): ResultStream<StorageObject>;
   abstract updateObject(update: StorageObjectUpdate): ResultStream<StorageObject>;

@@ -383,6 +383,26 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         return json({ data: transformedResults });
       };
 
+      // ===== CAPABILITIES =====
+      if (resource === 'capabilities' && request.method === 'GET') {
+        for await (const result of repo.getCapabilities()) {
+          if (Result.isSuccess(result)) {
+            return new Response(JSON.stringify({ data: result.success }), {
+              status: 200,
+              headers: { 'Content-Type': 'application/vnd.api+json' },
+            });
+          }
+          return new Response(
+            JSON.stringify({ errors: [{ status: '500', title: result.failure.code, detail: result.failure.message }] }),
+            { status: 500, headers: { 'Content-Type': 'application/vnd.api+json' } },
+          );
+        }
+        return new Response(
+          JSON.stringify({ errors: [{ status: '500', title: 'InternalError', detail: 'No result' }] }),
+          { status: 500, headers: { 'Content-Type': 'application/vnd.api+json' } },
+        );
+      }
+
       // ===== RECORDS =====
       if (resource === 'records' && request.method === 'GET') {
         return listFullRecords();
