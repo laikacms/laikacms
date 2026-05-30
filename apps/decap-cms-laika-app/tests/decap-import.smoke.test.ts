@@ -4,67 +4,54 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 /**
- * LCT-179: smoke test that proves the vendored `decap-cms` fork's `build:esm`
- * postinstall step actually materialised a consumable ESM artefact on CI.
+ * LCT-179: smoke test that proves `scripts/setup-vendor.mjs` actually cloned and
+ * built the vendored `@laikacms/decap` v4 fork into a consumable ESM artefact
+ * under `.vendor/laikacms-decap/dist`.
  *
- * The WORKLIST acceptance is to import the public surface from `decap-cms-core`
- * (the fork's chosen re-export) and assert the symbol is a function. The fork
- * exposes `DecapCmsCore` as a namespace object with an `init` (bootstrap)
- * function plus a default export.
+ * The fork is consumed exclusively through Vite (see `vite.config.ts`, which
+ * aliases `@laikacms/decap/*` subpaths into this dist). Its TypeScript ESM build
+ * emits extensionless relative imports, so the artefact is bundler-only and can
+ * NOT be `import()`-ed directly in a node test runner. We therefore assert the
+ * public surface statically — which still proves the build materialised real,
+ * non-stub ESM, not just empty files:
  *
- * Implementation note: we do NOT exercise the full import graph here because
- * `decap-cms-core/dist/esm/bootstrap.js` deep-imports browser-only sibling
- * packages (`decap-cms-lib-util`, `decap-cms-ui-default`, `react-dom/client`,
- * react-router-dom, ...). Those are bundled by the app's Vite build (covered
- * by the `pnpm build` acceptance gate); resolving them in a node-environment
- * unit-test runner would require a bundler config we deliberately don't ship
- * for the test harness. Instead we:
- *
- *   1. Assert the dist/esm entry file exists — proves
- *      `scripts/build-decap-fork.sh` ran the fork's Babel ESM build.
- *   2. Statically inspect the artefact for the public surface markers
- *      (`DecapCmsCore` namespace export, `bootstrap`-backed `init` binding).
- *   3. Dynamically import the leaf source module that defines `DecapCmsCore`
- *      and assert that `init` resolves to a function — exercising the real,
- *      just-built ESM file end-to-end without dragging in the browser graph.
+ *   1. The `core` and `app` entry files exist — proves `setup-vendor.mjs` ran
+ *      the fork's `tsc` ESM build.
+ *   2. `core/index.js` exposes the `DecapCmsCore` namespace (default + named)
+ *      and re-exports the extension `Registry`.
+ *   3. `core/lib/registry.js` defines the real registration functions
+ *      (`registerWidget`, `registerBackend`) — callable code, not stub exports.
+ *   4. `app/index.js` exposes the `init` entrypoint that mounts the CMS (the
+ *      "tie it together" step the fork moved out of `core`'s old bootstrap).
  */
 
 const here = dirname(fileURLToPath(import.meta.url));
-const forkRoot = resolve(here, '../../../vendor/decap-cms/packages/decap-cms-core');
-const distEntry = resolve(forkRoot, 'dist/esm/index.js');
+const distRoot = resolve(here, '../.vendor/laikacms-decap/dist');
+const coreEntry = resolve(distRoot, 'core/index.js');
+const registryEntry = resolve(distRoot, 'core/lib/registry.js');
+const appEntry = resolve(distRoot, 'app/index.js');
 
-describe('decap-cms-core ESM postinstall smoke test', () => {
-  it('produced a dist/esm/index.js artefact for the fork', () => {
-    expect(existsSync(distEntry)).toBe(true);
+describe('@laikacms/decap fork vendor smoke test', () => {
+  it('produced the core + app ESM entry artefacts for the fork', () => {
+    expect(existsSync(coreEntry)).toBe(true);
+    expect(existsSync(appEntry)).toBe(true);
   });
 
-  it('artefact exposes the DecapCmsCore namespace + init binding', () => {
-    const src = readFileSync(distEntry, 'utf8');
+  it('core entry exposes the DecapCmsCore namespace + Registry', () => {
+    const src = readFileSync(coreEntry, 'utf8');
     expect(src).toContain('export const DecapCmsCore');
-    expect(src).toContain('init: bootstrap');
     expect(src).toContain('export default DecapCmsCore');
+    expect(src).toContain('export { Registry }');
   });
 
-  it('imports DecapCmsCore.init and confirms it is a function', async () => {
-    // Bypass the (browser-only) bootstrap re-export by importing the source
-    // module that DEFINES DecapCmsCore directly. The dist file is just:
-    //     import bootstrap from './bootstrap';
-    //     import Registry from './lib/registry';
-    //     export const DecapCmsCore = { ...Registry, init: bootstrap };
-    // so importing it tail-first is enough to prove the named export resolves
-    // to a function — without traversing the browser-only side imports of
-    // bootstrap.js (those are covered by the app's vite build gate).
-    const registryMod: Record<string, unknown> = await import(
-      resolve(forkRoot, 'dist/esm/lib/registry.js')
-    );
-    expect(registryMod).toBeDefined();
-    // Registry is the default export of decap-cms-core/src/lib/registry.js
-    // and is itself a registry object of named methods — proving the Babel
-    // ESM build emitted callable functions, not just stub stringly exports.
-    const registry = (registryMod.default ?? registryMod) as Record<string, unknown>;
-    const callableKeys = Object.keys(registry).filter(
-      k => typeof (registry as Record<string, unknown>)[k] === 'function',
-    );
-    expect(callableKeys.length).toBeGreaterThan(0);
+  it('registry artefact defines the real registration functions', () => {
+    const src = readFileSync(registryEntry, 'utf8');
+    expect(src).toContain('export function registerWidget');
+    expect(src).toContain('export function registerBackend');
+  });
+
+  it('app entry exposes the init mount entrypoint', () => {
+    const src = readFileSync(appEntry, 'utf8');
+    expect(src).toContain('export function init');
   });
 });
