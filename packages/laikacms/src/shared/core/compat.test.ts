@@ -1,73 +1,46 @@
-import * as Result from 'effect/Result';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { collectStream, runTask } from './compat.js';
-import type { LaikaResult } from './domain/index.js';
-import { InvalidData, NotFoundError } from './domain/index.js';
-
-async function* makeGen<T>(items: LaikaResult<T>[]): AsyncGenerator<LaikaResult<T>> {
-  for (const item of items) {
-    yield item;
-  }
-}
+import { InvalidData } from './domain/index.js';
+import * as LaikaStream from './laika-stream.js';
+import * as LaikaTask from './laika-task.js';
 
 describe('runTask', () => {
-  it('returns the value from the first success result', async () => {
-    const gen = makeGen([Result.succeed(42)]);
-    await expect(runTask(gen)).resolves.toBe(42);
+  it('resolves with the task value on success', async () => {
+    await expect(runTask(LaikaTask.succeed(42))).resolves.toBe(42);
   });
 
-  it('throws the LaikaError on failure', async () => {
+  it('rejects with the LaikaError on failure', async () => {
     const error = new InvalidData('bad');
-    const gen = makeGen<number>([Result.fail(error)]);
-    await expect(runTask(gen)).rejects.toBe(error);
-  });
-
-  it('throws NotFoundError when generator exhausts without success', async () => {
-    const gen = makeGen<number>([]);
-    await expect(runTask(gen)).rejects.toMatchObject({ code: 'not_found' });
-  });
-
-  it('calls onProgress for each item', async () => {
-    const onProgress = vi.fn();
-    const success = Result.succeed('hello');
-    const gen = makeGen([success]);
-    await runTask(gen, { onProgress });
-    expect(onProgress).toHaveBeenCalledWith(success);
-  });
-
-  it('returns the first success and stops', async () => {
-    const onProgress = vi.fn();
-    const gen = makeGen([Result.succeed(1), Result.succeed(2)]);
-    const value = await runTask(gen, { onProgress });
-    expect(value).toBe(1);
-    expect(onProgress).toHaveBeenCalledTimes(1);
+    await expect(runTask(LaikaTask.fail(error))).rejects.toBe(error);
   });
 });
 
 describe('collectStream', () => {
-  it('collects all success values in order', async () => {
-    const gen = makeGen([Result.succeed(1), Result.succeed(2), Result.succeed(3)]);
-    await expect(collectStream(gen)).resolves.toEqual([1, 2, 3]);
+  it('collects all data values in order', async () => {
+    const stream = LaikaStream.succeedMany([1, 2, 3], {});
+    const result = await collectStream(stream);
+    expect(result.items).toEqual([1, 2, 3]);
+    expect(result.done).toEqual({});
   });
 
-  it('throws LaikaError on first failure', async () => {
-    const error = new InvalidData('nope');
-    const gen = makeGen<number>([Result.succeed(1), Result.fail(error), Result.succeed(3)]);
-    await expect(collectStream(gen)).rejects.toBe(error);
+  it('returns empty items for an empty stream', async () => {
+    const done = { total: 0 };
+    const stream = LaikaStream.empty(done);
+    const result = await collectStream(stream);
+    expect(result.items).toEqual([]);
+    expect(result.done).toBe(done);
   });
 
-  it('returns empty array for empty generator', async () => {
-    const gen = makeGen<string>([]);
-    await expect(collectStream(gen)).resolves.toEqual([]);
+  it('rejects with the LaikaError on stream failure', async () => {
+    const error = new InvalidData('stream failed');
+    await expect(collectStream(LaikaStream.fail(error))).rejects.toBe(error);
   });
 
-  it('calls onProgress for each item', async () => {
-    const onProgress = vi.fn();
-    const items = [Result.succeed('a'), Result.succeed('b')];
-    const gen = makeGen(items);
-    await collectStream(gen, { onProgress });
-    expect(onProgress).toHaveBeenCalledTimes(2);
-    expect(onProgress).toHaveBeenNthCalledWith(1, items[0]);
-    expect(onProgress).toHaveBeenNthCalledWith(2, items[1]);
+  it('preserves the typed done value', async () => {
+    const done = { pagination: { page: 2, pageSize: 10 }, total: 25 };
+    const stream = LaikaStream.succeed('only', done);
+    const result = await collectStream(stream);
+    expect(result.items).toEqual(['only']);
+    expect(result.done).toEqual(done);
   });
 });
