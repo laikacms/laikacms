@@ -14,9 +14,16 @@ export type StorageContractCapability =
   | 'removeAtoms';
 
 export interface StorageContractCase {
+  /** Human-readable name shown in test output. */
   name: string;
-  makeRepo: () => StorageRepository | Promise<StorageRepository>;
-  teardown?: () => void | Promise<void>;
+
+  /** Return a fully-constructed, ready-to-use repository instance. */
+  makeRepo(): Promise<StorageRepository>;
+
+  /** Optional cleanup hook called after all contract tests finish. */
+  teardown?(): Promise<void>;
+
+  /** Capabilities to skip (not supported by this backend). */
   skip?: StorageContractCapability[];
 }
 
@@ -51,7 +58,7 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
 
     // --- createObject then getObject ---
     itOrSkip('createObject')('createObject then getObject: returns matching metadata/content', async () => {
-      const key = `contract-test/create-object-${Date.now()}.json`;
+      const key = `contract-test/create-object-${Date.now()}`;
       const content = { hello: 'world', num: 42 };
       const created: StorageObject = await runTask(
         repo.createObject({ key, type: 'object', content }),
@@ -67,7 +74,7 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
 
     // --- createOrUpdateObject idempotent ---
     itOrSkip('createOrUpdateObject')('createOrUpdateObject idempotent: update reflects new content', async () => {
-      const key = `contract-test/create-or-update-${Date.now()}.json`;
+      const key = `contract-test/create-or-update-${Date.now()}`;
       const initialContent = { version: 1 };
       const updatedContent = { version: 2 };
 
@@ -80,7 +87,7 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
 
     // --- updateObject ---
     itOrSkip('updateObject')('updateObject: getObject reflects new content after update', async () => {
-      const key = `contract-test/update-object-${Date.now()}.json`;
+      const key = `contract-test/update-object-${Date.now()}`;
       const initialContent = { status: 'initial' };
       const updatedContent = { status: 'updated' };
 
@@ -109,7 +116,7 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
     // --- listAtoms after create ---
     itOrSkip('listAtoms')('listAtoms after create: created keys are present', async () => {
       const prefix = `contract-test/list-atoms-${Date.now()}`;
-      const keys = [`${prefix}/a.json`, `${prefix}/b.json`, `${prefix}/c.json`];
+      const keys = [`${prefix}/a`, `${prefix}/b`, `${prefix}/c`];
 
       for (const key of keys) {
         await runTask(repo.createObject({ key, type: 'object', content: { key } }));
@@ -127,7 +134,7 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
     // --- listAtomSummaries after create ---
     itOrSkip('listAtomSummaries')('listAtomSummaries after create: created keys are present', async () => {
       const prefix = `contract-test/list-summaries-${Date.now()}`;
-      const keys = [`${prefix}/x.json`, `${prefix}/y.json`];
+      const keys = [`${prefix}/x`, `${prefix}/y`];
 
       for (const key of keys) {
         await runTask(repo.createObject({ key, type: 'object', content: { label: key } }));
@@ -144,7 +151,7 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
 
     // --- getAtom for object ---
     itOrSkip('getAtom')('getAtom for object: returns an Atom', async () => {
-      const key = `contract-test/get-atom-obj-${Date.now()}.json`;
+      const key = `contract-test/get-atom-obj-${Date.now()}`;
       await runTask(repo.createObject({ key, type: 'object', content: { atom: true } }));
 
       const atom: Atom = await runTask(repo.getAtom(key));
@@ -164,8 +171,8 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
 
     // --- removeAtoms removes keys ---
     itOrSkip('removeAtoms')('removeAtoms: removes keys and reports removed > 0', async () => {
-      const key1 = `contract-test/remove-${Date.now()}-1.json`;
-      const key2 = `contract-test/remove-${Date.now()}-2.json`;
+      const key1 = `contract-test/remove-${Date.now()}-1`;
+      const key2 = `contract-test/remove-${Date.now()}-2`;
       await runTask(repo.createObject({ key: key1, type: 'object', content: {} }));
       await runTask(repo.createObject({ key: key2, type: 'object', content: {} }));
 
@@ -175,7 +182,7 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
 
     // --- removeAtoms missing key is warning not error ---
     itOrSkip('removeAtoms')('removeAtoms: missing key completes with skipped > 0', async () => {
-      const missingKey = `contract-test/does-not-exist-${Date.now()}.json`;
+      const missingKey = `contract-test/does-not-exist-${Date.now()}`;
 
       const { done } = await collectStream(repo.removeAtoms([missingKey]));
       expect(done.skipped).toBeGreaterThan(0);
