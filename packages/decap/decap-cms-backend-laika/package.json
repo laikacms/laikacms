@@ -25,7 +25,9 @@
   "scripts": {
     "dev": "tsc --watch",
     "build": "tsc",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "jsonwebtoken": "^9.0.2",
@@ -69,6 +71,7 @@
     "vite-plugin-dts": "catalog:tools",
     "@types/jwt-decode": "^3.1.0",
     "@types/react": "^19.1.0",
-    "typescript": "catalog:tools"
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
   }
 }
