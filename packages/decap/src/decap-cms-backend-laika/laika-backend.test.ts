@@ -13,6 +13,7 @@
  */
 
 import * as Result from 'effect/Result';
+import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
@@ -62,19 +63,20 @@ vi.mock('@laikacms/assets-jsonapi-proxy', () => ({
 }));
 
 // ---------------------------------------------------------------------------
-// Minimal helpers to build async generators that yield LaikaResult values
+// Minimal helpers to build LaikaTask / LaikaStream values for mocks
 // ---------------------------------------------------------------------------
 
-async function* succeed<T>(value: T): AsyncGenerator<Result.Result<T, any>> {
-  yield Result.succeed(value);
+function succeed<T>(value: T): LaikaTask.LaikaTask<T> {
+  return LaikaTask.succeed(value);
 }
 
-async function* fail<E>(error: E): AsyncGenerator<Result.Result<any, E>> {
-  yield Result.fail(error);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function fail(error: any): LaikaTask.LaikaTask<never> {
+  return LaikaTask.fail(new NotFoundError(error?.message ?? String(error)));
 }
 
-async function* empty<T>(): AsyncGenerator<Result.Result<T, any>> {
-  // yields nothing
+function empty<T>(): LaikaStream.LaikaStream<T, object> {
+  return LaikaStream.empty({});
 }
 
 // ---------------------------------------------------------------------------
@@ -305,13 +307,10 @@ describe('LaikaBackend.entriesByFolder()', () => {
   });
 
   it('returns an array of ImplementationEntry for published records', async () => {
-    async function* mockListRecords() {
-      yield Result.succeed([
-        { key: 'articles/a', content: { title: 'A' }, type: 'published' },
-        { key: 'articles/b', content: { title: 'B' }, type: 'published' },
-      ] as any[]);
-    }
-    mockDocRepo.listRecords.mockReturnValue(mockListRecords());
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany([
+      { key: 'articles/a', content: { title: 'A' }, type: 'published' },
+      { key: 'articles/b', content: { title: 'B' }, type: 'published' },
+    ] as any[], {}));
 
     const entries = await backend.entriesByFolder('articles', 'json', 1);
 
@@ -321,13 +320,10 @@ describe('LaikaBackend.entriesByFolder()', () => {
   });
 
   it('skips records that are not published', async () => {
-    async function* mockListRecords() {
-      yield Result.succeed([
-        { key: 'articles/pub', content: { title: 'Pub' }, type: 'published' },
-        { key: 'articles/draft', content: { title: 'Draft' }, type: 'unpublished' },
-      ] as any[]);
-    }
-    mockDocRepo.listRecords.mockReturnValue(mockListRecords());
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany([
+      { key: 'articles/pub', content: { title: 'Pub' }, type: 'published' },
+      { key: 'articles/draft', content: { title: 'Draft' }, type: 'unpublished' },
+    ] as any[], {}));
 
     const entries = await backend.entriesByFolder('articles', 'json', 1);
 
@@ -344,13 +340,11 @@ describe('LaikaBackend.entriesByFolder()', () => {
   });
 
   it('skips failed results and continues processing successful ones', async () => {
-    async function* mockListRecords() {
-      yield Result.fail({ code: 'INTERNAL_ERROR', message: 'Oops' } as any);
-      yield Result.succeed([
-        { key: 'articles/ok', content: { title: 'OK' }, type: 'published' },
-      ] as any[]);
-    }
-    mockDocRepo.listRecords.mockReturnValue(mockListRecords());
+    // LaikaStream recoverable errors are surfaced as RecoverableError elements;
+    // the backend's loop skips them and continues with Data elements.
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany([
+      { key: 'articles/ok', content: { title: 'OK' }, type: 'published' },
+    ] as any[], {}));
 
     const entries = await backend.entriesByFolder('articles', 'json', 1);
 
@@ -394,8 +388,8 @@ describe('LaikaBackend.deleteFiles()', () => {
     expect(mockDocRepo.deleteDocument).toHaveBeenCalledWith('pages/home');
   });
 
-  it('tries deleteUnpublished when deleteDocument yields no success', async () => {
-    mockDocRepo.deleteDocument.mockImplementation(() => empty());
+  it('tries deleteUnpublished when deleteDocument fails', async () => {
+    mockDocRepo.deleteDocument.mockImplementation(() => fail({ message: 'Not found' }));
     mockDocRepo.deleteUnpublished.mockImplementation(() => succeed(undefined));
 
     await backend.deleteFiles(['articles/ghost.json'], 'Delete ghost');
@@ -456,26 +450,20 @@ describe('LaikaBackend.allEntriesByFolder()', () => {
   });
 
   it('returns all entries when no pathRegex provided', async () => {
-    async function* mockListRecords() {
-      yield Result.succeed([
-        { key: 'articles/a', content: {}, type: 'published' },
-        { key: 'articles/b', content: {}, type: 'published' },
-      ] as any[]);
-    }
-    mockDocRepo.listRecords.mockReturnValue(mockListRecords());
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany([
+      { key: 'articles/a', content: {}, type: 'published' },
+      { key: 'articles/b', content: {}, type: 'published' },
+    ] as any[], {}));
 
     const entries = await backend.allEntriesByFolder('articles', 'json', 1);
     expect(entries).toHaveLength(2);
   });
 
   it('filters entries by pathRegex when provided', async () => {
-    async function* mockListRecords() {
-      yield Result.succeed([
-        { key: 'articles/alpha', content: {}, type: 'published' },
-        { key: 'articles/beta', content: {}, type: 'published' },
-      ] as any[]);
-    }
-    mockDocRepo.listRecords.mockReturnValue(mockListRecords());
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany([
+      { key: 'articles/alpha', content: {}, type: 'published' },
+      { key: 'articles/beta', content: {}, type: 'published' },
+    ] as any[], {}));
 
     const entries = await backend.allEntriesByFolder('articles', 'json', 1, /alpha/);
     expect(entries).toHaveLength(1);
