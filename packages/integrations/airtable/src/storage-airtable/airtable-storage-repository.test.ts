@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { AIRTABLE_BATCH_LIMIT, type AirtableRecord, escapeAirtableString } from './airtable-datasource.js';
 import { AirtableStorageRepository } from './airtable-storage-repository.js';
+import { airtableContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(airtableContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Airtable mock. The interesting bits to verify:
