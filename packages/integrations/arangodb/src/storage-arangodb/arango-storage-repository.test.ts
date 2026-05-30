@@ -43,6 +43,7 @@ let revCounter: number;
 let aqlCallCount: number;
 let lastAql: string | null = null;
 let lastAqlBindVars: Record<string, unknown> | null = null;
+let allAql: string[] = [];
 let removeAqlCount: number;
 let removeAqlPaths: string[] | null = null;
 
@@ -66,6 +67,7 @@ const evalAql = (query: string, bindVars: Record<string, unknown>): unknown[] =>
   aqlCallCount += 1;
   lastAql = q;
   lastAqlBindVars = bindVars;
+  allAql.push(q);
 
   // ---- findFileRecord: SELECT-LIMIT-RETURN
   let m = q.match(
@@ -298,6 +300,7 @@ beforeEach(() => {
   aqlCallCount = 0;
   lastAql = null;
   lastAqlBindVars = null;
+  allAql = [];
   removeAqlCount = 0;
   removeAqlPaths = null;
 });
@@ -424,13 +427,13 @@ describe('ArangoStorageRepository', () => {
     await LaikaTask.runPromise(
       repo.createObject({ type: 'object', key: 'notes/x', content: { body: 'a' } }),
     );
-    lastAql = null;
+    allAql = [];
     await LaikaTask.runPromise(
       repo.updateObject({ key: 'notes/x', content: { body: 'b' } }),
     );
-    expect(lastAql).toMatch(/UPDATE @key WITH @changes IN laika_files/);
-    const stored = collections.get('laika_files')?.get('notes--hello.md' /* wrong */);
-    // Actually the path is notes/x.md → key notes--x.md.
+    // updateObject re-reads via getObject afterwards, so the UPDATE is not the
+    // last query — assert it appears among the dispatched AQL statements.
+    expect(allAql.some(q => /UPDATE @key WITH @changes IN laika_files/.test(q))).toBe(true);
     expect(collections.get('laika_files')?.get('notes--x.md')?.content).toBe('b');
   });
 
