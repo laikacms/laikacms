@@ -31,7 +31,8 @@ import {
 } from '@laikacms/core';
 import type { DocumentsRepository } from '@laikacms/documents';
 import { DocumentsJsonApiProxyRepository } from '@laikacms/documents-jsonapi-proxy';
-import type { Pagination } from '@laikacms/storage';
+import type { Capabilities, Pagination } from '@laikacms/storage';
+import { defaultCapabilities } from '@laikacms/storage';
 import * as Result from 'effect/Result';
 
 // Helper to get first result from async generator
@@ -276,6 +277,7 @@ export default function createLaikaBackend(
 
     assetsRepository?: AssetsRepository;
     documentsRepository?: DocumentsRepository;
+    capabilities: Capabilities = defaultCapabilities;
 
     // Caches to reduce duplicate requests
     entryCache = new DedupeCache<ImplementationEntry>();
@@ -436,6 +438,17 @@ export default function createLaikaBackend(
           baseUrl: this.apiUrl,
         });
 
+        // Fetch capabilities on startup; fall back to defaultCapabilities on error
+        try {
+          const capResult = await firstResult(this.documentsRepository.getCapabilities());
+          if (Result.isSuccess(capResult)) {
+            this.capabilities = capResult.success;
+          }
+          console.log('Laika Backend capabilities:', this.capabilities);
+        } catch {
+          console.warn('Laika Backend: failed to fetch capabilities, using defaults');
+        }
+
         const authUser = {
           name: userData.name,
           login: userData.email,
@@ -464,6 +477,7 @@ export default function createLaikaBackend(
       this.tokenPromise = undefined;
       this.assetsRepository = undefined;
       this.documentsRepository = undefined;
+      this.capabilities = defaultCapabilities;
       this.entryCache.clear();
       this.unpublishedEntryCache.clear();
       this.unpublishedEntriesListCache.clear();
@@ -502,7 +516,10 @@ export default function createLaikaBackend(
       const repo = this.getDocumentsRepo();
       const entries: ImplementationEntry[] = [];
 
-      const pagination: Pagination = { limit: 100, offset: 0 };
+      // When server-side pagination is unsupported, omit limit to fetch all records
+      const pagination: Pagination = this.capabilities.pagination
+        ? { limit: 100, offset: 0 }
+        : { offset: 0 };
 
       for await (
         const result of repo.listRecords({
@@ -796,7 +813,10 @@ export default function createLaikaBackend(
       const repo = this.getAssetsRepo();
       const media: ImplementationMediaFile[] = [];
 
-      const pagination: Pagination = { limit: 100, offset: 0 };
+      // When server-side pagination is unsupported, omit limit to fetch all assets
+      const pagination: Pagination = this.capabilities.pagination
+        ? { limit: 100, offset: 0 }
+        : { offset: 0 };
 
       for await (
         const result of repo.listResources('', {
@@ -1028,7 +1048,10 @@ export default function createLaikaBackend(
         for (const collection of collections) {
           const collectionName = typeof collection === 'string' ? collection : collection.name;
 
-          const pagination: Pagination = { limit: 100, offset: 0 };
+          // When server-side pagination is unsupported, omit limit to fetch all records
+          const pagination: Pagination = this.capabilities.pagination
+            ? { limit: 100, offset: 0 }
+            : { offset: 0 };
 
           for await (
             const result of repo.listRecords({
