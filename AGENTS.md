@@ -48,3 +48,8 @@ packages/
 - Add Node.js-specific APIs to domain packages
 - Avoid exposing Effect types in public APIs
 - Add heavy dependencies without discussion
+
+## Testing conventions
+
+- New packages that have no test files yet MUST use `vitest run --passWithNoTests` in their `test`
+  script until real tests are added.
