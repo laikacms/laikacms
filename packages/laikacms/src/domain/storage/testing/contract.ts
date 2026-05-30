@@ -1,5 +1,5 @@
 import { collectStream, runTask } from 'laikacms/compat';
-import type { Atom, AtomSummary, Capabilities, Folder, StorageObject } from 'laikacms/storage';
+import type { Atom, AtomSummary, Folder, StorageObject } from 'laikacms/storage';
 import type { StorageRepository } from 'laikacms/storage';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
@@ -27,16 +27,9 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
 
   describe(`StorageRepository contract: ${name}`, () => {
     let repo: StorageRepository;
-    let capabilities: Capabilities | undefined;
 
     beforeAll(async () => {
       repo = await makeRepo();
-      try {
-        capabilities = await runTask(repo.getCapabilities());
-      } catch {
-        // If getCapabilities fails, tests that need it will handle it
-        capabilities = undefined;
-      }
     });
 
     if (teardown) {
