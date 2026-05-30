@@ -1,34 +1,27 @@
-import * as Result from 'effect/Result';
-import { NotFoundError } from './domain/index.js';
-import type { LaikaError, LaikaResult } from './domain/index.js';
+import * as LaikaStream from './laika-stream.js';
+import * as LaikaTask from './laika-task.js';
+import type { LaikaDone } from './laika-types.js';
 
-export async function runTask<T>(
-  gen: AsyncGenerator<LaikaResult<T>>,
-  opts?: { onProgress?: (result: LaikaResult<T>) => void },
-): Promise<T> {
-  for await (const result of gen) {
-    opts?.onProgress?.(result);
-    if (Result.isSuccess(result)) {
-      return result.success;
-    }
-    if (Result.isFailure(result)) {
-      throw result.failure;
-    }
-  }
-  throw new NotFoundError('No successful result');
-}
+/**
+ * Run a {@link LaikaTask} to completion and return its value as a Promise.
+ * Rejects with the fatal {@link LaikaError} on failure.
+ *
+ * This is a Promise-friendly entry point that does not require importing
+ * `effect` at the call site.
+ */
+export const runTask = <A>(task: LaikaTask.LaikaTask<A>): Promise<A> => LaikaTask.runPromise(task);
 
-export async function collectStream<T>(
-  gen: AsyncGenerator<LaikaResult<T>>,
-  opts?: { onProgress?: (result: LaikaResult<T>) => void },
-): Promise<T[]> {
-  const values: T[] = [];
-  for await (const result of gen) {
-    opts?.onProgress?.(result);
-    if (Result.isFailure(result)) {
-      throw result.failure;
-    }
-    values.push(result.success);
-  }
-  return values;
-}
+/**
+ * Collect all data items from a {@link LaikaStream} into an array and return
+ * `{ items, done }` as a Promise. Rejects with the fatal {@link LaikaError}
+ * on failure.
+ *
+ * This is a Promise-friendly entry point that does not require importing
+ * `effect` at the call site.
+ */
+export const collectStream = async <A, D extends LaikaDone>(
+  stream: LaikaStream.LaikaStream<A, D>,
+): Promise<{ items: ReadonlyArray<A>, done: D }> => {
+  const { data, done } = await LaikaStream.runPromiseCollect(stream);
+  return { items: data, done };
+};
