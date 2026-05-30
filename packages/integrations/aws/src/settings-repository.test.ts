@@ -1,5 +1,6 @@
-import type { ContentBaseSettings } from '@laikacms/contentbase-settings';
-import { NotFoundError } from '@laikacms/core';
+import * as Result from 'effect/Result';
+import type { ContentBaseSettings } from 'laikacms/contentbase-settings';
+import { NotFoundError } from 'laikacms/core';
 import type {
   Atom,
   AtomSummary,
@@ -8,8 +9,7 @@ import type {
   StorageObjectCreate,
   StorageObjectUpdate,
   StorageRepository,
-} from '@laikacms/storage';
-import * as Result from 'effect/Result';
+} from 'laikacms/storage';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DefaultContentBaseSettingsProvider } from './settings-repository.js';
 
@@ -215,7 +215,7 @@ describe('DefaultContentBaseSettingsProvider', () => {
 
   describe('putDocumentCollectionSettings', () => {
     it('saves and retrieves document collection settings', async () => {
-      const collectionSettings: import('@laikacms/contentbase-settings').DocumentCollectionSettings = {
+      const collectionSettings: import('laikacms/contentbase-settings').DocumentCollectionSettings = {
         type: 'document',
         key: 'events',
         name: 'Events',
