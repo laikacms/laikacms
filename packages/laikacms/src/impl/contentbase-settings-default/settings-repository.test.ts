@@ -1,9 +1,10 @@
 import * as Result from 'effect/Result';
 import type { ContentBaseSettings } from 'laikacms/contentbase-settings';
-import { NotFoundError } from 'laikacms/core';
+import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type {
   Atom,
   AtomSummary,
+  Folder,
   FolderCreate,
   StorageObject,
   StorageObjectCreate,
@@ -24,72 +25,69 @@ function makeMemoryStorage(initial?: Map<string, StorageObject>): StorageReposit
   const store: Map<string, StorageObject> = initial ?? new Map();
 
   return {
-    async *getObject(key: string) {
+    getObject(key: string): LaikaTask.LaikaTask<StorageObject> {
       const v = store.get(key);
-      if (!v) {
-        yield Result.fail(new NotFoundError(`Not found: ${key}`));
-        return;
-      }
-      yield Result.succeed(v);
+      if (!v) return LaikaTask.fail(new NotFoundError(`Not found: ${key}`));
+      return LaikaTask.succeed(v);
     },
 
-    async *createObject(create: StorageObjectCreate) {
+    createObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
       const obj = makeStorageObject(create.key, create.content ?? {});
       store.set(create.key, obj);
-      yield Result.succeed(obj);
+      return LaikaTask.succeed(obj);
     },
 
-    async *createOrUpdateObject(create: StorageObjectCreate) {
+    createOrUpdateObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
       const obj = makeStorageObject(create.key, create.content ?? {});
       store.set(create.key, obj);
-      yield Result.succeed(obj);
+      return LaikaTask.succeed(obj);
     },
 
-    async *updateObject(update: StorageObjectUpdate) {
+    updateObject(update: StorageObjectUpdate): LaikaTask.LaikaTask<StorageObject> {
       const existing = store.get(update.key);
-      if (!existing) {
-        yield Result.fail(new NotFoundError(`Not found: ${update.key}`));
-        return;
-      }
+      if (!existing) return LaikaTask.fail(new NotFoundError(`Not found: ${update.key}`));
       const updated: StorageObject = {
         ...existing,
         content: update.content ?? existing.content,
         updatedAt: new Date().toISOString(),
       };
       store.set(update.key, updated);
-      yield Result.succeed(updated);
+      return LaikaTask.succeed(updated);
     },
 
-    async *removeAtoms(keys: readonly string[]) {
+    removeAtoms(keys: readonly string[]): LaikaStream.LaikaStream<string, { removed: number, skipped: number }> {
       for (const key of keys) store.delete(key);
-      yield Result.succeed(keys as readonly string[]);
+      return LaikaStream.empty({ removed: keys.length, skipped: 0 });
     },
 
-    async *listAtoms(_folderKey: string, _options: unknown) {
-      yield Result.succeed([] as readonly Atom[]);
+    listAtoms(_folderKey: string, _options: unknown): LaikaStream.LaikaStream<Atom, object> {
+      return LaikaStream.empty({});
     },
 
-    async *listAtomSummaries(_folderKey: string, _options: unknown) {
-      yield Result.succeed([] as readonly AtomSummary[]);
+    listAtomSummaries(_folderKey: string, _options: unknown): LaikaStream.LaikaStream<AtomSummary, object> {
+      return LaikaStream.empty({});
     },
 
-    async *getFolder(_key: string) {
-      yield Result.fail(new NotFoundError('not implemented'));
+    getFolder(_key: string): LaikaTask.LaikaTask<Folder> {
+      return LaikaTask.fail(new NotFoundError('getFolder not implemented in mock'));
     },
 
-    async *createFolder(_create: FolderCreate) {
-      yield Result.fail(new NotFoundError('not implemented'));
+    createFolder(_create: FolderCreate): LaikaTask.LaikaTask<Folder> {
+      return LaikaTask.fail(new NotFoundError('createFolder not implemented in mock'));
     },
 
-    async *getAtom(key: string) {
+    getAtom(key: string): LaikaTask.LaikaTask<Atom> {
       const v = store.get(key);
-      if (!v) {
-        yield Result.fail(new NotFoundError(`Not found: ${key}`));
-        return;
-      }
-      yield Result.succeed(v as Atom);
+      if (!v) return LaikaTask.fail(new NotFoundError(`Not found: ${key}`));
+      return LaikaTask.succeed(v as Atom);
     },
-  } as StorageRepository;
+
+    getCapabilities(): LaikaTask.LaikaTask<object> {
+      return LaikaTask.succeed({
+        fileExtensions: { supported: true, supportedExtensions: { json: 'application/json' } },
+      });
+    },
+  } as unknown as StorageRepository;
 }
 
 // ---- tests ----
@@ -100,7 +98,7 @@ describe('DefaultContentBaseSettingsProvider', () => {
 
   beforeEach(() => {
     storage = makeMemoryStorage();
-    provider = new DefaultContentBaseSettingsProvider(storage);
+    provider = new DefaultContentBaseSettingsProvider({ storage });
   });
 
   describe('getSettings', () => {
@@ -126,15 +124,15 @@ describe('DefaultContentBaseSettingsProvider', () => {
       };
       // Pre-populate the storage with a settings file
       const populatedStorage = makeMemoryStorage(
-        new Map([['.contentbase/settings.json', {
+        new Map([['.contentbase/settings', {
           type: 'object',
-          key: '.contentbase/settings.json',
+          key: '.contentbase/settings',
           content: existingSettings,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         }]]),
       );
-      const populatedProvider = new DefaultContentBaseSettingsProvider(populatedStorage);
+      const populatedProvider = new DefaultContentBaseSettingsProvider({ storage: populatedStorage });
       const result = await populatedProvider.getSettings();
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
