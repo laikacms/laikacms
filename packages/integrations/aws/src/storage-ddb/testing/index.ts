@@ -1,6 +1,7 @@
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { mockClient } from 'aws-sdk-client-mock';
+import type { StorageObjectContent } from 'laikacms/storage';
 import type { StorageContractCase } from 'laikacms/storage/testing';
 
 import { DdbStorageRepository } from '../ddb-storage-repository.js';
@@ -13,13 +14,13 @@ const makeSerializerRegistry = () => ({
   json: {
     format: { mediaType: 'application/json' } as never,
     serializeDocumentFileContents: async (content: unknown) => JSON.stringify(content),
-    deserializeDocumentFileContents: async (raw: string) => JSON.parse(raw) as unknown,
+    deserializeDocumentFileContents: async (raw: string) => JSON.parse(raw) as StorageObjectContent,
   },
 });
 
 export const ddbContractCase: StorageContractCase = {
   name: 'DdbStorageRepository',
-  makeRepo() {
+  async makeRepo() {
     const store = new Map<string, Map<string, Record<string, unknown>>>();
     const ddbMock = mockClient(DynamoDBDocumentClient);
 

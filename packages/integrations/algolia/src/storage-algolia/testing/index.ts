@@ -1,3 +1,4 @@
+import type { StorageObjectContent } from 'laikacms/storage';
 import type { StorageContractCase } from 'laikacms/storage/testing';
 
 import { type AlgoliaRecord, PARENT_ATTR } from '../algolia-datasource.js';
@@ -69,13 +70,13 @@ const makeSerializerRegistry = () => ({
   json: {
     format: { mediaType: 'application/json' } as never,
     serializeDocumentFileContents: async (content: unknown) => JSON.stringify(content),
-    deserializeDocumentFileContents: async (raw: string) => JSON.parse(raw) as unknown,
+    deserializeDocumentFileContents: async (raw: string) => JSON.parse(raw) as StorageObjectContent,
   },
 });
 
 export const algoliaContractCase: StorageContractCase = {
   name: 'AlgoliaStorageRepository',
-  makeRepo() {
+  async makeRepo() {
     const mock = createMockAlgolia();
     return new AlgoliaStorageRepository({
       auth: { applicationId: APP_ID, apiKey: API_KEY },

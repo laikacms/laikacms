@@ -1,3 +1,4 @@
+import type { StorageObjectContent } from 'laikacms/storage';
 import type { StorageContractCase } from 'laikacms/storage/testing';
 
 import { AIRTABLE_BATCH_LIMIT, type AirtableRecord } from '../airtable-datasource.js';
@@ -14,6 +15,7 @@ interface Fields {
   Type: 'file' | 'folder';
   Extension?: string;
   Content?: string;
+  [key: string]: unknown;
 }
 
 type Expr =
@@ -187,13 +189,13 @@ const makeSerializerRegistry = () => ({
   json: {
     format: { mediaType: 'application/json' } as never,
     serializeDocumentFileContents: async (content: unknown) => JSON.stringify(content),
-    deserializeDocumentFileContents: async (raw: string) => JSON.parse(raw) as unknown,
+    deserializeDocumentFileContents: async (raw: string) => JSON.parse(raw) as StorageObjectContent,
   },
 });
 
 export const airtableContractCase: StorageContractCase = {
   name: 'AirtableStorageRepository',
-  makeRepo() {
+  async makeRepo() {
     const mock = createMockAirtable();
     return new AirtableStorageRepository({
       baseId: BASE_ID,

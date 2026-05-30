@@ -7,6 +7,7 @@ import {
   S3Client,
 } from '@aws-sdk/client-s3';
 import { mockClient } from 'aws-sdk-client-mock';
+import type { StorageObjectContent } from 'laikacms/storage';
 import type { StorageContractCase } from 'laikacms/storage/testing';
 
 import { S3StorageRepository } from '../s3-storage-repository.js';
@@ -27,7 +28,7 @@ const stringBody = (body: string) => ({
 const notFoundError = () => {
   const err = new Error('NoSuchKey');
   (err as { name: string }).name = 'NoSuchKey';
-  (err as { $metadata: unknown }).$metadata = { httpStatusCode: 404 };
+  (err as unknown as { $metadata: unknown }).$metadata = { httpStatusCode: 404 };
   return err;
 };
 
@@ -39,18 +40,23 @@ const makeSerializerRegistry = () => ({
   md: {
     format: { mediaType: 'text/markdown' } as never,
     serializeDocumentFileContents: async (content: unknown) => JSON.stringify(content),
-    deserializeDocumentFileContents: async (raw: string) => JSON.parse(raw) as unknown,
+    deserializeDocumentFileContents: async (raw: string) => JSON.parse(raw) as StorageObjectContent,
   },
 });
 
 export const s3ContractCase: StorageContractCase = {
   name: 'S3StorageRepository',
-  makeRepo() {
+  async makeRepo() {
     const store = new Map<string, StoredObject>();
     let etagCounter = 0;
-    const s3 = mockClient(S3Client);
+    // aws-sdk-client-mock's command types lag the installed @aws-sdk/client-s3
+    // smithy types, so the stub is cast here; runtime behaviour is unaffected.
+    // (The repo's existing S3 tests live in *.test.ts, which tsconfig excludes
+    // from typecheck — this testkit is a checked source file, hence the cast.)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const s3 = mockClient(S3Client as any) as any;
 
-    s3.on(HeadObjectCommand).callsFake(input => {
+    s3.on(HeadObjectCommand).callsFake((input: { Key: string }) => {
       const obj = store.get(input.Key);
       if (!obj) throw notFoundError();
       return {
@@ -61,7 +67,7 @@ export const s3ContractCase: StorageContractCase = {
       };
     });
 
-    s3.on(GetObjectCommand).callsFake(input => {
+    s3.on(GetObjectCommand).callsFake((input: { Key: string }) => {
       const obj = store.get(input.Key);
       if (!obj) throw notFoundError();
       return {
@@ -72,7 +78,7 @@ export const s3ContractCase: StorageContractCase = {
       };
     });
 
-    s3.on(PutObjectCommand).callsFake(input => {
+    s3.on(PutObjectCommand).callsFake((input: { Key: string, Body?: unknown, ContentType?: string }) => {
       etagCounter += 1;
       store.set(input.Key, {
         body: typeof input.Body === 'string' ? input.Body : '',
@@ -83,12 +89,12 @@ export const s3ContractCase: StorageContractCase = {
       return { ETag: `etag-${etagCounter}` };
     });
 
-    s3.on(DeleteObjectCommand).callsFake(input => {
+    s3.on(DeleteObjectCommand).callsFake((input: { Key: string }) => {
       store.delete(input.Key);
       return {};
     });
 
-    s3.on(ListObjectsV2Command).callsFake(input => {
+    s3.on(ListObjectsV2Command).callsFake((input: { Prefix?: string, Delimiter?: string, MaxKeys?: number }) => {
       const prefix = input.Prefix ?? '';
       const delimiter = input.Delimiter;
       const maxKeys = input.MaxKeys ?? 1000;

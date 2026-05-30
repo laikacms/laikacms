@@ -1,3 +1,4 @@
+import type { StorageObjectContent } from 'laikacms/storage';
 import type { StorageContractCase } from 'laikacms/storage/testing';
 
 import { UpstashRedisStorageRepository } from '../redis-storage-repository.js';
@@ -85,13 +86,13 @@ const makeSerializerRegistry = () => ({
   json: {
     format: { mediaType: 'application/json' } as never,
     serializeDocumentFileContents: async (content: unknown) => JSON.stringify(content),
-    deserializeDocumentFileContents: async (raw: string) => JSON.parse(raw) as unknown,
+    deserializeDocumentFileContents: async (raw: string) => JSON.parse(raw) as StorageObjectContent,
   },
 });
 
 export const upstashRedisContractCase: StorageContractCase = {
   name: 'UpstashRedisStorageRepository',
-  makeRepo() {
+  async makeRepo() {
     const redis = createMockRedis();
     return new UpstashRedisStorageRepository({
       url: URL_BASE,
