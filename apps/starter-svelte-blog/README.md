@@ -20,8 +20,8 @@ pnpm install
 pnpm dev
 ```
 
-Open <http://localhost:3000> for the blog and <http://localhost:3000/admin/> for the CMS editor
-(dev auth — no login required).
+Open <http://localhost:3000> for the blog and <http://localhost:3000/admin/> for the CMS editor (dev
+auth — no login required).
 
 ## Project layout
 
@@ -60,8 +60,8 @@ const { html, head } = renderBlogPage(posts);
 
 // You must splice head + body into your template yourself:
 const page = template
-  .replace('<!--ssr-head-->', head)     // <svelte:head> content (title, meta tags)
-  .replace('<!--ssr-body-->', html);    // rendered component HTML
+  .replace('<!--ssr-head-->', head) // <svelte:head> content (title, meta tags)
+  .replace('<!--ssr-body-->', html); // rendered component HTML
 ```
 
 **Why `laika.ts` lives in Express, not in `entry-server.ts`:** If you import the laika singleton
@@ -86,7 +86,9 @@ import { laika } from './lib/laika.js';
 const { items } = await collectStream(
   laika.documents.listRecordSummaries({
     pagination: { page: 1, perPage: 100 },
-    folder: 'posts', depth: 1, type: 'published',
+    folder: 'posts',
+    depth: 1,
+    type: 'published',
   }),
 );
 

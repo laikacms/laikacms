@@ -30,8 +30,8 @@ import express from 'express';
 import { collectStream, runTask } from 'laikacms/compat';
 import type { ViteDevServer } from 'vite';
 
-import { laika } from './lib/laika.js';
 import type { Post, PostSummary } from './entry-server.js';
+import { laika } from './lib/laika.js';
 
 const isDev = process.env['NODE_ENV'] !== 'production';
 const PORT = Number(process.env['PORT'] ?? 3000);
