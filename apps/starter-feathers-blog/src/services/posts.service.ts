@@ -15,8 +15,17 @@
  * requires mapping twice. An alternative is a single collectStream call with
  * a higher depth parameter if LaikaCMS supports it in the future.
  */
-import { NotFound } from '@feathersjs/errors';
 import type { Id, Params } from '@feathersjs/feathers';
+
+// Minimal feathers-style 404 — avoids the @feathersjs/errors dependency.
+class NotFound extends Error {
+  readonly code = 404;
+  readonly className = 'not-found';
+  constructor(message: string) {
+    super(message);
+    this.name = 'NotFound';
+  }
+}
 import { collectStream, runTask } from 'laikacms/compat';
 
 import { laika } from '../lib/laika.js';

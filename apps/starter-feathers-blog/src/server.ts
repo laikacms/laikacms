@@ -17,12 +17,37 @@
  */
 import path from 'node:path';
 
-import { rest } from '@feathersjs/express';
-import express from '@feathersjs/express';
-import feathers from '@feathersjs/feathers';
+// @feathersjs/express is CJS: module.exports = Object.assign(feathersExpress, exports).
+// TS's NodeNext + ESM-default-import sees the namespace, not the callable function,
+// so we type the import directly.
+import type { Application as FeathersApplication } from '@feathersjs/feathers';
+
+import expressNs from '@feathersjs/express';
+import { feathers } from '@feathersjs/feathers';
 
 import { laika } from './lib/laika.js';
 import { PostsService } from './services/posts.service.js';
+
+interface FeathersExpressApp extends FeathersApplication {
+  // express middleware surface used here
+  use(...args: unknown[]): this;
+  configure(fn: unknown): this;
+  all(path: string, handler: (req: ExpressLikeRequest, res: ExpressLikeResponse) => unknown): this;
+  listen(port: number, cb?: () => void): unknown;
+}
+interface ExpressLikeRequest extends AsyncIterable<Buffer | Uint8Array> {
+  headers: Record<string, string | string[] | undefined>;
+  method: string;
+  originalUrl?: string;
+  url: string;
+}
+interface ExpressLikeResponse {
+  status(code: number): this;
+  setHeader(name: string, value: string): this;
+  end(chunk?: Buffer): this;
+}
+
+const express = expressNs as typeof expressNs & ((app: FeathersApplication) => FeathersExpressApp);
 
 const PORT = Number(process.env['PORT'] ?? 3000);
 
@@ -31,7 +56,7 @@ const app = express(feathers());
 // Standard JSON body parsing and REST transport
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.configure(rest());
+app.configure(express.rest());
 
 // Register the LaikaCMS-backed posts service — accessible at GET /posts and GET /posts/:id
 app.use('posts', new PostsService());
