@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/starter-nitro-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Nitro standalone + LaikaCMS. Demonstrates file-based routing with defineEventHandler, toWebRequest/sendWebResponse from h3, and auto-imported server utilities.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild server/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && nitro dev",
+    "build": "pnpm build:admin && nitro build",
+    "start": "node .output/server/index.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "h3": "^1.15.0",
+    "laikacms": "workspace:*",
+    "nitropack": "^2.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

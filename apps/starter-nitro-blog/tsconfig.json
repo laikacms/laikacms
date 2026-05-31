@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ESNext"],
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "types": ["node", "nitropack/types"]
+  },
+  "include": ["server/**/*.ts", "nitro.config.ts"],
+  "exclude": ["node_modules", "server/admin-client.ts", ".output", ".nitro"]
+}
