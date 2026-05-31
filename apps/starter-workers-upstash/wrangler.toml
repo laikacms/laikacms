@@ -1,0 +1,11 @@
+name = "laikacms-starter-workers-upstash"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+
+# Set secrets before deploying:
+#   wrangler secret put UPSTASH_REDIS_REST_URL
+#   wrangler secret put UPSTASH_REDIS_REST_TOKEN
+#
+# For local dev, add a .dev.vars file:
+#   UPSTASH_REDIS_REST_URL=https://us1-xxx.upstash.io
+#   UPSTASH_REDIS_REST_TOKEN=AXxx...

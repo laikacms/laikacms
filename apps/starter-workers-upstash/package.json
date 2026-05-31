@@ -1,0 +1,24 @@
+{
+  "name": "@laikacms/starter-workers-upstash",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Cloudflare Workers blog backed by Upstash Redis. Zero infrastructure: deploy with `wrangler deploy`, content stored in Upstash KV. Shows createCustomLaika working in V8 isolates.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 3000",
+    "deploy": "wrangler deploy",
+    "typecheck": "wrangler types && tsc --noEmit",
+    "types": "wrangler types"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/upstash": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "*",
+    "typescript": "catalog:tools",
+    "wrangler": "catalog:tools"
+  }
+}
