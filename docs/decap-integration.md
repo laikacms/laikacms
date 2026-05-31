@@ -337,6 +337,49 @@ export default function AdminPage() {
 }
 ```
 
+### Turso / libSQL storage — schema and connection
+
+`LibSqlStorageRepository` speaks the libSQL Hrana HTTP pipeline protocol (`POST /v2/pipeline`) over
+`fetch`. It works with Turso (managed libSQL), local `sqld`, or any compatible endpoint.
+
+```ts
+import { LibSqlDataSource, LibSqlStorageRepository } from '@laikacms/libsql/storage-libsql';
+import * as Result from 'effect/Result';
+
+const dataSource = new LibSqlDataSource({
+  url: process.env.LIBSQL_URL!, // https://<db>.turso.io or http://localhost:8080
+  auth: { token: process.env.LIBSQL_AUTH_TOKEN }, // omit auth for local sqld
+});
+
+// Schema: CREATE TABLE IF NOT EXISTS is idempotent — safe to run on every start
+await dataSource.execute(`
+  CREATE TABLE IF NOT EXISTS laika_storage (
+    Path TEXT PRIMARY KEY, Parent TEXT NOT NULL, Name TEXT NOT NULL,
+    Type TEXT NOT NULL CHECK (Type IN ('file', 'folder')),
+    Extension TEXT, Content TEXT, UNIQUE (Type, Parent, Name)
+  )
+`);
+await dataSource.execute(
+  'CREATE INDEX IF NOT EXISTS laika_storage_parent_idx ON laika_storage (Parent)',
+);
+
+const storage = new LibSqlStorageRepository({
+  dataSource,
+  serializerRegistry,
+  defaultFileExtension: 'md',
+});
+```
+
+`LibSqlDataSource.execute()` returns a `LaikaResult` — check `Result.isFailure(r)` to surface DDL
+errors on startup rather than letting them silently propagate as query errors later.
+
+**Turso free tier**: 500 databases, 9 GB storage, 1 billion row-reads/month. Free forever for most
+side projects. Create a database with `turso db create <name>` and generate a token with
+`turso db tokens create <name>`.
+
+**Local sqld**: `sqld --db-path ./local.db` — no auth required; set
+`LIBSQL_URL=http://localhost:8080` and leave `LIBSQL_AUTH_TOKEN` unset.
+
 ### MongoDB storage — collection setup
 
 `MongoStorageRepository` accepts any `MongoCollectionLike` — a structural interface satisfied by

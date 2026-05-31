@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-libsql-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Hono + Turso / libSQL + LaikaCMS. Uses @laikacms/libsql/storage-libsql — a pure-fetch SQLite-over-HTTP adapter. Works with Turso (managed libSQL), local sqld, or any endpoint that speaks the libSQL Hrana HTTP protocol.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/libsql": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
