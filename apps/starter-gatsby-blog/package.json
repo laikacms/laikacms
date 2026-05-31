@@ -3,7 +3,6 @@
   "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Gatsby 5 + LaikaCMS. Demonstrates build-time data sourcing via Gatsby's sourceNodes API, custom GraphQL schema, Gatsby Functions for the Decap proxy, and useEffect for the client-only Decap admin.",
-  "type": "module",
   "scripts": {
     "dev": "gatsby develop",
     "build": "gatsby build",
