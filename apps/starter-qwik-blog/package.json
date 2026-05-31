@@ -1,0 +1,29 @@
+{
+  "name": "@laikacms/starter-qwik-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Qwik City + LaikaCMS. Demonstrates createEmbeddedLaika, routeLoader$, and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --mode ssr",
+    "build": "qwik build",
+    "preview": "vite preview --mode ssr",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@builder.io/qwik": "^1.10.0",
+    "@builder.io/qwik-city": "^1.10.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*",
+    "undici": "^6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vite-tsconfig-paths": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
