@@ -1,5 +1,8 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { notionContractCase } from './testing/index.js';
 
 import { NotionStorageRepository } from './notion-storage-repository.js';
 
@@ -334,3 +337,5 @@ describe('NotionStorageRepository auth', () => {
     expect(callCount).toBeGreaterThan(1);
   });
 });
+
+runStorageRepositoryContract(notionContractCase);
