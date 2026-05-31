@@ -1,12 +1,13 @@
 # starter-socketio-blog
 
-Minimal blog using **Express + Socket.io + LaikaCMS**. Demonstrates the **real-time content
-push** pattern — when you edit and publish a post in the Decap admin, all open browser tabs update
+Minimal blog using **Express + Socket.io + LaikaCMS**. Demonstrates the **real-time content push**
+pattern — when you edit and publish a post in the Decap admin, all open browser tabs update
 automatically without a page reload.
 
 - **`createEmbeddedLaika`** — filesystem storage + Decap JSON:API.
 - **`laika.documents.*` via `laikacms/compat`** — `runTask` / `collectStream` in Express handlers.
-- **`node:fs.watch`** — watches `content/` for `.md` file changes. Debounced and broadcast via Socket.io.
+- **`node:fs.watch`** — watches `content/` for `.md` file changes. Debounced and broadcast via
+  Socket.io.
 - **Socket.io push** — browser receives `content:updated` and refetches `/posts`.
 - **Decap admin from CDN** — `decap-cms.js` from unpkg; laika backend bundled by esbuild.
 
@@ -17,8 +18,8 @@ pnpm install
 pnpm dev
 ```
 
-Open <http://localhost:3000> and <http://localhost:3000/admin/> in separate tabs. Edit a post in
-the admin and watch the blog page update in real time.
+Open <http://localhost:3000> and <http://localhost:3000/admin/> in separate tabs. Edit a post in the
+admin and watch the blog page update in real time.
 
 ## How real-time updates work
 
@@ -57,12 +58,12 @@ export function watchContent(contentDir: string, io: Server) {
 }
 ```
 
-This works for single-process deployments. For multi-process or containerised deployments, use
-Redis pub/sub or a message queue to bridge the file change to other processes.
+This works for single-process deployments. For multi-process or containerised deployments, use Redis
+pub/sub or a message queue to bridge the file change to other processes.
 
-An alternative with a future LaikaCMS API would be a `laika.documents.onChange(callback)` hook
-that fires after each write. This would be more reliable than watching the filesystem directly
-(avoids temp files, handles in-memory storage adapters, etc.).
+An alternative with a future LaikaCMS API would be a `laika.documents.onChange(callback)` hook that
+fires after each write. This would be more reliable than watching the filesystem directly (avoids
+temp files, handles in-memory storage adapters, etc.).
 
 ## Project layout
 
