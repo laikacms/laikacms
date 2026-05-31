@@ -2456,6 +2456,53 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-pages-blog:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260512.0
+        version: 4.20260531.1
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+      wrangler:
+        specifier: catalog:tools
+        version: 4.90.1(@cloudflare/workers-types@4.20260531.1)
+
+  apps/starter-pocketbase-blog:
+    dependencies:
+      '@hono/node-server':
+        specifier: catalog:server
+        version: 1.19.14(hono@4.12.18)
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      '@laikacms/pocketbase':
+        specifier: workspace:*
+        version: link:../../packages/integrations/pocketbase
+      hono:
+        specifier: catalog:server
+        version: 4.12.18
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-polka-blog:
     dependencies:
       '@laikacms/decap-integrations':
@@ -27181,6 +27228,10 @@ packages:
   regexp.prototype.flags@1.5.4:
     resolution: {integrity: sha512-dYqgNSZbDwkaJ2ceRd9ojCGjBq+mOm9LmtXnAnEGyHhN/5R7iDW2TRw3h+o/jCFxus3P2LfWIIiwowAjANm7IA==}
     engines: {node: '>= 0.4'}
+
+  regexparam@2.0.2:
+    resolution: {integrity: sha512-A1PeDEYMrkLrfyOwv2jwihXbo9qxdGD3atBYQA9JJgreAx8/7rC6IUkWOw2NQlOxLp2wL0ifQbh1HuidDfYA6w==}
+    engines: {node: '>=8'}
 
   regexparam@3.0.0:
     resolution: {integrity: sha512-RSYAtP31mvYLkAHrOlh25pCNQ5hWnT106VukGaaFfuJrZFkGRX5GhUAdPqpSDXxOhA2c4akmRuplv1mRqnBn6Q==}
@@ -56560,6 +56611,8 @@ snapshots:
       get-proto: 1.0.1
       gopd: 1.2.0
       set-function-name: 2.0.2
+
+  regexparam@2.0.2: {}
 
   regexparam@3.0.0: {}
 
