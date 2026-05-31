@@ -98,7 +98,9 @@ async function loadEntry() {
     return vite.ssrLoadModule('/src/entry-server.ts') as Promise<typeof import('./entry-server.js')>;
   }
   // Production: import the pre-built SSR bundle from dist/server/entry-server.js
-  return import('../dist/server/entry-server.js') as Promise<typeof import('./entry-server.js')>;
+  // (string variable so TS doesn't try to resolve the dist path at typecheck).
+  const distEntry = '../dist/server/entry-server.js';
+  return import(distEntry) as Promise<typeof import('./entry-server.js')>;
 }
 
 /** Load published posts from LaikaCMS. */

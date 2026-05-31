@@ -25,9 +25,6 @@ const config: Config = {
           postsPerPage: 10,
         },
         docs: false,
-        theme: {
-          customCss: [],
-        },
       } satisfies Preset.Options,
     ],
   ],
