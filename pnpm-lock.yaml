@@ -2456,7 +2456,7 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
-  apps/starter-pages-blog:
+  apps/starter-polka-blog:
     dependencies:
       '@laikacms/decap-integrations':
         specifier: workspace:*
@@ -2464,38 +2464,19 @@ importers:
       laikacms:
         specifier: workspace:*
         version: link:../../packages/laikacms
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: ^4.20260512.0
-        version: 4.20260531.1
-      typescript:
-        specifier: catalog:tools
-        version: 6.0.3
-      wrangler:
-        specifier: catalog:tools
-        version: 4.90.1(@cloudflare/workers-types@4.20260531.1)
-
-  apps/starter-pocketbase-blog:
-    dependencies:
-      '@hono/node-server':
-        specifier: catalog:server
-        version: 1.19.14(hono@4.12.18)
-      '@laikacms/decap-integrations':
-        specifier: workspace:*
-        version: link:../../packages/decap
-      '@laikacms/pocketbase':
-        specifier: workspace:*
-        version: link:../../packages/integrations/pocketbase
-      hono:
-        specifier: catalog:server
-        version: 4.12.18
-      laikacms:
-        specifier: workspace:*
-        version: link:../../packages/laikacms
+      polka:
+        specifier: ^1.0.0-next.28
+        version: 1.0.0-next.28
+      sirv:
+        specifier: ^3.0.1
+        version: 3.0.2
     devDependencies:
       '@types/node':
         specifier: catalog:types
         version: 22.19.18
+      esbuild:
+        specifier: catalog:tools
+        version: 0.27.7
       tsx:
         specifier: catalog:tools
         version: 4.22.3
@@ -25746,6 +25727,10 @@ packages:
     resolution: {integrity: sha512-NCrCHhWmnQklfH4MtJMRjZ2a8c80qXeMlQMv2uVp9ISJMTt562SbGd6n2oq0PaPgKm7Z6pL9E2UlLIhC+SHL3w==}
     engines: {node: '>=4.0.0'}
 
+  polka@1.0.0-next.28:
+    resolution: {integrity: sha512-ryc8D/B5E/YnlWHkNMnRvNntPc4GwU1/+iDBjiXVz1SUjDRqlxYX5Ic0IaDLA/cQ+g7/x+jUzEjv2K16u1J+wA==}
+    engines: {node: '>=8'}
+
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
     engines: {node: '>= 0.4'}
@@ -27197,8 +27182,8 @@ packages:
     resolution: {integrity: sha512-dYqgNSZbDwkaJ2ceRd9ojCGjBq+mOm9LmtXnAnEGyHhN/5R7iDW2TRw3h+o/jCFxus3P2LfWIIiwowAjANm7IA==}
     engines: {node: '>= 0.4'}
 
-  regexparam@2.0.2:
-    resolution: {integrity: sha512-A1PeDEYMrkLrfyOwv2jwihXbo9qxdGD3atBYQA9JJgreAx8/7rC6IUkWOw2NQlOxLp2wL0ifQbh1HuidDfYA6w==}
+  regexparam@3.0.0:
+    resolution: {integrity: sha512-RSYAtP31mvYLkAHrOlh25pCNQ5hWnT106VukGaaFfuJrZFkGRX5GhUAdPqpSDXxOhA2c4akmRuplv1mRqnBn6Q==}
     engines: {node: '>=8'}
 
   regexpu-core@6.4.0:
@@ -28825,6 +28810,10 @@ packages:
 
   trough@2.2.0:
     resolution: {integrity: sha512-tmMpK00BjZiUyVyvrBK7knerNgmgvcV/KLVyuma/SC+TQN167GrMRciANTz09+k3zW8L8t60jWO1GpfkZdjTaw==}
+
+  trouter@4.0.0:
+    resolution: {integrity: sha512-bwwr76BThfiVwAFZqks5cJ+VoKNM3/2Yg1ZwJslkdmAUQ6S0UNoCoGYFDxdw+u1skfexggdmD2p35kW5Td4Cug==}
+    engines: {node: '>=6'}
 
   truncate-utf8-bytes@1.0.2:
     resolution: {integrity: sha512-95Pu1QXQvruGEhv62XCMO3Mm90GscOCClvrIUwCM0PYOXK3kaF3l3sIHxx71ThJfcbM2O5Au6SO3AWCSEfW4mQ==}
@@ -32440,8 +32429,8 @@ snapshots:
 
   '@babel/generator@7.29.1':
     dependencies:
-      '@babel/parser': 7.29.7
-      '@babel/types': 7.29.7
+      '@babel/parser': 7.29.3
+      '@babel/types': 7.29.0
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
       jsesc: 3.1.0
@@ -54851,6 +54840,11 @@ snapshots:
 
   pngjs@3.4.0: {}
 
+  polka@1.0.0-next.28:
+    dependencies:
+      '@polka/url': 1.0.0-next.29
+      trouter: 4.0.0
+
   possible-typed-array-names@1.1.0: {}
 
   postcss-attribute-case-insensitive@7.0.1(postcss@8.5.15):
@@ -56567,7 +56561,7 @@ snapshots:
       gopd: 1.2.0
       set-function-name: 2.0.2
 
-  regexparam@2.0.2: {}
+  regexparam@3.0.0: {}
 
   regexpu-core@6.4.0:
     dependencies:
@@ -58584,6 +58578,10 @@ snapshots:
   trough@1.0.5: {}
 
   trough@2.2.0: {}
+
+  trouter@4.0.0:
+    dependencies:
+      regexparam: 3.0.0
 
   truncate-utf8-bytes@1.0.2:
     dependencies:
