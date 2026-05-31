@@ -8,12 +8,6 @@ import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 import { blogCollections } from './decap-config.js';
 import { ensureCollections } from './setup.js';
 
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required env var: ${name}`);
-  return value;
-}
-
 /**
  * ARANGODB_URL      — ArangoDB HTTP endpoint. Default: http://localhost:8529
  * ARANGODB_DATABASE — ArangoDB database name. Default: _system
