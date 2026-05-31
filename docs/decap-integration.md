@@ -360,8 +360,8 @@ const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
 const { title, date, body } = doc.content as PostContent;
 ```
 
-This is the pattern used in all canonical starters. It is safe as long as your collection
-definition and interface stay in sync — they are not linked at the type level.
+This is the pattern used in all canonical starters. It is safe as long as your collection definition
+and interface stay in sync — they are not linked at the type level.
 
 **Option 2 — Zod validation (runtime safety)**
 
@@ -390,7 +390,7 @@ validation, or Feathers schemas), TypeBox gives you both a TypeScript type and a
 a single definition:
 
 ```typescript
-import { Type, Static } from '@sinclair/typebox';
+import { Static, Type } from '@sinclair/typebox';
 
 const PostSchema = Type.Object({
   title: Type.String(),
@@ -404,8 +404,8 @@ type Post = Static<typeof PostSchema>;
 **Known gap — no `zodSchemaFromCollection()` helper**
 
 The Decap collection definition (`blogCollections` in your `decap-config.ts`) already describes
-every field name, widget type, and whether the field is required. Ideally you could derive a Zod
-or TypeBox schema directly from that definition instead of duplicating field names. This helper does
+every field name, widget type, and whether the field is required. Ideally you could derive a Zod or
+TypeBox schema directly from that definition instead of duplicating field names. This helper does
 not exist yet — it is tracked as a future enhancement. Until then, keep your TypeScript interface /
 Zod schema in sync with the collection definition manually.
 
