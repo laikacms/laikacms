@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/azure",
   "version": "1.0.0",
+  "private": true,
   "description": "Azure service implementations for Laika CMS (Blob Storage, etc.). Each subpath is independent; `@azure/*` packages are optional peers.",
   "keywords": [
     "headless-cms",

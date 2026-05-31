@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/aws",
   "version": "1.0.0",
+  "private": true,
   "description": "AWS service implementations for Laika CMS (DynamoDB, S3, etc.).",
   "keywords": [
     "aws",

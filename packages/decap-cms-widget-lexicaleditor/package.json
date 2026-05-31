@@ -2,7 +2,6 @@
   "name": "decap-cms-widget-lexicaleditor",
   "description": "Lexical-based rich text widget for Decap CMS, built on a shadcn-editor fork.",
   "version": "0.1.0",
-  "private": true,
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

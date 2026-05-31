@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/algolia",
   "version": "1.0.0",
+  "private": true,
   "description": "Algolia-backed StorageRepository for Laika CMS. Treats an Algolia index as a hierarchical store: records are objects, virtual folders via a `_parent` attribute. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",

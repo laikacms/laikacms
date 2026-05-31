@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/google",
   "version": "1.0.0",
+  "private": true,
   "description": "Google Cloud service implementations for Laika CMS (Google Drive, etc.). Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",

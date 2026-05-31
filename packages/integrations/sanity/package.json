@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/sanity",
   "version": "1.0.0",
+  "private": true,
   "description": "Sanity-backed StorageRepository for Laika CMS. GROQ for queries, atomic transactional `/mutate` for writes. Runtime-agnostic — only depends on `fetch` and Web Crypto.",
   "keywords": [
     "headless-cms",
@@ -23,7 +24,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-sanity": {
       "types": "./dist/storage-sanity/index.d.ts",
@@ -49,5 +55,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

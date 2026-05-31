@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/couchdb",
   "version": "1.0.0",
+  "private": true,
   "description": "Apache CouchDB-backed StorageRepository for Laika CMS. Document-oriented store with first-class revisions, Mango selectors, and atomic _bulk_docs. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
@@ -24,7 +25,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-couchdb": {
       "types": "./dist/storage-couchdb/index.d.ts",
@@ -51,5 +57,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

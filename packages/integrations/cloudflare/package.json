@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/cloudflare",
   "version": "1.0.0",
+  "private": true,
   "description": "Cloudflare service implementations for Laika CMS (D1, Images, etc.). Each subpath is independent. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
@@ -26,7 +27,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-d1": {
       "types": "./dist/storage-d1/index.d.ts",
@@ -57,5 +63,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }
