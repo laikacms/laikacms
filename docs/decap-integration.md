@@ -296,20 +296,21 @@ footgun — do it once and forget it.
 `laika.fetch` (and `api.fetch`) expects a **Web API `Request`**. The table below shows what each
 framework gives you at the route handler boundary and whether you need a bridge.
 
-| Framework                         | What you receive                          | Bridge needed?                                                                          |
-| --------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------- |
-| **Astro**                         | Web API `Request`                         | None — pass directly: `laika.fetch(request)`                                            |
-| **SvelteKit**                     | Web API `Request`                         | None — pass directly: `laika.fetch(event.request)`                                      |
-| **Remix**                         | Web API `Request`                         | None — pass directly: `laika.fetch(request)`                                            |
-| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`) | None — pass directly: `laika.fetch(request)`                                            |
-| **Hono**                          | Hono `HonoRequest` wrapper                | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
-| **TanStack Start**                | Web API `Request`                         | None — pass directly from the server route handler                                      |
-| **Cloudflare Workers**            | Web API `Request`                         | None — Workers environment is spec-compliant                                            |
-| **Cloudflare Pages Functions**    | `context.request` — Web API `Request`     | None — use `context.request`: `api.fetch(context.request)` (see note below)             |
-| **Nuxt / h3**                     | h3 `H3Event`                              | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
-| **Express / plain `http.Server`** | Node.js `IncomingMessage`                 | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
-| **AWS Lambda (via http bridge)**  | Lambda event object                       | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
-| **Vercel Edge Functions**         | Web API `Request`                         | None — `export default async function handler(request: Request)` is spec-compliant      |
+| Framework                         | What you receive                                 | Bridge needed?                                                                          |
+| --------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| **Astro**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
+| **SvelteKit**                     | Web API `Request`                                | None — pass directly: `laika.fetch(event.request)`                                      |
+| **Remix**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
+| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`)        | None — pass directly: `laika.fetch(request)`                                            |
+| **Hono**                          | Hono `HonoRequest` wrapper                       | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
+| **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                      |
+| **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                            |
+| **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
+| **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
+| **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller   |
+| **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                       |
+| **Fastify**                       | Fastify `FastifyRequest`                         | `request.raw` → same Express bridge inside a Fastify route handler                      |
+| **AWS Lambda (via http bridge)**  | Lambda event object                              | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
 
 ### Express / plain `http.Server` — manual bridge
 
@@ -535,64 +536,64 @@ export default function AdminPage() {
 }
 ```
 
-### Cloudflare Pages Functions — use `decapApi` directly (no `createEmbeddedLaika`)
+### AdonisJS v6 — access the raw Node.js request via `ctx.request.request`
 
-Pages Functions run on the Workers edge runtime, which has no `node:fs`. `createEmbeddedLaika`
-hardcodes `FileSystemStorageRepository` and **will not work** in Pages Functions (or any other edge
-runtime). Wire `decapApi` manually with `R2StorageRepository` instead:
+AdonisJS v6 is **ESM-native** — it can import `laikacms` and `@laikacms/decap-integrations` directly
+without the dynamic `import()` workaround required by CommonJS frameworks like NestJS.
+
+AdonisJS wraps `IncomingMessage` in its own `Request` class. The raw Node.js objects are:
 
 ```ts
-// functions/api/decap/[[path]].ts
-import { decapApi } from '@laikacms/decap-integrations/decap-api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
-import { R2StorageRepository } from 'laikacms/storage-r2';
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+// app/controllers/decap_controller.ts
+import type { HttpContext } from '@adonisjs/core/http';
+import { Readable } from 'node:stream';
 
-interface Env {
-  CONTENT_BUCKET: R2Bucket;
-  DEV_TOKEN?: string;
+export default class DecapController {
+  async proxy({ request, response }: HttpContext) {
+    const req = request.request; // raw IncomingMessage
+    const res = response.response; // raw ServerResponse
+
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+
+    // Collect body (same bridge as Express)
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    const body = Buffer.concat(chunks);
+
+    const webRequest = new Request(url.toString(), {
+      method: req.method,
+      headers: req.headers as Record<string, string>,
+      body: body.byteLength > 0 && req.method !== 'GET' && req.method !== 'HEAD'
+        ? (body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer)
+        : null,
+      ...(body.byteLength > 0 ? { duplex: 'half' } : {}),
+    } as RequestInit);
+
+    const webResponse = await laika.fetch(webRequest);
+
+    res.statusCode = webResponse.status;
+    webResponse.headers.forEach((value, name) => res.setHeader(name, value));
+    if (webResponse.body) {
+      Readable.fromWeb(webResponse.body as import('stream/web').ReadableStream).pipe(res);
+    } else {
+      res.end();
+    }
+
+    // Prevent AdonisJS from sending a second response
+    response.finish();
+  }
 }
-
-export const onRequest: PagesFunction<Env> = async context => {
-  const storage = new R2StorageRepository(
-    context.env.CONTENT_BUCKET,
-    { md: markdownSerializer /* …etc… */ },
-    'md',
-  );
-  const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-  const api = decapApi({
-    documents: new ContentBaseDocumentsRepository(storage, settings),
-    storage,
-    assets: new ContentBaseAssetsRepository(storage, settings),
-    basePath: '/api/decap',
-    authenticateAccessToken: async (token: string) => {
-      if (token !== (context.env.DEV_TOKEN ?? 'dev-local-laika-token')) {
-        throw new Error('Unauthorized');
-      }
-      return { id: 'dev', email: 'dev@local.test', name: 'Dev Editor' };
-    },
-  });
-  return api.fetch(context.request);
-};
 ```
 
-The `[[path]]` double-bracket syntax is Cloudflare Pages' catch-all route segment — it matches
-`/api/decap/`, `/api/decap/anything/here`, etc. The exported name `onRequest` handles all HTTP
-methods; use `onRequestGet`, `onRequestPost`, etc. to restrict to specific methods.
+Wire the catch-all route in `start/routes.ts`:
 
-The R2 bucket binding (`CONTENT_BUCKET`) is configured in `wrangler.toml`:
-
-```toml
-[[r2_buckets]]
-binding = "CONTENT_BUCKET"
-bucket_name = "my-blog-content"
+```ts
+import router from '@adonisjs/core/services/router';
+const DecapController = () => import('#controllers/decap_controller');
+router.any('/api/decap/*', [DecapController, 'proxy']);
 ```
 
-Unlike the Workers + D1 starter, R2 uses a **native binding** — no API token or account ID secret is
-required in `wrangler.toml`. Create the bucket with `wrangler r2 bucket create my-blog-content` and
-the binding is available automatically.
+See `apps/starter-adonis-blog` for the full working example.
 
 ### SvelteKit — `src/app.html` is required
 
