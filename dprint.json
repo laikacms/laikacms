@@ -48,7 +48,8 @@
     "**/.svelte-kit",
     "**/.nuxt",
     "**/.next",
-    "**/.output"
+    "**/.output",
+    "**/.vinxi"
   ],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.93.3.wasm",
