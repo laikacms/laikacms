@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-meilisearch",
+  "description": "Starter: full-text search over LaikaCMS posts via Meilisearch. Indexer + /search endpoint. Real-world integration pattern.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "meili:up": "docker run -d --name laikacms-meili -p 7700:7700 -e MEILI_MASTER_KEY=devkey getmeili/meilisearch:latest",
+    "meili:down": "docker rm -f laikacms-meili || true"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "meilisearch": "^0.45.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

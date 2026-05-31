@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-drizzle-sqlite",
+  "description": "Starter: LaikaCMS with DrizzleStorageRepository over libsql/SQLite. First starter to exercise the SQL storage path.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@libsql/client": "^0.14.0",
+    "drizzle-orm": "^0.36.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "yaml": "^2.6.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

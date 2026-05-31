@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-qwik-blog",
+  "description": "Starter: Qwik City SSR blog with embedded LaikaCMS + Decap admin. Demonstrates Qwik's resumability + route loaders.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000",
+    "build": "qwik build",
+    "build.client": "vite build",
+    "build.server": "vite build -c adapters/node/vite.config.ts",
+    "preview": "qwik build preview && vite preview --port 3000",
+    "start": "node server/entry.node-server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@builder.io/qwik": "^1.13.0",
+    "@builder.io/qwik-city": "^1.13.0",
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools"
+  }
+}

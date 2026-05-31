@@ -148,6 +148,11 @@
       "import": "./dist/impl/storage-r2/index.js",
       "default": "./dist/impl/storage-r2/index.js"
     },
+    "./storage-s3": {
+      "types": "./dist/impl/storage-s3/index.d.ts",
+      "import": "./dist/impl/storage-s3/index.js",
+      "default": "./dist/impl/storage-s3/index.js"
+    },
     "./storage-webdav": {
       "types": "./dist/impl/storage-webdav/index.d.ts",
       "import": "./dist/impl/storage-webdav/index.js",

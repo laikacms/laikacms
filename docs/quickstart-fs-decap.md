@@ -20,28 +20,29 @@ Workers or AWS Lambda deployments see [deployment](./deployment.md).
 
 ## 1. Install packages
 
-Install the storage implementation, the HTTP API layer, and a serializer for the file format you
-want to store content in:
+Install the LaikaCMS package and a Node.js server runtime. Storage, API, and serializers are all
+subpath exports of the single `laikacms` package:
 
 ```bash
 # npm
-npm install @laikacms/storage-fs @laikacms/storage-api \
-  @laikacms/storage-serializers-json @hono/node-server
+npm install laikacms @hono/node-server
 
 # pnpm
-pnpm add @laikacms/storage-fs @laikacms/storage-api \
-  @laikacms/storage-serializers-json @hono/node-server
+pnpm add laikacms @hono/node-server
 ```
 
-| Package                              | Purpose                                                    |
-| ------------------------------------ | ---------------------------------------------------------- |
-| `@laikacms/storage-fs`               | `FileSystemStorageRepository` — reads/writes files on disk |
-| `@laikacms/storage-api`              | `buildJsonApi` — Hono-based JSON:API HTTP server           |
-| `@laikacms/storage-serializers-json` | Serializes content objects to/from `.json` files           |
-| `@hono/node-server`                  | Runs the Hono app on Node.js                               |
+| Package             | Purpose                                                            |
+| ------------------- | ------------------------------------------------------------------ |
+| `laikacms`          | Core: storage repos, API factories, serializers (subpath exports). |
+| `@hono/node-server` | Runs the Hono app on Node.js                                       |
 
-> **Other formats:** swap `@laikacms/storage-serializers-json` for
-> `@laikacms/storage-serializers-yaml` if you prefer YAML files, and change `'json'` to `'yaml'` in
+> **Subpath exports:** the snippet below imports from `laikacms/storage-fs`, `laikacms/storage-api`,
+> and `laikacms/storage-serializers-json`. These are subpath exports of the single `laikacms`
+> package — there is no separate `@laikacms/storage-fs` package on npm. See
+> [packages.md](./packages.md) for the full list of subpaths.
+
+> **Other formats:** swap `laikacms/storage-serializers-json` for
+> `laikacms/storage-serializers-yaml` if you prefer YAML files, and change `'json'` to `'yaml'` in
 > the snippet below.
 
 ---
@@ -53,9 +54,9 @@ Create `server.mjs` (or `server.ts` if you have a TypeScript build step):
 ```js
 // server.mjs
 import { serve } from '@hono/node-server';
-import { buildJsonApi } from '@laikacms/storage-api';
-import { FileSystemStorageRepository } from '@laikacms/storage-fs';
-import { jsonSerializer } from '@laikacms/storage-serializers-json';
+import { buildJsonApi } from 'laikacms/storage-api';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
 // 1. Build a serializer registry — maps file extensions to serializers.
 const serializerRegistry = {
@@ -125,17 +126,20 @@ You should receive a JSON:API response describing the available endpoints.
 
 ```bash
 # npm
-npm install @laikacms/decap-cms-backend-laika decap-cms-app
+npm install @laikacms/decap-integrations decap-cms-app
 
 # pnpm
-pnpm add @laikacms/decap-cms-backend-laika decap-cms-app
+pnpm add @laikacms/decap-integrations decap-cms-app
 ```
+
+> The `laika` backend lives at the `@laikacms/decap-integrations/decap-cms-backend-laika` subpath
+> export. There is no separate `@laikacms/decap-cms-backend-laika` package on npm.
 
 ### 4b. Register the backend
 
 ```typescript
 // admin/index.ts (or admin/index.js)
-import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
+import { createLaikaBackend } from '@laikacms/decap-integrations/decap-cms-backend-laika';
 import CMS from 'decap-cms-app';
 
 const LaikaBackend = createLaikaBackend({
