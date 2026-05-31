@@ -337,6 +337,78 @@ export default function AdminPage() {
 }
 ```
 
+### Typing `document.content` — casting vs. validation
+
+`laika.documents.getDocument()` returns a `Document` whose `.content` property is typed as
+`Record<string, unknown>`. The exact shape depends on your Decap collection configuration, which is
+known only at runtime — LaikaCMS cannot infer field types from the collection definition at compile
+time.
+
+**Option 1 — cast (fast, no runtime overhead)**
+
+Define a TypeScript interface that mirrors your Decap collection fields and cast `doc.content`:
+
+```typescript
+interface PostContent {
+  title?: string;
+  date?: string;
+  description?: string;
+  body?: string;
+}
+
+const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
+const { title, date, body } = doc.content as PostContent;
+```
+
+This is the pattern used in all canonical starters. It is safe as long as your collection
+definition and interface stay in sync — they are not linked at the type level.
+
+**Option 2 — Zod validation (runtime safety)**
+
+Parse `doc.content` through a Zod schema for runtime guarantees:
+
+```typescript
+import { z } from 'zod';
+
+const PostSchema = z.object({
+  title: z.string(),
+  date: z.string().optional(),
+  description: z.string().optional(),
+  body: z.string().optional(),
+});
+
+type Post = z.infer<typeof PostSchema>;
+
+const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
+const post = PostSchema.parse(doc.content); // throws ZodError if shape is wrong
+```
+
+**Option 3 — TypeBox (compatible with JSON Schema)**
+
+If you need a JSON Schema representation of your content type (e.g. for OpenAPI, tRPC output
+validation, or Feathers schemas), TypeBox gives you both a TypeScript type and a schema object from
+a single definition:
+
+```typescript
+import { Type, Static } from '@sinclair/typebox';
+
+const PostSchema = Type.Object({
+  title: Type.String(),
+  date: Type.Optional(Type.String()),
+  body: Type.Optional(Type.String()),
+});
+
+type Post = Static<typeof PostSchema>;
+```
+
+**Known gap — no `zodSchemaFromCollection()` helper**
+
+The Decap collection definition (`blogCollections` in your `decap-config.ts`) already describes
+every field name, widget type, and whether the field is required. Ideally you could derive a Zod
+or TypeBox schema directly from that definition instead of duplicating field names. This helper does
+not exist yet — it is tracked as a future enhancement. Until then, keep your TypeScript interface /
+Zod schema in sync with the collection definition manually.
+
 ### SvelteKit — `src/app.html` is required
 
 SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js, you must create
