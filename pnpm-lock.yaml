@@ -938,6 +938,37 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-drizzle-sqlite-blog:
+    dependencies:
+      '@hono/node-server':
+        specifier: catalog:server
+        version: 1.19.14(hono@4.12.18)
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      '@libsql/client':
+        specifier: ^0.14.0
+        version: 0.14.0
+      drizzle-orm:
+        specifier: ^0.36.0
+        version: 0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(react@19.2.6)
+      hono:
+        specifier: catalog:server
+        version: 4.12.18
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-dropbox-blog:
     dependencies:
       '@hono/node-server':
