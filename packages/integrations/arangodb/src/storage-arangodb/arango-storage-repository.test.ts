@@ -1,5 +1,8 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { arangoContractCase } from './testing/index.js';
 
 import { type ArangoCursorResponse, ArangoDataSource, type ArangoDocMeta } from './arango-datasource.js';
 import { ArangoStorageRepository, keyToPath, pathToKey } from './arango-storage-repository.js';
@@ -554,3 +557,5 @@ describe('ArangoStorageRepository', () => {
 
 // Reference unused symbols.
 void aqlCallCount;
+
+runStorageRepositoryContract(arangoContractCase);
