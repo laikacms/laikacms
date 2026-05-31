@@ -23,11 +23,11 @@ import { laika } from './src/lib/laika';
  * Pass the full content object — Gatsby uses it to determine whether a node
  * has changed between builds.
  */
-export const sourceNodes: GatsbyNode['sourceNodes'] = async ({
+export async function sourceNodes({
   actions,
   createContentDigest,
   createNodeId,
-}) => {
+}: Parameters<NonNullable<GatsbyNode['sourceNodes']>>[0]): Promise<void> {
   const { createNode } = actions;
 
   const { items } = await collectStream(
@@ -64,7 +64,7 @@ export const sourceNodes: GatsbyNode['sourceNodes'] = async ({
       },
     });
   }
-};
+}
 
 /**
  * createSchemaCustomization — define explicit GraphQL types for LaikaCMS nodes.
@@ -73,7 +73,9 @@ export const sourceNodes: GatsbyNode['sourceNodes'] = async ({
  * If there are no posts, Gatsby generates no LaikaPost type and queries fail.
  * Explicitly define the type so queries always work even on empty sites.
  */
-export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] = ({ actions }) => {
+export function createSchemaCustomization({
+  actions,
+}: Parameters<NonNullable<GatsbyNode['createSchemaCustomization']>>[0]): void {
   const { createTypes } = actions;
   createTypes(`
     type LaikaPost implements Node {
@@ -85,7 +87,7 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
       body: String
     }
   `);
-};
+}
 
 /**
  * createPages — generate a page for each LaikaCMS post.
@@ -94,7 +96,10 @@ export const createSchemaCustomization: GatsbyNode['createSchemaCustomization'] 
  * populated in sourceNodes. The slug becomes the URL path; the template
  * component queries the same GraphQL layer for full content.
  */
-export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions }) => {
+export async function createPages({
+  graphql,
+  actions,
+}: Parameters<NonNullable<GatsbyNode['createPages']>>[0]): Promise<void> {
   const { createPage } = actions;
 
   const result = await graphql<{ allLaikaPost: { nodes: Array<{ slug: string }> } }>(`
@@ -113,4 +118,4 @@ export const createPages: GatsbyNode['createPages'] = async ({ graphql, actions 
   for (const { slug } of result.data?.allLaikaPost.nodes ?? []) {
     createPage({ path: `/blog/${slug}`, component, context: { slug } });
   }
-};
+}
