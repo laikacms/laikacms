@@ -44,7 +44,7 @@ function HomePage() {
         )
         : (
           <ul style={{ listStyle: 'none', padding: 0 }}>
-            {posts.map(post => {
+            {posts.map((post: { key: string, updatedAt?: string }) => {
               const slug = post.key.replace(/^posts\//, '').replace(/\.md$/, '');
               return (
                 <li key={slug} style={{ marginBottom: '1rem' }}>

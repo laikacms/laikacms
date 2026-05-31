@@ -5,7 +5,7 @@ import { runTask } from 'laikacms/compat';
 import { laika } from '../laika.js';
 
 const getPost = createServerFn({ method: 'GET' })
-  .validator((slug: string) => slug)
+  .inputValidator((slug: string) => slug)
   .handler(async ({ data: slug }) => {
     try {
       const post = await runTask(laika.documents.getDocument(`posts/${slug}`));
