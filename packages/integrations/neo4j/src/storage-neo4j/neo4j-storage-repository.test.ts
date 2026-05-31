@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type CypherResult, type CypherStatement, Neo4jDataSource } from './neo4j-datasource.js';
 import { Neo4jStorageRepository } from './neo4j-storage-repository.js';
+import { neo4jContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(neo4jContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Neo4j mock.
