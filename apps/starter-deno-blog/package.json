@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "build:admin": "esbuild admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "build": "pnpm build:admin",
     "dev": "pnpm build:admin && deno task dev",
     "start": "deno task start",
     "typecheck": "tsc --noEmit"

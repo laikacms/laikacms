@@ -929,6 +929,40 @@ importers:
         specifier: catalog:tools
         version: 0.27.7
 
+  apps/starter-docusaurus-blog:
+    dependencies:
+      '@docusaurus/core':
+        specifier: ^3.9.0
+        version: 3.10.1(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(esbuild@0.27.7)(postcss@8.5.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
+      '@docusaurus/preset-classic':
+        specifier: ^3.9.0
+        version: 3.10.1(@algolia/client-search@5.53.0)(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(esbuild@0.27.7)(postcss@8.5.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@docusaurus/module-type-aliases':
+        specifier: ^3.9.0
+        version: 3.10.1(esbuild@0.27.7)(postcss@8.5.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@docusaurus/types':
+        specifier: ^3.9.0
+        version: 3.10.1(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.15))(esbuild@0.27.7)(html-minifier-terser@7.2.0)(postcss@8.5.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      '@types/react':
+        specifier: catalog:types
+        version: 19.2.14
+      esbuild:
+        specifier: catalog:tools
+        version: 0.27.7
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-drizzle-sqlite:
     dependencies:
       '@hono/node-server':
@@ -34284,7 +34318,7 @@ snapshots:
     dependencies:
       '@docusaurus/types': 3.10.1(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.15))(esbuild@0.27.7)(html-minifier-terser@7.2.0)(postcss@8.5.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@types/history': 4.7.11
-      '@types/react': 19.2.14
+      '@types/react': 18.3.29
       '@types/react-router-config': 5.0.11
       '@types/react-router-dom': 5.3.3
       react: 19.2.6
@@ -34869,7 +34903,7 @@ snapshots:
       '@mdx-js/mdx': 3.1.1
       '@types/history': 4.7.11
       '@types/mdast': 4.0.4
-      '@types/react': 19.2.14
+      '@types/react': 18.3.29
       commander: 5.1.0
       joi: 17.13.3
       react: 19.2.6
