@@ -1,7 +1,11 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { D1StorageRepository } from './d1-storage-repository.js';
+import { d1ContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(d1ContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Cloudflare D1 mock — handles the specific SQL the repository
