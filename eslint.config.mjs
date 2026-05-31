@@ -35,6 +35,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/build/**',
       '**/worker-configuration.d.ts',
+      '**/next-env.d.ts',
       'types/**',
       '**/.astro/**',
       '**/.next/**',

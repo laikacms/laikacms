@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 
 import { createEmbeddedLaika } from '@laikacms/decap-integrations/embedded';
 
-import { blogCollections } from './decap-config.js';
+import { blogCollections } from './decap-config';
 
 /**
  * Module-level singleton — Next.js runs each API route in the same Node.js
