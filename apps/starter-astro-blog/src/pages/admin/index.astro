@@ -1,0 +1,56 @@
+---
+/**
+ * Decap CMS admin UI.
+ *
+ * Pattern: "Decap admin from CDN"
+ *   1. window.CMS_MANUAL_INIT = true prevents Decap from auto-starting before
+ *      the laika backend is registered.
+ *   2. decap-cms.js from CDN provides the global CMS object.
+ *   3. The bundled <script> (below) imports the laika backend from the npm
+ *      package, registers it, and calls CMS.init() with the inline config.
+ *
+ * The page is prerendered (static HTML) because the admin is purely
+ * client-side once the scripts are loaded.
+ */
+export const prerender = true;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Content Manager</title>
+    <!-- Must be set before the CDN script loads Decap -->
+    <script is:inline>window.CMS_MANUAL_INIT = true;</script>
+  </head>
+  <body>
+    <!-- Decap CMS UI from CDN — synchronously sets window.CMS -->
+    <script is:inline src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+
+    <!--
+      Bundled by Vite/Astro: imports the laika backend plugin and the shared
+      collection config, registers the backend, then calls CMS.init().
+
+      Ordering guarantee: the CDN <script> above is parser-blocking (runs
+      synchronously during HTML parse). This bundled module script carries
+      type="module" (always deferred), so window.CMS is already defined when
+      it runs.
+    -->
+    <script>
+      import createLaikaBackend from '@laikacms/decap-integrations/decap-cms-backend-laika';
+      import { blogCollections } from '../../decap-config.js';
+
+      (window as any).CMS.registerBackend('laika', createLaikaBackend());
+
+      (window as any).CMS.init({
+        config: {
+          backend: { name: 'laika', api_url: '/api/decap' },
+          media_folder: 'public/uploads',
+          public_folder: '/uploads',
+          collections: blogCollections,
+        },
+      });
+    </script>
+  </body>
+</html>

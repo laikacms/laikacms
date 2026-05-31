@@ -99,7 +99,7 @@ Full docs, architecture notes, and deployment guides live in the
 
 ## Compat helpers — Promise-friendly entry points
 
-`laikacms/core` exports two Promise-friendly wrappers for non-Effect consumers:
+`laikacms/compat` exports two Promise-friendly wrappers for non-Effect consumers:
 
 - **`runTask(task, options?)`** — runs a `LaikaTask` and resolves with its value.
 - **`collectStream(stream, options?)`** — drains a `LaikaStream` and resolves with
@@ -109,7 +109,7 @@ Both accept an optional `onProgress` callback that is called for every `LaikaMet
 `Progress` and `RecoverableError` — as the task/stream runs.
 
 ```ts
-import { collectStream, runTask } from 'laikacms/core';
+import { collectStream, runTask } from 'laikacms/compat';
 
 // Task — receive progress events without importing Effect
 const result = await runTask(myTask, {

@@ -36,6 +36,7 @@ export default tseslint.config(
       '**/build/**',
       '**/worker-configuration.d.ts',
       'types/**',
+      '**/.astro/**',
     ],
   },
 );

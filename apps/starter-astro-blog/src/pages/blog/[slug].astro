@@ -1,0 +1,43 @@
+---
+/**
+ * Individual blog post page.
+ *
+ * Reads a published document via laika.documents.getDocument using runTask
+ * from laikacms/compat (Promise-friendly, no Effect import needed).
+ *
+ * document.content is the parsed frontmatter merged with the body field —
+ * the exact fields match what you configured in Decap CMS collections.
+ */
+import { runTask } from 'laikacms/compat';
+
+import Base from '../../layouts/Base.astro';
+import { laika } from '../../laika.js';
+
+const { slug } = Astro.params;
+if (!slug) return Astro.redirect('/');
+
+let post;
+try {
+  post = await runTask(laika.documents.getDocument(`posts/${slug}`));
+} catch {
+  return new Response('Not found', { status: 404 });
+}
+
+const { title, date, description, body } = post.content as {
+  title?: string;
+  date?: string;
+  description?: string;
+  body?: string;
+};
+---
+
+<Base title={title ?? slug} description={description}>
+  <article>
+    <h1>{title ?? slug}</h1>
+    {date && <time>{new Date(date).toLocaleDateString()}</time>}
+    {description && <p><em>{description}</em></p>}
+    <!-- body is raw markdown; render it as HTML in a real app with remark/rehype -->
+    <pre style="white-space:pre-wrap;font-family:inherit">{body}</pre>
+  </article>
+  <p><a href="/">← Back</a></p>
+</Base>
