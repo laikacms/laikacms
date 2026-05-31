@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-netlify-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Netlify Functions v2 + LaikaCMS. Demonstrates Netlify's WHATWG-native Request/Response, createEmbeddedLaika for local dev, and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && netlify dev",
+    "build": "pnpm build:admin",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@netlify/functions": "^2.0.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
