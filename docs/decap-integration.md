@@ -539,75 +539,32 @@ export default function AdminPage() {
 }
 ```
 
-### GitHub App storage — creating credentials
+### Upstash Redis — `keyPrefix` for multi-tenant deployments
 
-`GithubStorageRepository` authenticates as a **GitHub App**, not a personal access token. This gives
-you scoped, revocable per-repo access that works for production deployments.
-
-**One-time setup:**
-
-1. Go to [github.com/settings/apps/new](https://github.com/settings/apps/new).
-2. Set a name and homepage URL (any URL is fine for local dev).
-3. Permissions: **Repository permissions → Contents → Read & Write**, **Metadata → Read**.
-4. Uncheck "Active" under Webhook — you don't need webhooks.
-5. Create the app and note the **App ID** on the settings page.
-6. Under "Private keys", generate a key — download the `.pem` file.
-7. Click **Install App**, select your content repo, and note the installation ID from the URL
-   (`https://github.com/settings/installations/<INSTALLATION_ID>`).
+`UpstashRedisStorageRepository` is the most portable LaikaCMS storage adapter — it uses only
+`fetch`, so it runs unchanged in Node.js, Cloudflare Workers, Vercel Edge Functions, Deno Deploy, or
+any other runtime with a global `fetch`.
 
 ```ts
-import { GithubStorageRepository } from '@laikacms/github/storage-gh';
+import { UpstashRedisStorageRepository } from '@laikacms/upstash/storage-redis';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
-const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
-const { title, date, body } = doc.content as PostContent;
-```
-
-This is the pattern used in all canonical starters. It is safe as long as your collection definition
-and interface stay in sync — they are not linked at the type level.
-
-**Option 2 — Zod validation (runtime safety)**
-
-Parse `doc.content` through a Zod schema for runtime guarantees:
-
-```typescript
-import { z } from 'zod';
-
-const PostSchema = z.object({
-  title: z.string(),
-  date: z.string().optional(),
-  description: z.string().optional(),
-  body: z.string().optional(),
+const storage = new UpstashRedisStorageRepository({
+  url: process.env.UPSTASH_REDIS_URL, // https://<region>-<name>-<n>.upstash.io
+  token: process.env.UPSTASH_REDIS_TOKEN,
+  serializerRegistry: { md: markdownSerializer /* …etc… */ },
+  defaultFileExtension: 'md',
+  // keyPrefix defaults to 'laika:storage' — override per-tenant for multi-site deployments
+  keyPrefix: 'my-blog:storage',
 });
 ```
 
-**Private key in env vars**: `.pem` files contain real newlines. Most hosting platforms store env
-vars as single-line strings with literal `\n`. The `.replace(/\\n/g, '\n')` call in the snippet
-above handles this. If you paste the key directly (e.g. in a `.env` file with quotes), the `replace`
-is a harmless no-op.
+Credentials are available in the Upstash console under **Database → REST API** as
+`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. The free tier supports one database with
+10k commands/day — enough for a content-light blog.
 
-If you need a JSON Schema representation of your content type (e.g. for OpenAPI, tRPC output
-validation, or Feathers schemas), TypeBox gives you both a TypeScript type and a schema object from
-a single definition:
-
-```typescript
-import { Static, Type } from '@sinclair/typebox';
-
-const PostSchema = Type.Object({
-  title: Type.String(),
-  date: Type.Optional(Type.String()),
-  body: Type.Optional(Type.String()),
-});
-
-type Post = Static<typeof PostSchema>;
-```
-
-**Known gap — no `zodSchemaFromCollection()` helper**
-
-The Decap collection definition (`blogCollections` in your `decap-config.ts`) already describes
-every field name, widget type, and whether the field is required. Ideally you could derive a Zod or
-TypeBox schema directly from that definition instead of duplicating field names. This helper does
-not exist yet — it is tracked as a future enhancement. Until then, keep your TypeScript interface /
-Zod schema in sync with the collection definition manually.
+**Multi-tenant tip.** One Upstash database can back multiple sites. Set a distinct `keyPrefix` per
+site (e.g. `site-a:storage`, `site-b:storage`) so their keys don't collide.
 
 ### SvelteKit — `src/app.html` is required
 
