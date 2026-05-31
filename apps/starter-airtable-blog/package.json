@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-airtable-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by Airtable + LaikaCMS. Content lives in an Airtable base; Decap CMS reads/writes it via AirtableStorageRepository.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/airtable": "workspace:*",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
