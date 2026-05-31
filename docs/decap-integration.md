@@ -296,24 +296,19 @@ footgun — do it once and forget it.
 `laika.fetch` (and `api.fetch`) expects a **Web API `Request`**. The table below shows what each
 framework gives you at the route handler boundary and whether you need a bridge.
 
-| Framework                         | What you receive                          | Bridge needed?                                                                                                                              |
-| --------------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Astro**                         | Web API `Request`                         | None — pass directly: `laika.fetch(request)`                                                                                                |
-| **SvelteKit**                     | Web API `Request`                         | None — pass directly: `laika.fetch(event.request)`                                                                                          |
-| **Remix / React Router v7**       | Web API `Request`                         | None — pass directly: `laika.fetch(request)`                                                                                                |
-| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`) | None — pass directly: `laika.fetch(request)`                                                                                                |
-| **Hono / HonoX**                  | Hono `HonoRequest` wrapper                | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                                                                            |
-| **TanStack Start**                | Web API `Request`                         | None — pass directly from the server route handler                                                                                          |
-| **Waku**                          | Web API `Request`                         | None — `ApiHandler` receives a standard `Request`: `handlers: { all: req => laika.fetch(req) }`                                             |
-| **Bun.serve**                     | Web API `Request`                         | None — `Bun.serve({ fetch })` handler is spec-compliant                                                                                     |
-| **Cloudflare Workers**            | Web API `Request`                         | None — Workers environment is spec-compliant                                                                                                |
-| **Nuxt / h3**                     | h3 `H3Event`                              | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                                                                         |
-| **Express / plain `http.Server`** | Node.js `IncomingMessage`                 | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below                                                       |
-| **Fastify**                       | Node.js `IncomingMessage` (via `req.raw`) | Manual bridge — use `addContentTypeParser('*', { parseAs: 'buffer' })` to capture body bytes                                                |
-| **VitePress (dev server)**        | Node.js `IncomingMessage`                 | Manual bridge via `configureServer` Vite plugin — see [VitePress dev server](#vitepress-docusaurus--vite-based-dev-servers) below           |
-| **Docusaurus (dev server)**       | Node.js `IncomingMessage`                 | Manual bridge via `configureWebpack` + `setupMiddlewares` — see [VitePress dev server](#vitepress-docusaurus--vite-based-dev-servers) below |
-| **Eleventy (11ty) dev server**    | Node.js `IncomingMessage`                 | Manual bridge via `setServerOptions({ middleware: [...] })`                                                                                 |
-| **AWS Lambda (via http bridge)**  | Lambda event object                       | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch`                                                     |
+| Framework                         | What you receive                          | Bridge needed?                                                                          |
+| --------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------- |
+| **Astro**                         | Web API `Request`                         | None — pass directly: `laika.fetch(request)`                                            |
+| **SvelteKit**                     | Web API `Request`                         | None — pass directly: `laika.fetch(event.request)`                                      |
+| **Remix**                         | Web API `Request`                         | None — pass directly: `laika.fetch(request)`                                            |
+| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`) | None — pass directly: `laika.fetch(request)`                                            |
+| **Hono**                          | Hono `HonoRequest` wrapper                | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
+| **TanStack Start**                | Web API `Request`                         | None — pass directly from the server route handler                                      |
+| **Cloudflare Workers**            | Web API `Request`                         | None — Workers environment is spec-compliant                                            |
+| **Nuxt / h3**                     | h3 `H3Event`                              | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
+| **Express / plain `http.Server`** | Node.js `IncomingMessage`                 | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
+| **AWS Lambda (via http bridge)**  | Lambda event object                       | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
+| **Vercel Edge Functions**         | Web API `Request`                         | None — `export default async function handler(request: Request)` is spec-compliant      |
 
 ### Express / plain `http.Server` — manual bridge
 
@@ -539,32 +534,67 @@ export default function AdminPage() {
 }
 ```
 
-### Upstash Redis — `keyPrefix` for multi-tenant deployments
+### Vercel Edge Functions — use `@laikacms/vercel/storage-blob` (no `createEmbeddedLaika`)
 
-`UpstashRedisStorageRepository` is the most portable LaikaCMS storage adapter — it uses only
-`fetch`, so it runs unchanged in Node.js, Cloudflare Workers, Vercel Edge Functions, Deno Deploy, or
-any other runtime with a global `fetch`.
+Vercel Edge Functions run on the V8 edge runtime — no `node:fs`, so `createEmbeddedLaika` is not
+available. Use `@laikacms/vercel/storage-blob` with `decapApi` instead. Unlike Cloudflare R2 (native
+binding) or D1 (REST API secrets), Vercel Blob only requires a single `BLOB_READ_WRITE_TOKEN` env
+var:
 
 ```ts
-import { UpstashRedisStorageRepository } from '@laikacms/upstash/storage-redis';
+// api/decap/[...path].ts
+export const config = { runtime: 'edge' };
+
+import { decapApi } from '@laikacms/decap-integrations/decap-api';
+import { VercelBlobDataSource, VercelBlobStorageRepository } from '@laikacms/vercel/storage-blob';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
-const storage = new UpstashRedisStorageRepository({
-  url: process.env.UPSTASH_REDIS_URL, // https://<region>-<name>-<n>.upstash.io
-  token: process.env.UPSTASH_REDIS_TOKEN,
-  serializerRegistry: { md: markdownSerializer /* …etc… */ },
-  defaultFileExtension: 'md',
-  // keyPrefix defaults to 'laika:storage' — override per-tenant for multi-site deployments
-  keyPrefix: 'my-blog:storage',
-});
+export default async function handler(request: Request): Promise<Response> {
+  const dataSource = new VercelBlobDataSource({
+    auth: { token: process.env.BLOB_READ_WRITE_TOKEN },
+  });
+  const storage = new VercelBlobStorageRepository({
+    dataSource,
+    serializerRegistry: { md: markdownSerializer /* …etc… */ },
+    defaultFileExtension: 'md',
+  });
+  const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+  const api = decapApi({
+    documents: new ContentBaseDocumentsRepository(storage, settings),
+    storage,
+    assets: new ContentBaseAssetsRepository(storage, settings),
+    basePath: '/api/decap',
+    authenticateAccessToken: async (token: string) => {
+      if (token !== process.env.DEV_TOKEN) throw new Error('Unauthorized');
+      return { id: 'dev', email: 'dev@local.test', name: 'Dev Editor' };
+    },
+  });
+  return api.fetch(request);
+}
 ```
 
-Credentials are available in the Upstash console under **Database → REST API** as
-`UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. The free tier supports one database with
-10k commands/day — enough for a content-light blog.
+**Vercel Blob requires a real token even in local dev.** There is no local mock. Create a Blob store
+in the Vercel dashboard (Storage → Create → Blob), then add `BLOB_READ_WRITE_TOKEN` to `.env`. The
+same token works in both `vercel dev` and production.
 
-**Multi-tenant tip.** One Upstash database can back multiple sites. Set a distinct `keyPrefix` per
-site (e.g. `site-a:storage`, `site-b:storage`) so their keys don't collide.
+**Catch-all route syntax.** `api/decap/[...path].ts` is Vercel's catch-all segment — matches
+`/api/decap/`, `/api/decap/anything/here`, etc. The `export const config = { runtime: 'edge' }` opts
+the function into the V8 edge runtime.
+
+**Blog post routing.** Dynamic blog URLs (`/blog/:slug`) can be served by an `api/blog/[slug].ts`
+Edge Function and rewritten via `vercel.json`:
+
+```json
+{
+  "rewrites": [{ "source": "/blog/:slug", "destination": "/api/blog/:slug" }]
+}
+```
+
+When a rewrite is active, `new URL(request.url).pathname` inside the function returns the
+**original** path (`/blog/my-post`), not the destination path.
 
 ### SvelteKit — `src/app.html` is required
 
