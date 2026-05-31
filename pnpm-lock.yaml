@@ -913,14 +913,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/laikacms
 
-  apps/starter-docusaurus-blog:
+  apps/starter-deno-blog:
     dependencies:
-      '@docusaurus/core':
-        specifier: ^3.9.0
-        version: 3.10.1(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(esbuild@0.27.7)(postcss@8.5.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(typescript@6.0.3)
-      '@docusaurus/preset-classic':
-        specifier: ^3.9.0
-        version: 3.10.1(@algolia/client-search@5.53.0)(@mdx-js/react@3.1.1(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(esbuild@0.27.7)(postcss@8.5.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(search-insights@2.17.3)(typescript@6.0.3)
       '@laikacms/decap-integrations':
         specifier: workspace:*
         version: link:../../packages/decap
@@ -928,24 +922,12 @@ importers:
         specifier: workspace:*
         version: link:../../packages/laikacms
     devDependencies:
-      '@docusaurus/module-type-aliases':
-        specifier: ^3.9.0
-        version: 3.10.1(esbuild@0.27.7)(postcss@8.5.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@docusaurus/types':
-        specifier: ^3.9.0
-        version: 3.10.1(clean-css@5.3.3)(cssnano@6.1.2(postcss@8.5.15))(esbuild@0.27.7)(html-minifier-terser@7.2.0)(postcss@8.5.15)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       '@types/node':
         specifier: catalog:types
         version: 22.19.18
-      '@types/react':
-        specifier: catalog:types
-        version: 19.2.14
       esbuild:
         specifier: catalog:tools
         version: 0.27.7
-      typescript:
-        specifier: catalog:tools
-        version: 6.0.3
 
   apps/starter-drizzle-sqlite:
     dependencies:
@@ -32424,8 +32406,8 @@ snapshots:
 
   '@babel/generator@7.29.1':
     dependencies:
-      '@babel/parser': 7.29.3
-      '@babel/types': 7.29.0
+      '@babel/parser': 7.29.7
+      '@babel/types': 7.29.7
       '@jridgewell/gen-mapping': 0.3.13
       '@jridgewell/trace-mapping': 0.3.31
       jsesc: 3.1.0
@@ -45158,9 +45140,9 @@ snapshots:
   babel-dead-code-elimination@1.0.12:
     dependencies:
       '@babel/core': 7.29.7
-      '@babel/parser': 7.29.7
-      '@babel/traverse': 7.29.7
-      '@babel/types': 7.29.7
+      '@babel/parser': 7.29.3
+      '@babel/traverse': 7.29.0
+      '@babel/types': 7.29.0
     transitivePeerDependencies:
       - supports-color
 

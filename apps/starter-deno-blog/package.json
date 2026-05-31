@@ -1,0 +1,24 @@
+{
+  "name": "@laikacms/starter-deno-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Deno 2 + LaikaCMS. Demonstrates Deno.serve() WHATWG-native integration, createEmbeddedLaika via Node.js compat (node:fs / node:path), and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && deno task dev",
+    "start": "deno task start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
