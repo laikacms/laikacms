@@ -337,6 +337,53 @@ export default function AdminPage() {
 }
 ```
 
+### PocketBase storage — collection setup
+
+`PocketBaseStorageRepository` calls the PocketBase REST API over `fetch`. Auth is via a superuser
+JWT obtained by calling `POST /api/admins/auth-with-password`.
+
+**Collection setup** (once, via PocketBase admin UI at `/_/` → Collections → New collection):
+
+Create a collection named `laika_storage` with these fields:
+
+| Field       | Type   | Notes                     |
+| ----------- | ------ | ------------------------- |
+| `parent`    | Text   |                           |
+| `name`      | Text   | Index this field          |
+| `path`      | Text   | Unique index              |
+| `type`      | Select | Values: `file`, `folder`  |
+| `extension` | Text   |                           |
+| `content`   | Text   | Long text / no max length |
+
+```ts
+import { PocketBaseStorageRepository } from '@laikacms/pocketbase/storage-pb';
+
+// Authenticate once; cache the token (valid ~1 day for superuser tokens)
+const res = await fetch(`${pbUrl}/api/admins/auth-with-password`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ identity: email, password }),
+});
+const { token } = await res.json();
+
+const storage = new PocketBaseStorageRepository({
+  url: process.env.POCKETBASE_URL!,
+  auth: { token },
+  serializerRegistry,
+  defaultFileExtension: 'md',
+});
+```
+
+For long-running processes, replace the static `token` with a `tokenProvider` that re-authenticates
+when the token expires. PocketBase superuser tokens expire after ~1 day by default.
+
+**Self-hosting**: PocketBase is a single Go binary. Download from
+[pocketbase.io](https://pocketbase.io/docs/) — no Docker, no database setup, just
+`./pocketbase serve`.
+
+**PocketHost**: managed PocketBase hosting at [pockethost.io](https://pockethost.io) — free tier
+available.
+
 ### Turso / libSQL storage — schema and connection
 
 `LibSqlStorageRepository` speaks the libSQL Hrana HTTP pipeline protocol (`POST /v2/pipeline`) over
