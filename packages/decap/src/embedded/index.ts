@@ -188,3 +188,217 @@ export function createEmbeddedLaika(opts: CreateEmbeddedLaikaOptions): EmbeddedL
     assets,
   };
 }
+
+/**
+ * Options accepted by {@link minimalBlogConfig}. All fields are optional —
+ * the defaults match what every LaikaCMS starter template wants.
+ */
+export interface MinimalBlogConfigOptions {
+  /** Decap backend block. Defaults to `{ name: 'laika', branch: 'main' }`. */
+  backend?: Record<string, unknown>;
+  /** Collection technical name (Decap `name`). Default: `'posts'`. */
+  collectionName?: string;
+  /** Collection display label (Decap `label`). Default: `'Posts'`. */
+  collectionLabel?: string;
+  /** On-disk folder relative to `contentDir`. Default: same as `collectionName`. */
+  folder?: string;
+  /** File extension for new entries. Default: `'md'`. */
+  extension?: 'md' | 'json' | 'yaml' | 'yml';
+  /** Slug template. Default: `'{{slug}}'`. */
+  slug?: string;
+  /** Media library upload folder. Default: `'public/uploads'`. */
+  mediaFolder?: string;
+  /** Public URL prefix for uploaded media. Default: `'/uploads'`. */
+  publicFolder?: string;
+  /** Extra collections to append after the posts collection. */
+  extraCollections?: Array<Record<string, unknown>>;
+}
+
+/**
+ * Returns a minimal but real Decap config object: one Posts collection with
+ * title/date/body fields, the `laika` backend, and sane defaults for media.
+ *
+ * Most LaikaCMS starter templates use this as `decapConfig` so they don't
+ * each ship a copy of the same boilerplate. Pass it straight to
+ * {@link createEmbeddedLaika}:
+ *
+ * @example
+ *   import { createEmbeddedLaika, minimalBlogConfig } from
+ *     '@laikacms/decap-integrations/embedded';
+ *
+ *   export const laika = createEmbeddedLaika({
+ *     contentDir: resolve(process.cwd(), 'content'),
+ *     decapConfig: minimalBlogConfig(),
+ *     basePath: '/api/decap',
+ *     auth: { mode: 'dev' },
+ *   });
+ *
+ * Override only what you need:
+ *
+ * @example
+ *   minimalBlogConfig({
+ *     mediaFolder: 'static/uploads',     // SvelteKit / Nuxt
+ *     collectionName: 'articles',
+ *     extraCollections: [pagesCollection],
+ *   })
+ */
+export function minimalBlogConfig(
+  options: MinimalBlogConfigOptions = {},
+): Record<string, unknown> {
+  const collectionName = options.collectionName ?? 'posts';
+  const collectionLabel = options.collectionLabel ?? 'Posts';
+  const folder = options.folder ?? collectionName;
+  const extension = options.extension ?? 'md';
+  const slug = options.slug ?? '{{slug}}';
+  const mediaFolder = options.mediaFolder ?? 'public/uploads';
+  const publicFolder = options.publicFolder ?? '/uploads';
+  const backend = options.backend ?? { name: 'laika', branch: 'main' };
+
+  return {
+    backend,
+    media_folder: mediaFolder,
+    public_folder: publicFolder,
+    collections: [
+      {
+        name: collectionName,
+        label: collectionLabel,
+        folder,
+        create: true,
+        slug,
+        extension,
+        fields: [
+          { name: 'title', label: 'Title', widget: 'string' },
+          { name: 'date', label: 'Date', widget: 'datetime' },
+          { name: 'body', label: 'Body', widget: 'markdown' },
+        ],
+      },
+      ...(options.extraCollections ?? []),
+    ],
+  };
+}
+
+/**
+ * Options for {@link decapAdminHtml}.
+ */
+export interface DecapAdminHtmlOptions {
+  /**
+   * Decap config object — the same shape you pass to `createEmbeddedLaika`.
+   * Defaults to {@link minimalBlogConfig}().
+   */
+  decapConfig?: Record<string, unknown>;
+  /** Page title. Default: `'Admin · LaikaCMS'`. */
+  title?: string;
+  /**
+   * Origin override for `backend.base_url` and `dev_token` injection. By
+   * default the helper emits `window.location.origin` and lets the browser
+   * resolve it at runtime.
+   */
+  baseUrl?: string;
+  /**
+   * Pin a specific Decap CMS UMD bundle URL. Defaults to the latest 3.x on
+   * unpkg. Override for SRI / pinned versions / self-hosted bundles.
+   */
+  decapBundleUrl?: string;
+  /**
+   * Pin the `@laikacms/decap-integrations/decap-cms-backend-laika` esm bundle
+   * URL. Defaults to esm.sh.
+   */
+  laikaBackendUrl?: string;
+  /**
+   * Pin the dev-token bundle URL. Defaults to
+   * `https://esm.sh/@laikacms/decap-integrations/embedded`.
+   */
+  embeddedBundleUrl?: string;
+}
+
+const DEFAULT_DECAP_BUNDLE = 'https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js';
+const DEFAULT_LAIKA_BACKEND_BUNDLE = 'https://esm.sh/@laikacms/decap-integrations/decap-cms-backend-laika';
+const DEFAULT_EMBEDDED_BUNDLE = 'https://esm.sh/@laikacms/decap-integrations/embedded';
+
+/**
+ * Returns the HTML for a Decap CMS admin shell that:
+ *
+ *   1. Loads Decap CMS from a CDN.
+ *   2. Registers the `laika` Decap backend (also from a CDN) so writes go to
+ *      `${origin}/api/decap/*`.
+ *   3. Injects the dev token from `@laikacms/decap-integrations/embedded`
+ *      so local dev requires no real OAuth.
+ *   4. Calls `CMS.init({ config: { backend, collections, ... } })` with the
+ *      `decapConfig` you provide (defaults to {@link minimalBlogConfig}()).
+ *
+ * Pass the returned string to your framework's HTML response — e.g. Hono's
+ * `c.html(decapAdminHtml())`, Express's `res.send(decapAdminHtml())`,
+ * SvelteKit's `+server.ts` returning a `Response`. Replaces the ~50-line
+ * boilerplate that every starter previously shipped.
+ *
+ * @example
+ *   import { decapAdminHtml, minimalBlogConfig } from
+ *     '@laikacms/decap-integrations/embedded';
+ *
+ *   app.get('/admin', c => c.html(decapAdminHtml()));
+ *
+ *   // Custom config:
+ *   app.get('/admin', c =>
+ *     c.html(decapAdminHtml({
+ *       decapConfig: minimalBlogConfig({ mediaFolder: 'static/uploads' }),
+ *       title: 'My CMS',
+ *     })),
+ *   );
+ */
+export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
+  const decapConfig = options.decapConfig ?? minimalBlogConfig();
+  const title = options.title ?? 'Admin · LaikaCMS';
+  const decapBundleUrl = options.decapBundleUrl ?? DEFAULT_DECAP_BUNDLE;
+  const laikaBackendUrl = options.laikaBackendUrl ?? DEFAULT_LAIKA_BACKEND_BUNDLE;
+  const embeddedBundleUrl = options.embeddedBundleUrl ?? DEFAULT_EMBEDDED_BUNDLE;
+
+  // The `decapConfig` object is JSON-serialized into the inline script so the
+  // browser can read it without an extra request. We replace the
+  // closing-script-tag sequence to prevent HTML injection inside the JSON.
+  const serializedConfig = JSON.stringify(decapConfig, null, 2).replace(/<\/script/gi, '<\\/script');
+
+  // baseUrl: at runtime we read window.location.origin unless the caller
+  // pinned a value.
+  const baseUrlExpr = options.baseUrl
+    ? JSON.stringify(options.baseUrl)
+    : 'window.location.origin';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(title)}</title>
+  </head>
+  <body>
+    <script src="${escapeHtml(decapBundleUrl)}"></script>
+    <script type="module">
+      import { createLaikaBackend } from ${JSON.stringify(laikaBackendUrl)};
+      import { DEFAULT_DEV_TOKEN } from ${JSON.stringify(embeddedBundleUrl)};
+
+      const CMS = window.CMS;
+      CMS.registerBackend('laika', createLaikaBackend());
+
+      const userConfig = ${serializedConfig};
+      CMS.init({
+        config: {
+          ...userConfig,
+          backend: {
+            ...userConfig.backend,
+            base_url: ${baseUrlExpr},
+            dev_token: DEFAULT_DEV_TOKEN,
+          },
+        },
+      });
+    </script>
+  </body>
+</html>`;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
