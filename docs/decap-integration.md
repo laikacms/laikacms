@@ -206,18 +206,55 @@ footgun — do it once and forget it.
 `laika.fetch` (and `api.fetch`) expects a **Web API `Request`**. The table below shows what each
 framework gives you at the route handler boundary and whether you need a bridge.
 
-| Framework                         | What you receive                          | Bridge needed?                                                                          |
-| --------------------------------- | ----------------------------------------- | --------------------------------------------------------------------------------------- |
-| **Astro**                         | Web API `Request`                         | None — pass directly: `laika.fetch(request)`                                            |
-| **SvelteKit**                     | Web API `Request`                         | None — pass directly: `laika.fetch(event.request)`                                      |
-| **Remix**                         | Web API `Request`                         | None — pass directly: `laika.fetch(request)`                                            |
-| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`) | None — pass directly: `laika.fetch(request)`                                            |
-| **Hono**                          | Hono `HonoRequest` wrapper                | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
-| **TanStack Start**                | Web API `Request`                         | None — pass directly from the server route handler                                      |
-| **Cloudflare Workers**            | Web API `Request`                         | None — Workers environment is spec-compliant                                            |
-| **Nuxt / h3**                     | h3 `H3Event`                              | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
-| **Express / plain `http.Server`** | Node.js `IncomingMessage`                 | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
-| **AWS Lambda (via http bridge)**  | Lambda event object                       | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
+#### Zero-adapter (WHATWG-native — pass directly)
+
+These runtimes and frameworks pass a real WHATWG `Request` to your handler. No conversion needed.
+
+| Framework / Runtime          | Handler signature                      | How to call laika                                         |
+| ---------------------------- | -------------------------------------- | --------------------------------------------------------- |
+| **Astro**                    | `({ request }) => Response`            | `laika.fetch(request)`                                    |
+| **SvelteKit**                | `({ request }) => Response`            | `laika.fetch(event.request)`                              |
+| **Remix / React Router v7**  | `(args: { request }) => Response`      | `laika.fetch(request)`                                    |
+| **Next.js (App Router)**     | `(request: NextRequest) => Response`   | `laika.fetch(request)` (NextRequest extends Request)      |
+| **TanStack Start**           | `({ request }) => Response`            | `laika.fetch(request)`                                    |
+| **SolidStart**               | `(event: APIEvent) => Response`        | `laika.fetch(event.request)`                              |
+| **Qwik City**                | `(ev: RequestEventLoader) => Response` | `ev.send(await laika.fetch(ev.request))`                  |
+| **Analog (Angular / Nitro)** | h3 event via `toWebRequest`            | `laika.fetch(toWebRequest(event))`                        |
+| **Cloudflare Workers**       | `(request: Request, env) => Response`  | `laika.fetch(request)`                                    |
+| **Netlify Functions v2**     | `(req: Request) => Response`           | `laika.fetch(req)`                                        |
+| **Deno.serve()**             | `(request: Request) => Response`       | `laika.fetch(request)`                                    |
+| **Bun.serve()**              | `(request: Request) => Response`       | `laika.fetch(request)`                                    |
+| **Hono** (any runtime)       | `(c: Context) => Response`             | `laika.fetch(c.req.raw)` (`c.req.raw` is the raw Request) |
+| **Nuxt / H3 / Nitro**        | `(event: H3Event) => Response`         | `laika.fetch(toWebRequest(event))` from `h3`              |
+| **Vike** (Hono backend)      | via Hono context                       | `laika.fetch(c.req.raw)`                                  |
+
+#### Node.js `IncomingMessage` bridge
+
+These frameworks pass `IncomingMessage` / `ServerResponse` (Node.js HTTP, predating the Web API).
+You must construct a WHATWG `Request` manually. All use the same pattern; the difference is how the
+body is drained.
+
+| Framework        | Body draining method                                     | Notes                                                                              |
+| ---------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Express**      | `for await (const chunk of req) chunks.push(chunk)`      | req is a Readable stream                                                           |
+| **Fastify**      | `addContentTypeParser('*', { parseAs: 'buffer' }, fn)`   | Body is a pre-parsed `Buffer` passed to the handler                                |
+| **Koa**          | `for await (const chunk of ctx.req) chunks.push(chunk)`  | `ctx.respond = false` required to bypass Koa's response middleware                 |
+| **Hapi**         | route option `payload: { parse: false, output: 'data' }` | Body is a pre-drained `Buffer` in `request.payload`; `request.method` is lowercase |
+| **NestJS**       | `NestFactory.create(App, { rawBody: true })`             | `req.rawBody` is a `Buffer`; without this option the stream is consumed            |
+| **Polka**        | `for await (const chunk of req) chunks.push(chunk)`      | `req.params` is `IncomingMessage & { params: Record<string,string> }`              |
+| **micro**        | `await buffer(req, { limit: '10mb' })`                   | `buffer()` from the `micro` package drains the stream to `Buffer`                  |
+| **plain `http`** | `for await (const chunk of req) chunks.push(chunk)`      | Reference implementation — all other bridges are variants of this                  |
+
+#### Cloud function event bridges
+
+These platforms pass a platform-specific event object. The bridge converts it to a WHATWG `Request`.
+
+| Platform                 | Input type               | Bridge approach                                                                                                       |
+| ------------------------ | ------------------------ | --------------------------------------------------------------------------------------------------------------------- |
+| **AWS Lambda**           | `APIGatewayProxyEventV2` | Reconstruct `Request` from `event.rawPath`, `event.headers`, `event.body`                                             |
+| **GCP Cloud Functions**  | `functions.Request`      | Extends Express `Request`; use standard IncomingMessage bridge                                                        |
+| **Azure Functions v4**   | `HttpRequest`            | Has `.url`, `.method`, `.headers`, `.arrayBuffer()` but is NOT a WHATWG Request; construct `new Request(...)` from it |
+| **Netlify Functions v1** | `HandlerEvent`           | `event.body` is a base64 string; decode + reconstruct `Request` manually                                              |
 
 ### Express / plain `http.Server` — manual bridge
 
@@ -296,6 +333,114 @@ const req = new Request(url, {
 This affects the Express bridge above and any place you build a `Request` from a Node.js `Buffer`.
 The `.buffer` property of a `Buffer` is the **underlying shared** `ArrayBuffer`; always slice with
 `byteOffset`/`byteLength` to avoid passing a larger backing buffer to the `Request`.
+
+### Edge runtimes — `createEmbeddedLaika` is Node.js only
+
+`createEmbeddedLaika` uses `node:fs` and `node:path` internally (via `FileSystemStorageRepository`).
+It cannot run in **edge runtimes** such as Cloudflare Workers' edge deployment, Vercel Edge
+Functions, Deno Deploy, or any V8-isolate-only environment.
+
+This affects:
+
+- Cloudflare Workers (use `wrangler dev` for local dev, but do not deploy with `createEmbeddedLaika`
+  — use `createLaika` with a cloud storage backend instead)
+- Vercel Edge Functions (`runtime: 'edge'`)
+- Netlify Edge Functions
+
+The Node.js runtime variants of each platform **do** work:
+
+- Vercel Serverless Functions (Node.js runtime, not `runtime: 'edge'`)
+- Netlify Functions v2 (Node.js runtime)
+- AWS Lambda Node.js runtime
+
+For edge-compatible deployments, replace `FileSystemStorageRepository` with a cloud-based storage
+backend (GitHub API, S3, R2, etc.) and call `createLaika()` directly instead of
+`createEmbeddedLaika()`.
+
+### Hapi — `request.method` is lowercase
+
+Hapi normalizes HTTP methods to **lowercase** (`'get'`, `'post'`, etc.) before calling your handler.
+WHATWG `Request` is case-sensitive for methods — `GET` and `HEAD` may not carry a body. Always call
+`.toUpperCase()` before passing to `new Request()`:
+
+```ts
+const method = request.method.toUpperCase(); // 'get' → 'GET'
+```
+
+### Hapi — `payload.parse: false` required for the Decap proxy
+
+Hapi parses JSON and form bodies by default. Without explicit opt-out, `laika.fetch` receives a
+pre-parsed object instead of the raw payload, corrupting non-JSON requests (multipart media
+uploads).
+
+```ts
+server.route({
+  method: '*',
+  path: '/api/decap/{path*}',
+  options: {
+    payload: {
+      parse: false, // don't parse — laika handles content-type
+      output: 'data', // drain stream → Buffer before handler runs
+      allow: '*/*',
+    },
+  },
+  handler: async (request, h) => {
+    const buf = request.payload as Buffer;
+    const body = buf?.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer;
+    return toHapiResponse(await laika.fetch(new Request(url, { method, headers, body })), h);
+  },
+});
+```
+
+### NestJS — `rawBody: true` required for the Decap proxy
+
+NestJS uses body-parser which consumes the stream before controllers run. The raw bytes are only
+available if you opt in:
+
+```ts
+const app = await NestFactory.create(AppModule, { rawBody: true });
+```
+
+Then in the controller, `req.rawBody` is a `Buffer` containing the undecoded body.
+
+### Fastify — `addContentTypeParser('*', ...)` required for the Decap proxy
+
+Fastify parses bodies for registered content types only. Register a catch-all parser to get a
+`Buffer` for all payloads:
+
+```ts
+fastify.addContentTypeParser('*', { parseAs: 'buffer' }, (_req, body, done) => {
+  done(null, body);
+});
+```
+
+The `body` argument to your route handler is then a `Buffer`.
+
+### Koa — `ctx.respond = false` required
+
+Koa's default middleware writes `ctx.body` to the response at the end of the middleware chain. If
+you write directly to `ctx.res` (required to stream the laika response), set `ctx.respond = false`
+first to prevent the double-write:
+
+```ts
+ctx.respond = false;
+// now write to ctx.res directly
+```
+
+### Deno / Bun — `import.meta.dirname` vs `process.cwd()`
+
+Both Deno (1.28+) and Bun expose `import.meta.dirname` — the absolute path of the directory
+containing the current module file. It's more reliable than `process.cwd()` for resolving content
+directories relative to the source:
+
+```ts
+// Deno / Bun (import.meta.dirname available)
+contentDir: resolve(import.meta.dirname!, '..', 'content');
+
+// Node.js (import.meta.dirname available from Node 21.2+)
+// Falls back to:
+contentDir: resolve(process.cwd(), 'content'); // CWD changes with shell context
+```
 
 ### Astro — use `laikacms/compat`, not `laikacms/core`
 
