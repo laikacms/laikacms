@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/starter-electron-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Desktop blog editor built with Electron + LaikaCMS. The HTTP server runs in the Electron main process, content is stored in the OS user-data directory, and the BrowserWindow points at http://127.0.0.1:<port>/.",
+  "type": "module",
+  "main": "dist/main.js",
+  "scripts": {
+    "build:main": "esbuild src/main.ts --bundle --platform=node --format=esm --outfile=dist/main.js --external:electron",
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "build": "pnpm build:main && pnpm build:admin",
+    "start": "electron .",
+    "dev": "pnpm build && electron .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "express": "^5.1.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "catalog:types",
+    "electron": "^34.0.0",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}
