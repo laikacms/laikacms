@@ -161,6 +161,109 @@ app.all('/api/decap/*', async c => {
 
 ---
 
+## `createCustomLaika` — BYO storage preset
+
+`createCustomLaika` (exported from `/embedded`, `/custom`, and `/workers`) is a convenience wrapper
+that accepts _any_ `StorageRepository` and wires the full ContentBase stack (settings provider,
+document repo, asset repo, decapApi, dev auth, admin HTML) around it.
+
+```ts
+import { createCustomLaika, decapAdminHtml } from '@laikacms/decap-integrations/custom';
+
+// Replace with any StorageRepository implementation — see the table below.
+const storage = new WebDavStorageRepository(
+  { baseUrl: process.env.WEBDAV_URL },
+  { md: markdownSerializer, yml: yamlSerializer, json: jsonSerializer, raw: rawSerializer },
+  'md',
+);
+
+export const laika = createCustomLaika({
+  storage,
+  decapConfig: {
+    backend: { name: 'laika', api_url: '/api/decap' },
+    media_folder: 'public/uploads',
+    public_folder: '/uploads',
+    collections: yourCollections,
+  },
+  basePath: '/api/decap',
+  auth: { mode: 'dev' },
+});
+
+// In your route handler:
+app.all('/api/decap/*', c => laika.fetch(c.req.raw));
+app.get('/admin/', c => c.html(decapAdminHtml()));
+```
+
+`decapAdminHtml()` generates a complete self-contained HTML page that loads Decap CMS and the laika
+backend from CDN — no esbuild or bundler step needed.
+
+### Available `StorageRepository` implementations
+
+#### Built into `laikacms`
+
+| Subpath                    | Class                         | Notes                                                    |
+| -------------------------- | ----------------------------- | -------------------------------------------------------- |
+| `laikacms/storage-fs`      | `FileSystemStorageRepository` | Filesystem (Node.js only)                                |
+| `laikacms/storage-s3`      | `S3StorageRepository`         | AWS S3 / S3-compatible                                   |
+| `laikacms/storage-r2`      | `R2StorageRepository`         | Cloudflare R2 (Workers binding)                          |
+| `laikacms/storage-webdav`  | `WebDavStorageRepository`     | RFC 4918 WebDAV (Nextcloud, ownCloud, Apache mod_dav, …) |
+| `laikacms/storage-drizzle` | `DrizzleStorageRepository`    | Any Drizzle ORM dialect (SQLite, Postgres, MySQL)        |
+
+#### `@laikacms/*` integration packages
+
+Each package below exports a `StorageRepository` that can be dropped into `createCustomLaika`.
+Install the package you need alongside `laikacms` and `@laikacms/decap-integrations`.
+
+| Package                 | Class                          | Storage backend                  |
+| ----------------------- | ------------------------------ | -------------------------------- |
+| `@laikacms/airtable`    | `AirtableStorageRepository`    | Airtable (spreadsheet as CMS)    |
+| `@laikacms/algolia`     | `AlgoliaStorageRepository`     | Algolia (search index)           |
+| `@laikacms/arangodb`    | `ArangoStorageRepository`      | ArangoDB (multi-model graph DB)  |
+| `@laikacms/atproto`     | `AtprotoStorageRepository`     | AT Protocol (Bluesky)            |
+| `@laikacms/aws`         | `DdbStorageRepository`         | AWS DynamoDB                     |
+| `@laikacms/azure`       | `BlobStorageRepository`        | Azure Blob Storage               |
+| `@laikacms/backblaze`   | `B2StorageRepository`          | Backblaze B2 (S3-compatible)     |
+| `@laikacms/bitbucket`   | `BitbucketStorageRepository`   | Bitbucket repository             |
+| `@laikacms/clickhouse`  | `ClickhouseStorageRepository`  | ClickHouse (column-store DB)     |
+| `@laikacms/cloudflare`  | `D1StorageRepository`          | Cloudflare D1 (SQLite at edge)   |
+| `@laikacms/cloudinary`  | `CloudinaryStorageRepository`  | Cloudinary (media/asset storage) |
+| `@laikacms/contentful`  | `ContentfulStorageRepository`  | Contentful (headless CMS)        |
+| `@laikacms/convex`      | `ConvexStorageRepository`      | Convex (reactive backend)        |
+| `@laikacms/couchdb`     | `CouchdbStorageRepository`     | CouchDB (document DB)            |
+| `@laikacms/dropbox`     | `DropboxStorageRepository`     | Dropbox                          |
+| `@laikacms/etcd`        | `EtcdStorageRepository`        | etcd (distributed key-value)     |
+| `@laikacms/firestore`   | `FirestoreStorageRepository`   | Cloud Firestore                  |
+| `@laikacms/gel`         | `GelStorageRepository`         | Gel / EdgeDB                     |
+| `@laikacms/gist`        | `GistStorageRepository`        | GitHub Gist                      |
+| `@laikacms/github`      | `GitHubStorageRepository`      | GitHub repository (Git-backed)   |
+| `@laikacms/gitlab`      | `GitLabStorageRepository`      | GitLab repository (Git-backed)   |
+| `@laikacms/google`      | `GcsStorageRepository`         | Google Cloud Storage             |
+| `@laikacms/hygraph`     | `HygraphStorageRepository`     | Hygraph (headless CMS)           |
+| `@laikacms/influxdb`    | `InfluxStorageRepository`      | InfluxDB (time-series)           |
+| `@laikacms/libsql`      | `LibsqlStorageRepository`      | Turso / libSQL (SQLite at edge)  |
+| `@laikacms/meilisearch` | `MeilisearchStorageRepository` | Meilisearch (search engine)      |
+| `@laikacms/microsoft`   | `OneDriveStorageRepository`    | OneDrive / SharePoint            |
+| `@laikacms/mongodb`     | `MongoStorageRepository`       | MongoDB / DocumentDB             |
+| `@laikacms/neo4j`       | `Neo4jStorageRepository`       | Neo4j (graph database)           |
+| `@laikacms/notion`      | `NotionStorageRepository`      | Notion pages (plain-text blocks) |
+| `@laikacms/pinata`      | `PinataStorageRepository`      | Pinata (IPFS pinning)            |
+| `@laikacms/pocketbase`  | `PocketbaseStorageRepository`  | PocketBase (self-hosted backend) |
+| `@laikacms/sanity`      | `SanityStorageRepository`      | Sanity (headless CMS)            |
+| `@laikacms/supabase`    | `SupabaseStorageRepository`    | Supabase (Postgres + storage)    |
+| `@laikacms/surrealdb`   | `SurrealStorageRepository`     | SurrealDB (multi-model DB)       |
+| `@laikacms/trello`      | `TrelloStorageRepository`      | Trello (card-based boards)       |
+| `@laikacms/upstash`     | `UpstashStorageRepository`     | Upstash Redis (serverless Redis) |
+| `@laikacms/vercel`      | `VercelBlobStorageRepository`  | Vercel Blob storage              |
+
+> **Notion caveat:** `NotionStorageRepository` stores content as plain paragraph blocks. Markdown
+> serializers are bypassed — use `widget: 'text'` rather than `widget: 'markdown'` for body fields
+> in your Decap collection config.
+
+See the `apps/starter-airtable-blog` and `apps/starter-notion-blog` starters for complete working
+examples.
+
+---
+
 ## Widgets
 
 | Widget       | Subpath                                                     |
