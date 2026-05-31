@@ -32,7 +32,11 @@ export default createRoute(async c => {
     <main>
       <h1>My Blog</h1>
       {posts.length === 0
-        ? <p>No posts yet. <a href="/admin/">Open the CMS</a> to write your first post.</p>
+        ? (
+          <p>
+            No posts yet. <a href="/admin/">Open the CMS</a> to write your first post.
+          </p>
+        )
         : (
           <ul style="list-style:none;padding:0">
             {posts.map(post => {
@@ -42,7 +46,8 @@ export default createRoute(async c => {
                   <a href={`/blog/${slug}`}>{slug}</a>
                   {post.updatedAt && (
                     <time style="color:#666;font-size:0.9em">
-                      {' · '}{new Date(post.updatedAt).toLocaleDateString()}
+                      {' · '}
+                      {new Date(post.updatedAt).toLocaleDateString()}
                     </time>
                   )}
                 </li>

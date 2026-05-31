@@ -35,10 +35,16 @@ export default createRoute(async c => {
     <article>
       <h1>{title ?? slug}</h1>
       {date && <time style="color:#666">{new Date(date).toLocaleDateString()}</time>}
-      {description && <p><em>{description}</em></p>}
+      {description && (
+        <p>
+          <em>{description}</em>
+        </p>
+      )}
       {/* body is raw markdown — pipe through remark/rehype in production */}
       <pre style="white-space:pre-wrap;font-family:inherit">{body}</pre>
-      <p><a href="/">← Back</a></p>
+      <p>
+        <a href="/">← Back</a>
+      </p>
     </article>,
     { title: title ?? slug },
   );
