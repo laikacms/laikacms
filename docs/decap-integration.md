@@ -539,77 +539,46 @@ export default function AdminPage() {
 }
 ```
 
-### Typing `document.content` — casting vs. validation
+### GitHub App storage — creating credentials
 
-`laika.documents.getDocument()` returns a `Document` whose `.content` property is typed as
-`Record<string, unknown>`. The exact shape depends on your Decap collection configuration, which is
-known only at runtime — LaikaCMS cannot infer field types from the collection definition at compile
-time.
+`GithubStorageRepository` authenticates as a **GitHub App**, not a personal access token. This gives
+you scoped, revocable per-repo access that works for production deployments.
 
-**Option 1 — cast (fast, no runtime overhead)**
+**One-time setup:**
 
-Define a TypeScript interface that mirrors your Decap collection fields and cast `doc.content`:
+1. Go to [github.com/settings/apps/new](https://github.com/settings/apps/new).
+2. Set a name and homepage URL (any URL is fine for local dev).
+3. Permissions: **Repository permissions → Contents → Read & Write**, **Metadata → Read**.
+4. Uncheck "Active" under Webhook — you don't need webhooks.
+5. Create the app and note the **App ID** on the settings page.
+6. Under "Private keys", generate a key — download the `.pem` file.
+7. Click **Install App**, select your content repo, and note the installation ID from the URL
+   (`https://github.com/settings/installations/<INSTALLATION_ID>`).
 
-```typescript
-interface PostContent {
-  title?: string;
-  date?: string;
-  description?: string;
-  body?: string;
-}
+```ts
+import { GithubStorageRepository } from '@laikacms/github/storage-gh';
 
-const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
-const { title, date, body } = doc.content as PostContent;
-```
-
-This is the pattern used in all canonical starters. It is safe as long as your collection definition
-and interface stay in sync — they are not linked at the type level.
-
-**Option 2 — Zod validation (runtime safety)**
-
-Parse `doc.content` through a Zod schema for runtime guarantees:
-
-```typescript
-import { z } from 'zod';
-
-const PostSchema = z.object({
-  title: z.string(),
-  date: z.string().optional(),
-  description: z.string().optional(),
-  body: z.string().optional(),
+const storage = new GithubStorageRepository({
+  appId: process.env.GITHUB_APP_ID!,
+  privateKey: process.env.GITHUB_APP_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+  installationId: process.env.GITHUB_APP_INSTALLATION_ID!,
+  owner: 'your-org',
+  repo: 'your-content-repo',
+  branch: 'main',
+  serializerRegistry: { md: markdownSerializer, yaml: yamlSerializer, ... },
+  defaultFileExtension: 'md',
+  commitAuthor: { name: 'Laika CMS', email: 'cms@laika.local' },
 });
-
-type Post = z.infer<typeof PostSchema>;
-
-const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
-const post = PostSchema.parse(doc.content); // throws ZodError if shape is wrong
 ```
 
-**Option 3 — TypeBox (compatible with JSON Schema)**
+**Private key in env vars**: `.pem` files contain real newlines. Most hosting platforms store env
+vars as single-line strings with literal `\n`. The `.replace(/\\n/g, '\n')` call in the snippet
+above handles this. If you paste the key directly (e.g. in a `.env` file with quotes), the `replace`
+is a harmless no-op.
 
-If you need a JSON Schema representation of your content type (e.g. for OpenAPI, tRPC output
-validation, or Feathers schemas), TypeBox gives you both a TypeScript type and a schema object from
-a single definition:
-
-```typescript
-import { Static, Type } from '@sinclair/typebox';
-
-const PostSchema = Type.Object({
-  title: Type.String(),
-  date: Type.Optional(Type.String()),
-  body: Type.Optional(Type.String()),
-});
-
-type Post = Static<typeof PostSchema>;
-```
-
-**Known gap — no `zodSchemaFromCollection()` helper**
-
-The Decap collection definition (`blogCollections` in your `decap-config.ts`) already describes
-every field name, widget type, and whether the field is required. Ideally you could derive a Zod or
-TypeBox schema directly from that definition instead of duplicating field names. This helper does
-not exist yet — it is tracked as a future enhancement. Until then, keep your TypeScript interface /
-Zod schema in sync with the collection definition manually.
+**Token caching**: The adapter caches installation tokens (default TTL 50 minutes — GitHub issues
+them for 60 minutes). In a long-running Node.js process this is transparent; in a serverless
+function with no shared memory you may see extra token requests, which is fine.
 
 ### SvelteKit — `src/app.html` is required
 
