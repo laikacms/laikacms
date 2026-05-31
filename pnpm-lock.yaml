@@ -1519,6 +1519,40 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-graphql-blog:
+    dependencies:
+      '@hono/node-server':
+        specifier: catalog:server
+        version: 1.19.14(hono@4.12.18)
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      graphql:
+        specifier: ^16.9.0
+        version: 16.14.0
+      graphql-yoga:
+        specifier: ^5.10.4
+        version: 5.21.0(graphql@16.14.0)
+      hono:
+        specifier: catalog:server
+        version: 4.12.18
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      esbuild:
+        specifier: catalog:tools
+        version: 0.27.7
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-hattip:
     dependencies:
       '@hattip/adapter-node':
@@ -8458,12 +8492,6 @@ packages:
     peerDependencies:
       '@babel/core': ^7.0.0-0
 
-  '@babel/plugin-transform-react-constant-elements@7.29.7':
-    resolution: {integrity: sha512-J0wGhKan+rIiE2OhfhRptySLrJ6SjQYM6b6N1FMlhyhCcw1Mig8vQjWchyB+bgHGDvaWo6Diu6CLRMra2uMtmg==}
-    engines: {node: '>=6.9.0'}
-    peerDependencies:
-      '@babel/core': ^7.0.0-0
-
   '@babel/plugin-transform-react-display-name@7.29.7':
     resolution: {integrity: sha512-+1wdDMGNb4UPeY3Q4L5yLiYe6TXPXubs4NjrgRFw13hPRLJfEMw2Q5OXkee6/IfdqePIeW4Jjwe3aBh7SdKz4Q==}
     engines: {node: '>=6.9.0'}
@@ -11256,7 +11284,7 @@ packages:
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
-    engines: {'0': node >=0.10.0}
+    engines: {node: '>=0.10.0'}
 
   '@expo/cli@0.22.28':
     resolution: {integrity: sha512-lvt72KNitGuixYD2l3SZmRKVu2G4zJpmg5V7WfUBNpmUU5oODBw/6qmiJ6kSLAlfDozscUk+BBGknBBzxUrwrA==}
@@ -23154,6 +23182,7 @@ packages:
 
   libsql@0.4.7:
     resolution: {integrity: sha512-T9eIRCs6b0J1SHKYIvD8+KCJMcWZ900iZyxdnSCdqxN12Z1ijzT+jY5nrk72Jw4B0HGzms2NgpryArlJqvc3Lw==}
+    cpu: [x64, arm64, wasm32]
     os: [darwin, linux, win32]
 
   lie@3.1.1:
@@ -32899,11 +32928,6 @@ snapshots:
       '@babel/core': 7.29.7
       '@babel/helper-plugin-utils': 7.29.7
 
-  '@babel/plugin-transform-react-constant-elements@7.29.7(@babel/core@7.29.7)':
-    dependencies:
-      '@babel/core': 7.29.7
-      '@babel/helper-plugin-utils': 7.29.7
-
   '@babel/plugin-transform-react-display-name@7.29.7(@babel/core@7.29.7)':
     dependencies:
       '@babel/core': 7.29.7
@@ -42411,10 +42435,6 @@ snapshots:
     dependencies:
       '@types/unist': 2.0.11
 
-  '@types/he@1.2.3': {}
-
-  '@types/history@4.7.11': {}
-
   '@types/hoist-non-react-statics@3.3.7(@types/react@18.3.29)':
     dependencies:
       '@types/react': 18.3.29
@@ -42425,8 +42445,6 @@ snapshots:
       '@types/react': 19.2.14
       hoist-non-react-statics: 3.3.2
     optional: true
-
-  '@types/html-minifier-terser@6.1.0': {}
 
   '@types/http-assert@1.5.6': {}
 
@@ -42904,7 +42922,7 @@ snapshots:
       '@babel/plugin-syntax-typescript': 7.29.7(@babel/core@7.29.7)
       '@vanilla-extract/babel-plugin-debug-ids': 1.2.2
       '@vanilla-extract/css': 1.20.1(babel-plugin-macros@3.1.0)
-      esbuild: 0.19.11
+      esbuild: 0.17.6
       eval: 0.1.8
       find-up: 5.0.0
       javascript-stringify: 2.1.0
