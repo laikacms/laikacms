@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-atproto-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by AT Protocol (Bluesky) + LaikaCMS. Posts are stored as com.laikacms.file records in your AT Protocol repo; Decap CMS reads/writes them via AtprotoStorageRepository.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/atproto": "workspace:*",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
