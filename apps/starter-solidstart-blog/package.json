@@ -1,0 +1,29 @@
+{
+  "name": "@laikacms/starter-solidstart-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with SolidStart + LaikaCMS. Demonstrates createEmbeddedLaika, SSR via query()+'use server', documents via laikacms/compat, and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "vinxi dev",
+    "build": "vinxi build",
+    "start": "vinxi start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@solidjs/router": "^0.15.3",
+    "@solidjs/start": "^1.0.0",
+    "laikacms": "workspace:*",
+    "solid-js": "^1.9.3",
+    "vinxi": "^0.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
