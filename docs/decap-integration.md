@@ -305,6 +305,7 @@ framework gives you at the route handler boundary and whether you need a bridge.
 | **Hono**                          | Hono `HonoRequest` wrapper                | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
 | **TanStack Start**                | Web API `Request`                         | None — pass directly from the server route handler                                      |
 | **Cloudflare Workers**            | Web API `Request`                         | None — Workers environment is spec-compliant                                            |
+| **Cloudflare Pages Functions**    | `context.request` — Web API `Request`     | None — use `context.request`: `api.fetch(context.request)` (see note below)             |
 | **Nuxt / h3**                     | h3 `H3Event`                              | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
 | **Express / plain `http.Server`** | Node.js `IncomingMessage`                 | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
 | **AWS Lambda (via http bridge)**  | Lambda event object                       | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
@@ -534,33 +535,32 @@ export default function AdminPage() {
 }
 ```
 
-### Vercel Edge Functions — use `@laikacms/vercel/storage-blob` (no `createEmbeddedLaika`)
+### Cloudflare Pages Functions — use `decapApi` directly (no `createEmbeddedLaika`)
 
-Vercel Edge Functions run on the V8 edge runtime — no `node:fs`, so `createEmbeddedLaika` is not
-available. Use `@laikacms/vercel/storage-blob` with `decapApi` instead. Unlike Cloudflare R2 (native
-binding) or D1 (REST API secrets), Vercel Blob only requires a single `BLOB_READ_WRITE_TOKEN` env
-var:
+Pages Functions run on the Workers edge runtime, which has no `node:fs`. `createEmbeddedLaika`
+hardcodes `FileSystemStorageRepository` and **will not work** in Pages Functions (or any other edge
+runtime). Wire `decapApi` manually with `R2StorageRepository` instead:
 
 ```ts
-// api/decap/[...path].ts
-export const config = { runtime: 'edge' };
-
+// functions/api/decap/[[path]].ts
 import { decapApi } from '@laikacms/decap-integrations/decap-api';
-import { VercelBlobDataSource, VercelBlobStorageRepository } from '@laikacms/vercel/storage-blob';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { R2StorageRepository } from 'laikacms/storage-r2';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
-export default async function handler(request: Request): Promise<Response> {
-  const dataSource = new VercelBlobDataSource({
-    auth: { token: process.env.BLOB_READ_WRITE_TOKEN },
-  });
-  const storage = new VercelBlobStorageRepository({
-    dataSource,
-    serializerRegistry: { md: markdownSerializer /* …etc… */ },
-    defaultFileExtension: 'md',
-  });
+interface Env {
+  CONTENT_BUCKET: R2Bucket;
+  DEV_TOKEN?: string;
+}
+
+export const onRequest: PagesFunction<Env> = async context => {
+  const storage = new R2StorageRepository(
+    context.env.CONTENT_BUCKET,
+    { md: markdownSerializer /* …etc… */ },
+    'md',
+  );
   const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
   const api = decapApi({
     documents: new ContentBaseDocumentsRepository(storage, settings),
@@ -568,33 +568,31 @@ export default async function handler(request: Request): Promise<Response> {
     assets: new ContentBaseAssetsRepository(storage, settings),
     basePath: '/api/decap',
     authenticateAccessToken: async (token: string) => {
-      if (token !== process.env.DEV_TOKEN) throw new Error('Unauthorized');
+      if (token !== (context.env.DEV_TOKEN ?? 'dev-local-laika-token')) {
+        throw new Error('Unauthorized');
+      }
       return { id: 'dev', email: 'dev@local.test', name: 'Dev Editor' };
     },
   });
-  return api.fetch(request);
-}
+  return api.fetch(context.request);
+};
 ```
 
-**Vercel Blob requires a real token even in local dev.** There is no local mock. Create a Blob store
-in the Vercel dashboard (Storage → Create → Blob), then add `BLOB_READ_WRITE_TOKEN` to `.env`. The
-same token works in both `vercel dev` and production.
+The `[[path]]` double-bracket syntax is Cloudflare Pages' catch-all route segment — it matches
+`/api/decap/`, `/api/decap/anything/here`, etc. The exported name `onRequest` handles all HTTP
+methods; use `onRequestGet`, `onRequestPost`, etc. to restrict to specific methods.
 
-**Catch-all route syntax.** `api/decap/[...path].ts` is Vercel's catch-all segment — matches
-`/api/decap/`, `/api/decap/anything/here`, etc. The `export const config = { runtime: 'edge' }` opts
-the function into the V8 edge runtime.
+The R2 bucket binding (`CONTENT_BUCKET`) is configured in `wrangler.toml`:
 
-**Blog post routing.** Dynamic blog URLs (`/blog/:slug`) can be served by an `api/blog/[slug].ts`
-Edge Function and rewritten via `vercel.json`:
-
-```json
-{
-  "rewrites": [{ "source": "/blog/:slug", "destination": "/api/blog/:slug" }]
-}
+```toml
+[[r2_buckets]]
+binding = "CONTENT_BUCKET"
+bucket_name = "my-blog-content"
 ```
 
-When a rewrite is active, `new URL(request.url).pathname` inside the function returns the
-**original** path (`/blog/my-post`), not the destination path.
+Unlike the Workers + D1 starter, R2 uses a **native binding** — no API token or account ID secret is
+required in `wrangler.toml`. Create the bucket with `wrangler r2 bucket create my-blog-content` and
+the binding is available automatically.
 
 ### SvelteKit — `src/app.html` is required
 

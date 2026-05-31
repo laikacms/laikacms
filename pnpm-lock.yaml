@@ -2313,6 +2313,25 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-pages-blog:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260512.0
+        version: 4.20260531.1
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+      wrangler:
+        specifier: catalog:tools
+        version: 4.90.1(@cloudflare/workers-types@4.20260531.1)
+
   apps/starter-pocketbase-blog:
     dependencies:
       '@hono/node-server':
@@ -11021,7 +11040,7 @@ packages:
 
   '@expo/bunyan@4.0.1':
     resolution: {integrity: sha512-+Lla7nYSiHZirgK+U/uYzsLv/X+HaJienbD5AKX1UQZHYfWaP+9uuQluRB4GrEVWF0GZ7vEVp/jzaOT9k/SQlg==}
-    engines: {'0': node >=0.10.0}
+    engines: {node: '>=0.10.0'}
 
   '@expo/cli@0.22.28':
     resolution: {integrity: sha512-lvt72KNitGuixYD2l3SZmRKVu2G4zJpmg5V7WfUBNpmUU5oODBw/6qmiJ6kSLAlfDozscUk+BBGknBBzxUrwrA==}
