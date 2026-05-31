@@ -25,7 +25,7 @@ const app = new Hono();
 
 // GraphQL endpoint — GraphQL Yoga returns a WHATWG Response from its handler.
 const yoga = createYoga({ schema, graphqlEndpoint: '/graphql' });
-app.all('/graphql', c => yoga.handle(c.req.raw, c));
+app.all('/graphql', c => yoga.handle(c.req.raw));
 
 // Decap JSON:API — laika.fetch accepts a WHATWG Request directly.
 app.all('/api/decap/*', c => laika.fetch(c.req.raw));
