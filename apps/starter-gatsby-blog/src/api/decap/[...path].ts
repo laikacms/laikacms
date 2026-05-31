@@ -1,6 +1,6 @@
 import type { GatsbyFunctionRequest, GatsbyFunctionResponse } from 'gatsby';
 
-import { laika } from '../../lib/laika.js';
+import { laika } from '../../lib/laika';
 
 /**
  * Gatsby Function — Decap JSON:API proxy.

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-import { blogCollections } from '../lib/decap-config.js';
+import { blogCollections } from '../lib/decap-config';
 
 /**
  * Decap CMS admin — bootstrapped on the client via useEffect.

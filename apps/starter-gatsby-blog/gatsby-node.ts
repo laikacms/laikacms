@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { GatsbyNode } from 'gatsby';
 import { collectStream, runTask } from 'laikacms/compat';
 
-import { laika } from './src/lib/laika.js';
+import { laika } from './src/lib/laika';
 
 /**
  * Gatsby's build-time data sourcing via sourceNodes.

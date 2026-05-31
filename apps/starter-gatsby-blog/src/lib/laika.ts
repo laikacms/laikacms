@@ -2,7 +2,7 @@ import { resolve } from 'node:path';
 
 import { createEmbeddedLaika } from '@laikacms/decap-integrations/embedded';
 
-import { blogCollections } from './decap-config.js';
+import { blogCollections } from './decap-config';
 
 /**
  * Singleton used in server-only contexts:
