@@ -2181,6 +2181,28 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-netlify-blog:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      '@netlify/functions':
+        specifier: ^2.0.0
+        version: 2.8.2
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      esbuild:
+        specifier: catalog:tools
+        version: 0.27.7
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-netlify-functions:
     dependencies:
       '@laikacms/decap-integrations':
