@@ -8,9 +8,13 @@ import {
 } from '@aws-sdk/client-s3';
 import { mockClient } from 'aws-sdk-client-mock';
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { S3StorageRepository } from './s3-storage-repository.js';
+import { s3ContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(s3ContractCase);
 
 // ---------------------------------------------------------------------------
 // Wire the official aws-sdk-client-mock to an in-memory Map so the repository
