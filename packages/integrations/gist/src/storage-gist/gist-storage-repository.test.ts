@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { decodeGistFilename, encodeGistFilename } from './gist-datasource.js';
 import { GistStorageRepository } from './gist-storage-repository.js';
+import { gistContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(gistContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory GitHub Gist mock. Handles the two endpoints the data source
