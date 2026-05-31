@@ -376,6 +376,51 @@ model's collection, a Realm collection, or any object that implements the requir
 (`findOne`, `insertOne`, `replaceOne`, `deleteMany`, `aggregate`). No `mongodb` driver required if
 you already have one configured.
 
+### Firestore storage — service account setup
+
+`FirestoreStorageRepository` speaks the Firestore REST API over `fetch` — no Firebase SDK needed. It
+authenticates via a `tokenProvider` that returns a Google OAuth2 access token.
+
+```ts
+import { GoogleAuth } from 'google-auth-library';
+import { FirestoreStorageRepository } from '@laikacms/firestore/storage-firestore';
+
+const auth = new GoogleAuth({
+  credentials: JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON!),
+  scopes: ['https://www.googleapis.com/auth/datastore'],
+});
+
+const storage = new FirestoreStorageRepository({
+  projectId: process.env.FIREBASE_PROJECT_ID!,
+  databaseId: '(default)',
+  auth: {
+    tokenProvider: async () => {
+      const client = await auth.getClient();
+      const { token } = await client.getAccessToken();
+      return token!;
+    },
+  },
+  serializerRegistry: { ... },
+  defaultFileExtension: 'md',
+});
+```
+
+**Creating a service account key:**
+
+1. Open Firebase Console → Project Settings → Service accounts.
+2. Click **Generate new private key** → download `service-account.json`.
+3. Store the raw JSON as `GOOGLE_SERVICE_ACCOUNT_JSON` in your env (most platforms accept multi-line
+   values; if not, use `jq -c . service-account.json` to compact to a single line).
+
+**On GCE / Cloud Run / App Engine**: omit `credentials` from `GoogleAuth`. The library
+auto-discovers credentials via Workload Identity or the metadata server — no key file needed.
+
+**Alternative: `GOOGLE_APPLICATION_CREDENTIALS`**: set this env var to the path of the key file and
+omit the `credentials` option; `google-auth-library` will pick it up automatically.
+
+**Firestore Emulator**: set `apiUrl` to `http://localhost:8080` and pass any non-empty string as the
+token (the emulator doesn't validate tokens).
+
 ### GitHub App storage — creating credentials
 
 `GithubStorageRepository` authenticates as a **GitHub App**, not a personal access token. This gives

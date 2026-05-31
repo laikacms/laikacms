@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/starter-firestore-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Hono + Cloud Firestore + LaikaCMS. Uses @laikacms/firestore/storage-firestore — a pure-fetch Firestore REST adapter that requires no Firebase SDK. Authenticates via a service account JSON key and google-auth-library.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/firestore": "workspace:*",
+    "google-auth-library": "^9.14.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
