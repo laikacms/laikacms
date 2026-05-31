@@ -77,7 +77,9 @@ app.get('/', async (_req, res, next) => {
       }),
     );
 
-    const posts = records
+    type PostSummary = { type: string, key: string, updatedAt?: string };
+
+    const posts = (records as PostSummary[])
       .filter(r => r.type === 'published-summary')
       .sort((a, b) => {
         if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);

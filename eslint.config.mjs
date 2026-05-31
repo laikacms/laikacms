@@ -43,6 +43,8 @@ export default tseslint.config(
       '**/.svelte-kit/**',
       '**/.nuxt/**',
       '**/.output/**',
+      // Built static assets (esbuild bundles, etc.)
+      '**/public/admin/bundle.js',
     ],
   },
 );

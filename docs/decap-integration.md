@@ -201,17 +201,17 @@ footgun — do it once and forget it.
 `laika.fetch` (and `api.fetch`) expects a **Web API `Request`**. The table below shows what each
 framework gives you at the route handler boundary and whether you need a bridge.
 
-| Framework                        | What you receive                  | Bridge needed?                                                                                   |
-| -------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------ |
-| **Astro**                        | Web API `Request`                 | None — pass directly: `laika.fetch(request)`                                                     |
-| **SvelteKit**                    | Web API `Request`                 | None — pass directly: `laika.fetch(event.request)`                                               |
-| **Remix**                        | Web API `Request`                 | None — pass directly: `laika.fetch(request)`                                                     |
-| **Hono**                         | Hono `HonoRequest` wrapper        | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                                 |
-| **TanStack Start**               | Web API `Request`                 | None — pass directly from the server route handler                                               |
-| **Cloudflare Workers**           | Web API `Request`                 | None — Workers environment is spec-compliant                                                     |
-| **Nuxt / h3**                    | h3 `H3Event`                      | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                              |
-| **Express / plain `http.Server`**| Node.js `IncomingMessage`         | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below            |
-| **AWS Lambda (via http bridge)** | Lambda event object               | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch`         |
+| Framework                         | What you receive           | Bridge needed?                                                                          |
+| --------------------------------- | -------------------------- | --------------------------------------------------------------------------------------- |
+| **Astro**                         | Web API `Request`          | None — pass directly: `laika.fetch(request)`                                            |
+| **SvelteKit**                     | Web API `Request`          | None — pass directly: `laika.fetch(event.request)`                                      |
+| **Remix**                         | Web API `Request`          | None — pass directly: `laika.fetch(request)`                                            |
+| **Hono**                          | Hono `HonoRequest` wrapper | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
+| **TanStack Start**                | Web API `Request`          | None — pass directly from the server route handler                                      |
+| **Cloudflare Workers**            | Web API `Request`          | None — Workers environment is spec-compliant                                            |
+| **Nuxt / h3**                     | h3 `H3Event`               | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
+| **Express / plain `http.Server`** | Node.js `IncomingMessage`  | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
+| **AWS Lambda (via http bridge)**  | Lambda event object        | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
 
 ### Express / plain `http.Server` — manual bridge
 
@@ -238,10 +238,12 @@ async function bridgeToLaika(
     method: req.method,
     headers: req.headers as Record<string, string>,
     // TS6: pass .buffer (concrete ArrayBuffer), not the Buffer/Uint8Array directly
-    body: bodyBuffer ? bodyBuffer.buffer.slice(
-      bodyBuffer.byteOffset,
-      bodyBuffer.byteOffset + bodyBuffer.byteLength,
-    ) as ArrayBuffer : null,
+    body: bodyBuffer
+      ? bodyBuffer.buffer.slice(
+        bodyBuffer.byteOffset,
+        bodyBuffer.byteOffset + bodyBuffer.byteLength,
+      ) as ArrayBuffer
+      : null,
     // Required when forwarding a body
     duplex: 'half',
   } as RequestInit);
@@ -268,13 +270,13 @@ app.all('/api/decap/*', (req, res) => bridgeToLaika(req, res, laika));
 ### TypeScript 6 — `BodyInit` regression with `Buffer` / `Uint8Array`
 
 TypeScript 6 tightened the `BodyInit` type. `Buffer` and `Uint8Array<ArrayBufferLike>` are **no
-longer assignable** to `BodyInit` because `ArrayBufferLike` is wider than `ArrayBuffer`. The `Request`
-body constructor requires a **concrete `ArrayBuffer`**.
+longer assignable** to `BodyInit` because `ArrayBufferLike` is wider than `ArrayBuffer`. The
+`Request` body constructor requires a **concrete `ArrayBuffer`**.
 
 ```ts
 // TS6: Wrong — Buffer / Uint8Array<ArrayBufferLike> is not assignable to BodyInit
-const req = new Request(url, { body: buffer });         // TS error in TS6
-const req2 = new Request(url, { body: uint8Array });    // TS error in TS6 (ArrayBufferLike)
+const req = new Request(url, { body: buffer }); // TS error in TS6
+const req2 = new Request(url, { body: uint8Array }); // TS error in TS6 (ArrayBufferLike)
 
 // TS6: Correct — extract the concrete ArrayBuffer slice
 const req = new Request(url, {
@@ -285,9 +287,9 @@ const req = new Request(url, {
 });
 ```
 
-This affects the Express bridge above and any place you build a `Request` from a Node.js
-`Buffer`. The `.buffer` property of a `Buffer` is the **underlying shared** `ArrayBuffer`; always
-slice with `byteOffset`/`byteLength` to avoid passing a larger backing buffer to the `Request`.
+This affects the Express bridge above and any place you build a `Request` from a Node.js `Buffer`.
+The `.buffer` property of a `Buffer` is the **underlying shared** `ArrayBuffer`; always slice with
+`byteOffset`/`byteLength` to avoid passing a larger backing buffer to the `Request`.
 
 ### Astro — use `laikacms/compat`, not `laikacms/core`
 
