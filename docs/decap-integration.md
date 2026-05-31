@@ -337,6 +337,47 @@ export default function AdminPage() {
 }
 ```
 
+### GitHub App storage — creating credentials
+
+`GithubStorageRepository` authenticates as a **GitHub App**, not a personal access token. This gives
+you scoped, revocable per-repo access that works for production deployments.
+
+**One-time setup:**
+
+1. Go to [github.com/settings/apps/new](https://github.com/settings/apps/new).
+2. Set a name and homepage URL (any URL is fine for local dev).
+3. Permissions: **Repository permissions → Contents → Read & Write**, **Metadata → Read**.
+4. Uncheck "Active" under Webhook — you don't need webhooks.
+5. Create the app and note the **App ID** on the settings page.
+6. Under "Private keys", generate a key — download the `.pem` file.
+7. Click **Install App**, select your content repo, and note the installation ID from the URL
+   (`https://github.com/settings/installations/<INSTALLATION_ID>`).
+
+```ts
+import { GithubStorageRepository } from '@laikacms/github/storage-gh';
+
+const storage = new GithubStorageRepository({
+  appId: process.env.GITHUB_APP_ID!,
+  privateKey: process.env.GITHUB_APP_PRIVATE_KEY!.replace(/\\n/g, '\n'),
+  installationId: process.env.GITHUB_APP_INSTALLATION_ID!,
+  owner: 'your-org',
+  repo: 'your-content-repo',
+  branch: 'main',
+  serializerRegistry: { md: markdownSerializer, yaml: yamlSerializer, ... },
+  defaultFileExtension: 'md',
+  commitAuthor: { name: 'Laika CMS', email: 'cms@laika.local' },
+});
+```
+
+**Private key in env vars**: `.pem` files contain real newlines. Most hosting platforms store env
+vars as single-line strings with literal `\n`. The `.replace(/\\n/g, '\n')` call in the snippet
+above handles this. If you paste the key directly (e.g. in a `.env` file with quotes), the `replace`
+is a harmless no-op.
+
+**Token caching**: The adapter caches installation tokens (default TTL 50 minutes — GitHub issues
+them for 60 minutes). In a long-running Node.js process this is transparent; in a serverless
+function with no shared memory you may see extra token requests, which is fine.
+
 ### SvelteKit — `src/app.html` is required
 
 SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js, you must create
