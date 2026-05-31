@@ -47,6 +47,7 @@
     "pnpm-lock.yaml",
     "**/.svelte-kit",
     "**/.nuxt",
+    "**/.next",
     "**/.output"
   ],
   "plugins": [
