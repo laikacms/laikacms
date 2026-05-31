@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type FirestoreFields, toFirestoreFields } from './firestore-datasource.js';
 import { FirestoreStorageRepository } from './firestore-storage-repository.js';
+import { firestoreContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(firestoreContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Firestore — handles GET / PATCH / DELETE / collection-list for
