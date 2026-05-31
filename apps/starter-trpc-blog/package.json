@@ -1,0 +1,31 @@
+{
+  "name": "@laikacms/starter-trpc-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog exposing LaikaCMS content over a tRPC API served by Hono. Demonstrates: end-to-end type-safe procedures over laika.documents.*, typed output schemas, and Web-API-native integration with no IncomingMessage bridge.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@hono/trpc-server": "^0.3.4",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@trpc/server": "^11.0.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
