@@ -188,3 +188,70 @@ There are **two** packages in the laika-cms ecosystem with confusingly similar n
   Lives in this repo under `packages/decap/`.
 
 Their subpath exports do not overlap, so you can `pnpm add` both side by side.
+
+---
+
+## Framework setup notes
+
+Gaps discovered while building the canonical starter apps (LCMS-023). Each note is a one-time
+footgun — do it once and forget it.
+
+### Astro — use `laikacms/compat`, not `laikacms/core`
+
+`runTask` and `collectStream` must be imported from `laikacms/compat`. The `laikacms/core` subpath
+does not export them (this was a README bug fixed in PR #41).
+
+```ts
+// correct
+import { collectStream, runTask } from 'laikacms/compat';
+
+// wrong — named exports do not exist here
+import { collectStream, runTask } from 'laikacms/core';
+```
+
+### Next.js (App Router) — admin page must be a client component
+
+The `/admin` page must be a `'use client'` component that injects the Decap CDN script via
+`useEffect`. There is no server-rendered equivalent: `next/script` with
+`strategy="beforeInteractive"` does not work for third-party CDN scripts in Server Components.
+
+```tsx
+// app/admin/page.tsx
+'use client';
+
+import { useEffect } from 'react';
+
+export default function AdminPage() {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/decap-cms@^3/dist/decap-cms.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  return <div id="nc-root" />;
+}
+```
+
+### SvelteKit — `src/app.html` is required
+
+SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js, you must create
+`src/app.html` explicitly or the dev server will error on startup.
+
+```html
+<!-- src/app.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
+</html>
+```
