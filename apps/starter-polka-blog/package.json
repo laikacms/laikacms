@@ -5,6 +5,7 @@
   "description": "Starter blog built with Polka + LaikaCMS. Polka is a tiny Express alternative (~33 LOC router) used internally by SvelteKit's dev server.",
   "type": "module",
   "scripts": {
+    "build": "pnpm build:admin",
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
     "dev": "pnpm build:admin && tsx watch src/index.ts",
     "start": "tsx src/index.ts",
