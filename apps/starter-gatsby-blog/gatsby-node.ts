@@ -39,7 +39,7 @@ export async function sourceNodes({
     }),
   );
 
-  for (const item of items.filter(r => r.type === 'published-summary')) {
+  for (const item of items.filter(r => r.type === 'published-summary' && r.key.endsWith('.md'))) {
     let content: Record<string, unknown> = {};
     try {
       const doc = await runTask(laika.documents.getDocument(item.key));
@@ -63,6 +63,27 @@ export async function sourceNodes({
         contentDigest: createContentDigest({ item, content }),
       },
     });
+  }
+}
+
+/**
+ * onCreatePage — mark the Decap admin page as client-only.
+ *
+ * Gatsby normally tries to SSR every page into static HTML. The admin page
+ * imports Effect-based modules (via @laikacms/decap-integrations) that
+ * reference browser globals at module load time. Marking the page as
+ * matchPath-only means Gatsby skips static HTML generation for /admin/* and
+ * serves the client bundle instead, avoiding the SSR crash in Option.js.
+ */
+export function onCreatePage({
+  page,
+  actions,
+}: Parameters<NonNullable<GatsbyNode['onCreatePage']>>[0]): void {
+  const { createPage, deletePage } = actions;
+
+  if (page.path === '/admin/' || page.path === '/admin') {
+    deletePage(page);
+    createPage({ ...page, matchPath: '/admin/*' });
   }
 }
 
