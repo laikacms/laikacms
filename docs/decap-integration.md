@@ -337,6 +337,45 @@ export default function AdminPage() {
 }
 ```
 
+### MongoDB storage — collection setup
+
+`MongoStorageRepository` accepts any `MongoCollectionLike` — a structural interface satisfied by
+both the official `mongodb` npm driver and a fetch-based Atlas Data API shim. No schema migration
+needed: the collection is created automatically on first write.
+
+```ts
+import {
+  MongoDataSource,
+  MongoStorageRepository,
+  type StorageDoc,
+} from '@laikacms/mongodb/storage-mongodb';
+import { MongoClient } from 'mongodb';
+
+const client = new MongoClient(process.env.MONGODB_URI!);
+await client.connect();
+
+const collection = client.db('laikacms').collection<StorageDoc>('cms_storage');
+
+// Recommended: create these indexes once on startup (idempotent)
+await collection.createIndex({ parent: 1, name: 1 }, { unique: true, background: true });
+await collection.createIndex({ path: 1 }, { unique: true, background: true });
+
+const dataSource = new MongoDataSource({ collection });
+const storage = new MongoStorageRepository({
+  dataSource,
+  serializerRegistry,
+  defaultFileExtension: 'md',
+});
+```
+
+**Atlas URI format**:
+`mongodb+srv://<user>:<pass>@<cluster>.mongodb.net/?retryWrites=true&w=majority`
+
+**Bring your own collection**: Because `MongoCollectionLike` is structural, you can pass a Mongoose
+model's collection, a Realm collection, or any object that implements the required methods
+(`findOne`, `insertOne`, `replaceOne`, `deleteMany`, `aggregate`). No `mongodb` driver required if
+you already have one configured.
+
 ### GitHub App storage — creating credentials
 
 `GithubStorageRepository` authenticates as a **GitHub App**, not a personal access token. This gives
