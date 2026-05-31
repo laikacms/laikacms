@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-multi-collection-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Portfolio site with multiple LaikaCMS content collections: blog posts, projects, and static pages. Shows how minimalBlogConfig() is a convenience — real apps build a full decapConfig with multiple folders and field schemas.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.4",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "^4.7.11",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
