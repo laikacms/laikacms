@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { vercelBlobContractCase } from './testing/index.js';
 import { VercelBlobDataSource } from './vercel-blob-datasource.js';
 import { VercelBlobStorageRepository } from './vercel-blob-storage-repository.js';
+
+runStorageRepositoryContract(vercelBlobContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Vercel Blob mock. Three endpoints carry the test surface:

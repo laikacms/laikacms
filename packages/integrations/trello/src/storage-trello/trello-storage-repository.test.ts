@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { trelloContractCase } from './testing/index.js';
 import { type TrelloCard, TrelloDataSource, type TrelloList } from './trello-datasource.js';
 import { TrelloStorageRepository } from './trello-storage-repository.js';
+
+runStorageRepositoryContract(trelloContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Trello REST mock.

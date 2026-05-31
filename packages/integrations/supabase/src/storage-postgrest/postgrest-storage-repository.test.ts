@@ -1,7 +1,11 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { PostgrestStorageRepository } from './postgrest-storage-repository.js';
+import { postgrestContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(postgrestContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory PostgREST mock. The interesting part: faithfully evaluating the
