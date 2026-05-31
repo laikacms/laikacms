@@ -76,16 +76,18 @@ const splitKey = (key: string): { parent: string, name: string } => {
  * Postgres-over-HTTP for the price of a single fetch dependency — runs
  * on Node, Bun, Deno, Cloudflare Workers, Vercel Edge, the browser.
  *
- * Required table schema (provision once via Supabase Studio or `psql`):
+ * Required table schema (provision once via Supabase Studio or `psql`).
+ * Column names are PascalCase (quoted in SQL) because PostgREST filter
+ * parameters are case-sensitive — `?Parent=eq.foo` maps to `"Parent"`.
  *
- *     parent       text not null
- *     name         text not null
- *     path         text not null unique
- *     type         text not null check (type in ('file','folder'))
- *     extension    text
- *     content      text
- *     created_at   timestamptz default now()
- *     updated_at   timestamptz default now()
+ *     "Parent"    text not null default ''
+ *     "Name"      text not null
+ *     "Path"      text not null unique
+ *     "Type"      text not null check ("Type" in ('file','folder'))
+ *     "Extension" text
+ *     "Content"   text
+ *     created_at  timestamptz default now()
+ *     updated_at  timestamptz default now()
  *
  * The repository assumes the table is provisioned and never runs DDL —
  * same model as the Cloudflare D1 / PocketBase / Airtable iterations.
