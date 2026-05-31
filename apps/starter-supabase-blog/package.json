@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-supabase-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Hono + Supabase (PostgreSQL via PostgREST) + LaikaCMS. Shows how to use @laikacms/supabase/storage-postgrest when you already have a Supabase project and want content stored in your Postgres database instead of the filesystem.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/supabase": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

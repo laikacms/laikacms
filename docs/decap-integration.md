@@ -337,6 +337,50 @@ export default function AdminPage() {
 }
 ```
 
+### Supabase — use `@laikacms/supabase/storage-postgrest` to store content in PostgreSQL
+
+`PostgrestStorageRepository` stores every file and folder as a row in a Postgres table exposed via
+Supabase's PostgREST endpoint. Use it when your app already has a Supabase project and you want CMS
+content co-located with your application data.
+
+**Setup steps:**
+
+1. Run the migration in the Supabase SQL Editor:
+
+```sql
+create table if not exists public.cms_storage (
+  id         uuid primary key default gen_random_uuid(),
+  parent     text not null,
+  name       text not null,
+  path       text not null unique,
+  type       text not null check (type in ('file', 'folder')),
+  extension  text,
+  content    text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+```
+
+2. Wire the repository:
+
+```ts
+import { PostgrestStorageRepository } from '@laikacms/supabase/storage-postgrest';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+
+const storage = new PostgrestStorageRepository({
+  url: `${process.env.SUPABASE_URL}/rest/v1`,
+  tableName: 'cms_storage',
+  auth: { anonKey: process.env.SUPABASE_SERVICE_KEY }, // service_role key bypasses RLS
+  serializerRegistry: { md: markdownSerializer /* …etc… */ },
+  defaultFileExtension: 'md',
+});
+```
+
+The `auth.anonKey` field is sent in both the `apikey` and `Authorization: Bearer` headers. Pass the
+**service role** key (not the anon key) so PostgREST skips Row Level Security for CMS writes. For
+user-scoped access, enable RLS on the table and pass a `userJwt` to `auth` alongside the anon key —
+see the `PostgrestAuth` interface for the full options.
+
 ### SvelteKit — `src/app.html` is required
 
 SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js, you must create
