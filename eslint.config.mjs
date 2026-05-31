@@ -37,8 +37,10 @@ export default tseslint.config(
       '**/worker-configuration.d.ts',
       '**/next-env.d.ts',
       'types/**',
+      // Framework-generated artifact directories — never manually edited
       '**/.astro/**',
       '**/.next/**',
+      '**/.svelte-kit/**',
     ],
   },
 );
