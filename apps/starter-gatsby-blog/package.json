@@ -1,0 +1,29 @@
+{
+  "name": "@laikacms/starter-gatsby-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Gatsby 5 + LaikaCMS. Demonstrates build-time data sourcing via Gatsby's sourceNodes API, custom GraphQL schema, Gatsby Functions for the Decap proxy, and useEffect for the client-only Decap admin.",
+  "type": "module",
+  "scripts": {
+    "dev": "gatsby develop",
+    "build": "gatsby build",
+    "start": "gatsby serve",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "gatsby": "^5.0.0",
+    "laikacms": "workspace:*",
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "@types/react": "catalog:types",
+    "@types/react-dom": "catalog:types",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
