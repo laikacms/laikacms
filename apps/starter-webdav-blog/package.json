@@ -1,0 +1,30 @@
+{
+  "name": "@laikacms/starter-webdav-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog: Hono + WebDavStorageRepository + LaikaCMS. Content lives on any WebDAV server (Nextcloud, ownCloud, rclone, Apache mod_dav). Includes an embedded dev WebDAV server for zero-setup local development.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/index.ts",
+    "build": "pnpm build:admin",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "gray-matter": "^4.0.3",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
