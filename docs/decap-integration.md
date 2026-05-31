@@ -558,16 +558,25 @@ you scoped, revocable per-repo access that works for production deployments.
 ```ts
 import { GithubStorageRepository } from '@laikacms/github/storage-gh';
 
-const storage = new GithubStorageRepository({
-  appId: process.env.GITHUB_APP_ID!,
-  privateKey: process.env.GITHUB_APP_PRIVATE_KEY!.replace(/\\n/g, '\n'),
-  installationId: process.env.GITHUB_APP_INSTALLATION_ID!,
-  owner: 'your-org',
-  repo: 'your-content-repo',
-  branch: 'main',
-  serializerRegistry: { md: markdownSerializer, yaml: yamlSerializer, ... },
-  defaultFileExtension: 'md',
-  commitAuthor: { name: 'Laika CMS', email: 'cms@laika.local' },
+const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
+const { title, date, body } = doc.content as PostContent;
+```
+
+This is the pattern used in all canonical starters. It is safe as long as your collection definition
+and interface stay in sync — they are not linked at the type level.
+
+**Option 2 — Zod validation (runtime safety)**
+
+Parse `doc.content` through a Zod schema for runtime guarantees:
+
+```typescript
+import { z } from 'zod';
+
+const PostSchema = z.object({
+  title: z.string(),
+  date: z.string().optional(),
+  description: z.string().optional(),
+  body: z.string().optional(),
 });
 ```
 
@@ -576,9 +585,29 @@ vars as single-line strings with literal `\n`. The `.replace(/\\n/g, '\n')` call
 above handles this. If you paste the key directly (e.g. in a `.env` file with quotes), the `replace`
 is a harmless no-op.
 
-**Token caching**: The adapter caches installation tokens (default TTL 50 minutes — GitHub issues
-them for 60 minutes). In a long-running Node.js process this is transparent; in a serverless
-function with no shared memory you may see extra token requests, which is fine.
+If you need a JSON Schema representation of your content type (e.g. for OpenAPI, tRPC output
+validation, or Feathers schemas), TypeBox gives you both a TypeScript type and a schema object from
+a single definition:
+
+```typescript
+import { Static, Type } from '@sinclair/typebox';
+
+const PostSchema = Type.Object({
+  title: Type.String(),
+  date: Type.Optional(Type.String()),
+  body: Type.Optional(Type.String()),
+});
+
+type Post = Static<typeof PostSchema>;
+```
+
+**Known gap — no `zodSchemaFromCollection()` helper**
+
+The Decap collection definition (`blogCollections` in your `decap-config.ts`) already describes
+every field name, widget type, and whether the field is required. Ideally you could derive a Zod or
+TypeBox schema directly from that definition instead of duplicating field names. This helper does
+not exist yet — it is tracked as a future enhancement. Until then, keep your TypeScript interface /
+Zod schema in sync with the collection definition manually.
 
 ### SvelteKit — `src/app.html` is required
 
