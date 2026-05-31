@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/backblaze",
   "version": "1.0.0",
+  "private": true,
   "description": "Backblaze B2 native API-backed StorageRepository for Laika CMS. Two-phase upload, file versioning, mandatory SHA-1 content verification, and POST-for-everything API. Runtime-agnostic — only depends on `fetch` and Web Crypto.",
   "keywords": [
     "headless-cms",
@@ -24,7 +25,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-b2": {
       "types": "./dist/storage-b2/index.d.ts",
@@ -51,5 +57,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

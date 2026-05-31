@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/libsql",
   "version": "1.0.0",
+  "private": true,
   "description": "libSQL/Turso-backed StorageRepository for Laika CMS. Distributed SQLite over the hrana HTTP pipeline protocol, with typed argument encoding and conditional batch transactions. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
@@ -25,7 +26,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-libsql": {
       "types": "./dist/storage-libsql/index.d.ts",
@@ -52,5 +58,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

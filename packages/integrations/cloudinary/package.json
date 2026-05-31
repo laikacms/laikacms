@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/cloudinary",
   "version": "1.0.0",
+  "private": true,
   "description": "Cloudinary-backed AssetsRepository for Laika CMS. Real folders, signed uploads, deterministic URL transforms exposed as variations. Runtime-agnostic — only depends on `fetch` and Web Crypto.",
   "keywords": [
     "headless-cms",

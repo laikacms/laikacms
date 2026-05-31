@@ -2,7 +2,6 @@
   "name": "decap-cms-widget-portabletext-editor",
   "description": "Decap CMS widget backed by @portabletext/editor (Sanity's native Portable Text editor). Sibling of decap-cms-widget-lexicaleditor.",
   "version": "0.1.0",
-  "private": true,
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",

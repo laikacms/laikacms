@@ -2,7 +2,6 @@
   "name": "decap-cms-lexical-core",
   "description": "Lexical-specific bindings for the editor-agnostic @laikacloud/portabletext-core: PT<->Lexical bridge, headless editor, custom blocks subsystem.",
   "version": "0.1.0",
-  "private": true,
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
