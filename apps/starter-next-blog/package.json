@@ -1,0 +1,29 @@
+{
+  "name": "@laikacms/starter-next-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Next.js (App Router) + LaikaCMS. Demonstrates createEmbeddedLaika, documents via laikacms/compat, and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*",
+    "next": "^15.0.0",
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "@types/react": "catalog:types",
+    "@types/react-dom": "catalog:types",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
