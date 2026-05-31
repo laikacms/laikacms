@@ -1,13 +1,16 @@
 import { getPost } from "../../../server/posts";
 
 $ const slug = input.params.slug;
-$ const post = await getPost(slug);
 
-if(!post)
-  p -- Post not found.
-else
-  article
-    h2 style="margin-bottom: 0.25rem;" -- ${post.title}
-    if(post.date)
-      small style="color: #666;" -- ${new Date(post.date).toLocaleDateString()}
-    div style="margin-top: 1.5rem; white-space: pre-wrap;" -- ${post.body}
+<await(getPost(slug))>
+  <@then|post|>
+    if(!post)
+      p -- Post not found.
+    else
+      article
+        h2 style="margin-bottom: 0.25rem;" -- ${post.title}
+        if(post.date)
+          small style="color: #666;" -- ${new Date(post.date).toLocaleDateString()}
+        div style="margin-top: 1.5rem; white-space: pre-wrap;" -- ${post.body}
+  </@then>
+</await>

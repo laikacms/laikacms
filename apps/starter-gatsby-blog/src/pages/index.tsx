@@ -1,4 +1,5 @@
 import { graphql, type HeadFC, type PageProps } from 'gatsby';
+import * as React from 'react';
 
 type PostNode = {
   slug: string,

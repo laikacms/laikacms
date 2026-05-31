@@ -16,6 +16,11 @@ interface PostContent {
   body?: string;
 }
 
+// Waku 1.0 file-system routing scans pages/ and defaults dynamic-param pages
+// to render:'static' unless overridden — this slug page reads a CMS doc per
+// request, so it must be dynamic.
+export const getConfig = () => ({ render: 'dynamic' as const });
+
 export default async function BlogPostPage({ slug }: { slug: string }) {
   let post;
   try {

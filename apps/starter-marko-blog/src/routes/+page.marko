@@ -1,19 +1,21 @@
 import { listPosts } from "../server/posts";
 
-$ const posts = await listPosts();
-
 section
   p
     -- Edit posts at
     a href="/admin" -- /admin
     -- (Decap CMS). Content is rendered server-side with Marko's streaming SSR.
-  ul style="list-style: none; padding: 0;"
-    if(posts.length === 0)
-      li
-        em -- No posts yet — add one in the admin UI.
-    for|post| of=posts
-      li style="margin-bottom: 1rem;"
-        a href=`/posts/${post.slug}` -- ${post.title}
-        if(post.date)
-          small style="margin-left: 0.5rem; color: #666;"
-            -- ${new Date(post.date).toLocaleDateString()}
+  <await(listPosts())>
+    <@then|posts|>
+      ul style="list-style: none; padding: 0;"
+        if(posts.length === 0)
+          li
+            em -- No posts yet — add one in the admin UI.
+        for|post| of=posts
+          li style="margin-bottom: 1rem;"
+            a href=`/posts/${post.slug}` -- ${post.title}
+            if(post.date)
+              small style="margin-left: 0.5rem; color: #666;"
+                -- ${new Date(post.date).toLocaleDateString()}
+    </@then>
+  </await>
