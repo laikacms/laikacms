@@ -37,6 +37,7 @@ export default tseslint.config(
       '**/worker-configuration.d.ts',
       'types/**',
       '**/.astro/**',
+      '**/.next/**',
     ],
   },
 );
