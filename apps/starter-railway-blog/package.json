@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-railway-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Blog deployable to Railway.app — uses decapAdminHtml() to eliminate the admin esbuild step entirely, and auto-detects Railway volume mount via CONTENT_DIR env var.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.4",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "^4.7.11",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

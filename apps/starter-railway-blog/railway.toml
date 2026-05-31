@@ -1,0 +1,21 @@
+# railway.toml — Railway App Platform deployment config.
+# https://docs.railway.app/reference/config-as-code
+#
+# Quick-deploy steps:
+#   1. Push this repo to GitHub.
+#   2. railway login && railway link   (or use the Railway dashboard)
+#   3. railway up
+#
+# For persistent content (survives re-deploys):
+#   Railway dashboard → your service → Volumes → Add volume, mount at /data
+#   Then set env var CONTENT_DIR=/data/content in the service settings.
+
+[build]
+builder = "nixpacks"
+buildCommand = "pnpm install --frozen-lockfile"
+
+[deploy]
+startCommand = "pnpm --filter @laikacms/starter-railway-blog start"
+healthcheckPath = "/"
+healthcheckTimeout = 30
+restartPolicyType = "always"
