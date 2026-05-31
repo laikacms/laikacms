@@ -1,6 +1,6 @@
 import * as S from 'effect/Schema';
 import { StorageObjectContentSchema } from 'laikacms/storage';
-import { DocumentLanguage } from '../record/record-language';
+import { DocumentLanguage } from '../record/record-language.js';
 
 // Omit status from create schema - it's always 'published' for documents
 // and will be added automatically by the repository

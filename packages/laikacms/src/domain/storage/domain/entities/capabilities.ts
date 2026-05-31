@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 import type { StandardSchemaV1 } from '@standard-schema/spec';
 import * as S from 'effect/Schema';
-import { StorageFormatSchema } from '../types';
+import { StorageFormatSchema } from '../types/index.js';
 
 export const CompatibilityDate = S.String.pipe(S.brand('StorageRepositoryCompatibilityDate'));
 export type CompatibilityDate = S.Schema.Type<typeof CompatibilityDate>;
