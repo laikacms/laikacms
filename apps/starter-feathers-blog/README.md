@@ -3,8 +3,8 @@
 Minimal blog built with [Feathers.js v5](https://feathersjs.com) and LaikaCMS. Demonstrates the
 **API-first / headless CMS** pattern:
 
-- **Feathers service** — `PostsService` wraps `laika.documents.*` behind a typed REST interface.
-  Any Feathers transport (REST, Socket.io) can query CMS content.
+- **Feathers service** — `PostsService` wraps `laika.documents.*` behind a typed REST interface. Any
+  Feathers transport (REST, Socket.io) can query CMS content.
 - **`laika.documents.*` via `laikacms/compat`** — `runTask` / `collectStream` inside the service
   class, identical API to all other starters.
 - **Client-side blog** — `public/index.html` fetches `/posts` JSON and renders without SSR.
@@ -17,8 +17,8 @@ pnpm install
 pnpm dev
 ```
 
-Open <http://localhost:3000> for the blog and <http://localhost:3000/admin/> for the CMS editor
-(dev auth — no login required). The REST API is at `http://localhost:3000/posts`.
+Open <http://localhost:3000> for the blog and <http://localhost:3000/admin/> for the CMS editor (dev
+auth — no login required). The REST API is at `http://localhost:3000/posts`.
 
 ## Project layout
 
@@ -82,10 +82,10 @@ app.use('posts', new PostsService());
 
 ## REST API
 
-| Method | Path          | Feathers operation | Description            |
-| ------ | ------------- | ------------------ | ---------------------- |
-| GET    | `/posts`      | `find()`           | List all published posts |
-| GET    | `/posts/:id`  | `get(id)`          | Fetch a single post    |
+| Method | Path         | Feathers operation | Description              |
+| ------ | ------------ | ------------------ | ------------------------ |
+| GET    | `/posts`     | `find()`           | List all published posts |
+| GET    | `/posts/:id` | `get(id)`          | Fetch a single post      |
 
 Feathers adds standard error handling: `404 NotFound` if a post doesn't exist.
 

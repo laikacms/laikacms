@@ -15,8 +15,8 @@
  * requires mapping twice. An alternative is a single collectStream call with
  * a higher depth parameter if LaikaCMS supports it in the future.
  */
-import type { Id, Params } from '@feathersjs/feathers';
 import { NotFound } from '@feathersjs/errors';
+import type { Id, Params } from '@feathersjs/feathers';
 import { collectStream, runTask } from 'laikacms/compat';
 
 import { laika } from '../lib/laika.js';
