@@ -1,0 +1,23 @@
+{
+  "name": "@laikacms/starter-express-backend",
+  "description": "Starter: classic Express backend with an explicit req/res ↔ Web Request/Response adapter so it can host the LaikaCMS web-standard fetch handler.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "express": "^4.21.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

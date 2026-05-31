@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-mcp-server",
+  "description": "Starter: Model Context Protocol (MCP) server exposing LaikaCMS as tools for AI agents. Plug into Claude Desktop, ChatGPT, Cursor, or any MCP client.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "laikacms-mcp": "./src/server.ts"
+  },
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "laikacms": "workspace:*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

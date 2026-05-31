@@ -1,0 +1,23 @@
+{
+  "name": "@laikacms/starter-cli-tool",
+  "description": "Starter: a Node.js CLI that reads/writes LaikaCMS content from the shell. Useful for CI scripts, content migrations, build-time generation.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "laika": "./src/cli.ts"
+  },
+  "scripts": {
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

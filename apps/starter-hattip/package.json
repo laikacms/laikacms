@@ -1,0 +1,25 @@
+{
+  "name": "@laikacms/starter-hattip",
+  "description": "Starter: LaikaCMS on Hattip — write the handler once, deploy it to Node/Bun/Deno/Workers/Lambda/Vercel by swapping the adapter import.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/node-entry.ts",
+    "start": "tsx src/node-entry.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hattip/adapter-node": "^0.0.49",
+    "@hattip/compose": "^0.0.49",
+    "@hattip/core": "^0.0.49",
+    "@hattip/router": "^0.0.49",
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

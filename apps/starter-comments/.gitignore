@@ -1,0 +1,7 @@
+node_modules
+dist
+.env
+.env.local
+.turbo
+content/.contentbase
+content/comments/*.md

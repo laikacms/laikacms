@@ -1,0 +1,22 @@
+---
+layout: base.njk
+title: LaikaCMS Eleventy starter — Home
+---
+<p>
+  Edit posts at <a href="http://localhost:3001/admin">the admin server</a> (Decap CMS).
+  Content is stored on disk under <code>content/posts/</code>; Eleventy regenerates
+  this site whenever a file changes.
+</p>
+<ul style="list-style: none; padding: 0;">
+{% for post in collections.posts %}
+  <li style="margin-bottom: 1rem;">
+    <a href="{{ post.url }}">{{ post.data.title or post.fileSlug }}</a>
+    {% if post.data.date %}
+      <small style="margin-left: 0.5rem; color: #666;">{{ post.data.date.toLocaleDateString() }}</small>
+    {% endif %}
+  </li>
+{% endfor %}
+{% if not collections.posts.length %}
+  <li><em>No posts yet — add one in the admin UI.</em></li>
+{% endif %}
+</ul>
