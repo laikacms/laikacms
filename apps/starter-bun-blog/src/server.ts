@@ -13,7 +13,6 @@
  */
 import { collectStream, runTask } from 'laikacms/compat';
 
-import { blogCollections } from './decap-config.js';
 import { laika } from './laika.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
