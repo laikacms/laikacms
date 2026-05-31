@@ -1,0 +1,33 @@
+{
+  "name": "@laikacms/starter-svelte-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Svelte 5 (standalone SSR, no SvelteKit) + LaikaCMS. Shows what SvelteKit abstracts away: Vite ssrLoadModule, express routing, and the Decap API proxy.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx src/server.ts",
+    "build": "pnpm build:admin && vite build && vite build --ssr --outDir dist/server",
+    "start": "NODE_ENV=production tsx src/server.ts",
+    "typecheck": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "express": "^5.1.0",
+    "laikacms": "workspace:*",
+    "svelte": "^5.0.0"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@types/express": "^5.0.0",
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "svelte-check": "^4.0.0",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
