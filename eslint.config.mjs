@@ -46,6 +46,8 @@ export default tseslint.config(
       '**/.vinxi/**',
       // Built static assets (esbuild bundles, etc.)
       '**/public/admin/bundle.js',
+      // Qwik SSR build output
+      'apps/starter-qwik-blog/server/**',
     ],
   },
 );
