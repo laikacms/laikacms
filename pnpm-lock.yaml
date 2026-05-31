@@ -460,6 +460,25 @@ importers:
         specifier: catalog:tools
         version: 4.90.1(@cloudflare/workers-types@4.20260509.1)
 
+  apps/storage-contract-e2e:
+    dependencies:
+      effect:
+        specifier: catalog:default
+        version: 4.0.0-beta.66
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+      vitest:
+        specifier: catalog:tools
+        version: 4.1.5(@opentelemetry/api@1.9.0)(@types/node@22.19.18)(@vitest/coverage-v8@4.1.5)(happy-dom@20.9.0)(vite@8.0.11(@types/node@22.19.18)(esbuild@0.27.7)(jiti@2.7.0)(yaml@2.8.4))
+
   apps/website:
     dependencies:
       '@tanstack/react-router':
