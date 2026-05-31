@@ -1,0 +1,18 @@
+---
+pagination:
+  data: posts
+  size: 1
+  alias: post
+  addAllPagesToCollections: false
+permalink: "/blog/{{ post.slug }}/"
+layout: base.njk
+eleventyComputed:
+  title: "{{ post.title }}"
+---
+<article>
+  <h1>{{ post.title }}</h1>
+  {% if post.date %}<time>{{ post.date }}</time>{% endif %}
+  {% if post.description %}<p><em>{{ post.description }}</em></p>{% endif %}
+  <pre style="white-space:pre-wrap;font-family:inherit">{{ post.body }}</pre>
+</article>
+<p><a href="/">← Back</a></p>
