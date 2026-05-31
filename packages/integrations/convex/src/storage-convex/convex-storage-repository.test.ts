@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ConvexDataSource } from './convex-datasource.js';
 import { ConvexStorageRepository } from './convex-storage-repository.js';
+import { convexContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(convexContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Convex HTTP RPC mock.
