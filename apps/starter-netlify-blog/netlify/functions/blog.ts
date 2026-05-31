@@ -61,12 +61,8 @@ async function renderHome(): Promise<Response> {
 }
 
 async function renderPost(slug: string): Promise<Response> {
-  let post: Awaited<ReturnType<typeof runTask<ReturnType<typeof laika.documents.getDocument>>>>;
-  try {
-    post = await runTask(laika.documents.getDocument(`posts/${slug}`));
-  } catch {
-    return new Response('Not Found', { status: 404 });
-  }
+  const post = await runTask(laika.documents.getDocument(`posts/${slug}`)).catch(() => null);
+  if (!post) return new Response('Not Found', { status: 404 });
 
   const { title, date, description, body } = post.content as {
     title?: string,
