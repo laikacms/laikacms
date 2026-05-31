@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-h3-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with H3 + LaikaCMS. H3 is the primitive runtime beneath Nitro/Nuxt — using it directly shows how WHATWG-native HTTP works without a build step.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "h3": "^1.15.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
