@@ -1,14 +1,18 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { InfluxDbDataSource } from './influxdb-datasource.js';
 import { InfluxDbStorageRepository } from './influxdb-storage-repository.js';
+import { influxDbContractCase } from './testing/index.js';
 import {
   parseAnnotatedCsv,
   parseLineProtocolPoint,
   serializeAnnotatedCsv,
   serializeLineProtocolPoint,
 } from './wire-format.js';
+
+runStorageRepositoryContract(influxDbContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory InfluxDB v2 HTTP mock.

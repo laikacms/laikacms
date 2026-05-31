@@ -270,6 +270,12 @@ const parseCsvRow = (line: string): string[] => {
  * Serialize an array of column-keyed records to InfluxDB's annotated-CSV
  * format. Used by the test mock; production code only consumes CSV.
  */
+/** Quote a CSV cell value if it contains commas, double-quotes, or newlines. */
+const quoteCsvCell = (value: string): string => {
+  if (!/[,"\r\n]/.test(value)) return value;
+  return `"${value.replace(/"/g, '""')}"`;
+};
+
 export const serializeAnnotatedCsv = (
   columns: ReadonlyArray<{ name: string, datatype: string }>,
   rows: ReadonlyArray<Record<string, string>>,
@@ -287,7 +293,7 @@ export const serializeAnnotatedCsv = (
   ];
   for (let i = 0; i < rows.length; i += 1) {
     const row = rows[i]!;
-    const cells = ['', '_result', String(i), ...columns.map(c => row[c.name] ?? '')];
+    const cells = ['', '_result', String(i), ...columns.map(c => quoteCsvCell(row[c.name] ?? ''))];
     lines.push(cells.join(','));
   }
   return lines.join('\r\n') + '\r\n';
