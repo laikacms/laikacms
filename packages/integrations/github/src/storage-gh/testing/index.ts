@@ -34,8 +34,6 @@ const createMockOctokit = () => {
   const createdAt = new Date('2026-01-01');
 
   const getContentData = (path: string) => {
-    const prefix = path === '' ? '' : `${path}/`;
-
     const exactFile = files.get(path);
     if (exactFile) {
       return {
