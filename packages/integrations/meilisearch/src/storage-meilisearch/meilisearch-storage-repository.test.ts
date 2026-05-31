@@ -1,5 +1,8 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { meilisearchContractCase } from './testing/index.js';
 
 import { andFilter, eqFilter, MeiliDataSource, type MeiliDocument } from './meilisearch-datasource.js';
 import { MeiliStorageRepository } from './meilisearch-storage-repository.js';
@@ -528,3 +531,5 @@ describe('MeiliStorageRepository', () => {
 // Reference unused symbols.
 void searchCallCount;
 void upsertCallCount;
+
+runStorageRepositoryContract(meilisearchContractCase);
