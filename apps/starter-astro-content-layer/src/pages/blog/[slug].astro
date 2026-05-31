@@ -1,0 +1,36 @@
+---
+// Prerendered — Astro generates one HTML file per post at build time.
+// getStaticPaths() is required in static mode to enumerate all slugs.
+import { getCollection, getEntry } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  return posts.map(post => ({ params: { slug: post.id } }));
+}
+
+const { slug } = Astro.params;
+const post = await getEntry('posts', slug);
+
+if (!post) {
+  return Astro.redirect('/404');
+}
+
+const { title, date, description, body } = post.data;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>{title ?? slug}</title>
+  </head>
+  <body>
+    <article>
+      <h1>{title ?? slug}</h1>
+      {date && <time>{new Date(date).toLocaleDateString()}</time>}
+      {description && <p><em>{description}</em></p>}
+      <pre style="white-space:pre-wrap;font-family:inherit">{body ?? ''}</pre>
+    </article>
+    <p><a href="/">← Back</a></p>
+  </body>
+</html>
