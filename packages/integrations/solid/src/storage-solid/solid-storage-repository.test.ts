@@ -1,9 +1,13 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { SolidDataSource } from './solid-datasource.js';
 import { SolidStorageRepository } from './solid-storage-repository.js';
+import { solidContractCase } from './testing/index.js';
 import { parseTurtle, resolveIri, serializeTurtle, type TurtleTriple } from './turtle.js';
+
+runStorageRepositoryContract(solidContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Solid Pod / LDP mock.
