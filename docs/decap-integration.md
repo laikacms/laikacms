@@ -62,6 +62,34 @@ ContentBase document + asset repos, and the `decapApi(...)` router. The first ru
 
 ### Client — Decap admin shell
 
+Two ways to serve the admin UI:
+
+**Option A — `decapAdminHtml()` (simpler, no build step)**
+
+When you already have a running server, the simplest admin shell is a single function call. No
+esbuild step, no `public/admin/bundle.js`, no React dependency. Available from all three presets
+(`/embedded`, `/custom`, `/workers`):
+
+```ts
+import { decapAdminHtml, minimalBlogConfig } from '@laikacms/decap-integrations/custom';
+
+const decapConfig = minimalBlogConfig();
+const ADMIN_HTML = decapAdminHtml({ decapConfig, title: 'My Admin' });
+
+// Hono
+app.get('/admin', c => c.html(ADMIN_HTML));
+// Express
+app.get('/admin', (_req, res) => res.send(ADMIN_HTML));
+```
+
+The function inlines the Decap config into a `<script>` that loads Decap from CDN and registers the
+Laika backend. Dev-mode auth is wired automatically when `auth: { mode: 'dev' }` is passed to
+`createCustomLaika` / `createEmbeddedLaika`.
+
+**Option B — React island (full control, smaller bundle)**
+
+Use when you need custom widgets or the Decap React tree:
+
 ```ts
 // src/components/DecapAdmin.tsx (a React island)
 import { createLaikaBackend } from '@laikacms/decap-integrations/decap-cms-backend-laika';
