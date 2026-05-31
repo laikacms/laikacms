@@ -56,8 +56,9 @@ ContentBase document + asset repos, and the `decapApi(...)` router. The first ru
 `content/config.yml` from your `decapConfig` so the editor and the server agree on the schema.
 
 > **Node.js only.** `createEmbeddedLaika` hardcodes `FileSystemStorageRepository`, which requires
-> `node:fs`. It is incompatible with edge runtimes (Cloudflare Workers, Deno Deploy, etc.). For
-> edge deployments, wire the pieces manually using `decapApi` — see [Standalone Worker](#standalone-worker-byo-storage) below.
+> `node:fs`. It is incompatible with edge runtimes (Cloudflare Workers, Deno Deploy, etc.). For edge
+> deployments, wire the pieces manually using `decapApi` — see
+> [Standalone Worker](#standalone-worker-byo-storage) below.
 
 ### Client — Decap admin shell
 
