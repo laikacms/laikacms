@@ -41,6 +41,8 @@ export default tseslint.config(
       '**/.astro/**',
       '**/.next/**',
       '**/.svelte-kit/**',
+      '**/.nuxt/**',
+      '**/.output/**',
     ],
   },
 );
