@@ -2878,6 +2878,31 @@ importers:
         specifier: ^2.1.0
         version: 2.2.12(typescript@6.0.3)
 
+  apps/starter-vitepress-blog:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+      vitepress:
+        specifier: ^1.6.3
+        version: 1.6.4(@algolia/client-search@5.53.0)(@types/node@22.19.18)(@types/react@18.3.29)(fuse.js@7.4.0)(jwt-decode@4.0.0)(lightningcss@1.32.0)(nprogress@0.2.0)(postcss@8.5.15)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(sass@1.97.3)(search-insights@2.17.3)(terser@5.48.0)(typescript@6.0.3)
+      vue:
+        specifier: ^3.5.17
+        version: 3.5.35(typescript@6.0.3)
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      esbuild:
+        specifier: catalog:tools
+        version: 0.27.7
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-vue-ssr-blog:
     dependencies:
       '@hono/node-server':
