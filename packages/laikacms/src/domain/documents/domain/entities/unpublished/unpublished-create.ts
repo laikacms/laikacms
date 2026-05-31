@@ -1,6 +1,6 @@
 import * as S from 'effect/Schema';
 import { StorageObjectContentSchema } from 'laikacms/storage';
-import { DocumentLanguage } from '../record/record-language';
+import { DocumentLanguage } from '../record/record-language.js';
 
 /**
  * Schema for creating a new unpublished document

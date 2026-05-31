@@ -1,6 +1,6 @@
 import * as S from 'effect/Schema';
 import { AtomBaseSchema, StorageObjectContentSchema } from 'laikacms/storage';
-import { DocumentLanguage } from '../record/record-language';
+import { DocumentLanguage } from '../record/record-language.js';
 
 /**
  * Unpublished document entity
