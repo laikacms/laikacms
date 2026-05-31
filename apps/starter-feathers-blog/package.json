@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/starter-feathers-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Feathers.js v5 + LaikaCMS. API-first pattern: a Feathers service wraps laika.documents.* to expose a typed REST API; the blog frontend fetches JSON client-side.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@feathersjs/express": "^5.0.0",
+    "@feathersjs/feathers": "^5.0.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
