@@ -1,0 +1,31 @@
+{
+  "name": "@laikacms/starter-docusaurus-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Docusaurus v3 + LaikaCMS. A Docusaurus plugin uses configureDevServer(app) to inject the Decap JSON:API handler into Docusaurus's Express-based dev server. Posts are markdown files in blog/ — managed by LaikaCMS, rendered by Docusaurus.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=static/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && docusaurus start",
+    "build": "pnpm build:admin && docusaurus build",
+    "preview": "docusaurus serve",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@docusaurus/core": "^3.9.0",
+    "@docusaurus/preset-classic": "^3.9.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@docusaurus/module-type-aliases": "^3.9.0",
+    "@docusaurus/types": "^3.9.0",
+    "@types/node": "catalog:types",
+    "@types/react": "catalog:types",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
