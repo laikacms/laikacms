@@ -239,10 +239,11 @@ These are the things that consistently bite first-time integrators:
 
 ┌─ Deploying to edge/serverless? ──────────────────────────────────┐
 │                                                                  │
-│  Cloudflare Workers? → starter-workers-r2 ✅                       │
-│  AWS Lambda?         → starter-lambda-blog                        │
-│  Vercel Edge?        → starter-vercel-edge 🟡 (PoC — storage gap)  │
-│  Netlify Functions?  → starter-netlify-functions 🟡 (dev only)     │
+│  Cloudflare Workers + R2?  → starter-workers-r2 ✅                │
+│  Cloudflare Workers + D1?  → starter-workers-d1 ✅                │
+│  AWS Lambda?               → starter-lambda-blog                  │
+│  Vercel Edge?              → starter-vercel-edge 🟡 (PoC)         │
+│  Netlify Functions?        → starter-netlify-functions 🟡 (dev)   │
 └──────────────────────────────────────────────────────────────────┘
 ```
 

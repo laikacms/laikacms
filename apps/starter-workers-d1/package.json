@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/starter-workers-d1",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter: Cloudflare Workers + Hono + D1 (SQLite) backed LaikaCMS via DrizzleStorageRepository. Shows createCustomLaika with SQL storage in the edge runtime.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 3000",
+    "deploy": "wrangler deploy",
+    "typecheck": "wrangler types && tsc --noEmit",
+    "types": "wrangler types",
+    "db:migrate:local": "wrangler d1 execute laikacms-d1 --local --file migrations/0001_create_atoms.sql",
+    "db:migrate:remote": "wrangler d1 execute laikacms-d1 --remote --file migrations/0001_create_atoms.sql"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "drizzle-orm": "^0.44.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "catalog:tools",
+    "wrangler": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

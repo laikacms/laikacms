@@ -1,0 +1,14 @@
+name = "laikacms-starter-workers-d1"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Local dev: wrangler will create an in-memory D1 mock automatically.
+# For production:
+#   1. wrangler d1 create laikacms-d1
+#   2. Copy the database_id into this file
+#   3. pnpm run db:migrate:remote
+[[d1_databases]]
+binding = "DB"
+database_name = "laikacms-d1"
+database_id = "placeholder-create-with-wrangler-d1-create"
