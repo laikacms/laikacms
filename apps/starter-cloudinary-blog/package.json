@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-cloudinary-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Blog using Cloudinary for media (CloudinaryAssetsRepository) + FileSystem for content. Shows how to combine a custom AssetsRepository with FileSystem storage by calling decapApi() directly instead of a preset.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/cloudinary": "workspace:*",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

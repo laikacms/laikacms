@@ -1,0 +1,6 @@
+.env
+dist/
+content/posts/
+content/config.yml
+public/uploads/*
+!public/uploads/.gitkeep
