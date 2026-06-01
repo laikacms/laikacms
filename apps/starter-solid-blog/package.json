@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-solid-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by a Solid Pod (Linked Data Platform). URI-as-identity, trailing-slash container/resource addressing, RDF/Turtle listings, content negotiation, If-None-Match:* for create-only PUTs. Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/solid": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
