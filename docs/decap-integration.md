@@ -593,8 +593,6 @@ const DecapController = () => import('#controllers/decap_controller');
 router.any('/api/decap/*', [DecapController, 'proxy']);
 ```
 
-See `apps/starter-adonis-blog` for the full working example.
-
 ### SvelteKit — `src/app.html` is required
 
 SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js, you must create
