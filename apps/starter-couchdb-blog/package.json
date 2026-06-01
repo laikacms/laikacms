@@ -1,0 +1,31 @@
+{
+  "name": "@laikacms/starter-couchdb-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog using Apache CouchDB as the content store via CouchDbStorageRepository + createCustomLaika. Demonstrates first-class _rev OCC, Mango selectors, and atomic _bulk_docs multi-delete.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "couch:up": "docker run -d --name laikacms-couch -p 5984:5984 -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password couchdb:3",
+    "couch:down": "docker rm -f laikacms-couch || true",
+    "couch:init": "node -e \"fetch('http://admin:password@localhost:5984/cms', {method:'PUT'}).then(r=>r.json()).then(console.log)\"",
+    "couch:index": "node -e \"Promise.all([fetch('http://admin:password@localhost:5984/cms/_index',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:{fields:['parent']}})}),fetch('http://admin:password@localhost:5984/cms/_index',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({index:{fields:['type','parent','name']}})})]).then(rs=>Promise.all(rs.map(r=>r.json()))).then(r=>console.log(JSON.stringify(r,null,2)))\""
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/couchdb": "workspace:*",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
