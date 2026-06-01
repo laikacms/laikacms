@@ -184,8 +184,13 @@ These are the things that consistently bite first-time integrators:
    - The Decap backend lives at `@laikacms/decap-integrations/decap-cms-backend-laika` — a subpath
      of `@laikacms/decap-integrations`, NOT a separate `@laikacms/decap-cms-backend-laika` package.
 
-4. **`createEmbeddedLaika` is Node-only.** It calls `node:fs.mkdirSync` at module-load time. Don't
-   import it from Workers/edge code. Use `createWorkersLaika` instead.
+4. **`createEmbeddedLaika` is NOT Workers/edge-safe** — but it works fine on Deno 2 and Bun.
+   It calls `node:fs.mkdirSync` at module-load time, which requires filesystem access. Don't
+   import it from Cloudflare Workers or other V8-isolate runtimes. Use `createWorkersLaika`
+   instead. On **Deno 2**: works as-is, provided `"nodeModulesDir": "auto"` is set in `deno.json`
+   so pnpm workspace packages resolve from `node_modules/`, and the process has `--allow-read`
+   `--allow-write` flags (included in `deno run -A`). See `apps/starter-fresh-blog` for a full
+   Deno 2 example using Fresh routing.
 
 5. **Workers/edge storage is currently R2-only.** Vercel Blob, Netlify Blobs, Deno KV, Bun S3 don't
    have first-party `StorageRepository` adapters yet. The Vercel Edge and Netlify Functions starters
@@ -235,6 +240,7 @@ These are the things that consistently bite first-time integrators:
 │  Koa?             → starter-koa-backend                           │
 │  Bun runtime?     → starter-bun-backend                           │
 │  Deno runtime?    → starter-deno-backend                          │
+│  Deno Fresh?      → starter-fresh-blog                            │
 └──────────────────────────────────────────────────────────────────┘
 
 ┌─ Deploying to edge/serverless? ──────────────────────────────────┐

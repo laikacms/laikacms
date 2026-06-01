@@ -1,0 +1,25 @@
+{
+  "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
+  "tasks": {
+    "dev": "deno run -A --watch=routes/,lib/ dev.ts",
+    "start": "deno run -A main.ts",
+    "build": "deno run -A dev.ts build",
+    "check": "deno check main.ts routes/index.tsx routes/admin.tsx \"routes/blog/[slug].tsx\" \"routes/api/decap/[...path].ts\" lib/laika.ts"
+  },
+  "imports": {
+    "$fresh/": "https://deno.land/x/fresh@1.7.3/",
+    "preact": "npm:preact@^10.23.1",
+    "preact/": "npm:preact@^10.23.1/",
+    "@preact/signals": "npm:@preact/signals@^1.2.1",
+    "@preact/signals-core": "npm:@preact/signals-core@^1.5.1"
+  },
+  "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "lib": ["ESNext", "DOM"],
+    "strict": true,
+    "noImplicitAny": true
+  },
+  "exclude": ["**/_fresh/*"]
+}
