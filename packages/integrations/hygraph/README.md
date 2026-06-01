@@ -10,7 +10,7 @@ Runtime-agnostic — only depends on `fetch`.
 
 ```ts
 import { HygraphStorageRepository } from '@laikacms/hygraph/storage-hygraph';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new HygraphStorageRepository({
   endpoint: 'https://api-eu-west-2.hygraph.com/v2/<project-id>/master',
@@ -19,7 +19,7 @@ const repo = new HygraphStorageRepository({
     // or: tokenProvider: () => refreshedPat(),
   },
   stage: 'DRAFT', // optional — defaults to "DRAFT"
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```

@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-hygraph-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by Hygraph (formerly GraphCMS) via the GraphQL Content API. First true-GraphQL transport in the suite — one query returns files + folders in a single round-trip. Requires LaikaObject + LaikaFolder content models pre-provisioned in Hygraph Studio. Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/hygraph": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
