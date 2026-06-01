@@ -65,6 +65,7 @@ or run directly**. Goals:
 | [`apps/starter-stripe-paywall`](../apps/starter-stripe-paywall/)       | Stripe Checkout + paywall — free preview for visitors, full body for subscribers                                         | FileSystem                        | Decap via `decapAdminHtml()`                              | ✅ Working                                                       |
 | [`apps/starter-email-digest`](../apps/starter-email-digest/)           | Email subscribers + scheduled per-subscriber digest of new posts via Resend; one-click unsubscribe                       | FileSystem                        | Decap via `decapAdminHtml()`                              | ✅ Working                                                       |
 | [`apps/starter-comments`](../apps/starter-comments/)                   | Built-in moderated comments backed by LaikaCMS records (two collections in one config); IP rate-limited; admin queue     | FileSystem                        | Decap via `decapAdminHtml()` (queue lives in the same UI) | ✅ Working                                                       |
+| [`apps/starter-ldap-blog`](../apps/starter-ldap-blog/)                 | Hono — LDAP directory as storage; DN addressing, `objectClass` schema, RFC 4515 filters, scope searches, bulkOps         | **LDAP**                          | Decap via `decapAdminHtml()`                              | ✅ Working (requires schema setup — see README)                  |
 
 More are coming — Deno Deploy, native pub/sub.
 
