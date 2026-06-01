@@ -65,6 +65,7 @@ or run directly**. Goals:
 | [`apps/starter-stripe-paywall`](../apps/starter-stripe-paywall/)       | Stripe Checkout + paywall — free preview for visitors, full body for subscribers                                         | FileSystem                        | Decap via `decapAdminHtml()`                              | ✅ Working                                                       |
 | [`apps/starter-email-digest`](../apps/starter-email-digest/)           | Email subscribers + scheduled per-subscriber digest of new posts via Resend; one-click unsubscribe                       | FileSystem                        | Decap via `decapAdminHtml()`                              | ✅ Working                                                       |
 | [`apps/starter-comments`](../apps/starter-comments/)                   | Built-in moderated comments backed by LaikaCMS records (two collections in one config); IP rate-limited; admin queue     | FileSystem                        | Decap via `decapAdminHtml()` (queue lives in the same UI) | ✅ Working                                                       |
+| [`apps/starter-media-blog`](../apps/starter-media-blog/)               | Hono blog demonstrating **image upload + serving** via `laika.storage.getObject` — the canonical pattern for `GET /uploads/:filename` | FileSystem                        | Decap via `decapAdminHtml()`                              | ✅ Working                                                       |
 
 More are coming — Deno Deploy, native pub/sub.
 
@@ -191,6 +192,40 @@ The Nuxt starter uses it as-is. The earlier starters still hand-roll their confi
 migrate them. Frameworks that no one ends up maintaining will be moved to `apps/starters-archive/`
 rather than deleted; surfacing doc gaps is the point, and even a broken starter is a useful corpus
 when figuring out which docs and API ergonomics need improvement.
+
+### Serving uploaded images (the assets gap)
+
+`minimalBlogConfig()` defaults to `media_folder: 'public/uploads'` and `public_folder: '/uploads'`.
+When an editor uploads `photo.jpg` through Decap, LaikaCMS stores it **base64-encoded inside a JSON
+object** in the contentbase (key `public/uploads/photo.jpg`). Markdown bodies then reference the
+image as `![alt](/uploads/photo.jpg)`.
+
+**The server must have a route that decodes and serves the binary.** Static file serving
+(`serveStatic`, `express.static`) does _not_ work here because the file on disk is serialised JSON,
+not a raw JPEG. The pattern:
+
+```ts
+// Hono
+app.get('/uploads/:filename', async c => {
+  const { filename } = c.req.param();
+  let obj;
+  try {
+    obj = await runTask(laika.storage.getObject(`public/uploads/${filename}`));
+  } catch {
+    return c.notFound();
+  }
+  const base64 = obj.content['data'];
+  const mimeType = obj.content['mimeType'];
+  if (typeof base64 !== 'string' || typeof mimeType !== 'string') return c.notFound();
+  const bytes = Buffer.from(base64, 'base64');
+  return new Response(bytes, {
+    headers: { 'Content-Type': mimeType, 'Cache-Control': 'public, max-age=31536000, immutable' },
+  });
+});
+```
+
+See `apps/starter-media-blog/src/server.ts` for the full working example. If your `public_folder`
+differs (e.g. `'/media'` or `'/assets'`), adjust the route path and storage key prefix accordingly.
 
 ## What every starter must show
 

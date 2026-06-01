@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-media-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Hono blog demonstrating how to serve images uploaded through Decap CMS. Uses laika.storage.getObject to decode base64-encoded assets and serve them as binary responses. Key pattern: GET /uploads/:filename → decode → respond with Content-Type.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "marked": "^15.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
