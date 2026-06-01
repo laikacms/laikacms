@@ -66,6 +66,10 @@ or run directly**. Goals:
 | [`apps/starter-email-digest`](../apps/starter-email-digest/)           | Email subscribers + scheduled per-subscriber digest of new posts via Resend; one-click unsubscribe                       | FileSystem                        | Decap via `decapAdminHtml()`                              | ✅ Working                                                       |
 | [`apps/starter-comments`](../apps/starter-comments/)                   | Built-in moderated comments backed by LaikaCMS records (two collections in one config); IP rate-limited; admin queue     | FileSystem                        | Decap via `decapAdminHtml()` (queue lives in the same UI) | ✅ Working                                                       |
 
+| [`apps/starter-angular-blog`](../apps/starter-angular-blog/) | Angular 19 SSR (`@angular/ssr` +
+Express) — standalone components, `HttpClient` blog routes, SSR base-URL interceptor | FileSystem |
+Decap via `decapAdminHtml()` | ✅ Working |
+
 More are coming — Deno Deploy, native pub/sub.
 
 ### `laikacms/storage-s3` — first-party S3 adapter (new)
