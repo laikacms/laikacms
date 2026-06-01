@@ -1,0 +1,29 @@
+{
+  "name": "@laikacms/starter-ldap-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by an LDAP directory. DN hierarchical addressing, objectClass schema model, RFC 4515 filter DSL, scope-based searches, bulkOps atomic multi-write. Client-agnostic: bring ldapjs or any LdapOps-shaped client. Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/ldap": "workspace:*",
+    "hono": "catalog:server",
+    "ldapjs": "^3.0.7",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/ldapjs": "^2.2.5",
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
