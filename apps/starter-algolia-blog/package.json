@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-algolia-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by Algolia. Treats a search index as the storage layer — every post is an Algolia record and is immediately searchable. Single-query folder listing via _parent attribute. Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/algolia": "workspace:*",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
