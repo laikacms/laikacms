@@ -147,6 +147,63 @@ createEmbeddedLaika({
 });
 ```
 
+### f) Multiple content collections
+
+`minimalBlogConfig()` ships one `posts` collection. Add more via `extraCollections`:
+
+```ts
+const decapConfig = minimalBlogConfig({
+  collectionName: 'blog',
+  folder: 'blog',
+  extraCollections: [
+    // Folder collection — one Markdown file per project
+    {
+      name: 'projects',
+      label: 'Projects',
+      folder: 'projects',
+      create: true,
+      slug: '{{slug}}',
+      extension: 'md',
+      fields: [
+        { name: 'title', label: 'Title', widget: 'string' },
+        { name: 'description', label: 'Short description', widget: 'text' },
+        { name: 'url', label: 'Live URL', widget: 'string', required: false },
+        { name: 'tags', label: 'Tags', widget: 'list' },
+        { name: 'body', label: 'Case study', widget: 'markdown' },
+      ],
+    },
+    // Files collection — singleton About page
+    {
+      name: 'pages',
+      label: 'Pages',
+      files: [
+        {
+          name: 'about',
+          label: 'About',
+          file: 'about.md',
+          fields: [
+            { name: 'title', label: 'Title', widget: 'string' },
+            { name: 'body', label: 'Bio', widget: 'markdown' },
+          ],
+        },
+      ],
+    },
+  ],
+});
+```
+
+Then read `projects/` just like `posts/`:
+
+```ts
+const { items } = await collectStream(
+  laika.documents.listRecords({ folder: 'projects', depth: 1,
+    pagination: { offset: 0, limit: 100 }, type: 'published' }),
+);
+// Singleton: laika.documents.getDocument('about')
+```
+
+See `apps/starter-portfolio` for the complete example.
+
 ---
 
 ## 3. The presets — choose the right one
