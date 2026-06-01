@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-effect-platform-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog using @effect/platform-node HttpRouter + LaikaCMS. Demonstrates the WHATWG bridge (HttpServerRequest.toWeb / HttpServerResponse.fromWeb) that lets laika.fetch live inside Effect's HTTP layer natively.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@effect/platform-node": "catalog:",
+    "@laikacms/decap-integrations": "workspace:*",
+    "effect": "catalog:",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

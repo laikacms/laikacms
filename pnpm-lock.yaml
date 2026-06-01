@@ -1001,6 +1001,31 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-effect-platform-blog:
+    dependencies:
+      '@effect/platform-node':
+        specifier: 'catalog:'
+        version: 4.0.0-beta.66(effect@4.0.0-beta.66)(ioredis@5.10.1)
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      effect:
+        specifier: 'catalog:'
+        version: 4.0.0-beta.66
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-electron-blog:
     dependencies:
       '@laikacms/decap-integrations':
