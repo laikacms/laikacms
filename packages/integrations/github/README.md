@@ -47,7 +47,7 @@ Practical signs you do **not** need App mode:
 
 ```ts
 import { GithubStorageRepository } from '@laikacms/github/storage-gh';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { storageSerializerYaml } from 'laikacms/storage-serializers-yaml';
 
 const storage = new GithubStorageRepository({
@@ -61,7 +61,7 @@ const storage = new GithubStorageRepository({
   branch: 'main',
   serializerRegistry: {
     yaml: storageSerializerYaml(),
-    md: storageSerializerMarkdown(),
+    md: markdownSerializer(),
   },
   defaultFileExtension: 'md',
 });

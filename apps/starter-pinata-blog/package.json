@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-pinata-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog using Pinata (IPFS) as the content store — first content-addressed backend in the suite. Copy-on-write updates, mutable name-index over immutable CIDs, eventual-consistent pinList reads.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/pinata": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -9,7 +9,7 @@ browser.
 
 ```ts
 import { DropboxStorageRepository } from '@laikacms/dropbox/storage-dropbox';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new DropboxStorageRepository({
   auth: {
@@ -19,7 +19,7 @@ const repo = new DropboxStorageRepository({
     // tokenProvider: () => fetchFreshAccessToken(),
   },
   rootPath: '/laika-content', // optional — scope under a Dropbox subfolder
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```

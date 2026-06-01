@@ -12,7 +12,7 @@ browser.
 
 ```ts
 import { BitbucketStorageRepository } from '@laikacms/bitbucket/storage-bb';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new BitbucketStorageRepository({
   workspace: 'esstudio',
@@ -23,7 +23,7 @@ const repo = new BitbucketStorageRepository({
     // or: oauthToken: process.env.BITBUCKET_OAUTH_TOKEN!,
     // or: tokenProvider: () => refreshedAccessToken(),
   },
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
   commitAuthor: { name: 'Laika Bot', email: 'bot@example.com' },
 });

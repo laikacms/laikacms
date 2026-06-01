@@ -33,13 +33,13 @@ DigitalOcean Spaces, and anything else that speaks the S3 API.
 ```ts
 import { S3Client } from '@aws-sdk/client-s3';
 import { S3StorageRepository } from '@laikacms/aws/storage-s3';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new S3StorageRepository({
   client: new S3Client({ region: 'eu-west-1' }),
   bucket: 'esstudio-content',
   basePath: 'site-a', // optional — scope under a prefix
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```

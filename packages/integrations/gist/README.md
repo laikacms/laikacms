@@ -11,12 +11,12 @@ Runtime-agnostic — only depends on `fetch`.
 
 ```ts
 import { GistStorageRepository } from '@laikacms/gist/storage-gist';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new GistStorageRepository({
   gistId: 'abc123...', // existing gist; caller creates it
   auth: { token: process.env.GITHUB_PAT! }, // PAT with `gist` scope
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```

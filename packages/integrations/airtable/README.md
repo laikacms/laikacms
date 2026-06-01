@@ -9,13 +9,13 @@ Runtime-agnostic — only depends on `fetch`.
 
 ```ts
 import { AirtableStorageRepository } from '@laikacms/airtable/storage-airtable';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new AirtableStorageRepository({
   baseId: 'appXXXXXXXXXXXX',
   tableName: 'laika_storage', // OR a table id (`tblYYYYYYYYYYYY`)
   auth: { token: process.env.AIRTABLE_PAT! },
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```
