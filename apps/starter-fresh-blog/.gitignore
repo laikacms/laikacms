@@ -1,0 +1,8 @@
+# Fresh build artifacts — fresh.gen.ts IS committed; _fresh/ is not
+_fresh/
+
+# Content created at runtime
+content/posts/
+content/config.yml
+public/uploads/*
+!public/uploads/.gitkeep
