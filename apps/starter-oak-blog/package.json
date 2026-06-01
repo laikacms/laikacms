@@ -1,0 +1,22 @@
+{
+  "name": "@laikacms/starter-oak-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Oak (Deno) + LaikaCMS. Demonstrates Oak middleware routing, createEmbeddedLaika, and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "deno task dev",
+    "start": "deno task start",
+    "typecheck": "deno task check"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
