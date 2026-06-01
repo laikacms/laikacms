@@ -1,0 +1,29 @@
+{
+  "name": "@laikacms/starter-gel-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog using Gel (formerly EdgeDB) as the content store via GelStorageRepository + createCustomLaika. Demonstrates EdgeQL typed parameters, shape literals, and atomic multi-delete.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "gel:migrate": "gel migration apply",
+    "gel:watch": "gel watch"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/gel": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
