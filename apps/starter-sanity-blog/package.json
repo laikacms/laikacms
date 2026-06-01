@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-sanity-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by Sanity Content Lake (GROQ reads + /mutate transactions). Deep key creation commits ancestors + object in one transaction. OCC via _rev + ifRevisionID. Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/sanity": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
