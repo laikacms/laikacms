@@ -204,6 +204,20 @@ These are the things that consistently bite first-time integrators:
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** When adding a new
    starter under `apps/`, mirror this convention — see existing starters' `package.json`.
 
+8. **Uploaded images are NOT raw files on disk — you must serve them yourself.**
+   `ContentBaseAssetsRepository` (used by `createEmbeddedLaika`) encodes uploaded binaries as
+   base64 inside a JSON object in the contentbase. Static-file middleware (`serveStatic`, etc.)
+   cannot serve them. Add a dedicated route:
+   ```ts
+   app.get('/uploads/:filename', async c => {
+     const obj = await runTask(laika.storage.getObject(`public/uploads/${c.req.param('filename')}`));
+     const bytes = Buffer.from(obj.content['data'] as string, 'base64');
+     return new Response(bytes, { headers: { 'Content-Type': obj.content['mimeType'] as string } });
+   });
+   ```
+   See `apps/starter-media-blog` for the complete pattern (includes `Cache-Control`,
+   error handling, and `marked`-rendered markdown so `<img>` tags actually render).
+
 ---
 
 ## 5. Decision tree
@@ -213,18 +227,19 @@ These are the things that consistently bite first-time integrators:
 ```
 ┌─ Building a public website? ─────────────────────────────────────┐
 │                                                                  │
-│  React?           → starter-next-blog (App Router SSR)            │
-│  Vue?             → starter-nuxt-blog                             │
-│  Svelte?          → starter-sveltekit-blog                        │
-│  Solid?           → starter-solid-start                           │
-│  Qwik?            → starter-qwik-blog                             │
-│  Astro?           → starter-astro-blog                            │
-│  Eleventy/static? → starter-eleventy-jamstack                     │
-│  TanStack Router? → starter-tanstack-blog                         │
-│  Marko?           → starter-marko-blog                            │
-│  Hypermedia/HTMX? → starter-htmx-hono                             │
-│  Web Components?  → starter-lit-spa                               │
+│  React?           → starter-next-blog (App Router SSR)           │
+│  Vue?             → starter-nuxt-blog                            │
+│  Svelte?          → starter-sveltekit-blog                       │
+│  Solid?           → starter-solid-start                          │
+│  Qwik?            → starter-qwik-blog                            │
+│  Astro?           → starter-astro-blog                           │
+│  Eleventy/static? → starter-eleventy-jamstack                    │
+│  TanStack Router? → starter-tanstack-blog                        │
+│  Marko?           → starter-marko-blog                           │
+│  Hypermedia/HTMX? → starter-htmx-hono                            │
+│  Web Components?  → starter-lit-spa                              │
 │  Just want SPA?   → starter-vite-vue-spa or starter-vite-solid-spa│
+│  Need image/file uploads?  → starter-media-blog                  │
 └──────────────────────────────────────────────────────────────────┘
 
 ┌─ Building a backend API (no public UI)? ─────────────────────────┐
