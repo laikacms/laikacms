@@ -204,6 +204,31 @@ These are the things that consistently bite first-time integrators:
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** When adding a new
    starter under `apps/`, mirror this convention — see existing starters' `package.json`.
 
+8. **`createCustomLaika` hard-wires `ContentBaseAssetsRepository`.** All three presets build their
+   assets repo internally and don't expose an `assets` option. To use a custom `AssetsRepository`
+   (Cloudinary, S3 presigned, etc.), call `decapApi()` from
+   `@laikacms/decap-integrations/decap-api` directly:
+
+   ```ts
+   import { decapApi } from '@laikacms/decap-integrations/decap-api';
+   import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+   import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
+
+   const storage = new FileSystemStorageRepository({ ... });
+   const settings = new DecapContentBaseSettingsProvider({ storage });
+   const documents = new ContentBaseDocumentsRepository(storage, settings);
+
+   const laikaApi = decapApi({
+     documents,
+     storage,
+     assets: myCustomAssetsRepo,   // any AssetsRepository
+     basePath: '/api/decap',
+     authenticateAccessToken: async token => { /* ... */ },
+   });
+   ```
+
+   See `apps/starter-cloudinary-blog` for a complete example.
+
 ---
 
 ## 5. Decision tree
