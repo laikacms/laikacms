@@ -14,7 +14,7 @@ refresh.
 
 ```ts
 import { GoogleDriveStorageRepository } from '@laikacms/google/storage-drive';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new GoogleDriveStorageRepository({
   auth: {
@@ -25,7 +25,7 @@ const repo = new GoogleDriveStorageRepository({
   },
   // Optional — defaults to the user's "My Drive" root.
   rootFolderId: '1a2b3c-DriveFolderIdForYourApp',
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```

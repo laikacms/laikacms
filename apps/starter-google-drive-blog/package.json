@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-google-drive-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by Google Drive. Real folder hierarchy, path→id resolution with instance-level cache, drive.file OAuth scope, permanent deletes. Static token or async tokenProvider for refresh. No googleapis SDK. Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/google": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
