@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-pagination-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Hono blog demonstrating page-based pagination with laika.documents. Uses collectStream's done.total and done.pagination to build prev/next links. Shows how to read the total document count without loading all content.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
