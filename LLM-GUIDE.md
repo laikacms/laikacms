@@ -204,6 +204,16 @@ These are the things that consistently bite first-time integrators:
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** When adding a new
    starter under `apps/`, mirror this convention — see existing starters' `package.json`.
 
+8. **Angular without `@angular/cli`: use `@analogjs/vite-plugin-angular` + Vite SSR mode.**
+   - `@angular/cli` brings a heavy install. `@analogjs/vite-plugin-angular` is the public Vite
+     plugin that handles Angular template compilation (AOT) in a plain Vite context.
+   - In dev: `vite.ssrLoadModule('/src/entry-server.ts')` reloads on changes.
+   - In prod: `vite build && vite build --ssr` produces `dist/browser` + `dist/server`.
+   - `renderApplication(bootstrap, { document, url })` from `@angular/platform-server` is the
+     underlying SSR API; `@angular/ssr`'s `CommonEngine` wraps it with caching — skip it unless
+     you need its cache.
+   - Import `'zone.js/node'` at the **top of `entry-server.ts`** before any Angular import.
+
 ---
 
 ## 5. Decision tree
@@ -216,6 +226,8 @@ These are the things that consistently bite first-time integrators:
 │  React?           → starter-next-blog (App Router SSR)            │
 │  Vue?             → starter-nuxt-blog                             │
 │  Svelte?          → starter-sveltekit-blog                        │
+│  Angular?         → starter-angular-ssr-blog (plain SSR)          │
+│                     or starter-analog-blog (Analog meta-framework) │
 │  Solid?           → starter-solid-start                           │
 │  Qwik?            → starter-qwik-blog                             │
 │  Astro?           → starter-astro-blog                            │
