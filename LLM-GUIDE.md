@@ -90,7 +90,31 @@ try {
 }
 ```
 
-### c) Deploy to Cloudflare Workers + R2
+### c) Draft / preview mode
+
+```ts
+// Editors visit /preview?token=<secret> which sets a cookie.
+// Server checks the cookie and conditionally exposes unpublished posts.
+
+// List drafts (status: draft, pending_review, etc.):
+const { items: draftSummaries } = await collectStream(
+  laika.documents.listRecordSummaries({
+    pagination: { page: 1, perPage: 100 },
+    folder: 'posts',
+    depth: 1,
+    type: 'unpublished',   // ← omit or set to 'published' for visitors
+  }),
+);
+
+// Read a specific draft's content:
+const unpublished = await runTask(laika.documents.getUnpublished('posts/my-draft'));
+// unpublished.status  → 'draft' | 'pending_review' | ...
+// unpublished.content → { title, date, body, ... }
+```
+
+See `apps/starter-draft-preview` for the full pattern including cookie-gated preview URLs.
+
+### d) Deploy to Cloudflare Workers + R2
 
 ```ts
 import {
@@ -121,7 +145,7 @@ app.get('/admin', c => c.html(decapAdminHtml({ decapConfig: minimalBlogConfig() 
 export default app;
 ```
 
-### d) Use the HTTP API from a SPA (Vue/Solid/Lit/React-SPA)
+### e) Use the HTTP API from a SPA (Vue/Solid/Lit/React-SPA)
 
 **Don't.** Use a sidecar Node/Workers backend that exposes `/api/posts` etc. as public endpoints
 (reading the repo directly), and have the SPA `fetch('/api/posts')`. See `apps/starter-vite-vue-spa`
@@ -130,7 +154,7 @@ or `apps/starter-vite-solid-spa` for the canonical sidecar pattern.
 Why: the LaikaCMS HTTP API requires a Bearer token on every endpoint except `/health`. SPAs can't
 safely hold one.
 
-### e) Add real auth (production)
+### f) Add real auth (production)
 
 ```ts
 import { jwtVerify } from 'jose';

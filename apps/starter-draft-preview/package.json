@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-draft-preview",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Hono blog demonstrating draft/preview mode: unpublished posts are hidden from visitors but visible to editors with a preview token. Uses laika.documents.getUnpublished() and listRecords({ type: 'unpublished' }).",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
