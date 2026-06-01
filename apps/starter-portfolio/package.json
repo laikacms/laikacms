@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-portfolio",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter portfolio site with two Decap CMS collections (projects + blog) + LaikaCMS. Demonstrates minimalBlogConfig({ extraCollections }) for multi-collection setups and the 'files' singleton pattern for an About page.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.tsx",
+    "start": "tsx src/server.tsx",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
