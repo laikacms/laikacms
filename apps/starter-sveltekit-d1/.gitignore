@@ -1,0 +1,5 @@
+.svelte-kit
+.wrangler
+build
+node_modules
+.env

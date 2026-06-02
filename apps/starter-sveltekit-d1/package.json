@@ -1,0 +1,33 @@
+{
+  "name": "@laikacms/starter-sveltekit-d1",
+  "version": "0.0.1",
+  "private": true,
+  "description": "SvelteKit blog deployed to Cloudflare Pages backed by D1 (SQLite) via DrizzleStorageRepository. Demonstrates platform.env.DB access pattern.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev --compatibility-date=2026-01-01 -- vite dev",
+    "build": "vite build",
+    "deploy": "vite build && wrangler pages deploy .svelte-kit/cloudflare",
+    "typecheck": "svelte-kit sync && tsc --noEmit",
+    "db:migrate:local": "wrangler d1 execute laikacms-d1 --local --file migrations/0001_create_atoms.sql",
+    "db:migrate:remote": "wrangler d1 execute laikacms-d1 --remote --file migrations/0001_create_atoms.sql"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "drizzle-orm": "^0.44.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260512.0",
+    "@sveltejs/adapter-cloudflare": "^7.0.0",
+    "@sveltejs/kit": "^2.0.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "svelte": "^5.0.0",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "wrangler": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
