@@ -169,6 +169,7 @@ catalogs:
   server:
     "hono": "^4.12.9"
     "@hono/node-server": "^1.19.11"
+    "jose": "^5.10.0"
 
   ai:
     "ai": "^6.0.141"
