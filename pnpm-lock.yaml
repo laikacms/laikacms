@@ -852,6 +852,31 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-connect-blog:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      connect:
+        specifier: ^3.7.0
+        version: 3.7.0
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/connect':
+        specifier: ^3.4.38
+        version: 3.4.38
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-convex-blog:
     dependencies:
       '@hono/node-server':

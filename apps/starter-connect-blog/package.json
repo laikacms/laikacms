@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-connect-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with connect + LaikaCMS. connect is the minimal Node.js middleware framework (ancestor of Express). No built-in routing — URLs are matched manually; Decap proxy reads the raw stream directly.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "connect": "^3.7.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/connect": "^3.4.38",
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

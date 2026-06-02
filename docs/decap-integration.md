@@ -306,6 +306,7 @@ framework gives you at the route handler boundary and whether you need a bridge.
 | **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                      |
 | **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                            |
 | **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
+| **connect**                       | Node.js `IncomingMessage`                        | No built-in router; use `req.originalUrl` for full path inside prefix mounts            |
 | **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
 | **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller   |
 | **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                       |
@@ -591,6 +592,38 @@ Wire the catch-all route in `start/routes.ts`:
 import router from '@adonisjs/core/services/router';
 const DecapController = () => import('#controllers/decap_controller');
 router.any('/api/decap/*', [DecapController, 'proxy']);
+```
+
+### connect — manual URL routing + `req.originalUrl`
+
+[connect](https://github.com/senchalabs/connect) is the minimal Node.js middleware framework
+(ancestor of Express). It has **no built-in router** — you match paths manually with `if`/regex.
+
+Two things to know when using connect with LaikaCMS:
+
+**1. Prefix mounts strip `req.url`.** `app.use('/api/decap', handler)` matches any path starting
+with `/api/decap`, but inside the handler `req.url` is the **sub-path** (`/documents`, not
+`/api/decap/documents`). connect sets `req.originalUrl` to the full path — use that to reconstruct
+the URL for `laika.fetch`:
+
+```ts
+app.use('/api/decap', async (req, res) => {
+  const fullPath = (req as { originalUrl?: string }).originalUrl ?? req.url ?? '/';
+  const url = `http://${req.headers.host}${fullPath}`;
+  // ...
+});
+```
+
+**2. No body parser — stream is pristine.** connect has no built-in body parsing, so the
+`IncomingMessage` stream arrives untouched in every middleware. This makes it trivially easy to
+forward binary bodies to `laika.fetch`:
+
+```ts
+async function readBody(req: IncomingMessage): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  req.on('data', (c: Buffer) => chunks.push(c));
+  return new Promise(resolve => req.on('end', () => resolve(Buffer.concat(chunks))));
+}
 ```
 
 ### SvelteKit — `src/app.html` is required
