@@ -32,7 +32,7 @@ export default function AdminPage() {
       cms.registerBackend('laika', createLaikaBackend());
       cms.init({
         config: {
-          backend: { name: 'laika', api_url: '/api/decap' },
+          backend: { name: 'laika', api_root: '/api/decap' },
           media_folder: 'static/uploads',
           public_folder: '/uploads',
           collections: blogCollections,

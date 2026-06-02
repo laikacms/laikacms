@@ -24,7 +24,7 @@ export const blogCollections = [
 
 /** Full Decap config — passed to laika on the server and to CMS.init() in the browser. */
 export const decapConfig = {
-  backend: { name: 'laika', api_url: '/api/decap' },
+  backend: { name: 'laika', api_root: '/api/decap' },
   // For production, point media_folder at an R2 bucket (see wrangler.toml [[r2_buckets]]).
   media_folder: 'uploads',
   public_folder: '/uploads',

@@ -9,7 +9,7 @@ export const laika = createEmbeddedLaika({
   basePath: '/api/decap',
   auth: { mode: 'dev' },
   decapConfig: {
-    backend: { name: 'laika', api_url: '/api/decap' },
+    backend: { name: 'laika', api_root: '/api/decap' },
     media_folder: 'public/uploads',
     public_folder: '/uploads',
     collections: blogCollections,

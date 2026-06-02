@@ -43,7 +43,7 @@ const makeLaika = (env: Env) => {
   return createCustomLaika({
     storage,
     decapConfig: {
-      backend: { name: 'laika', api_url: '/api/decap' },
+      backend: { name: 'laika', api_root: '/api/decap' },
       media_folder: 'uploads',
       public_folder: '/uploads',
       collections: blogCollections,

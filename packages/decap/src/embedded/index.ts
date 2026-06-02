@@ -252,7 +252,7 @@ export function minimalBlogConfig(
   const slug = options.slug ?? '{{slug}}';
   const mediaFolder = options.mediaFolder ?? 'public/uploads';
   const publicFolder = options.publicFolder ?? '/uploads';
-  const backend = options.backend ?? { name: 'laika', branch: 'main' };
+  const backend = options.backend ?? { name: 'laika', branch: 'main', api_root: '/api/decap' };
 
   return {
     backend,
