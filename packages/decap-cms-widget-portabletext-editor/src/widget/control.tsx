@@ -2,7 +2,6 @@ import { createRichtextValue, type PortableTextDocument, RichtextValue } from '@
 import { type ReactNode, useMemo, useRef } from 'react';
 
 import { PortableTextEditorView } from '../editor/PortableTextEditorView';
-import './register-mappers';
 
 interface DecapField {
   get(key: 'format' | 'placeholder'): string | undefined;

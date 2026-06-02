@@ -4,10 +4,9 @@
  */
 import { LexicalControl } from './control';
 import { LexicalPreview } from './preview';
-import { ensureDefaultFormatsRegistered } from './register-formats';
 import { lexicalEditorWidgetSchema } from './schema';
 
-export { ensureDefaultFormatsRegistered, LexicalControl, lexicalEditorWidgetSchema, LexicalPreview };
+export { LexicalControl, lexicalEditorWidgetSchema, LexicalPreview };
 
 export interface LexicalWidgetDefinition {
   name: 'lexicaleditor';
@@ -23,9 +22,12 @@ export interface LexicalWidgetDefinition {
  * `CMS.registerWidgetValueSerializer('lexicaleditor', passthroughSerializer)` so
  * Decap's `serializeValues()` doesn't stringify the `RichtextValue` early —
  * `toString()` fires once, at file-write time.
+ *
+ * Register the output formats you want at call site via
+ * `registerMapper(...)` from `@laikacloud/portabletext-core` — formats are
+ * intentionally not bundled here so consumers only pay for what they use.
  */
 export function Widget(): LexicalWidgetDefinition {
-  ensureDefaultFormatsRegistered();
   return {
     name: 'lexicaleditor',
     controlComponent: LexicalControl,

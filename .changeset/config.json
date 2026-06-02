@@ -17,7 +17,6 @@
   "updateInternalDependencies": "patch",
   "ignore": [
     "@laikacloud/decap-cms-laika-app",
-    "@laikacloud/portabletext-core",
     "@laikacms/airtable",
     "@laikacms/algolia",
     "@laikacms/arangodb",

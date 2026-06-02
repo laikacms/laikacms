@@ -7,14 +7,7 @@
 export { Editor } from './editor/Editor';
 
 // Decap widget integration: factory, control/preview components, passthrough serializer.
-export {
-  ensureDefaultFormatsRegistered,
-  LexicalControl,
-  lexicalEditorWidgetSchema,
-  LexicalPreview,
-  passthroughSerializer,
-  Widget,
-} from './widget';
+export { LexicalControl, lexicalEditorWidgetSchema, LexicalPreview, passthroughSerializer, Widget } from './widget';
 export type { LexicalWidgetDefinition } from './widget';
 
 export * from './editor/themes/editor-theme';
