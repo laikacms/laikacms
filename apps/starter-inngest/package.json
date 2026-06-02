@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-inngest",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog with Inngest background jobs triggered on content saves. Demonstrates wrapping laika.fetch to fire cms/* events after successful document writes — LaikaCMS has no native hook system, so HTTP interception is the idiomatic pattern.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "inngest": "^4.5.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

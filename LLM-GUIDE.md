@@ -70,12 +70,12 @@ import { collectStream, runTask } from 'laikacms/compat';
 import { NotFoundError } from 'laikacms/core';
 import { laika } from '~/server/laika';
 
-// List published posts in a folder:
+// List summaries (key + updatedAt, no content body) — use for index pages:
 const { items } = await collectStream(
-  laika.documents.listRecords({
+  laika.documents.listRecordSummaries({
     folder: 'posts',
     depth: 1,
-    pagination: { offset: 0, limit: 100 },
+    pagination: { page: 1, perPage: 100 }, // also accepts { offset, limit }
     type: 'published',
   }),
 );
@@ -83,10 +83,12 @@ const { items } = await collectStream(
 // Read one published document by key:
 try {
   const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
+  const { title, body } = doc.content as { title?: string, body?: string };
 } catch (err) {
   if (err instanceof NotFoundError) {
     /* render 404 */
   }
+  throw err; // always re-throw unknown errors
 }
 ```
 
