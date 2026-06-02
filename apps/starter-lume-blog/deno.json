@@ -1,0 +1,20 @@
+{
+  "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
+  "tasks": {
+    "site:dev": "deno run -A https://deno.land/x/lume/ci.ts --serve --port=4000",
+    "admin:dev": "deno run --allow-net --allow-read --allow-write --watch admin/server.ts",
+    "dev": "deno run --allow-run --allow-net --allow-read --allow-write admin/concurrently.ts",
+    "build": "deno run -A https://deno.land/x/lume/ci.ts",
+    "check": "deno check admin/server.ts admin/laika.ts"
+  },
+  "imports": {
+    "lume/": "https://deno.land/x/lume@v2.5.3/",
+    "@hono/hono": "npm:hono@^4.12.9"
+  },
+  "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "strict": true,
+    "noImplicitAny": true
+  }
+}

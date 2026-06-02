@@ -1,0 +1,15 @@
+---
+layout: base.njk
+---
+
+<article>
+  <h1>{{ title }}</h1>
+  {% if date %}
+  <time style="color:#666">{{ date | date("DATE") }}</time>
+  {% endif %}
+  {% if description %}
+  <p><em>{{ description }}</em></p>
+  {% endif %}
+  {{ content | safe }}
+  <p><a href="/">← Back</a></p>
+</article>

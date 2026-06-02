@@ -1,0 +1,24 @@
+{
+  "name": "@laikacms/starter-lume-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Lume (Deno SSG) + LaikaCMS. Lume is Deno's answer to Eleventy — a flexible static site generator. Uses the Jamstack sidecar pattern: Lume generates HTML from markdown, a Deno Hono sidecar serves the Decap CMS admin and API.",
+  "type": "module",
+  "scripts": {
+    "site:dev": "deno task site:dev",
+    "admin:dev": "deno task admin:dev",
+    "dev": "deno task dev",
+    "build": "deno task build",
+    "typecheck": "deno task check"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
