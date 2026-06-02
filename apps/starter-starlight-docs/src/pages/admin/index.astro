@@ -1,0 +1,38 @@
+---
+/**
+ * Decap CMS admin UI for the Starlight docs site.
+ *
+ * Prerendered (static HTML): the admin is a client-side SPA — no server
+ * involvement after the initial page load.  The CMS communicates with the
+ * embedded Laika backend via /api/decap/*.
+ */
+export const prerender = true;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Content Manager</title>
+    <script is:inline>window.CMS_MANUAL_INIT = true;</script>
+  </head>
+  <body>
+    <script is:inline src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+    <script>
+      import createLaikaBackend from '@laikacms/decap-integrations/decap-cms-backend-laika';
+      import { docsCollections } from '../../laika/decap-config.js';
+
+      (window as any).CMS.registerBackend('laika', createLaikaBackend());
+
+      (window as any).CMS.init({
+        config: {
+          backend: { name: 'laika', api_url: '/api/decap' },
+          media_folder: 'public/uploads',
+          public_folder: '/uploads',
+          collections: docsCollections,
+        },
+      });
+    </script>
+  </body>
+</html>

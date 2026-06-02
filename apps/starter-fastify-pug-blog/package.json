@@ -1,0 +1,35 @@
+{
+  "name": "@laikacms/starter-fastify-pug-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog using Fastify + Pug templates + remark Markdown rendering + LaikaCMS. Shows @fastify/view plugin setup, Fastify plugin system, and how to bridge Fastify req/reply to laika.fetch.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/static": "^8.0.0",
+    "@fastify/view": "^10.0.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "fastify": "^5.0.0",
+    "laikacms": "workspace:*",
+    "pug": "^3.0.3",
+    "rehype-stringify": "^10.0.0",
+    "remark": "^15.0.0",
+    "remark-rehype": "^11.0.0",
+    "unified": "^11.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "@types/pug": "^2.0.10",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

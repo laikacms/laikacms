@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="{{ .Site.Language.Lang }}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ block "title" . }}{{ .Title }} · {{ .Site.Title }}{{ end }}</title>
+  </head>
+  <body style="font-family:system-ui,sans-serif;max-width:48rem;margin:0 auto;padding:1rem 1.5rem">
+    {{ block "main" . }}{{ end }}
+  </body>
+</html>

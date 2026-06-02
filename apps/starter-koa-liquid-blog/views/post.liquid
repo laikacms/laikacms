@@ -1,0 +1,11 @@
+{% layout 'base' %}
+
+{% block content %}
+  <article>
+    <h1>{{ title }}</h1>
+    {% if date %}<time>{{ date }}</time>{% endif %}
+    {{ bodyHtml }}
+  </article>
+
+  <p><a href="/">← Back to home</a></p>
+{% endblock %}

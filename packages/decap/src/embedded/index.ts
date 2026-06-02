@@ -307,8 +307,24 @@ export interface DecapAdminHtmlOptions {
   /**
    * Pin the dev-token bundle URL. Defaults to
    * `https://esm.sh/@laikacms/decap-integrations/embedded`.
+   *
+   * Not used when `devToken` is supplied directly.
    */
   embeddedBundleUrl?: string;
+  /**
+   * Inject a pre-issued access token directly into the admin shell instead of
+   * loading `DEFAULT_DEV_TOKEN` from CDN. Use this for **production auth**:
+   * issue a JWT on the server after your own login flow, then pass it here so
+   * the Decap admin authenticates as the signed-in user without a separate
+   * OAuth round-trip.
+   *
+   * @example
+   *   app.get('/admin', requireLogin, async c => {
+   *     const token = await signUserJwt(c.get('user'));
+   *     return c.html(decapAdminHtml({ devToken: token }));
+   *   });
+   */
+  devToken?: string;
 }
 
 const DEFAULT_DECAP_BUNDLE = 'https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js';
@@ -351,17 +367,31 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
   const decapBundleUrl = options.decapBundleUrl ?? DEFAULT_DECAP_BUNDLE;
   const laikaBackendUrl = options.laikaBackendUrl ?? DEFAULT_LAIKA_BACKEND_BUNDLE;
   const embeddedBundleUrl = options.embeddedBundleUrl ?? DEFAULT_EMBEDDED_BUNDLE;
+  const { devToken } = options;
 
   // The `decapConfig` object is JSON-serialized into the inline script so the
   // browser can read it without an extra request. We replace the
   // closing-script-tag sequence to prevent HTML injection inside the JSON.
   const serializedConfig = JSON.stringify(decapConfig, null, 2).replace(/<\/script/gi, '<\\/script');
 
+  // devToken injection: if a token is supplied server-side, serialize it
+  // directly into the script so no CDN import is needed and the Decap admin
+  // authenticates as the signed-in user without a separate OAuth round-trip.
+  const tokenExpr = devToken
+    ? JSON.stringify(devToken)
+    : 'DEFAULT_DEV_TOKEN';
+
   // baseUrl: at runtime we read window.location.origin unless the caller
   // pinned a value.
   const baseUrlExpr = options.baseUrl
     ? JSON.stringify(options.baseUrl)
     : 'window.location.origin';
+
+  // When a token is provided directly we still import the backend helper but
+  // skip the DEFAULT_DEV_TOKEN import to keep the bundle smaller.
+  const tokenImport = devToken
+    ? ''
+    : `\n      import { DEFAULT_DEV_TOKEN } from ${JSON.stringify(embeddedBundleUrl)};`;
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -373,8 +403,7 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
   <body>
     <script src="${escapeHtml(decapBundleUrl)}"></script>
     <script type="module">
-      import { createLaikaBackend } from ${JSON.stringify(laikaBackendUrl)};
-      import { DEFAULT_DEV_TOKEN } from ${JSON.stringify(embeddedBundleUrl)};
+      import { createLaikaBackend } from ${JSON.stringify(laikaBackendUrl)};${tokenImport}
 
       const CMS = window.CMS;
       CMS.registerBackend('laika', createLaikaBackend());
@@ -386,7 +415,7 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
           backend: {
             ...userConfig.backend,
             base_url: ${baseUrlExpr},
-            dev_token: DEFAULT_DEV_TOKEN,
+            dev_token: ${tokenExpr},
           },
         },
       });

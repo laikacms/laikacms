@@ -1,0 +1,7 @@
+/dist
+/.angular
+/node_modules
+/content/posts/*.md
+!/content/posts/.gitkeep
+/public/uploads/*
+!/public/uploads/.gitkeep

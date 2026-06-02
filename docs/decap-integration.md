@@ -55,8 +55,10 @@ That's the entire server. `createEmbeddedLaika` constructs the filesystem-backed
 ContentBase document + asset repos, and the `decapApi(...)` router. The first run seeds
 `content/config.yml` from your `decapConfig` so the editor and the server agree on the schema.
 
-> **Node.js only.** `createEmbeddedLaika` hardcodes `FileSystemStorageRepository`, which requires
-> `node:fs`. It is incompatible with edge runtimes (Cloudflare Workers, Deno Deploy, etc.). For edge
+> **Not for edge runtimes.** `createEmbeddedLaika` uses `FileSystemStorageRepository`, which
+> requires `node:fs` and a writable local filesystem. It runs on **Node.js** and **Deno 2** (Deno 2
+> supports `node:` built-ins — see `starter-fresh-blog` and `starter-lume-blog`), but is
+> incompatible with edge runtimes (Cloudflare Workers, Deno Deploy, Vercel Edge, etc.). For edge
 > deployments, wire the pieces manually using `decapApi` — see
 > [Standalone Worker](#standalone-worker-byo-storage) below.
 
@@ -296,21 +298,22 @@ footgun — do it once and forget it.
 `laika.fetch` (and `api.fetch`) expects a **Web API `Request`**. The table below shows what each
 framework gives you at the route handler boundary and whether you need a bridge.
 
-| Framework                         | What you receive                                 | Bridge needed?                                                                          |
-| --------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| **Astro**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
-| **SvelteKit**                     | Web API `Request`                                | None — pass directly: `laika.fetch(event.request)`                                      |
-| **Remix**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
-| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`)        | None — pass directly: `laika.fetch(request)`                                            |
-| **Hono**                          | Hono `HonoRequest` wrapper                       | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
-| **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                      |
-| **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                            |
-| **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
-| **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
-| **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller   |
-| **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                       |
-| **Fastify**                       | Fastify `FastifyRequest`                         | `request.raw` → same Express bridge inside a Fastify route handler                      |
-| **AWS Lambda (via http bridge)**  | Lambda event object                              | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
+| Framework                         | What you receive                                 | Bridge needed?                                                                                                                          |
+| --------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------- |
+| **Astro**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                                                                            |
+| **SvelteKit**                     | Web API `Request`                                | None — pass directly: `laika.fetch(event.request)`                                                                                      |
+| **Remix**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                                                                            |
+| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`)        | None — pass directly: `laika.fetch(request)`                                                                                            |
+| **Hono**                          | Hono `HonoRequest` wrapper                       | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                                                                        |
+| **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                                                                      |
+| **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                                                                            |
+| **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                                                                     |
+| **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below                                                   |
+| **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller                                                   |
+| **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                                                                       |
+| **FoalTS v4**                     | FoalTS `Context` (Express-based)                 | Wrap FoalTS app inside bare Express; use `express.raw()` before mounting FoalTS — see [FoalTS](#foalts-v4--outer-express-wrapper) below |
+| **Fastify**                       | Fastify `FastifyRequest`                         | `request.raw` → same Express bridge inside a Fastify route handler                                                                      |
+| **AWS Lambda (via http bridge)**  | Lambda event object                              | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch`                                                 |
 
 ### Express / plain `http.Server` — manual bridge
 
@@ -592,6 +595,64 @@ import router from '@adonisjs/core/services/router';
 const DecapController = () => import('#controllers/decap_controller');
 router.any('/api/decap/*', [DecapController, 'proxy']);
 ```
+
+### FoalTS v4 — outer Express wrapper
+
+FoalTS v4 is a **decorator-based TypeScript MVC** framework that uses Express internally. Its
+`createApp` function registers the body parser as part of the app bootstrap — you cannot add
+middleware to the resulting app that runs _before_ the body parser.
+
+For the Decap proxy you need the raw binary body (for file uploads etc.). The solution is to wrap
+the FoalTS app inside a **plain Express app**, register `express.raw()` there first, then mount
+FoalTS beneath it:
+
+```ts
+// src/index.ts
+import 'reflect-metadata';
+import { createApp } from '@foal/core';
+import express from 'express';
+import * as http from 'node:http';
+import { AppController } from './app/app.controller.js';
+import { laika } from './app/laika.js';
+
+const PORT = Number(process.env.PORT ?? 3000);
+
+const outer = express();
+
+// express.raw() runs BEFORE FoalTS body parser because FoalTS is mounted after.
+outer.use(
+  '/api/decap',
+  express.raw({ type: '*/*', limit: '50mb' }),
+  async (req, res) => {
+    const url = `http://localhost:${PORT}${req.originalUrl}`;
+    const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
+    const body = hasBody && Buffer.isBuffer(req.body) && req.body.length > 0 ? req.body : null;
+
+    const webRes = await laika.fetch(
+      new Request(url, {
+        method: req.method,
+        headers: req.headers as Record<string, string>,
+        body,
+      }),
+    );
+
+    res.status(webRes.status);
+    webRes.headers.forEach((value: string, name: string) => {
+      if (name.toLowerCase() !== 'transfer-encoding') res.setHeader(name, value);
+    });
+    res.send(Buffer.from(await webRes.arrayBuffer()));
+  },
+);
+
+const foalApp = await createApp(AppController);
+outer.use(foalApp as express.RequestHandler); // FoalTS handles everything else
+
+http.createServer(outer).listen(PORT);
+```
+
+FoalTS controllers return `HttpResponse` objects and use `@Get`/`@Post`/`@All` decorators. Because
+they sit behind the Decap proxy in the Express chain, the CMS never reaches FoalTS routing and the
+body parser issue is bypassed entirely.
 
 ### SvelteKit — `src/app.html` is required
 

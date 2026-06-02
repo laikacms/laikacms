@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-zod-validation",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter showing Zod v4 validation for LaikaCMS content. doc.content is Record<string,unknown> — Zod is the natural fit for runtime validation + TypeScript inference from a single schema definition.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "zod": "^4.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

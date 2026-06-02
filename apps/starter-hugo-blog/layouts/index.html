@@ -1,0 +1,22 @@
+{{ define "title" }}{{ .Site.Title }}{{ end }}
+{{ define "main" }}
+<h1>{{ .Site.Title }}</h1>
+
+{{ $posts := where .Site.RegularPages "Section" "posts" }}
+{{ if $posts }}
+<ul style="list-style:none;padding:0">
+  {{ range $posts }}
+  <li style="margin-bottom:1.5rem">
+    <a href="{{ .Permalink }}" style="color:#0070f3">{{ .Title }}</a>
+    {{ if .Date }}
+    · <time style="color:#666;font-size:0.9em">{{ .Date.Format "Jan 2, 2006" }}</time>
+    {{ end }}
+  </li>
+  {{ end }}
+</ul>
+{{ else }}
+<p>No posts yet. <a href="http://localhost:3001/admin">Open the CMS</a> to write your first post.</p>
+{{ end }}
+
+<p><a href="http://localhost:3001/admin" style="color:#888;font-size:0.9em">Admin →</a></p>
+{{ end }}

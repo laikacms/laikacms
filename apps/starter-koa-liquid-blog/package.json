@@ -1,0 +1,37 @@
+{
+  "name": "@laikacms/starter-koa-liquid-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog using Koa + LiquidJS templates + remark Markdown rendering + LaikaCMS. Liquid is Shopify's template language — used by Jekyll, GitHub Pages, and Eleventy. Sandboxed: no arbitrary code execution in templates.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@koa/router": "^13.1.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "koa": "^2.16.1",
+    "koa-static": "^5.0.0",
+    "liquidjs": "^10.0.0",
+    "laikacms": "workspace:*",
+    "rehype-stringify": "^10.0.0",
+    "remark": "^15.0.0",
+    "remark-rehype": "^11.0.0",
+    "unified": "^11.0.5"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.15.0",
+    "@types/koa__router": "^12.0.4",
+    "@types/koa-static": "^4.0.4",
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

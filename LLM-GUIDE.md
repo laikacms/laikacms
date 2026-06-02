@@ -72,10 +72,10 @@ import { laika } from '~/server/laika';
 
 // List published posts in a folder:
 const { items } = await collectStream(
-  laika.documents.listRecords({
+  laika.documents.listRecordSummaries({
     folder: 'posts',
     depth: 1,
-    pagination: { offset: 0, limit: 100 },
+    pagination: { page: 1, perPage: 100 }, // NOT { offset, limit }
     type: 'published',
   }),
 );
@@ -83,10 +83,12 @@ const { items } = await collectStream(
 // Read one published document by key:
 try {
   const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
+  const { title, body } = doc.content as { title?: string, body?: string };
 } catch (err) {
   if (err instanceof NotFoundError) {
     /* render 404 */
   }
+  throw err; // always re-throw unknown errors
 }
 ```
 
@@ -133,19 +135,36 @@ safely hold one.
 ### e) Add real auth (production)
 
 ```ts
-import { jwtVerify } from 'jose';
+import { jwtVerify, SignJWT } from 'jose';
 
+// 1. Issue a JWT after your login form:
+const token = await new SignJWT({ email: user.email, name: user.name })
+  .setProtectedHeader({ alg: 'HS256' })
+  .setSubject(user.id)
+  .setExpirationTime('8h')
+  .sign(secret);
+
+// 2. Inject it into the admin shell server-side (no CDN dev-token import):
+app.get('/admin', requireLogin, async c => {
+  const token = getCookie(c, 'session')!;
+  return c.html(decapAdminHtml({ devToken: token }));
+});
+
+// 3. Validate it on every API request:
 createEmbeddedLaika({
   // ... contentDir, decapConfig, basePath ...
   auth: {
     mode: 'custom',
     async authenticateAccessToken(token) {
-      const { payload } = await jwtVerify(token, jwks);
+      const { payload } = await jwtVerify(token, secret);
       return { id: payload.sub, email: payload.email, name: payload.name };
     },
   },
 });
 ```
+
+The `devToken` option to `decapAdminHtml()` replaces the hardcoded `DEFAULT_DEV_TOKEN` CDN import
+with a server-side token injection. See `apps/starter-jose-auth` for the full login→JWT→admin flow.
 
 ---
 
@@ -204,6 +223,18 @@ These are the things that consistently bite first-time integrators:
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** When adding a new
    starter under `apps/`, mirror this convention — see existing starters' `package.json`.
 
+8. **Effect Platform 4.x moved HTTP types into `effect/unstable/http/*`.** If you're using
+   `@effect/platform-node`, import from `effect/unstable/http/HttpRouter`, not
+   `@effect/platform/HttpRouter`. The platform-node package only exports the Node.js server
+   primitives (`NodeHttpServer`, `NodeRuntime`). Additionally:
+   - `Effect.catchAll` → use `Effect.result()` to convert failures to `Result<A, E>`, then branch on
+     `Result.isSuccess` / `Result.isFailure`. The `.success` field holds the value on success.
+   - `HttpRouter.add(method, path, handler)` at the **module** level returns a `Layer` (not an
+     `Effect`). Compose route layers with `Layer.mergeAll` and serve via
+     `HttpRouter.serve(appLayer)`.
+   - Bridge `laika.fetch` into Effect HTTP: `yield* HttpServerRequest.toWeb(request)` gives a WHATWG
+     `Request`; wrap the result with `HttpServerResponse.fromWeb(response)`.
+
 ---
 
 ## 5. Decision tree
@@ -229,12 +260,13 @@ These are the things that consistently bite first-time integrators:
 
 ┌─ Building a backend API (no public UI)? ─────────────────────────┐
 │                                                                  │
-│  Hono on Node?    → starter-hono-backend                          │
-│  Express?         → starter-express-backend                       │
-│  Fastify?         → starter-fastify-backend                       │
-│  Koa?             → starter-koa-backend                           │
-│  Bun runtime?     → starter-bun-backend                           │
-│  Deno runtime?    → starter-deno-backend                          │
+│  Hono on Node?        → starter-hono-backend                      │
+│  Express?             → starter-express-backend                   │
+│  Fastify?             → starter-fastify-backend                   │
+│  Koa?                 → starter-koa-backend                       │
+│  Bun runtime?         → starter-bun-backend                       │
+│  Deno runtime?        → starter-deno-backend                      │
+│  Effect Platform?     → starter-effect-platform-blog              │
 └──────────────────────────────────────────────────────────────────┘
 
 ┌─ Deploying to edge/serverless? ──────────────────────────────────┐

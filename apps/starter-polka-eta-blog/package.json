@@ -1,0 +1,33 @@
+{
+  "name": "@laikacms/starter-polka-eta-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog using Polka + Eta templates + remark Markdown rendering + LaikaCMS. Polka is a tiny Express alternative (~4KB) used by SvelteKit's dev server. Eta is a TypeScript-native, ESM-first template engine.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "eta": "^3.5.0",
+    "laikacms": "workspace:*",
+    "polka": "^1.0.0-next.28",
+    "rehype-stringify": "^10.0.0",
+    "remark": "^15.0.0",
+    "remark-rehype": "^11.0.0",
+    "sirv": "^3.0.1",
+    "unified": "^11.0.5"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
