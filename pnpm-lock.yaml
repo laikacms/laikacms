@@ -1780,6 +1780,49 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-h3-nunjucks-blog:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      h3:
+        specifier: ^1.15.0
+        version: 1.15.11
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+      nunjucks:
+        specifier: ^3.2.4
+        version: 3.2.4(chokidar@3.6.0)
+      rehype-stringify:
+        specifier: ^10.0.0
+        version: 10.0.1
+      remark:
+        specifier: ^15.0.0
+        version: 15.0.1
+      remark-rehype:
+        specifier: ^11.0.0
+        version: 11.1.2
+      unified:
+        specifier: ^11.0.5
+        version: 11.0.5
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      '@types/nunjucks':
+        specifier: ^3.2.6
+        version: 3.2.6
+      esbuild:
+        specifier: catalog:tools
+        version: 0.27.7
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-hapi-blog:
     dependencies:
       '@hapi/hapi':
