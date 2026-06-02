@@ -1690,6 +1690,34 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-google-drive-blog:
+    dependencies:
+      '@hono/node-server':
+        specifier: catalog:server
+        version: 1.19.14(hono@4.12.18)
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      '@laikacms/google':
+        specifier: workspace:*
+        version: link:../../packages/integrations/google
+      hono:
+        specifier: catalog:server
+        version: 4.12.18
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-graphql:
     dependencies:
       '@hono/node-server':
@@ -2231,6 +2259,34 @@ importers:
       hono:
         specifier: catalog:server
         version: 4.12.18
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
+  apps/starter-jose-auth:
+    dependencies:
+      '@hono/node-server':
+        specifier: catalog:server
+        version: 1.19.14(hono@4.12.18)
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      hono:
+        specifier: catalog:server
+        version: 4.12.18
+      jose:
+        specifier: ^6.0.0
+        version: 6.2.3
       laikacms:
         specifier: workspace:*
         version: link:../../packages/laikacms
