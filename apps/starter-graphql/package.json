@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-graphql",
   "description": "Starter: GraphQL API over LaikaCMS via graphql-yoga. Demonstrates that the repo layer can expose any API shape — JSON:API is one possibility, GraphQL is another.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

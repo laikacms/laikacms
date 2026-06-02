@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-node-http",
   "description": "Starter: the minimum viable LaikaCMS server — node:http only, no framework, ~80 LOC. Pedagogical / reference shape.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

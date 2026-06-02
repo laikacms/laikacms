@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-i18n",
   "description": "Starter: multilingual content via LaikaCMS's language field. Accept-Language negotiation, per-locale routes, fallback chain.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

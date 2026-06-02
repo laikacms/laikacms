@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-marko-blog",
   "description": "Starter: Marko 5 streaming-SSR blog with embedded LaikaCMS. eBay's tag-based template language with out-of-order rendering.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

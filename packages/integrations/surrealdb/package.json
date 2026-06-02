@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/surrealdb",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "SurrealDB-backed StorageRepository for Laika CMS. Multi-model database with first-class record IDs (table:id), SurQL queries, NS/DB header isolation, and BEGIN/COMMIT multi-statement transactions. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

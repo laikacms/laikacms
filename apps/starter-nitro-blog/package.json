@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-nitro-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Nitro standalone + LaikaCMS. Demonstrates file-based routing with defineEventHandler, toWebRequest/sendWebResponse from h3, and auto-imported server utilities.",
   "type": "module",

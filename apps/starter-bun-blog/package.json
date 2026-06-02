@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-bun-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Bun's native HTTP server + LaikaCMS. Zero-adaptation laika.fetch integration via WHATWG Request/Response.",
   "type": "module",

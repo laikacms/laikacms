@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-koa-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Koa v2 + LaikaCMS. Shows async middleware composition and the WHATWG Request bridge for laika.fetch.",
   "type": "module",

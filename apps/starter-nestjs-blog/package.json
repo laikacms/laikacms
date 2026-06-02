@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-nestjs-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with NestJS + LaikaCMS. Demonstrates createEmbeddedLaika with a NestJS controller and DI pattern.",
   "type": "module",

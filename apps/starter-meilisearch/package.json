@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-meilisearch",
   "description": "Starter: full-text search over LaikaCMS posts via Meilisearch. Indexer + /search endpoint. Real-world integration pattern.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

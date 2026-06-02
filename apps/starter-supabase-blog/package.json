@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-supabase-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog backed by Supabase (PostgREST). Content stored in a single laika_storage table; full CRUD via Supabase REST API; Decap admin from CDN.",
   "type": "module",

@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-trpc",
   "description": "Starter: tRPC v11 + Hono. Type-safe RPC over LaikaCMS — the TypeScript ecosystem's typed-API path, complementing the GraphQL starter.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

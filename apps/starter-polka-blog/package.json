@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-polka-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Polka + LaikaCMS. Polka is a tiny Express alternative (~33 LOC router) used internally by SvelteKit's dev server.",
   "type": "module",

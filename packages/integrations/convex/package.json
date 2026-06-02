@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/convex",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "Convex-backed StorageRepository for Laika CMS. Reactive database with TypeScript functions as the query layer — RPC over POST /api/{query,mutation} with named-function paths. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

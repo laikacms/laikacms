@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/microsoft",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "Microsoft Graph-backed storage implementations for Laika CMS. First export: OneDrive / SharePoint document libraries via the Microsoft Graph $batch endpoint. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

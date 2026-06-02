@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/libsql",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "libSQL/Turso-backed StorageRepository for Laika CMS. Distributed SQLite over the hrana HTTP pipeline protocol, with typed argument encoding and conditional batch transactions. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

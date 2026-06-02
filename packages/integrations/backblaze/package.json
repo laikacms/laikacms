@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/backblaze",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "Backblaze B2 native API-backed StorageRepository for Laika CMS. Two-phase upload, file versioning, mandatory SHA-1 content verification, and POST-for-everything API. Runtime-agnostic — only depends on `fetch` and Web Crypto.",
   "keywords": [

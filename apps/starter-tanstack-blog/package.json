@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-tanstack-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with TanStack Start + LaikaCMS. SSR via server functions, Decap proxy via server route ANY handler, admin via useEffect.",
   "type": "module",

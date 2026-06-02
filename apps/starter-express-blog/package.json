@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-express-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Express + LaikaCMS on Node.js. Shows how to bridge Express req/res to the Web API Request/Response that laika.fetch expects.",
   "type": "module",

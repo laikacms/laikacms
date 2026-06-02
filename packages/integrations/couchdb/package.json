@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/couchdb",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "Apache CouchDB-backed StorageRepository for Laika CMS. Document-oriented store with first-class revisions, Mango selectors, and atomic _bulk_docs. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

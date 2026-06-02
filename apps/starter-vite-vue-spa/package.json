@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-vite-vue-spa",
   "description": "Starter: pure-client Vue 3 SPA (Vite) + sidecar Hono backend, stitched via Vite proxy for single-origin DX.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

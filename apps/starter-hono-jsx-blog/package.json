@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-hono-jsx-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog using Hono's built-in JSX renderer + LaikaCMS. Zero extra dependencies: hono/jsx provides the JSX runtime — no React, no Preact, no Vite.",
   "type": "module",

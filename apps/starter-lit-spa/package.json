@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-lit-spa",
   "description": "Starter: framework-less Web Components SPA (Vite + Lit) + sidecar Hono backend. First starter to use the new decapAdminHtml helper.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-tinyhttp-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with tinyhttp + LaikaCMS on Node.js. Shows how to bridge tinyhttp req/res to the Web API Request/Response that laika.fetch expects.",
   "type": "module",

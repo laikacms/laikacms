@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-webhooks",
   "description": "Starter: outbound webhooks. Subscribe URLs receive signed POSTs when LaikaCMS content changes. Common downstream-rebuild / notification pattern.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

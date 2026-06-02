@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-vike-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Vike (vite-plugin-ssr) + React + LaikaCMS. Framework-agnostic SSR: +data.ts files load content at request time via laika.documents.*, Decap admin bootstrapped client-side via useEffect.",
   "type": "module",

@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-github-storage",
   "description": "Starter: LaikaCMS storing content directly in a GitHub repo. Hono + @laikacms/github + createCustomLaika. Runtime-portable.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

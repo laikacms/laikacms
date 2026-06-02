@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-comments",
   "description": "Starter: built-in moderated comments backed by LaikaCMS records. Public post + GET-approved; admin moderation queue.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

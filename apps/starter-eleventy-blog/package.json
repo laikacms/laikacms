@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-eleventy-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Eleventy (11ty) + LaikaCMS. Jamstack pattern: Eleventy SSG reads content at build time via laika.documents.*, and the dev server middleware wires up the Decap JSON:API at /api/decap/*.",
   "type": "module",

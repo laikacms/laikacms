@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-hapi-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Hapi.js v21 + LaikaCMS. Demonstrates Hapi's payload.output:'data' pattern for bridging Node.js IncomingMessage to WHATWG Request.",
   "type": "module",

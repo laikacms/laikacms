@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-socketio-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog using Express + Socket.io + LaikaCMS. Real-time pattern: node:fs.watch on content/ broadcasts 'content:updated' events via Socket.io so the browser refreshes without polling.",
   "type": "module",

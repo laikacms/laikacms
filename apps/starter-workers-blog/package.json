@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-workers-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Cloudflare Workers + D1 + LaikaCMS. Shows lower-level decapApi wiring for edge runtimes where createEmbeddedLaika (Node.js / FileSystem) is not available.",
   "type": "module",
