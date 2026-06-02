@@ -2,7 +2,14 @@ import { resolve } from 'node:path';
 
 import { createEmbeddedLaika, decapAdminHtml, minimalBlogConfig } from '@laikacms/decap-integrations/embedded';
 
-export const decapConfig = minimalBlogConfig();
+/**
+ * The laika-backend reads config.backend.api_root (not api_url) to construct
+ * document/asset API URLs as `${base_url}${api_root}/documents`, etc.
+ * Without this, apiUrl defaults to just the origin and API calls 404.
+ */
+export const decapConfig = minimalBlogConfig({
+  backend: { name: 'laika', branch: 'main', api_root: '/api/decap' },
+});
 
 /**
  * Singleton EmbeddedLaika instance.

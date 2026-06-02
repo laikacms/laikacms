@@ -311,6 +311,7 @@ framework gives you at the route handler boundary and whether you need a bridge.
 | **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                       |
 | **Fastify**                       | Fastify `FastifyRequest`                         | `request.raw` → same Express bridge inside a Fastify route handler                      |
 | **AWS Lambda (via http bridge)**  | Lambda event object                              | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
+| **Oak (Deno)**                    | Oak `Context.request` (wraps WHATWG)             | Reconstruct `Request` from `ctx.request.url.href` + `ctx.request.headers` + `body.arrayBuffer()` |
 
 ### Express / plain `http.Server` — manual bridge
 
@@ -593,6 +594,33 @@ const DecapController = () => import('#controllers/decap_controller');
 router.any('/api/decap/*', [DecapController, 'proxy']);
 ```
 
+### `minimalBlogConfig()` and `decapAdminHtml()` — always set `api_root`
+
+`decapAdminHtml()` injects `base_url: window.location.origin` into the browser-side Decap backend
+config. The laika-backend then constructs the API URL as:
+
+```ts
+this.apiUrl = Url.combine(config.backend.base_url, config.backend.api_root);
+```
+
+If `api_root` is omitted, `apiUrl` collapses to the site origin and every API call (`/documents`,
+`/session`, `/health`) goes to the wrong path. **Always pass `api_root` when using
+`minimalBlogConfig()`:**
+
+```ts
+// ✅ Correct — /api/decap/documents, /api/decap/session, etc.
+const decapConfig = minimalBlogConfig({
+  backend: { name: 'laika', branch: 'main', api_root: '/api/decap' },
+});
+
+// ❌ Missing api_root — all API calls go to /, /documents, /session (wrong paths)
+const decapConfig = minimalBlogConfig(); // backend has no api_root
+```
+
+> **`api_url` vs `api_root`**: Older starters use `api_url` in the backend block. The laika-backend
+> reads `api_root`, not `api_url`. The `api_url` key is silently ignored — use `api_root` going
+> forward.
+
 ### SvelteKit — `src/app.html` is required
 
 SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js, you must create
@@ -612,3 +640,34 @@ SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js
   </body>
 </html>
 ```
+
+### Oak (Deno) — reconstruct Request from context
+
+[Oak](https://jsr.io/@oak/oak) is the de-facto Koa-inspired middleware framework for Deno.
+Unlike `Deno.serve()` (where the WHATWG `Request` is passed to the handler directly), Oak wraps it
+in its own `Context.request` type. Reconstruct a WHATWG `Request` before calling `laika.fetch`:
+
+```ts
+// In a top-level middleware (more reliable than router for wildcard paths):
+app.use(async (ctx, next) => {
+  if (!ctx.request.url.pathname.startsWith('/api/decap')) return next();
+
+  const body = ctx.request.hasBody ? await ctx.request.body.arrayBuffer() : null;
+  const req = new Request(ctx.request.url.href, {
+    method: ctx.request.method,
+    headers: ctx.request.headers, // already WHATWG-compatible
+    body: body && body.byteLength > 0 ? body : null,
+  });
+  const res = await laika.fetch(req);
+  ctx.response.status = res.status;
+  res.headers.forEach((v, k) => ctx.response.headers.set(k, v));
+  ctx.response.body = res.body ?? new Uint8Array(0);
+});
+```
+
+Use `ctx.request.url.href` (a string) rather than `ctx.request.url` (a `URL`) for the `Request`
+constructor — some Oak versions pass an object that doesn't serialize correctly. Use a top-level
+middleware rather than a router route for the Decap proxy; Oak's URLPattern router doesn't reliably
+match arbitrary trailing paths.
+
+See `apps/starter-oak-blog` for a complete example.
