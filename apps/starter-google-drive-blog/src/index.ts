@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { collectStream, runTask } from 'laikacms/compat';
+import { NotFoundError } from 'laikacms/core';
 
 import { decapAdminHtml, decapConfig, laika } from './laika.js';
 
@@ -59,7 +60,8 @@ app.get('/blog/:slug', async c => {
   let post;
   try {
     post = await runTask(laika.documents.getDocument(`posts/${slug}`));
-  } catch {
+  } catch (err) {
+    if (!(err instanceof NotFoundError)) throw err;
     return c.notFound();
   }
   const { title, date, description, body } = post.content as {

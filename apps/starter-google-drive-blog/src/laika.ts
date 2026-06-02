@@ -1,6 +1,9 @@
 import { createCustomLaika, decapAdminHtml, minimalBlogConfig } from '@laikacms/decap-integrations/custom';
 import { GoogleDriveStorageRepository } from '@laikacms/google/storage-drive';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
+import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -55,14 +58,16 @@ function requireEnv(name: string): string {
  * the cache and adds latency for each call.
  */
 
-const auth = process.env['GOOGLE_ACCESS_TOKEN']
-  ? { accessToken: requireEnv('GOOGLE_ACCESS_TOKEN') }
-  : { tokenProvider: async () => requireEnv('GOOGLE_ACCESS_TOKEN') };
-
 const storage = new GoogleDriveStorageRepository({
-  auth,
+  auth: { accessToken: requireEnv('GOOGLE_ACCESS_TOKEN') },
   rootFolderId: process.env['GOOGLE_ROOT_FOLDER'],
-  serializerRegistry: { md: markdownSerializer },
+  serializerRegistry: {
+    md: markdownSerializer,
+    yaml: yamlSerializer,
+    yml: yamlSerializer,
+    json: jsonSerializer,
+    raw: rawSerializer,
+  },
   defaultFileExtension: 'md',
 });
 
