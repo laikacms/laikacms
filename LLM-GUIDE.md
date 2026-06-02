@@ -206,8 +206,8 @@ These are the things that consistently bite first-time integrators:
 
 8. **`createCustomLaika` hard-wires `ContentBaseAssetsRepository`.** All three presets build their
    assets repo internally and don't expose an `assets` option. To use a custom `AssetsRepository`
-   (Cloudinary, S3 presigned, etc.), call `decapApi()` from
-   `@laikacms/decap-integrations/decap-api` directly:
+   (Cloudinary, S3 presigned, etc.), call `decapApi()` from `@laikacms/decap-integrations/decap-api`
+   directly:
 
    ```ts
    import { decapApi } from '@laikacms/decap-integrations/decap-api';

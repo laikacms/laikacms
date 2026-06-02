@@ -1,12 +1,15 @@
 import { resolve } from 'node:path';
 
 import { CloudinaryAssetsRepository } from '@laikacms/cloudinary/assets-cloudinary';
-import { DEFAULT_DEV_TOKEN, decapAdminHtml, minimalBlogConfig } from '@laikacms/decap-integrations/embedded';
 import { decapApi } from '@laikacms/decap-integrations/decap-api';
+import { decapAdminHtml, DEFAULT_DEV_TOKEN, minimalBlogConfig } from '@laikacms/decap-integrations/embedded';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
+import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
 /**
  * Manual wiring — used when no preset fits.
@@ -29,7 +32,13 @@ const CONTENT_DIR = resolve(process.cwd(), 'content');
 // 1. Storage (markdown content on local filesystem)
 const storage = new FileSystemStorageRepository({
   basePath: CONTENT_DIR,
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: {
+    md: storageSerializerMarkdown,
+    yaml: yamlSerializer,
+    yml: yamlSerializer,
+    json: jsonSerializer,
+    raw: rawSerializer,
+  },
   defaultFileExtension: 'md',
 });
 
