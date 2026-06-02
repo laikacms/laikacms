@@ -1,0 +1,23 @@
+{
+  "name": "@laikacms/starter-preview-mode",
+  "description": "Starter: LaikaCMS preview mode — shows draft posts via getUnpublished() with a preview token. Documents the 'unpublished' type in listRecordSummaries.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@hono/node-server": "catalog:server",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}
