@@ -296,21 +296,22 @@ footgun — do it once and forget it.
 `laika.fetch` (and `api.fetch`) expects a **Web API `Request`**. The table below shows what each
 framework gives you at the route handler boundary and whether you need a bridge.
 
-| Framework                         | What you receive                                 | Bridge needed?                                                                          |
-| --------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| **Astro**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
-| **SvelteKit**                     | Web API `Request`                                | None — pass directly: `laika.fetch(event.request)`                                      |
-| **Remix**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
-| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`)        | None — pass directly: `laika.fetch(request)`                                            |
-| **Hono**                          | Hono `HonoRequest` wrapper                       | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
-| **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                      |
-| **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                            |
-| **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
-| **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
-| **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller   |
-| **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                       |
-| **Fastify**                       | Fastify `FastifyRequest`                         | `request.raw` → same Express bridge inside a Fastify route handler                      |
-| **AWS Lambda (via http bridge)**  | Lambda event object                              | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
+| Framework                         | What you receive                                         | Bridge needed?                                                                                                                                          |
+| --------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Astro**                         | Web API `Request`                                        | None — pass directly: `laika.fetch(request)`                                                                                                            |
+| **SvelteKit**                     | Web API `Request`                                        | None — pass directly: `laika.fetch(event.request)`                                                                                                      |
+| **Remix**                         | Web API `Request`                                        | None — pass directly: `laika.fetch(request)`                                                                                                            |
+| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`)                | None — pass directly: `laika.fetch(request)`                                                                                                            |
+| **Hono**                          | Hono `HonoRequest` wrapper                               | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                                                                                        |
+| **TanStack Start**                | Web API `Request`                                        | None — pass directly from the server route handler                                                                                                      |
+| **Cloudflare Workers**            | Web API `Request`                                        | None — Workers environment is spec-compliant                                                                                                            |
+| **Nuxt / h3**                     | h3 `H3Event`                                             | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                                                                                     |
+| **Express / plain `http.Server`** | Node.js `IncomingMessage`                                | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below                                                                   |
+| **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`)         | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller                                                                   |
+| **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)                  | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                                                                                       |
+| **LoopBack 4**                    | Express `Request` (LoopBack uses Express under the hood) | Outer Express wrapper: mount `express.raw()` + Decap handler before `app.requestHandler` — see [LoopBack 4 section](#loopback-4--outer-express-wrapper) |
+| **Fastify**                       | Fastify `FastifyRequest`                                 | `request.raw` → same Express bridge inside a Fastify route handler                                                                                      |
+| **AWS Lambda (via http bridge)**  | Lambda event object                                      | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch`                                                                 |
 
 ### Express / plain `http.Server` — manual bridge
 
@@ -611,4 +612,128 @@ SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js
     <div style="display: contents">%sveltekit.body%</div>
   </body>
 </html>
+```
+
+### LoopBack 4 — outer Express wrapper
+
+LoopBack 4 (IBM) uses Express internally and runs its own body-parser middleware at the
+`PARSE_PARAMS` sequence point. Mounting `laika.fetch` inside a LoopBack controller would mean the
+request body is already consumed before your handler runs.
+
+**Solution:** use `RestApplication.requestHandler` as an Express middleware and mount it inside an
+outer Express server. Register the Decap proxy route **before** `app.requestHandler` so LoopBack
+never sees those requests.
+
+> **Doc gap:** `RestApplication` exposes `requestHandler` (a standard Express `RequestHandler`) that
+> can be mounted in any outer Express app. Do **not** call `app.start()` — that would have LoopBack
+> bind its own HTTP server. Call `app.init()` instead (resolves bindings and registers controllers
+> without opening a port).
+
+```ts
+// src/index.ts
+import 'reflect-metadata';
+import express from 'express';
+import * as http from 'node:http';
+import { BlogApplication } from './application.js';
+import { ADMIN_HTML, laika } from './laika.js';
+
+const PORT = Number(process.env.PORT ?? 3000);
+
+async function main() {
+  const app = new BlogApplication();
+  await app.init(); // NOT app.start() — that would bind a second port
+
+  const outer = express();
+
+  // Decap JSON:API proxy — before app.requestHandler so LoopBack never sees it
+  outer.use(
+    '/api/decap',
+    express.raw({ type: '*/*', limit: '50mb' }),
+    async (req: express.Request, res: express.Response) => {
+      const url = `http://localhost:${PORT}${req.originalUrl}`;
+      const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
+      const rawBuf: Buffer | undefined = hasBody && Buffer.isBuffer(req.body) && req.body.length > 0
+        ? (req.body as Buffer)
+        : undefined;
+      const body: ArrayBuffer | null = rawBuf
+        ? (rawBuf.buffer.slice(
+          rawBuf.byteOffset,
+          rawBuf.byteOffset + rawBuf.byteLength,
+        ) as ArrayBuffer)
+        : null;
+
+      const webReq = new Request(url, {
+        method: req.method,
+        headers: req.headers as Record<string, string>,
+        body,
+      });
+      const webRes = await laika.fetch(webReq);
+      res.status(webRes.status);
+      webRes.headers.forEach((v: string, k: string) => {
+        if (k !== 'transfer-encoding') res.setHeader(k, v);
+      });
+      res.send(Buffer.from(await webRes.arrayBuffer()));
+    },
+  );
+
+  outer.get('/admin', (_req, res) => {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.send(ADMIN_HTML);
+  });
+
+  // LoopBack handles all remaining routes
+  outer.use(app.requestHandler as express.RequestHandler);
+
+  http.createServer(outer).listen(PORT);
+}
+main().catch(err => {
+  console.error(err);
+  process.exit(1);
+});
+```
+
+LoopBack 4 controllers use `@inject(RestBindings.Http.RESPONSE)` to return HTML with a correct
+`Content-Type`:
+
+```ts
+// src/controllers/blog.controller.ts
+import { inject } from '@loopback/core';
+import { get, param, RestBindings } from '@loopback/rest';
+import type { Response } from '@loopback/rest';
+import { collectStream } from 'laikacms/compat';
+import { laika } from '../laika.js';
+
+export class BlogController {
+  constructor(
+    @inject(RestBindings.Http.RESPONSE) private readonly res: Response,
+  ) {}
+
+  @get('/')
+  async index(): Promise<string> {
+    const { items } = await collectStream(laika.documents.listRecordSummaries({
+      pagination: { page: 1, perPage: 100 },
+      folder: 'posts',
+      depth: 1,
+      type: 'published',
+    }));
+    this.res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return `<ul>${items.map(r => `<li>${r.key}</li>`).join('')}</ul>`;
+  }
+}
+```
+
+Register the controller in your `RestApplication` subclass:
+
+```ts
+// src/application.ts
+import 'reflect-metadata';
+import { RestApplication } from '@loopback/rest';
+import { BlogController } from './controllers/blog.controller.js';
+
+export class BlogApplication extends RestApplication {
+  constructor() {
+    super({ rest: { openApiSpec: { disabled: true }, apiExplorer: { disabled: true } } });
+    this.controller(BlogController);
+  }
+}
 ```
