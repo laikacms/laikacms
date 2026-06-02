@@ -1,8 +1,15 @@
-import { defineConfig } from '@adonisjs/core/http';
+import { defineConfig } from '@adonisjs/core/app';
 
 export default defineConfig({
-  generateRequestId: false,
-  trustProxy: false,
-  cookie: {},
-  allowMethodSpoofing: false,
+  appKey: 'a-random-32-character-key-for-dev',
+  http: {
+    generateRequestId: true,
+    allowMethodSpoofing: false,
+    trustProxy: false,
+    cookie: {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+    },
+  },
 });

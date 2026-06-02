@@ -1,17 +1,22 @@
-/**
- * AdonisJS routes — loaded at startup via the `preloads` array in adonisrc.ts.
- *
- * AdonisJS uses lazy controller imports to keep startup fast; the controller
- * module is only loaded when the route is first hit.
- */
 import router from '@adonisjs/core/services/router';
 
-const PostsController = () => import('#controllers/posts_controller');
 const DecapController = () => import('#controllers/decap_controller');
+const BlogController = () => import('#controllers/blog_controller');
 
-// Blog JSON API — consumed by the SPA in public/index.html
-router.get('/posts', [PostsController, 'index']);
-router.get('/posts/:slug', [PostsController, 'show']);
+/**
+ * Decap JSON:API — all HTTP methods forwarded to laika.fetch.
+ *
+ * AdonisJS parses request bodies by default (bodyParser middleware in kernel.ts).
+ * For these routes we need the RAW body so laika.fetch can read it.
+ * See DecapController for the body-handling approach.
+ */
+router.any('/api/decap/*', [DecapController, 'handle']);
 
-// Decap CMS JSON:API proxy — catch all HTTP methods and sub-paths
-router.any('/api/decap/*', [DecapController, 'proxy']);
+/** Decap admin shell — standalone HTML page, not an AdonisJS view. */
+router.get('/admin', [DecapController, 'admin']);
+
+/** Blog routes */
+router.get('/', [BlogController, 'index']);
+router.get('/blog/:slug', [BlogController, 'show']);
+
+/** Static uploads are served by the built-in static file middleware from /public */
