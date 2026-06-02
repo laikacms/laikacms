@@ -63,7 +63,7 @@ const evaluatePipeline = (docs: StorageDoc[], pipeline: PipelineStage[]): Storag
           if (stage.$project[k] === 0) continue;
           out[k] = v;
         }
-        return out as StorageDoc;
+        return out as unknown as StorageDoc;
       });
     } else if ('$limit' in stage) {
       working = working.slice(0, stage.$limit);
