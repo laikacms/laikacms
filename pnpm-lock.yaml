@@ -1808,6 +1808,55 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-hapi-vision-blog:
+    dependencies:
+      '@hapi/hapi':
+        specifier: ^21.0.0
+        version: 21.4.9
+      '@hapi/inert':
+        specifier: ^7.0.0
+        version: 7.1.1
+      '@hapi/vision':
+        specifier: ^7.0.0
+        version: 7.0.3
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+      nunjucks:
+        specifier: ^3.2.4
+        version: 3.2.4(chokidar@3.6.0)
+      rehype-stringify:
+        specifier: ^10.0.0
+        version: 10.0.1
+      remark:
+        specifier: ^15.0.0
+        version: 15.0.1
+      remark-rehype:
+        specifier: ^11.0.0
+        version: 11.1.2
+      unified:
+        specifier: ^11.0.5
+        version: 11.0.5
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      '@types/nunjucks':
+        specifier: ^3.2.6
+        version: 3.2.6
+      esbuild:
+        specifier: catalog:tools
+        version: 0.27.7
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-hattip:
     dependencies:
       '@hattip/adapter-node':
@@ -11777,6 +11826,9 @@ packages:
 
   '@hapi/vise@5.0.1':
     resolution: {integrity: sha512-XZYWzzRtINQLedPYlIkSkUr7m5Ddwlu99V9elh8CSygXstfv3UnWIXT0QD+wmR0VAG34d2Vx3olqcEhRRoTu9A==}
+
+  '@hapi/vision@7.0.3':
+    resolution: {integrity: sha512-1UM3Xej7HZQPaxzWkefvMfcuXoF9R8kIiDTl+Pfdv8f5mJwAv0zIB4R/UvNoQP1+JYgQT+QeUDxcGD8QdIUDyg==}
 
   '@hapi/wreck@18.1.2':
     resolution: {integrity: sha512-3dMnV2pfhQiyEqu8DL3VBmxkdLiRDiiUDuG79Dp+UK1gL9ZxAfDOUhB6k3D5MLqcgJJ1IARyGFhwoc1NITr/pg==}
@@ -36184,6 +36236,13 @@ snapshots:
   '@hapi/vise@5.0.1':
     dependencies:
       '@hapi/hoek': 11.0.7
+
+  '@hapi/vision@7.0.3':
+    dependencies:
+      '@hapi/boom': 10.0.1
+      '@hapi/bounce': 3.0.2
+      '@hapi/hoek': 11.0.7
+      '@hapi/validate': 2.0.1
 
   '@hapi/wreck@18.1.2':
     dependencies:
