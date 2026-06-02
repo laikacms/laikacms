@@ -1,0 +1,32 @@
+{
+  "name": "@laikacms/starter-nestjs-fastify",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with NestJS + Fastify adapter + LaikaCMS. Contrasts with starter-nestjs-blog (Express) by using the Fastify platform-specific adapter and the JSON re-serialization bridge pattern.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch & tsx watch dist/main.js",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/static": "^8.0.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-fastify": "^11.0.0",
+    "fastify": "^5.0.0",
+    "laikacms": "workspace:*",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "^7.8.1"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
