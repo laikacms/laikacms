@@ -1,0 +1,25 @@
+{
+  "name": "@laikacms/starter-midway-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Midway.js v4 (Koa adapter) + LaikaCMS. Midway.js is Alibaba's TypeScript enterprise framework with an IoC container and decorator-based controllers.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/bootstrap.ts",
+    "start": "tsx src/bootstrap.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@midwayjs/core": "^4.1.0",
+    "@midwayjs/koa": "^4.1.0",
+    "laikacms": "workspace:*",
+    "reflect-metadata": "^0.2.2"
+  },
+  "devDependencies": {
+    "@types/koa": "^2.15.0",
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}
