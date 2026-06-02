@@ -5,11 +5,11 @@ store, backed by **LaikaCMS** via `createCustomLaika` + `DrizzleStorageRepositor
 
 ## Why D1 vs R2?
 
-| Dimension | R2 (object storage) | D1 (SQLite) |
-|-----------|--------------------|--------------------|
-| Query | Key/prefix scan | Full SQL — `WHERE`, `ORDER BY`, range filters |
-| Cost | ~$0.015/GB/month | Free tier: 5 GB + 25 M row reads/day |
-| Best for | Large blobs, media | Structured content, fast reads |
+| Dimension | R2 (object storage) | D1 (SQLite)                                   |
+| --------- | ------------------- | --------------------------------------------- |
+| Query     | Key/prefix scan     | Full SQL — `WHERE`, `ORDER BY`, range filters |
+| Cost      | ~$0.015/GB/month    | Free tier: 5 GB + 25 M row reads/day          |
+| Best for  | Large blobs, media  | Structured content, fast reads                |
 
 For a blog with hundreds of posts, D1's indexed queries are faster and cheaper than R2 prefix scans.
 
@@ -69,7 +69,7 @@ function makeLaika(env: Env) {
     decapConfig,
     basePath: '/api/decap',
     auth: { mode: 'dev' },
-    seedConfigOnFirstRequest: true,  // writes config.yml to D1 on first request
+    seedConfigOnFirstRequest: true, // writes config.yml to D1 on first request
   });
 }
 app.all('/api/decap/*', c => makeLaika(c.env).fetch(c.req.raw));
