@@ -1,6 +1,9 @@
 import { createCustomLaika, decapAdminHtml, minimalBlogConfig } from '@laikacms/decap-integrations/custom';
 import { HygraphStorageRepository } from '@laikacms/hygraph/storage-hygraph';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
+import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -61,7 +64,13 @@ const storage = new HygraphStorageRepository({
     token: requireEnv('HYGRAPH_PAT'),
   },
   stage: (process.env['HYGRAPH_STAGE'] ?? 'DRAFT') as 'DRAFT' | 'PUBLISHED',
-  serializerRegistry: { md: markdownSerializer },
+  serializerRegistry: {
+    md: markdownSerializer,
+    yaml: yamlSerializer,
+    yml: yamlSerializer,
+    json: jsonSerializer,
+    raw: rawSerializer,
+  },
   defaultFileExtension: 'md',
 });
 
