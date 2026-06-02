@@ -23,6 +23,7 @@
     "@typescript-eslint/eslint-plugin": "catalog:lint",
     "@typescript-eslint/parser": "catalog:lint",
     "@vitest/coverage-v8": "catalog:tools",
+    "dprint": "^0.54.0",
     "eslint": "catalog:lint",
     "globals": "catalog:lint",
     "husky": "^9.1.7",
