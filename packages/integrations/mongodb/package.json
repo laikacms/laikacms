@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/mongodb",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "MongoDB-backed StorageRepository for Laika CMS. Document store with aggregation-pipeline listings and bulkWrite multi-doc atomicity. Driver-agnostic — depends on a structural `MongoCollectionLike` interface.",
   "keywords": [

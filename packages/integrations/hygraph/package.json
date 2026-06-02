@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/hygraph",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Hygraph-backed StorageRepository for Laika CMS via the GraphQL Content API. First true-GraphQL transport in the suite. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

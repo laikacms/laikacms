@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-express-backend",
   "description": "Starter: classic Express backend with an explicit req/res ↔ Web Request/Response adapter so it can host the LaikaCMS web-standard fetch handler.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

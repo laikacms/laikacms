@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-next-pages",
   "description": "Starter: Next.js 15 with the Pages Router (legacy). Complement to the App Router variant. Uses getServerSideProps for content fetching.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

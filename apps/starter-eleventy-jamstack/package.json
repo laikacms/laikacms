@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-eleventy-jamstack",
   "description": "Starter: Eleventy (11ty) Jamstack site reading from LaikaCMS content/, with a sidecar Hono admin server.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

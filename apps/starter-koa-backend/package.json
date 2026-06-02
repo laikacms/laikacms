@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-koa-backend",
   "description": "Starter: Koa 2 backend with a web-standard fetch adapter, hosting LaikaCMS over JSON:API + a Decap admin shell.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

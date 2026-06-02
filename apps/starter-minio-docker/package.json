@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-minio-docker",
   "description": "Starter: self-hosted LaikaCMS with MinIO via docker-compose. One command to a working CMS + S3-compatible bucket. Uses the new laikacms/storage-s3 adapter.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

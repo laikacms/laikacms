@@ -1,0 +1,8 @@
+node_modules/
+.cache/
+public/
+.turbo/
+.env
+.env.local
+.env.*.local
+*.tsbuildinfo

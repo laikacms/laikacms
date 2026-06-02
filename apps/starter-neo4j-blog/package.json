@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-neo4j-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog backed by Neo4j. Each post is a LaikaFile node; hierarchy expressed via CHILD_OF relationships. Uses the transactional HTTP endpoint with Cypher; Decap admin from CDN.",
   "type": "module",

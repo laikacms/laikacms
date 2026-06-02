@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/bitbucket",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Bitbucket-backed StorageRepository for Laika CMS via the Cloud REST v2 API. Authenticates with an app password or OAuth2 bearer token. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

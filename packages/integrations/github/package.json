@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/github",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "GitHub-backed StorageRepository for Laika CMS. Stores content in a GitHub repository; authenticates as a GitHub App via installation tokens.",
   "keywords": [

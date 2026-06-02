@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-fastify-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog built with Fastify + LaikaCMS on Node.js. Shows how to configure Fastify's content-type parser and bridge req/reply to the Web API Request/Response that laika.fetch expects.",
   "type": "module",

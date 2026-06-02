@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/notion",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Notion-backed StorageRepository for Laika CMS. Pages-with-children become folders, leaf pages become objects, page block content is the object body. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

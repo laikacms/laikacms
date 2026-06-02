@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-app-runner-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Blog deployable to AWS App Runner — managed container service that auto-scales from zero. Uses decapAdminHtml() for a zero-build admin and apprunner.yaml for config-as-code deployment.",
   "type": "module",

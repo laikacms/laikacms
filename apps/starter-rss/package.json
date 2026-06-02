@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-rss",
   "description": "Starter: RSS 2.0 and Atom feeds from LaikaCMS published posts. Sitemap.xml + JSON Feed bonus endpoints. Zero deps beyond Hono + LaikaCMS.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-trpc-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog exposing LaikaCMS content over a tRPC API served by Hono. Demonstrates: end-to-end type-safe procedures over laika.documents.*, typed output schemas, and Web-API-native integration with no IncomingMessage bridge.",
   "type": "module",

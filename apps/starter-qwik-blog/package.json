@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-qwik-blog",
   "description": "Starter: Qwik City SSR blog with embedded LaikaCMS + Decap admin. Demonstrates Qwik's resumability + route loaders.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

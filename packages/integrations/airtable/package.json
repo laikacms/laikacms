@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/airtable",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Airtable-backed StorageRepository for Laika CMS. `filterByFormula` for queries, chunked batch mutations (Airtable's 10-record cap). Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

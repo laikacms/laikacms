@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/vercel",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Vercel Blob-backed StorageRepository for Laika CMS. Path-flat blob storage with URL-suffix avoidance and POST-to-delete-by-URL. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

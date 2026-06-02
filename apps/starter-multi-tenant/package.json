@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-multi-tenant",
   "description": "Starter: per-tenant Laika instances with isolated content namespaces. SaaS-style content platform pattern.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

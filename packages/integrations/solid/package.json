@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/solid",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Solid Pod / Linked Data Platform-backed StorageRepository for Laika CMS. RDF/Turtle wire format with ldp:contains hierarchy and URI-as-identity addressing. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

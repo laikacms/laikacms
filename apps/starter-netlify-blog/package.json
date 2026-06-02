@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-netlify-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog built with Netlify Functions v2 + LaikaCMS. Demonstrates Netlify's WHATWG-native Request/Response, createEmbeddedLaika for local dev, and Decap admin from CDN.",
   "type": "module",

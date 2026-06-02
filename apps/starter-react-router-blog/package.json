@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-react-router-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog built with React Router v7 + LaikaCMS. Demonstrates createEmbeddedLaika, server loaders, and Decap admin from CDN.",
   "type": "module",

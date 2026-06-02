@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-preact-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog using Preact SSR + Hono + LaikaCMS. Shows React-compatible JSX rendering with preact-render-to-string — no Vite, no React runtime, tsx handles TSX compilation on the fly.",
   "type": "module",

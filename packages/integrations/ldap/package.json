@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/ldap",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "LDAP-backed StorageRepository for Laika CMS. DN-hierarchical addressing with objectClass schemas, LDAP search filters, and bulkOps atomic batches. Client-agnostic — depends on a structural `LdapOps` interface.",
   "keywords": [
