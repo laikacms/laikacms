@@ -9,7 +9,10 @@ import {
   type LdapSearchOptions,
   LdapStorageRepository,
 } from '@laikacms/ldap/storage-ldap';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
+import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 import ldap from 'ldapjs';
 
 function requireEnv(name: string): string {
@@ -231,7 +234,13 @@ const dataSource = new LdapDataSource({ ops: makeLdapJsOps(ldapClient) });
 const storage = new LdapStorageRepository({
   dataSource,
   baseDn: requireEnv('LDAP_BASE_DN'),
-  serializerRegistry: { md: markdownSerializer },
+  serializerRegistry: {
+    md: markdownSerializer,
+    yaml: yamlSerializer,
+    yml: yamlSerializer,
+    json: jsonSerializer,
+    raw: rawSerializer,
+  },
   defaultFileExtension: 'md',
 });
 
