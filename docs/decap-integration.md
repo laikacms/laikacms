@@ -616,8 +616,8 @@ SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js
 
 ### Deno Fresh (v1) — admin route must return a raw `Response` to bypass `_app.tsx`
 
-Fresh v1's `_app.tsx` is applied only when a handler calls `ctx.render()` (or when a route exports
-a default component with no handler). If your admin route returns a `new Response(html, ...)` directly
+Fresh v1's `_app.tsx` is applied only when a handler calls `ctx.render()` (or when a route exports a
+default component with no handler). If your admin route returns a `new Response(html, ...)` directly
 from its handler, `_app.tsx` is never invoked and Decap CMS gets a clean full-viewport document:
 
 ```ts
@@ -655,12 +655,12 @@ and looks broken.
 
 How to provide a clean document, per framework:
 
-| Framework          | Approach                                                                                  |
-| ------------------ | ----------------------------------------------------------------------------------------- |
-| **Next.js**        | Add `app/admin/layout.tsx` that renders a bare `<html><body>` without the root layout    |
-| **Remix**          | Use a splat route without a parent layout, or export a `links`-free component            |
-| **SvelteKit**      | The admin page's `+layout.svelte` can be empty; skip the root layout by not inheriting it |
-| **Nuxt**           | Set `layout: false` in `definePageMeta()` on the admin page                              |
-| **Astro**          | Export `export const prerender = true` and render a full `<!doctype html>` directly       |
-| **Deno Fresh**     | Return `new Response(html, ...)` from the handler — bypasses `_app.tsx` entirely          |
-| **All others**     | Serve a plain HTML file from your static directory or return a raw `Response` string      |
+| Framework      | Approach                                                                                  |
+| -------------- | ----------------------------------------------------------------------------------------- |
+| **Next.js**    | Add `app/admin/layout.tsx` that renders a bare `<html><body>` without the root layout     |
+| **Remix**      | Use a splat route without a parent layout, or export a `links`-free component             |
+| **SvelteKit**  | The admin page's `+layout.svelte` can be empty; skip the root layout by not inheriting it |
+| **Nuxt**       | Set `layout: false` in `definePageMeta()` on the admin page                               |
+| **Astro**      | Export `export const prerender = true` and render a full `<!doctype html>` directly       |
+| **Deno Fresh** | Return `new Response(html, ...)` from the handler — bypasses `_app.tsx` entirely          |
+| **All others** | Serve a plain HTML file from your static directory or return a raw `Response` string      |

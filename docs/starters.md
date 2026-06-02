@@ -212,11 +212,14 @@ when figuring out which docs and API ergonomics need improvement.
    (`@laikacms/starter-<...>`, `private: true`, `workspace:*` for `laikacms` and
    `@laikacms/decap-integrations`).
 3. Use `createEmbeddedLaika({ contentDir, decapConfig, basePath, auth: { mode: 'dev' } })` for
-   server wiring. Seed one sample post under `content/posts/`.
-4. Render the post list on the home page using `laika.documents.listRecords({...})` and
+   server wiring. Use `minimalBlogConfig({ mediaFolder })` for the `decapConfig` unless you need a
+   custom collection shape. Seed one sample post under `content/posts/`.
+4. Render the post list on the home page using `laika.documents.listRecordSummaries({...})` and
    `collectStream(...)` from `laikacms/compat`.
-5. Mount the Decap admin at `/admin`. The starter README must call out anything you had to do that
-   the embedded preset didn't already handle.
+5. Mount the Decap admin at `/admin`. Prefer `decapAdminHtml()` from
+   `@laikacms/decap-integrations/embedded` — it generates the full page with no local build step.
+   The starter README must call out anything you had to do that the embedded preset didn't already
+   handle.
 6. Write a README that explains the layout, how to run, and the known **production hardening steps**
    (real auth, persistent storage, self-hosted Decap bundle).
 7. If you had to dig into the laika packages to figure something out — fix the docs or add the

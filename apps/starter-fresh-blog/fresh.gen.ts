@@ -2,11 +2,11 @@
 // This file SHOULD be checked into source version control.
 // This file is automatically updated during development when running `dev.ts`.
 
+import type { Manifest } from '$fresh/server.ts';
 import * as $admin from './routes/admin.tsx';
 import * as $api_decap_path_ from './routes/api/decap/[...path].ts';
 import * as $blog_slug_ from './routes/blog/[slug].tsx';
 import * as $index from './routes/index.tsx';
-import type { Manifest } from '$fresh/server.ts';
 
 const manifest: Manifest = {
   routes: {

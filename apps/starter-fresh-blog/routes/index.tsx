@@ -37,20 +37,20 @@ export default function HomePage({ data: posts }: PageProps<Post[]>) {
       {posts.length === 0
         ? (
           <p>
-            No posts yet. <a href='/admin'>Open the CMS</a> to write your first post.
+            No posts yet. <a href="/admin">Open the CMS</a> to write your first post.
           </p>
         )
         : (
-          <ul style='list-style:none;padding:0'>
+          <ul style="list-style:none;padding:0">
             {posts.map(post => {
               const slug = post.key.replace(/^posts\//, '').replace(/\.md$/, '');
               return (
-                <li key={post.key} style='margin-bottom:1.5rem'>
+                <li key={post.key} style="margin-bottom:1.5rem">
                   <a href={`/blog/${slug}`}>{slug}</a>
                   {post.updatedAt && (
                     <>
                       {' · '}
-                      <time style='color:#666;font-size:0.9em'>
+                      <time style="color:#666;font-size:0.9em">
                         {new Date(post.updatedAt).toLocaleDateString()}
                       </time>
                     </>

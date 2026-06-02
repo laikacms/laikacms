@@ -31,16 +31,16 @@ export default function PostPage({ data, params }: PageProps<PostContent>) {
   return (
     <article>
       <h1>{title ?? params.slug}</h1>
-      {date && <time style='color:#666'>{new Date(date).toLocaleDateString()}</time>}
+      {date && <time style="color:#666">{new Date(date).toLocaleDateString()}</time>}
       {description && (
         <p>
           <em>{description}</em>
         </p>
       )}
       {/* body is raw markdown — pipe through remark/rehype in production */}
-      <pre style='white-space:pre-wrap;font-family:inherit'>{body}</pre>
+      <pre style="white-space:pre-wrap;font-family:inherit">{body}</pre>
       <p>
-        <a href='/'>← Back</a>
+        <a href="/">← Back</a>
       </p>
     </article>
   );
