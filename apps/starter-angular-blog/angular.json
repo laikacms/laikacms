@@ -5,27 +5,33 @@
   "projects": {
     "starter-angular-blog": {
       "projectType": "application",
+      "schematics": {
+        "@schematics/angular:component": {
+          "style": "css",
+          "standalone": true
+        }
+      },
       "root": "",
       "sourceRoot": "src",
+      "prefix": "app",
       "architect": {
         "build": {
-          "builder": "@angular-devkit/build-angular:application",
+          "builder": "@angular/build:application",
           "options": {
-            "outputPath": "dist/starter-angular-blog",
+            "outputPath": "dist",
             "index": "src/index.html",
             "browser": "src/main.ts",
             "polyfills": ["zone.js"],
             "tsConfig": "tsconfig.app.json",
             "server": "src/main.server.ts",
-            "prerender": false,
             "ssr": {
               "entry": "server.ts"
             },
+            "prerender": false,
             "assets": [
               {
                 "glob": "**/*",
-                "input": "public",
-                "output": "browser"
+                "input": "public"
               }
             ],
             "styles": [],
@@ -33,6 +39,18 @@
           },
           "configurations": {
             "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "500kB",
+                  "maximumError": "1MB"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "4kB",
+                  "maximumError": "8kB"
+                }
+              ],
               "outputHashing": "all"
             },
             "development": {
@@ -44,7 +62,7 @@
           "defaultConfiguration": "production"
         },
         "serve": {
-          "builder": "@angular-devkit/build-angular:dev-server",
+          "builder": "@angular/build:dev-server",
           "configurations": {
             "production": {
               "buildTarget": "starter-angular-blog:build:production"

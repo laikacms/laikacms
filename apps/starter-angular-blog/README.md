@@ -1,131 +1,91 @@
 # starter-angular-blog
 
-Starter blog built with **Angular 19 SSR** + **LaikaCMS**. Demonstrates:
+Minimal blog built with [Angular 21](https://angular.dev) (SSR via `@angular/ssr`) and LaikaCMS.
 
-- `createEmbeddedLaika` mounted inside an **Express** server that also serves Angular's SSR.
-- Blog pages as Angular standalone components reading content via `HttpClient` (`/api/posts`).
-- An **absolute-URL interceptor** that makes Angular `HttpClient` work during server rendering
-  (relative URLs don't resolve without a base URL in Node.js `fetch`).
-- **`decapAdminHtml()`** — no esbuild step, no `public/admin/bundle.js` — just one function call in
-  Express and the admin is served at `/admin`.
+## Key integration points
+
+- **`createEmbeddedLaika`** in `server.ts` — the Express server that Angular CLI generates for SSR
+  is extended with Laika/Decap routes before the Angular `CommonEngine` catch-all.
+- **JSON API pattern** — `server.ts` exposes `/api/posts` and `/api/posts/:slug` endpoints that call
+  `laika.documents.*` directly. Angular's `HttpClient` calls these from both SSR and browser
+  contexts. This avoids importing Effect-based code into the Angular bundle.
+- **`SERVER_URL` injection token** — on the server, `global fetch()` requires an absolute URL.
+  `server.ts` injects `SERVER_URL = "http://localhost:<port>"` at render time; the browser
+  gets `null` (falls back to relative URL `""`). This pattern differs from the SvelteKit/Nuxt
+  starters that have built-in server fetch helpers.
+- **`withHttpTransferCache()`** — Angular serialises HTTP responses made during SSR and replays
+  them in the browser, so no duplicate `/api/posts` fetch occurs on hydration.
+- **`decapAdminHtml()`** — `/admin` is served by Express before Angular's catch-all. Angular
+  must not hydrate the Decap CMS shell. Serving it from a plain Express route prevents Angular
+  from touching it.
 
 ## Quick start
 
 ```bash
 pnpm install
-pnpm build        # ng build → browser + server bundles
-pnpm start        # node dist/starter-angular-blog/server/server.mjs
+pnpm dev      # angular dev server with SSR (ng serve)
 ```
 
-Or for development with live reload:
+Open <http://localhost:4200> for the blog and <http://localhost:4200/admin> for the CMS.
+
+To build for production:
 
 ```bash
-pnpm dev          # ng serve — starts Angular dev server with SSR
+pnpm build
+pnpm start   # node dist/server/server.mjs
 ```
-
-Open <http://localhost:3000> (prod) or <http://localhost:4200> (dev) for the blog and
-<http://localhost:3000/admin> for the Decap CMS editor.
 
 ## Project layout
 
 ```
-angular.json           # Angular CLI workspace config (builder: @angular-devkit/build-angular:application)
-tsconfig.json          # base TypeScript config for Angular 19 (TS 5.5 — not 6, which Angular 19 doesn't support)
-tsconfig.app.json      # app-specific tsconfig
-server.ts              # Express server: Decap API + blog JSON API + Angular SSR
+angular.json           # Angular CLI workspace config
+tsconfig.json
+tsconfig.app.json
+server.ts              # Express server — LaikaCMS + Angular CommonEngine SSR
 src/
-  index.html           # HTML shell (Angular injects into <app-root>)
-  main.ts              # Browser bootstrap — bootstrapApplication(AppComponent, appConfig)
-  main.server.ts       # Server bootstrap — uses app.config.server.ts (merged config)
-  laika.ts             # createEmbeddedLaika singleton
+  index.html           # App shell (<app-root> placeholder)
+  main.ts              # Browser bootstrap
+  main.server.ts       # SSR bootstrap (merges appConfig + serverConfig)
   app/
-    tokens.ts          # SERVER_ORIGIN injection token (passed via CommonEngine.render providers)
-    app.component.ts   # Root component: just <router-outlet />
-    app.config.ts      # Browser providers: router, HttpClient(withFetch), clientHydration
-    app.config.server.ts # Server providers: provideServerRendering + HttpClient with interceptor
-    app.routes.ts      # Routes: / → HomeComponent, /blog/:slug → PostComponent
-    interceptors/
-      base-url.interceptor.ts  # Prepends SERVER_ORIGIN to relative URLs during SSR
+    app.component.ts   # Root component (<router-outlet>)
+    app.config.ts      # Browser providers (HttpClient, Router, ClientHydration)
+    app.config.server.ts # SSR-only providers (provideServerRendering)
+    app.routes.ts      # Route definitions (lazy-loaded components)
     services/
-      blog.service.ts  # HttpClient wrapper for /api/posts and /api/posts/:slug
+      posts.service.ts # HttpClient calls to /api/posts (handles SSR URL)
     pages/
-      home/home.component.ts   # Blog index — ngOnInit calls blog.getPosts()
-      post/post.component.ts   # Post detail — ngOnInit calls blog.getPost(slug)
-content/               # Markdown content root (seeded by Decap CMS)
-public/uploads/        # Media upload target
+      home/            # Blog index — lists posts from /api/posts
+      post/            # Post detail — fetches from /api/posts/:slug
+content/
+  posts/               # Markdown files managed by Decap CMS
+public/
+  uploads/             # Media uploads
 ```
 
-## Why a separate blog JSON API?
+## Angular-specific gotchas
 
-Angular's `HttpClient` is the canonical way to fetch data in Angular — both for the browser
-(XHR/fetch) and for SSR (Node.js fetch). During SSR, Angular's zone waits for all pending HttpClient
-requests to complete before serializing HTML, so the page is fully rendered on the server with real
-content.
+### Body parser conflict
 
-`laika.documents.*` is Node.js-only (`node:fs` / `node:path`). Importing it directly into an Angular
-service would try to bundle it into the browser build. The clean boundary is:
+Angular's SSR Express server must not use `express.json()` or `bodyParser` in front of
+`/api/decap/*`. The Express-to-WHATWG adapter in `server.ts` reads the raw body stream; a body
+parser would drain it first. This is the same constraint as `starter-express-blog`.
 
-- **Express routes** own `laika.documents.*` and expose a REST API (`/api/posts`,
-  `/api/posts/:slug`).
-- **Angular services** own `HttpClient` and know nothing about Node.js.
+### Absolute URLs in SSR
 
-## The SSR base-URL interceptor
+Angular's `HttpClient` with `withFetch()` uses the global `fetch()`, which in Node.js requires
+absolute URLs. The `SERVER_URL` injection token pattern shown here is the idiomatic way to handle
+this; alternatives include `REQUEST` token inspection or a custom `HttpInterceptor`.
 
-During SSR, `HttpClient.get('/api/posts')` sends a relative URL. Node.js `fetch` (used by Angular
-with `withFetch()`) requires an absolute URL. The interceptor reads `SERVER_ORIGIN`
-(`http://localhost:PORT`) from the DI tree and prepends it:
+### Decap admin isolation
 
-```ts
-// app.config.server.ts
-const serverConfig: ApplicationConfig = {
-  providers: [
-    provideServerRendering(),
-    provideHttpClient(withFetch(), withInterceptors([absoluteUrlInterceptor])),
-  ],
-};
-export const config = mergeApplicationConfig(appConfig, serverConfig);
-```
+Angular hydrates the entire `<html>` document. Serving `/admin` as a plain Express response
+(before the Angular `CommonEngine` handler) keeps Decap out of Angular's hydration boundary.
+The `decapAdminHtml()` helper generates the complete standalone page.
 
-`SERVER_ORIGIN` is injected by `CommonEngine.render()` at render time:
+### Build output paths
 
-```ts
-// server.ts
-commonEngine.render({
-  bootstrap,
-  providers: [
-    { provide: APP_BASE_HREF, useValue: baseUrl },
-    { provide: SERVER_ORIGIN, useValue: `${protocol}://${headers['host']}` },
-  ],
-  ...
-});
-```
+The Angular build outputs:
+- `dist/browser/` — client bundle, served as static files
+- `dist/server/server.mjs` — compiled server entry point
 
-This token is never provided in the browser bootstrap — `inject(SERVER_ORIGIN, { optional: true })`
-returns `null` and the interceptor is a no-op.
-
-## TypeScript version
-
-Angular 19 supports TypeScript 5.4–5.5. The workspace catalog pins `typescript` to v6 (for the core
-packages). This starter explicitly pins `"typescript": "~5.5.4"` in `devDependencies` to satisfy
-Angular's compiler-cli — pnpm isolates each package's `node_modules`, so both coexist without
-conflicts.
-
-**Doc gap fixed:** this incompatibility wasn't documented anywhere. Added a note above.
-
-## Production hardening
-
-| Area        | Starter default                 | Production recommendation                          |
-| ----------- | ------------------------------- | -------------------------------------------------- |
-| Auth        | `mode: 'dev'` (no password)     | `mode: 'custom'` with your own JWT/session check   |
-| Storage     | Filesystem (`content/`)         | Persistent volume or swap to S3/R2/Drizzle storage |
-| Decap CMS   | Loaded from CDN (unpkg/esm.sh)  | Self-host the bundle for SRI + no CDN dependency   |
-| Angular SSR | `index.server.html` (disk read) | Edge caching in front of the Express server        |
-
-## Framework adapter note
-
-Express delivers `IncomingMessage` to route handlers; `laika.fetch` requires a WHATWG `Request`. See
-`server.ts` for the full bridge used in the `/api/decap/*` route. The bridge follows the pattern
-documented in `docs/decap-integration.md § Express / plain http.Server`.
-
-Angular's built-in routes (`/`, `/blog/:slug`) use `HttpClient` which stays within Angular's world —
-no bridging needed there.
+In development (`ng serve`), Angular Dev Server handles SSR in memory — `dist/` is not written.

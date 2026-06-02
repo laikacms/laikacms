@@ -1,167 +1,211 @@
-/**
- * Angular SSR Express server — LaikaCMS integration.
- *
- * Route priority (first match wins):
- *   1. POST /api/decap/*  — Decap JSON:API (Node IncomingMessage → WHATWG bridge)
- *   2. GET  /api/posts    — blog list   (laika.documents, no extra HTTP hop)
- *   3. GET  /api/posts/:slug — single post
- *   4. GET  /admin        — Decap CMS admin shell via decapAdminHtml()
- *   5. GET  **            — Angular browser build static assets
- *   6. GET  **            — Angular SSR (CommonEngine)
- *
- * SERVER_ORIGIN is injected into each SSR render so absoluteUrlInterceptor
- * can convert relative HttpClient URLs to absolute during server rendering.
- */
 import { APP_BASE_HREF } from '@angular/common';
 import { CommonEngine } from '@angular/ssr/node';
 import express from 'express';
-import { dirname, join, resolve } from 'node:path';
-import { Readable } from 'node:stream';
+import type { Request as ExpressReq, Response as ExpressRes } from 'express';
+import { createServer } from 'node:http';
 import { fileURLToPath } from 'node:url';
-
-import { decapAdminHtml } from '@laikacms/decap-integrations/embedded';
+import { dirname, join, resolve } from 'node:path';
 import { collectStream, runTask } from 'laikacms/compat';
+import { createEmbeddedLaika, decapAdminHtml } from '@laikacms/decap-integrations/embedded';
+import bootstrap from './src/main.server.js';
 
-import { SERVER_ORIGIN } from './src/app/tokens';
-import { laika } from './src/laika';
-import bootstrap from './src/main.server';
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
-const serverDistFolder = dirname(fileURLToPath(import.meta.url));
+// Angular build outputs browser assets to dist/browser and the server bundle
+// to dist/server. This file is compiled into dist/server/server.mjs, so
+// dist/browser is one level up.
+const serverDistFolder = __dirname;
 const browserDistFolder = resolve(serverDistFolder, '../browser');
 const indexHtml = join(serverDistFolder, 'index.server.html');
 
-// Render once at startup — the HTML is static (config baked in).
-const ADMIN_HTML = decapAdminHtml();
+const blogCollections = [
+  {
+    name: 'posts',
+    label: 'Blog Posts',
+    folder: 'posts',
+    create: true,
+    slug: '{{slug}}',
+    sortable_fields: ['title', 'date'],
+    fields: [
+      { label: 'Title', name: 'title', widget: 'string' },
+      { label: 'Date', name: 'date', widget: 'datetime' },
+      { label: 'Description', name: 'description', widget: 'string', required: false },
+      { label: 'Body', name: 'body', widget: 'markdown' },
+    ],
+  },
+] as const;
 
-export function app(): express.Express {
-  const server = express();
-  const commonEngine = new CommonEngine();
+const laika = createEmbeddedLaika({
+  contentDir: resolve(process.cwd(), 'content'),
+  basePath: '/api/decap',
+  auth: { mode: 'dev' },
+  decapConfig: {
+    backend: { name: 'laika', api_url: '/api/decap' },
+    media_folder: 'public/uploads',
+    public_folder: '/uploads',
+    collections: blogCollections,
+  },
+});
 
-  server.set('view engine', 'html');
-  server.set('views', browserDistFolder);
+// Bridge an Express IncomingMessage to a WHATWG Request.
+// laika.fetch expects the web-standard Fetch API; Express uses Node's
+// IncomingMessage. This adapter is needed for any Express-based integration.
+async function toLaikaRequest(req: ExpressReq): Promise<Request> {
+  const host = req.headers.host ?? 'localhost';
+  const url = new URL(req.originalUrl, `http://${host}`);
 
-  // 1. Decap JSON:API
-  //
-  // Express delivers an IncomingMessage; laika.fetch expects a WHATWG Request.
-  // The bridge pattern from docs/decap-integration.md § Express bridge:
-  //   - Collect the body from the Node.js stream.
-  //   - Construct a WHATWG Request with the exact ArrayBuffer slice (TS6 requirement).
-  //   - Pipe the WHATWG Response body back through the Node.js response.
-  server.all('/api/decap/*', async (req, res) => {
-    const url = `${req.protocol}://${req.headers['host'] ?? 'localhost'}${req.originalUrl}`;
-
-    const chunks: Buffer[] = [];
-    for await (const chunk of req) chunks.push(chunk as Buffer);
-    const buf = chunks.length ? Buffer.concat(chunks) : null;
-
-    const hasBody = buf && buf.byteLength > 0 && req.method !== 'GET' && req.method !== 'HEAD';
-    const webReq = new Request(url, {
-      method: req.method,
-      headers: req.headers as Record<string, string>,
-      body: hasBody
-        ? (buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) as ArrayBuffer)
-        : null,
-      ...(hasBody ? { duplex: 'half' } : {}),
-    } as RequestInit);
-
-    const webRes = await laika.fetch(webReq);
-    res.status(webRes.status);
-    webRes.headers.forEach((v, k) => res.setHeader(k, v));
-    if (webRes.body) {
-      Readable.fromWeb(webRes.body as import('stream/web').ReadableStream).pipe(res);
-    } else {
-      res.end();
+  let body: ArrayBuffer | undefined;
+  if (req.method !== 'GET' && req.method !== 'HEAD') {
+    const chunks: Uint8Array[] = [];
+    for await (const chunk of req) chunks.push(new Uint8Array(chunk as Buffer));
+    const total = chunks.reduce((n, c) => n + c.byteLength, 0);
+    if (total > 0) {
+      const merged = new Uint8Array(total);
+      let offset = 0;
+      for (const c of chunks) { merged.set(c, offset); offset += c.byteLength; }
+      body = merged.buffer;
     }
-  });
+  }
 
-  // 2. Blog list API — Angular HttpClient reads this during SSR + client navigation.
-  server.get('/api/posts', async (_req, res) => {
-    try {
-      const { items } = await collectStream(
-        laika.documents.listRecordSummaries({
-          pagination: { page: 1, perPage: 100 },
-          folder: 'posts',
-          depth: 1,
-          type: 'published',
-        }),
-      );
-      const posts = items
-        .filter(r => r.type === 'published-summary')
-        .sort((a, b) => {
-          if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
-          return b.key.localeCompare(a.key);
-        })
-        .map(r => ({
-          slug: r.key.replace(/^posts\//, '').replace(/\.md$/, ''),
-          updatedAt: r.updatedAt ?? null,
-        }));
-      res.json(posts);
-    } catch {
-      res.status(500).json({ error: 'Failed to load posts' });
-    }
+  return new Request(url, {
+    method: req.method,
+    headers: req.headers as Record<string, string>,
+    body,
   });
+}
 
-  // 3. Single post API
-  server.get('/api/posts/:slug', async (req, res) => {
-    try {
-      const doc = await runTask(laika.documents.getDocument(`posts/${req.params['slug']}`));
-      res.json({ slug: req.params['slug'], ...doc.content });
-    } catch {
-      res.status(404).json({ error: 'Not found' });
-    }
+async function sendLaikaResponse(webRes: Response, res: ExpressRes): Promise<void> {
+  res.status(webRes.status);
+  webRes.headers.forEach((value, name) => {
+    if (name.toLowerCase() !== 'transfer-encoding') res.setHeader(name, value);
   });
+  res.send(Buffer.from(await webRes.arrayBuffer()));
+}
 
-  // 4. Decap CMS admin — served before Angular catches /** routes.
-  //    decapAdminHtml() returns a full <html> document with Decap loaded from CDN
-  //    and the laika backend registered. No esbuild step needed.
-  server.get('/admin', (_req, res) => {
-    res.setHeader('Content-Type', 'text/html; charset=utf-8');
-    res.send(ADMIN_HTML);
-  });
+const app = express();
+const commonEngine = new CommonEngine();
 
-  // 5. Static files from the Angular browser build.
-  server.get(
-    '**',
-    express.static(browserDistFolder, {
-      maxAge: '1y',
-      index: 'index.html',
-      redirect: false,
+// --- Laika / Decap routes (must come before Angular catch-all) ---
+
+// Proxy all Decap JSON:API requests to laika.
+// Do NOT add express.json() before this handler — it would drain the body stream
+// before laika.fetch reads it. The adapter above reads the raw body itself.
+app.all('/api/decap/*path', async (req, res, next) => {
+  try {
+    const webRes = await laika.fetch(await toLaikaRequest(req));
+    await sendLaikaResponse(webRes, res);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// --- JSON API for Angular's HttpClient ---
+
+interface PostSummary {
+  slug: string;
+  title?: string;
+  date?: string;
+  description?: string;
+  updatedAt?: string;
+}
+
+interface Post extends PostSummary {
+  body?: string;
+}
+
+app.get('/api/posts', async (_req, res, next) => {
+  try {
+    const { items: records } = await collectStream(
+      laika.documents.listRecordSummaries({
+        pagination: { page: 1, perPage: 100 },
+        folder: 'posts',
+        depth: 1,
+        type: 'published',
+      }),
+    );
+
+    const posts: PostSummary[] = records
+      .filter(r => r.type === 'published-summary')
+      .map(r => ({
+        slug: r.key.replace(/^posts\//, '').replace(/\.md$/, ''),
+        updatedAt: r.updatedAt,
+      }))
+      .sort((a, b) => {
+        if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
+        return b.slug.localeCompare(a.slug);
+      });
+
+    res.json(posts);
+  } catch (err) {
+    next(err);
+  }
+});
+
+app.get('/api/posts/:slug', async (req, res, next) => {
+  try {
+    const { slug } = req.params;
+    const doc = await runTask(laika.documents.getDocument(`posts/${slug}`));
+    const { title, date, description, body } = doc.content as {
+      title?: string;
+      date?: string;
+      description?: string;
+      body?: string;
+    };
+    const post: Post = { slug, title, date, description, body };
+    res.json(post);
+  } catch {
+    res.status(404).json({ error: 'Post not found' });
+  }
+});
+
+// Decap admin shell — served by Express before Angular takes over.
+// decapAdminHtml() returns a complete standalone HTML page with Decap from CDN
+// and the laika backend pre-wired. Angular must not hydrate this route, which
+// is why it's served as a plain Express response.
+app.get('/admin', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(
+    decapAdminHtml({
+      decapConfig: {
+        backend: { name: 'laika', api_url: '/api/decap' },
+        media_folder: 'public/uploads',
+        public_folder: '/uploads',
+        collections: blogCollections,
+      },
     }),
   );
+});
 
-  // 6. Angular SSR — all remaining GET requests.
-  server.get('**', (req, res, next) => {
-    const { protocol, originalUrl, baseUrl, headers } = req;
-    const serverOrigin = `${protocol}://${headers['host'] ?? 'localhost'}`;
+// --- Angular SSR ---
 
-    commonEngine
-      .render({
-        bootstrap,
-        documentFilePath: indexHtml,
-        url: `${protocol}://${headers['host']}${originalUrl}`,
-        publicPath: browserDistFolder,
-        providers: [
-          { provide: APP_BASE_HREF, useValue: baseUrl },
-          // absoluteUrlInterceptor reads SERVER_ORIGIN during SSR to convert
-          // relative /api/posts URLs to http://localhost:PORT/api/posts.
-          { provide: SERVER_ORIGIN, useValue: serverOrigin },
-        ],
-      })
-      .then(html => res.send(html))
-      .catch(err => next(err));
-  });
+// Serve browser bundles (JS, CSS, images) from the Angular build output.
+app.get(['*.*'], express.static(browserDistFolder, { maxAge: '1y' }));
 
-  return server;
-}
+// All other routes — render with Angular SSR.
+// We inject SERVER_URL so Angular's HttpClient can construct absolute URLs
+// for /api/posts and /api/posts/:slug during server-side rendering.
+app.get('**', (req, res, next) => {
+  const { protocol, originalUrl, baseUrl, headers } = req;
+  const serverUrl = `${protocol}://${headers.host}`;
 
-function run(): void {
-  const port = Number(process.env['PORT'] ?? 3000);
-  const server = app();
-  server.listen(port, () => {
-    console.log(`Angular blog running at http://localhost:${port}`);
-    console.log(`  Blog:  http://localhost:${port}/`);
-    console.log(`  Admin: http://localhost:${port}/admin`);
-  });
-}
+  commonEngine
+    .render({
+      bootstrap,
+      documentFilePath: indexHtml,
+      url: `${protocol}://${headers.host}${originalUrl}`,
+      publicPath: browserDistFolder,
+      providers: [
+        { provide: APP_BASE_HREF, useValue: baseUrl },
+        { provide: 'SERVER_URL', useValue: serverUrl },
+      ],
+    })
+    .then(html => res.send(html))
+    .catch(err => next(err));
+});
 
-run();
+const PORT = Number(process.env['PORT'] ?? 4000);
+createServer(app).listen(PORT, () => {
+  console.log(`Angular SSR + LaikaCMS running at http://localhost:${PORT}`);
+  console.log(`  Blog:  http://localhost:${PORT}/`);
+  console.log(`  Admin: http://localhost:${PORT}/admin`);
+});

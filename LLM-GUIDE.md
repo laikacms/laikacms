@@ -204,6 +204,17 @@ These are the things that consistently bite first-time integrators:
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** When adding a new
    starter under `apps/`, mirror this convention — see existing starters' `package.json`.
 
+8. **Angular SSR (and any framework using `HttpClient` / `global fetch` server-side): HTTP calls
+   need absolute URLs in Node.js.**
+   - The browser's `fetch('/api/posts')` works with relative URLs because the browser knows the
+     origin. Node.js's `fetch('/api/posts')` does not — it throws `TypeError: Failed to parse URL`.
+   - Pattern: inject a `SERVER_URL` string token during SSR (e.g.
+     `{ provide: 'SERVER_URL', useValue: 'http://localhost:4000' }`) and prepend it in your
+     data-fetching service. On the browser, the token is absent and falls back to `''`.
+   - `withHttpTransferCache()` (Angular) / `useServerFetch()` (Nuxt) / `$fetch` with `baseURL`
+     (Nuxt) deduplicates the server and browser fetch so no double request occurs on hydration.
+   - See `starter-angular-blog` for the complete pattern.
+
 ---
 
 ## 5. Decision tree
@@ -216,6 +227,7 @@ These are the things that consistently bite first-time integrators:
 │  React?           → starter-next-blog (App Router SSR)            │
 │  Vue?             → starter-nuxt-blog                             │
 │  Svelte?          → starter-sveltekit-blog                        │
+│  Angular?         → starter-angular-blog                          │
 │  Solid?           → starter-solid-start                           │
 │  Qwik?            → starter-qwik-blog                             │
 │  Astro?           → starter-astro-blog                            │
