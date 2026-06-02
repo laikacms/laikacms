@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-platformatic-blog",
+  "description": "Starter: Platformatic Service (Fastify-based, config-driven) + LaikaCMS. Shows how to wire LaikaCMS into a Platformatic plugin with the same raw-stream Fastify bridge.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "build": "tsc",
+    "plt:start": "npx platformatic service start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@platformatic/service": "^2.75.2",
+    "fastify": "^5.1.0",
+    "fastify-plugin": "^4.5.1",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}
