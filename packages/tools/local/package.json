@@ -65,11 +65,11 @@
     "typescript": "catalog:tools"
   },
   "peerDependencies": {
-    "@laikacms/github": "1.0.1",
-    "@laikacms/surrealdb": "1.0.1",
-    "@laikacms/trello": "1.0.1",
-    "@laikacms/upstash": "1.0.1",
-    "@laikacms/vercel": "1.0.1"
+    "@laikacms/github": "1.0.0",
+    "@laikacms/surrealdb": "1.0.0",
+    "@laikacms/trello": "1.0.0",
+    "@laikacms/upstash": "1.0.0",
+    "@laikacms/vercel": "1.0.0"
   },
   "peerDependenciesMeta": {
     "@laikacms/github": {
