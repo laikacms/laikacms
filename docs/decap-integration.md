@@ -305,6 +305,7 @@ framework gives you at the route handler boundary and whether you need a bridge.
 | **Hono**                          | Hono `HonoRequest` wrapper                       | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
 | **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                      |
 | **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                            |
+| **Deno Fresh (v1)**               | Web API `Request`                                | None — Fresh passes the raw WHATWG `Request` to each handler: `laika.fetch(req)`        |
 | **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
 | **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
 | **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller   |
@@ -612,3 +613,54 @@ SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js
   </body>
 </html>
 ```
+
+### Deno Fresh (v1) — admin route must return a raw `Response` to bypass `_app.tsx`
+
+Fresh v1's `_app.tsx` is applied only when a handler calls `ctx.render()` (or when a route exports
+a default component with no handler). If your admin route returns a `new Response(html, ...)` directly
+from its handler, `_app.tsx` is never invoked and Decap CMS gets a clean full-viewport document:
+
+```ts
+// routes/admin.tsx
+import type { Handlers } from '$fresh/server.ts';
+import { decapAdminHtml } from '@laikacms/decap-integrations/embedded';
+import { blogCollections } from '../lib/decap-config.ts';
+
+export const handler: Handlers = {
+  GET() {
+    return new Response(
+      decapAdminHtml({
+        decapConfig: {
+          backend: { name: 'laika', api_url: '/api/decap' },
+          media_folder: 'public/uploads',
+          public_folder: '/uploads',
+          collections: blogCollections,
+        },
+      }),
+      { headers: { 'Content-Type': 'text/html; charset=utf-8' } },
+    );
+  },
+};
+// No default export — this is an API route, not a page route.
+```
+
+**Static files in Fresh are served from `static/`, not `public/`.** If you bundle the admin client
+with esbuild, write the output to `static/admin/bundle.js` — Fresh serves it at `/admin/bundle.js`.
+
+### General — admin page must not be wrapped by the framework root layout
+
+Decap CMS mounts into `document.body` and takes over the full viewport. If your framework's root
+layout adds a `<nav>`, padding, or a `<div id="app">` wrapper, Decap's UI renders inside that chrome
+and looks broken.
+
+How to provide a clean document, per framework:
+
+| Framework          | Approach                                                                                  |
+| ------------------ | ----------------------------------------------------------------------------------------- |
+| **Next.js**        | Add `app/admin/layout.tsx` that renders a bare `<html><body>` without the root layout    |
+| **Remix**          | Use a splat route without a parent layout, or export a `links`-free component            |
+| **SvelteKit**      | The admin page's `+layout.svelte` can be empty; skip the root layout by not inheriting it |
+| **Nuxt**           | Set `layout: false` in `definePageMeta()` on the admin page                              |
+| **Astro**          | Export `export const prerender = true` and render a full `<!doctype html>` directly       |
+| **Deno Fresh**     | Return `new Response(html, ...)` from the handler — bypasses `_app.tsx` entirely          |
+| **All others**     | Serve a plain HTML file from your static directory or return a raw `Response` string      |
