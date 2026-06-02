@@ -296,21 +296,22 @@ footgun — do it once and forget it.
 `laika.fetch` (and `api.fetch`) expects a **Web API `Request`**. The table below shows what each
 framework gives you at the route handler boundary and whether you need a bridge.
 
-| Framework                         | What you receive                                 | Bridge needed?                                                                          |
-| --------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| **Astro**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
-| **SvelteKit**                     | Web API `Request`                                | None — pass directly: `laika.fetch(event.request)`                                      |
-| **Remix**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
-| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`)        | None — pass directly: `laika.fetch(request)`                                            |
-| **Hono**                          | Hono `HonoRequest` wrapper                       | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
-| **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                      |
-| **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                            |
-| **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
-| **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
-| **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller   |
-| **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                       |
-| **Fastify**                       | Fastify `FastifyRequest`                         | `request.raw` → same Express bridge inside a Fastify route handler                      |
-| **AWS Lambda (via http bridge)**  | Lambda event object                              | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
+| Framework                         | What you receive                                 | Bridge needed?                                                                                                                            |
+| --------------------------------- | ------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| **Astro**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                                                                              |
+| **SvelteKit**                     | Web API `Request`                                | None — pass directly: `laika.fetch(event.request)`                                                                                        |
+| **Remix**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                                                                              |
+| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`)        | None — pass directly: `laika.fetch(request)`                                                                                              |
+| **Hono**                          | Hono `HonoRequest` wrapper                       | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                                                                          |
+| **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                                                                        |
+| **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                                                                              |
+| **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                                                                       |
+| **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below                                                     |
+| **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller                                                     |
+| **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                                                                         |
+| **Fastify**                       | Fastify `FastifyRequest`                         | `request.raw` → same Express bridge inside a Fastify route handler                                                                        |
+| **tsoa (Express preset)**         | Node.js `IncomingMessage` (via Express)          | Mount `express.raw()` + Decap proxy **before** `RegisterRoutes(app)` — see [tsoa section](#tsoa--mount-decap-proxy-before-registerroutes) |
+| **AWS Lambda (via http bridge)**  | Lambda event object                              | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch`                                                   |
 
 ### Express / plain `http.Server` — manual bridge
 
@@ -611,4 +612,75 @@ SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js
     <div style="display: contents">%sveltekit.body%</div>
   </body>
 </html>
+```
+
+### tsoa — mount Decap proxy before `RegisterRoutes`
+
+tsoa generates an Express router (`RegisterRoutes`) from TypeScript controller decorators at build
+time (`tsoa routes`). The generated code installs `express.json()` internally for JSON routes. Mount
+the Decap proxy route **before** calling `RegisterRoutes(app)` so `express.raw()` can capture the
+pristine body stream before any body parser runs.
+
+```ts
+// src/index.ts
+import express from 'express';
+import { RegisterRoutes } from './generated/routes.js';
+import { ADMIN_HTML, laika } from './laika.js';
+
+const app = express();
+
+// 1. Decap proxy — BEFORE RegisterRoutes
+app.use('/api/decap', express.raw({ type: '*/*', limit: '50mb' }), async (req, res) => {
+  const url = `http://localhost:3000${req.originalUrl}`;
+  const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
+  const rawBuf = hasBody && Buffer.isBuffer(req.body) && req.body.length > 0
+    ? (req.body as Buffer)
+    : undefined;
+  const body: ArrayBuffer | null = rawBuf
+    ? rawBuf.buffer.slice(rawBuf.byteOffset, rawBuf.byteOffset + rawBuf.byteLength) as ArrayBuffer
+    : null;
+  const webReq = new Request(url, {
+    method: req.method,
+    headers: req.headers as Record<string, string>,
+    body,
+  });
+  const webRes = await laika.fetch(webReq);
+  res.status(webRes.status);
+  webRes.headers.forEach((v, k) => {
+    if (k !== 'transfer-encoding') res.setHeader(k, v);
+  });
+  res.send(Buffer.from(await webRes.arrayBuffer()));
+});
+
+app.get('/admin', (_req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(ADMIN_HTML);
+});
+
+// 2. tsoa generated router (installs express.json() for JSON routes)
+RegisterRoutes(app);
+```
+
+**`@Produces('text/html')` for HTML responses**: tsoa serialises return values to JSON by default.
+Decorate HTML-returning methods with `@Produces('text/html')` to skip serialisation:
+
+```ts
+@Route()
+export class BlogController {
+  @Get('/')
+  @Produces('text/html')
+  async index(): Promise<string> {
+    return '<!DOCTYPE html>…';
+  }
+}
+```
+
+**Add `@tsoa/runtime` as a direct dep**: tsoa's generated code imports from `@tsoa/runtime`, which
+is a transitive dep of `tsoa`. pnpm's strict isolation prevents resolving transitive deps, so add
+`@tsoa/runtime` explicitly to `package.json`.
+
+**`tsoa.json` must set `"esm": true`** in the `routes` section for ESM projects:
+
+```json
+{ "routes": { "routesDir": "src/generated", "middleware": "express", "esm": true } }
 ```

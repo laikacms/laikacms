@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-tsoa-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with tsoa + Express + LaikaCMS. tsoa generates an OpenAPI spec and Express router from TypeScript controller decorators at build time.",
+  "type": "module",
+  "scripts": {
+    "routes": "tsoa routes",
+    "dev": "pnpm routes && tsx watch src/index.ts",
+    "start": "pnpm routes && tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "express": "^4.21.0",
+    "laikacms": "workspace:*",
+    "tsoa": "^6.6.0",
+    "@tsoa/runtime": "^6.6.0"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.22",
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}
