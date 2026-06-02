@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-clickhouse-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog backed by ClickHouse. Content stored in a ReplacingMergeTree table; NDJSON wire format; X-ClickHouse-User/Key auth; Decap admin from CDN.",
   "type": "module",

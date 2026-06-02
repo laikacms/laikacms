@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-dropbox-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog backed by Dropbox. Each post is a Markdown file in your Dropbox; full CRUD via Dropbox API v2; Decap admin from CDN.",
   "type": "module",

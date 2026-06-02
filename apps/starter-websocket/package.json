@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-websocket",
   "description": "Starter: WebSocket-driven real-time content updates with Hono + @hono/node-ws. Bidirectional complement to the SSE starter.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

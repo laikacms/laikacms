@@ -2,7 +2,6 @@
   "name": "@laikacloud/portabletext-core",
   "description": "Editor-agnostic core: Portable Text types, Mapper interface + registry, RichtextValue, key helpers.",
   "version": "0.1.0",
-  "private": true,
   "license": "MIT",
   "type": "module",
   "main": "./dist/index.js",
@@ -24,7 +23,10 @@
       "default": "./dist/*.js"
     }
   },
-  "files": ["dist", "src"],
+  "files": [
+    "dist",
+    "src"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json -w",

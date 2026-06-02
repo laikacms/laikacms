@@ -8,7 +8,6 @@ import {
 
 import { Editor } from '../editor/Editor';
 import { EditorGlobalStyles } from '../editor/themes/global-styles';
-import './register-formats';
 
 interface DecapField {
   format?: string;

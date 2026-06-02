@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-stripe-paywall",
   "description": "Starter: Stripe Checkout + paywall. Free preview snippet; subscribers see full body. Signed session cookie + Stripe webhook for promotion.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

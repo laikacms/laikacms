@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-azure-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog deployed as Azure Functions v4 + LaikaCMS. Demonstrates the v4 programming model (app.http registration), WHATWG Request bridging from HttpRequest, and static file serving via Azure Static Web Apps.",
   "type": "module",

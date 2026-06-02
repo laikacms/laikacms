@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/laika-gateway",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "Hosted multi-tenant gateway for the laika Decap CMS backend. One GitHub App, many repos — users install the App on their own repo and point Decap CMS at this gateway instead of standing up their own Worker.",
   "type": "module",

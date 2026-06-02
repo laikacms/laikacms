@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-elysia-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Elysia + Bun + LaikaCMS. Elysia's context.request is a Web API Request, so laika.fetch works with zero adaptation.",
   "scripts": {

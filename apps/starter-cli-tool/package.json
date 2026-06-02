@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-cli-tool",
   "description": "Starter: a Node.js CLI that reads/writes LaikaCMS content from the shell. Useful for CI scripts, content migrations, build-time generation.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "bin": {

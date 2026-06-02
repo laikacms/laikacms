@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-mcp-server",
   "description": "Starter: Model Context Protocol (MCP) server exposing LaikaCMS as tools for AI agents. Plug into Claude Desktop, ChatGPT, Cursor, or any MCP client.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "bin": {

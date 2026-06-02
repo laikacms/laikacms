@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-astro-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Astro + LaikaCMS. Demonstrates createEmbeddedLaika, documents via laikacms/compat, and Decap admin from CDN.",
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/supabase",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "Supabase (PostgREST)-backed StorageRepository for Laika CMS. Postgres-over-HTTP via PostgREST's operator-suffix filter DSL. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

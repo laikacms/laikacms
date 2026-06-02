@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-honox-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with HonoX (Hono meta-framework with file-based routing) + LaikaCMS. laika.fetch plugs directly into Hono route handlers via c.req.raw — no bridge needed.",
   "type": "module",

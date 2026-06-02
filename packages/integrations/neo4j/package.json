@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/neo4j",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "Neo4j-backed StorageRepository for Laika CMS. Native graph database with Cypher pattern-matching, relationship-based folder hierarchy, and atomic transactional batches via POST /tx/commit. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

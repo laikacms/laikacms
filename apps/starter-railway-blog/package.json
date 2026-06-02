@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-railway-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Blog deployable to Railway.app — uses decapAdminHtml() to eliminate the admin esbuild step entirely, and auto-detects Railway volume mount via CONTENT_DIR env var.",
   "type": "module",

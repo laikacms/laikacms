@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-solid-start",
   "description": "Starter: SolidStart SSR blog with embedded LaikaCMS. Completes the Solid trio (Solid SPA, this, and Qwik-adjacent resumability).",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

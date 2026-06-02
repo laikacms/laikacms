@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-analog-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Analog (Angular meta-framework) + LaikaCMS. Demonstrates createEmbeddedLaika, route load functions for SSR data, Nitro API routes, and afterNextRender for client-only Decap bootstrap.",
   "type": "module",

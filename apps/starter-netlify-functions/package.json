@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-netlify-functions",
   "description": "Starter: LaikaCMS on Netlify Functions (Node runtime). Hono routing + createEmbeddedLaika. Documents Netlify Blobs for production storage.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-graphql-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog exposing LaikaCMS content over a GraphQL API (GraphQL Yoga) served by Hono. Demonstrates: GraphQL resolvers over laika.documents.*, typed casting of doc.content (Record<string,unknown>), and Web-API-native integration with no IncomingMessage bridge.",
   "type": "module",

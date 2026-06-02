@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-pocketbase-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog backed by PocketBase — self-hosted SQLite with a REST API. Content stored in a laika_storage collection; full CRUD via PocketBase API; Decap admin from CDN.",
   "type": "module",

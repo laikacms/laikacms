@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/gist",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "GitHub Gist-backed StorageRepository for Laika CMS. Every write goes through one PATCH endpoint with the full file map. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

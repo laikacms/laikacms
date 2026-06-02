@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-drizzle-sqlite",
   "description": "Starter: LaikaCMS with DrizzleStorageRepository over libsql/SQLite. First starter to exercise the SQL storage path.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

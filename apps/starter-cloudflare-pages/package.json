@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-cloudflare-pages",
   "description": "Starter: Cloudflare Pages (static assets) + Pages Functions (/api/*) + R2 binding. Hostable for free, edge-distributed.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

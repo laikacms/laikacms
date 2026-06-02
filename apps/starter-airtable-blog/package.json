@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-airtable-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog backed by Airtable + LaikaCMS. Content lives in an Airtable base; Decap CMS reads/writes it via AirtableStorageRepository.",
   "type": "module",

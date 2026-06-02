@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-electron-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Desktop blog editor built with Electron + LaikaCMS. The HTTP server runs in the Electron main process, content is stored in the OS user-data directory, and the BrowserWindow points at http://127.0.0.1:<port>/.",
   "type": "module",

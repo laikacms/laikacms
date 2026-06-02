@@ -3,8 +3,6 @@ import type { ReactNode } from 'react';
 
 import { createRichtextValue, type PortableTextDocument, RichtextValue } from 'decap-cms-lexical-core';
 
-import './register-formats';
-
 interface LexicalPreviewProps {
   /** Stored field value — either a live `RichtextValue` proxy or a raw string. */
   value?: string | RichtextValue | PortableTextDocument;

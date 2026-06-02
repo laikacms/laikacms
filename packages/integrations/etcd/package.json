@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/etcd",
-  "version": "1.0.1",
+  "version": "1.0.0",
   "private": true,
   "description": "etcd-backed StorageRepository for Laika CMS. MVCC KV store with hierarchical-prefix scans, base64-encoded wire format, and Txn-based atomic multi-key writes. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

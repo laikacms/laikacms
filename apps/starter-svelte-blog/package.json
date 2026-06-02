@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-svelte-blog",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Svelte 5 (standalone SSR, no SvelteKit) + LaikaCMS. Shows what SvelteKit abstracts away: Vite ssrLoadModule, express routing, and the Decap API proxy.",
   "type": "module",

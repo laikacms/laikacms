@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-workers-r2",
   "description": "Starter: Cloudflare Worker + R2 bucket exposing LaikaCMS over JSON:API + a Decap admin shell.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {

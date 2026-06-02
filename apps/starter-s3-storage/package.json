@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-s3-storage",
   "description": "Starter: LaikaCMS over any S3-compatible object store (AWS S3 / MinIO / Backblaze B2 / Cloudflare R2 via S3 endpoint). Hono + @aws-sdk/client-s3.",
-  "version": "1.0.1",
+  "version": "0.0.1",
   "private": true,
   "type": "module",
   "scripts": {
