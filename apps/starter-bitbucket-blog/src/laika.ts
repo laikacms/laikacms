@@ -1,6 +1,9 @@
 import { BitbucketStorageRepository } from '@laikacms/bitbucket/storage-bb';
 import { createCustomLaika, decapAdminHtml, minimalBlogConfig } from '@laikacms/decap-integrations/custom';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
+import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
 function requireEnv(name: string): string {
   const value = process.env[name];
@@ -53,7 +56,13 @@ const storage = new BitbucketStorageRepository({
   repo: requireEnv('BITBUCKET_REPO'),
   branch: process.env['BITBUCKET_BRANCH'] ?? 'main',
   auth,
-  serializerRegistry: { md: markdownSerializer },
+  serializerRegistry: {
+    md: markdownSerializer,
+    yaml: yamlSerializer,
+    yml: yamlSerializer,
+    json: jsonSerializer,
+    raw: rawSerializer,
+  },
   defaultFileExtension: 'md',
   commitAuthor: {
     name: process.env['BITBUCKET_AUTHOR_NAME'] ?? 'Laika Bot',
