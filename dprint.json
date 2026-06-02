@@ -52,7 +52,8 @@
     "**/.vinxi",
     "**/_site",
     "**/public/admin",
-    "**/static/admin"
+    "**/static/admin",
+    "**/.astro"
   ],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.93.3.wasm",
