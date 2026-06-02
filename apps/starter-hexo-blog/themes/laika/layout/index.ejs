@@ -1,0 +1,20 @@
+<% page.posts.each(post => { %>
+<article>
+  <h2><a href="<%= post.path %>"><%= post.title %></a></h2>
+  <p class="meta">
+    <%= date(post.date, config.date_format) %>
+    <% if (post.tags && post.tags.length) { %>
+      &nbsp;·&nbsp;
+      <% post.tags.each(tag => { %><a href="<%= tag.path %>">#<%= tag.name %></a> <% }) %>
+    <% } %>
+  </p>
+  <%- post.excerpt || post.content.substring(0, 300) + '…' %>
+</article>
+<% }) %>
+
+<% if (page.total > 1) { %>
+<nav style="display:flex;gap:1rem;margin-top:2rem">
+  <% if (page.prev) { %><a href="<%- page.prev_link %>">← Newer</a><% } %>
+  <% if (page.next) { %><a href="<%- page.next_link %>">Older →</a><% } %>
+</nav>
+<% } %>
