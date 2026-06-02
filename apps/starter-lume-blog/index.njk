@@ -1,0 +1,26 @@
+---
+layout: base.njk
+title: My Blog
+---
+<h1>My Blog</h1>
+
+<p>Edit posts at <a href="http://localhost:3001/admin">the admin server</a> (Decap CMS).
+Content is stored on disk under <code>content/posts/</code>; Lume regenerates this
+site whenever a file changes.</p>
+
+{% set posts = search.pages("url^=/content/posts/", "date=desc") %}
+
+{% if posts.length == 0 %}
+  <p><em>No posts yet — add one in the admin UI.</em></p>
+{% else %}
+  <ul style="list-style:none;padding:0">
+  {% for post in posts %}
+    <li style="margin-bottom:1rem">
+      <a href="{{ post.url }}">{{ post.title or post.src.slug }}</a>
+      {% if post.date %}
+        <small style="margin-left:0.5rem;color:#666">{{ post.date | date("MMMM d, yyyy") }}</small>
+      {% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+{% endif %}

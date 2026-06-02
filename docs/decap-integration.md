@@ -55,8 +55,10 @@ That's the entire server. `createEmbeddedLaika` constructs the filesystem-backed
 ContentBase document + asset repos, and the `decapApi(...)` router. The first run seeds
 `content/config.yml` from your `decapConfig` so the editor and the server agree on the schema.
 
-> **Node.js only.** `createEmbeddedLaika` hardcodes `FileSystemStorageRepository`, which requires
-> `node:fs`. It is incompatible with edge runtimes (Cloudflare Workers, Deno Deploy, etc.). For edge
+> **Not for edge runtimes.** `createEmbeddedLaika` uses `FileSystemStorageRepository`, which
+> requires `node:fs` and a writable local filesystem. It runs on **Node.js** and **Deno 2**
+> (Deno 2 supports `node:` built-ins — see `starter-fresh-blog` and `starter-lume-blog`), but is
+> incompatible with edge runtimes (Cloudflare Workers, Deno Deploy, Vercel Edge, etc.). For edge
 > deployments, wire the pieces manually using `decapApi` — see
 > [Standalone Worker](#standalone-worker-byo-storage) below.
 
