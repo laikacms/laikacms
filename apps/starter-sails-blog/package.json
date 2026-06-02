@@ -1,0 +1,18 @@
+{
+  "name": "@laikacms/starter-sails-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "LaikaCMS + Sails.js blog starter",
+  "scripts": {
+    "dev": "node app.js",
+    "start": "NODE_ENV=production node app.js"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*",
+    "sails": "^1.5.12"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

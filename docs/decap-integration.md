@@ -296,21 +296,22 @@ footgun — do it once and forget it.
 `laika.fetch` (and `api.fetch`) expects a **Web API `Request`**. The table below shows what each
 framework gives you at the route handler boundary and whether you need a bridge.
 
-| Framework                         | What you receive                                 | Bridge needed?                                                                          |
-| --------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| **Astro**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
-| **SvelteKit**                     | Web API `Request`                                | None — pass directly: `laika.fetch(event.request)`                                      |
-| **Remix**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
-| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`)        | None — pass directly: `laika.fetch(request)`                                            |
-| **Hono**                          | Hono `HonoRequest` wrapper                       | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
-| **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                      |
-| **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                            |
-| **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
-| **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
-| **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller   |
-| **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                       |
-| **Fastify**                       | Fastify `FastifyRequest`                         | `request.raw` → same Express bridge inside a Fastify route handler                      |
-| **AWS Lambda (via http bridge)**  | Lambda event object                              | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
+| Framework                         | What you receive                                 | Bridge needed?                                                                                                                                                               |
+| --------------------------------- | ------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Astro**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                                                                                                                 |
+| **SvelteKit**                     | Web API `Request`                                | None — pass directly: `laika.fetch(event.request)`                                                                                                                           |
+| **Remix**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                                                                                                                 |
+| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`)        | None — pass directly: `laika.fetch(request)`                                                                                                                                 |
+| **Hono**                          | Hono `HonoRequest` wrapper                       | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                                                                                                             |
+| **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                                                                                                           |
+| **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                                                                                                                 |
+| **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                                                                                                          |
+| **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below                                                                                        |
+| **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller                                                                                        |
+| **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                                                                                                            |
+| **Fastify**                       | Fastify `FastifyRequest`                         | `request.raw` → same Express bridge inside a Fastify route handler                                                                                                           |
+| **AWS Lambda (via http bridge)**  | Lambda event object                              | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch`                                                                                      |
+| **Sails.js v1**                   | Express `IncomingMessage` (via Sails http hook)  | Pre-buffer with `express.raw()` in `config/http.js`; controller gets `Buffer` in `req.body`; see [Sails.js bridge](#sailsjs--cjs--esm-interop-and-raw-body-via-confighttpjs) |
 
 ### Express / plain `http.Server` — manual bridge
 
@@ -591,6 +592,113 @@ Wire the catch-all route in `start/routes.ts`:
 import router from '@adonisjs/core/services/router';
 const DecapController = () => import('#controllers/decap_controller');
 router.any('/api/decap/*', [DecapController, 'proxy']);
+```
+
+### Sails.js — CJS + ESM interop and raw body via `config/http.js`
+
+Sails.js v1 is **CommonJS-only** — its config files (`config/`, `api/controllers/`) must use
+`require()` / `module.exports`. Because LaikaCMS packages are ESM-only, the only way to consume them
+is via **dynamic `import()`**, which is valid inside a CJS file in Node.js ≥ 20.
+
+**Lazy-initialise once, cache forever:**
+
+```js
+// api/controllers/BlogController.js
+'use strict';
+const path = require('path');
+
+let laika = null;
+let adminHtml = null;
+let initPromise = null;
+
+async function init() {
+  if (initPromise) return initPromise;
+  initPromise = (async () => {
+    const { createEmbeddedLaika, decapAdminHtml, minimalBlogConfig } = await import(
+      '@laikacms/decap-integrations/embedded'
+    );
+    laika = createEmbeddedLaika({
+      contentDir: path.resolve(process.cwd(), 'content'),
+      basePath: '/api/decap',
+      auth: { mode: 'dev' },
+      decapConfig: minimalBlogConfig(),
+    });
+    adminHtml = decapAdminHtml();
+  })();
+  return initPromise;
+}
+
+// Kick off eagerly so the first request isn't cold.
+init().catch(err => console.error('LaikaCMS init error:', err));
+```
+
+**Raw body pre-buffering via `config/http.js`:**
+
+Sails delegates HTTP middleware to an Express sub-stack. Insert a targeted `express.raw()` parser
+for `/api/decap/*` routes **before** the `router` entry in the middleware order. This populates
+`req.body` as a `Buffer` by the time the controller action runs — Sails' own body parsing never sees
+the stream.
+
+```js
+// config/http.js
+'use strict';
+const express = require('express');
+const rawParser = express.raw({ type: '*/*', limit: '50mb' });
+
+module.exports.http = {
+  middleware: {
+    rawDecapBody: function(req, res, next) {
+      if (req.path && req.path.startsWith('/api/decap')) {
+        return rawParser(req, res, next);
+      }
+      return next();
+    },
+    order: ['rawDecapBody', 'cookieParser', 'compress', 'poweredBy', 'router', 'www', 'favicon'],
+  },
+};
+```
+
+**Controller proxy action:**
+
+```js
+async decapProxy(req, res) {
+  await init();
+  const url = new URL(req.url, `http://${req.headers.host}`);
+  const rawBuf = Buffer.isBuffer(req.body) && req.body.byteLength > 0 ? req.body : null;
+  const body = rawBuf
+    ? rawBuf.buffer.slice(rawBuf.byteOffset, rawBuf.byteOffset + rawBuf.byteLength)
+    : null;
+  const webReq = new Request(url.toString(), {
+    method: req.method,
+    headers: req.headers,
+    body,
+    ...(body ? { duplex: 'half' } : {}),
+  });
+  const webRes = await laika.fetch(webReq);
+  res.status(webRes.status);
+  webRes.headers.forEach((value, name) => {
+    if (name.toLowerCase() !== 'transfer-encoding') res.set(name, value);
+  });
+  return res.send(Buffer.from(await webRes.arrayBuffer()));
+},
+```
+
+Wire the routes in `config/routes.js`:
+
+```js
+module.exports.routes = {
+  'ALL /api/decap': { controller: 'BlogController', action: 'decapProxy' },
+  'ALL /api/decap/*': { controller: 'BlogController', action: 'decapProxy' },
+  'GET /admin': { controller: 'BlogController', action: 'admin' },
+  'GET /blog/:slug': { controller: 'BlogController', action: 'post' },
+  'GET /': { controller: 'BlogController', action: 'index' },
+};
+```
+
+Disable unused Sails hooks to reduce startup time (create `.sailsrc` at the project root):
+
+```json
+{ "hooks": { "grunt": false, "sockets": false, "session": false, "views": false } }
 ```
 
 ### SvelteKit — `src/app.html` is required

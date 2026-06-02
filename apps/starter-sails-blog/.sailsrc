@@ -1,0 +1,8 @@
+{
+  "hooks": {
+    "grunt": false,
+    "sockets": false,
+    "session": false,
+    "views": false
+  }
+}
