@@ -1,0 +1,31 @@
+{
+  "name": "@laikacms/starter-astro-d1",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Astro + Cloudflare Pages + D1 + LaikaCMS. Demonstrates DrizzleStorageRepository with a native D1 binding, per-request laika factory, and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev --compatibility-date=2026-01-01 -- astro dev",
+    "build": "astro build",
+    "deploy": "astro build && wrangler pages deploy dist",
+    "typecheck": "astro check",
+    "db:migrate:local": "wrangler d1 execute laikacms-astro-d1 --local --file migrations/0001_create_atoms.sql",
+    "db:migrate:remote": "wrangler d1 execute laikacms-astro-d1 --remote --file migrations/0001_create_atoms.sql"
+  },
+  "dependencies": {
+    "@astrojs/cloudflare": "^12.6.13",
+    "@laikacms/decap-integrations": "workspace:*",
+    "astro": "^5.0.0",
+    "drizzle-orm": "^0.44.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@cloudflare/workers-types": "^4.20260512.0",
+    "typescript": "catalog:tools",
+    "wrangler": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

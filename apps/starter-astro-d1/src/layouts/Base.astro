@@ -1,0 +1,56 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    {description && <meta name="description" content={description} />}
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 720px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+        line-height: 1.6;
+        color: #1a1a1a;
+      }
+      nav a {
+        margin-right: 1rem;
+        color: inherit;
+      }
+      h1,
+      h2,
+      h3 {
+        line-height: 1.2;
+      }
+      time {
+        color: #666;
+        font-size: 0.9em;
+      }
+      a {
+        color: #0070f3;
+      }
+    </style>
+  </head>
+  <body>
+    <nav>
+      <a href="/">Blog</a>
+      <a href="/admin/">Admin</a>
+    </nav>
+    <slot />
+  </body>
+</html>
