@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/sanity",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Sanity-backed StorageRepository for Laika CMS. GROQ for queries, atomic transactional `/mutate` for writes. Runtime-agnostic — only depends on `fetch` and Web Crypto.",
   "keywords": [

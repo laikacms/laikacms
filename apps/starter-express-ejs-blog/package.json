@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-express-ejs-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog using Express + EJS templates + LaikaCMS. Traditional server-side template rendering — no components, no JSX, just HTML templates with embedded JS expressions.",
   "type": "module",

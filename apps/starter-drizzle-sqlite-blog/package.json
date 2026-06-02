@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-drizzle-sqlite-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog: Hono + DrizzleStorageRepository over libsql/SQLite + LaikaCMS. Shows createCustomLaika (BYO storage) and decapAdminHtml (no esbuild admin bundle needed).",
   "type": "module",

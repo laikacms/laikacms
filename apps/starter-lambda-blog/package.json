@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-lambda-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog built with AWS Lambda (Node.js) + LaikaCMS. Demonstrates createEmbeddedLaika with a Lambda handler adapter (ALB / API Gateway HTTP API v2).",
   "type": "module",

@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-libsql-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog backed by libSQL / Turso. Content stored in a distributed SQLite table via the hrana HTTP pipeline protocol; full CRUD; Decap admin from CDN.",
   "type": "module",

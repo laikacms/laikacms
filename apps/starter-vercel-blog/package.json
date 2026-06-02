@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-vercel-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog built with Vercel Edge Functions + Vercel Blob + LaikaCMS. Uses @laikacms/vercel/storage-blob with decapApi — no createEmbeddedLaika since Edge Functions run on V8, not Node.js.",
   "type": "module",

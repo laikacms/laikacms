@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-vitepress-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog built with VitePress + LaikaCMS. VitePress renders markdown files that LaikaCMS manages via the Decap CMS. A Vite plugin wires the Decap JSON:API into the VitePress dev server — no separate backend process needed during development.",
   "type": "module",

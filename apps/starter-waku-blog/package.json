@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-waku-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog built with Waku (minimal React RSC framework) + LaikaCMS. laika.documents.* in React Server Components; laika.fetch in Waku API routes (no IncomingMessage bridge — Waku passes Web API Request natively).",
   "type": "module",

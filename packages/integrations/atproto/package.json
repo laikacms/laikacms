@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/atproto",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "AT Protocol-backed StorageRepository for Laika CMS. Content-addressable records with DID-identified repos, lexicon-typed collections, and atomic applyWrites batches. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

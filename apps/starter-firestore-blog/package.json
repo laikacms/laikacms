@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-firestore-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog backed by Google Cloud Firestore. Content stored in a Firestore collection tree; full CRUD via Firestore REST API; Application Default Credentials for auth; Decap admin from CDN.",
   "type": "module",

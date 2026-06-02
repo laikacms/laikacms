@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/cloudflare",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Cloudflare service implementations for Laika CMS (D1, Images, etc.). Each subpath is independent. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

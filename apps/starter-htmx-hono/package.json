@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-htmx-hono",
   "description": "Starter: server-rendered HTML via hono/jsx + HTMX for hypermedia interactivity. Zero client framework, zero virtual DOM, full LaikaCMS.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

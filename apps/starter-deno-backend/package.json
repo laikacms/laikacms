@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-deno-backend",
   "description": "Starter: Deno 2 backend exposing LaikaCMS over JSON:API + a Decap admin shell. Workspace deps are bridged via Deno's nodeModulesDir mode.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-arangodb-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog backed by ArangoDB. Content stored in two ArangoDB document collections via AQL; full CRUD; Basic auth or Bearer JWT; Decap admin from CDN.",
   "type": "module",

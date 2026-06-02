@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-react-native-expo",
   "description": "Starter: React Native + Expo Router mobile app that consumes a deployed LaikaCMS backend over HTTP.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "scripts": {
     "start": "expo start",

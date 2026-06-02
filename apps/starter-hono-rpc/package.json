@@ -1,7 +1,7 @@
 {
   "name": "@laikacms/starter-hono-rpc",
   "description": "Starter: typed Hono routes + Hono's built-in hc() client. Third typed-API surface alongside tRPC and GraphQL, with no codegen or extra dependency tree.",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "type": "module",
   "scripts": {

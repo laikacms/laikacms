@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/clickhouse",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "ClickHouse-backed StorageRepository for Laika CMS. Columnar OLAP database with streaming NDJSON wire format, URL-as-query SQL, and ReplacingMergeTree upsert semantics. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

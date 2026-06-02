@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/meilisearch",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "MeiliSearch-backed StorageRepository for Laika CMS. Async-by-default mutations via the Tasks API, bulk delete via document-ID arrays, SQL-like filter DSL. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

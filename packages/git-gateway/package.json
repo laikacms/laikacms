@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/git-gateway",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Drop-in Netlify git-gateway-compatible HTTP handler. Proxies a fixed GitHub repo through a GitHub App installation token, behind a pluggable Bearer-token verifier. Runtime-agnostic (Hono).",
   "keywords": [
     "git-gateway",

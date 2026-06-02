@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/trello",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Trello-backed StorageRepository for Laika CMS. Board/list/card hierarchy with floating-point `pos` ordering, query-string auth, and soft-delete via `closed`. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

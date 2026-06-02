@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-mongodb-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog backed by MongoDB (Atlas or self-hosted). Content stored in a single collection; full CRUD via the official mongodb driver; Decap admin from CDN.",
   "type": "module",

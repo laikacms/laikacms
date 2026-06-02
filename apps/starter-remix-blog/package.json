@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-remix-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog built with Remix + LaikaCMS. Demonstrates createEmbeddedLaika, documents via loader functions, and Decap admin from CDN.",
   "type": "module",

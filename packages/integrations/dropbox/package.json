@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/dropbox",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Dropbox-backed StorageRepository for Laika CMS via the Dropbox HTTP API v2. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

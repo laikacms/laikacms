@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-surrealdb-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog backed by SurrealDB. Content stored in a SurrealDB cluster via the HTTP /sql endpoint; no schema migration needed — tables are created on first write. Decap admin from CDN.",
   "type": "module",

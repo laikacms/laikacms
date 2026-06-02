@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/pocketbase",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "PocketBase-backed StorageRepository for Laika CMS. Self-hostable, SQLite-backed, REST + JWT. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

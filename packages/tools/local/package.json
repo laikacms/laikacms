@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/local",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Local-file-backed dev tooling for Laika CMS: a JSON:API storage server (`laika-local serve`) and a config-to-typed-TypeScript codegen (`laika-local types`).",
   "keywords": [
     "headless-cms",
@@ -65,18 +65,28 @@
     "typescript": "catalog:tools"
   },
   "peerDependencies": {
-    "@laikacms/github": "1.0.0",
-    "@laikacms/surrealdb": "1.0.0",
-    "@laikacms/trello": "1.0.0",
-    "@laikacms/upstash": "1.0.0",
-    "@laikacms/vercel": "1.0.0"
+    "@laikacms/github": "1.0.1",
+    "@laikacms/surrealdb": "1.0.1",
+    "@laikacms/trello": "1.0.1",
+    "@laikacms/upstash": "1.0.1",
+    "@laikacms/vercel": "1.0.1"
   },
   "peerDependenciesMeta": {
-    "@laikacms/github": { "optional": true },
-    "@laikacms/surrealdb": { "optional": true },
-    "@laikacms/trello": { "optional": true },
-    "@laikacms/upstash": { "optional": true },
-    "@laikacms/vercel": { "optional": true }
+    "@laikacms/github": {
+      "optional": true
+    },
+    "@laikacms/surrealdb": {
+      "optional": true
+    },
+    "@laikacms/trello": {
+      "optional": true
+    },
+    "@laikacms/upstash": {
+      "optional": true
+    },
+    "@laikacms/vercel": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=22"

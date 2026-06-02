@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-webdav-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog: Hono + WebDavStorageRepository + LaikaCMS. Content lives on any WebDAV server (Nextcloud, ownCloud, rclone, Apache mod_dav). Includes an embedded dev WebDAV server for zero-setup local development.",
   "type": "module",

@@ -1,7 +1,7 @@
 {
   "name": "@laikacloud/decap-cms-laika-app",
-  "description": "Laika's all-in-one Decap CMS shell \u2014 Decap CMS v4.beta + TanStack Router/Query + Vite + Cloudflare Workers, with both the Lexical and @portabletext/editor widgets pre-registered.",
-  "version": "0.0.1",
+  "description": "Laika's all-in-one Decap CMS shell — Decap CMS v4.beta + TanStack Router/Query + Vite + Cloudflare Workers, with both the Lexical and @portabletext/editor widgets pre-registered.",
+  "version": "0.0.2",
   "private": true,
   "type": "module",
   "scripts": {

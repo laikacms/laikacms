@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/influxdb",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "InfluxDB v2-backed StorageRepository for Laika CMS. Time-series database with line protocol writes, Flux pipeline DSL, and annotated CSV responses. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [

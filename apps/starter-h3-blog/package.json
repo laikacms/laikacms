@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-h3-blog",
-  "version": "0.0.1",
+  "version": "1.0.1",
   "private": true,
   "description": "Starter blog built with H3 + LaikaCMS. H3 is the primitive runtime beneath Nitro/Nuxt — using it directly shows how WHATWG-native HTTP works without a build step.",
   "type": "module",
