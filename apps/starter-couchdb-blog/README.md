@@ -23,45 +23,47 @@ Three architectural traits unique to CouchDB within the LaikaCMS backend suite:
 ## Quick start (Docker)
 
 ```bash
-pnpm couch:up     # start CouchDB container
-pnpm couch:init   # create the "cms" database
-pnpm couch:index  # create Mango indexes (important for performance)
-cp .env.example .env
+docker run -p 5984:5984 -e COUCHDB_USER=admin -e COUCHDB_PASSWORD=password couchdb
+curl -u admin:password -X PUT http://localhost:5984/laikacms
+cp .env.example .env   # set COUCHDB_USERNAME=admin COUCHDB_PASSWORD=password
 pnpm dev
 ```
 
-Open `http://localhost:3000/admin` → write your first post → visit `http://localhost:3000/posts`.
+Open `http://localhost:3000/admin/` → write your first post → visit `http://localhost:3000/`.
 
 ## Environment variables
 
-| Variable         | Required | Description                                                                  |
-| ---------------- | -------- | ---------------------------------------------------------------------------- |
-| `COUCH_URL`      | ✅       | Full database URL incl. db name, e.g. `http://admin:pass@localhost:5984/cms` |
-| `COUCH_USERNAME` | optional | HTTP Basic username (if not embedded in URL)                                 |
-| `COUCH_PASSWORD` | optional | HTTP Basic password (if not embedded in URL)                                 |
-| `PORT`           | optional | HTTP port (default: `3000`)                                                  |
+| Variable           | Required | Description                                                                |
+| ------------------ | -------- | -------------------------------------------------------------------------- |
+| `COUCHDB_URL`      | optional | CouchDB endpoint incl. db name (default: `http://localhost:5984/laikacms`) |
+| `COUCHDB_USERNAME` | optional | HTTP Basic username                                                        |
+| `COUCHDB_PASSWORD` | optional | HTTP Basic password                                                        |
+| `COUCHDB_BEARER`   | optional | Bearer token for IBM Cloudant IAM auth (takes precedence over Basic)       |
+| `PORT`             | optional | HTTP port (default: `3000`)                                                |
+
+No credentials = CouchDB "admin party" mode (useful for local dev with no auth configured).
 
 ## Mango indexes (production)
 
-Without indexes, CouchDB falls back to a full scan. Create these once:
+Without indexes, CouchDB falls back to a full scan. Create these once after provisioning the
+database:
 
 ```bash
 # Index on parent (used by listAtomSummaries)
-curl -X POST $COUCH_URL/_index \
+curl -u admin:password -X POST http://localhost:5984/laikacms/_index \
   -H 'Content-Type: application/json' \
   -d '{"index": {"fields": ["parent"]}}'
 
 # Composite index (used by getObject probes)
-curl -X POST $COUCH_URL/_index \
+curl -u admin:password -X POST http://localhost:5984/laikacms/_index \
   -H 'Content-Type: application/json' \
   -d '{"index": {"fields": ["type", "parent", "name"]}}'
 ```
 
-Or run `pnpm couch:index` (uses the default dev credentials).
+## IBM Cloudant
 
-## Cloudant / hosted CouchDB
-
-Set `COUCH_URL` to your Cloudant database endpoint, e.g.: `https://account.cloudant.com/cms`
-
-For IAM auth, set `COUCH_URL` without credentials and pass the IAM token via the `auth` option in
-`src/laika.ts` using `authorizationHeader: 'Bearer <token>'`.
+```bash
+COUCHDB_URL=https://acct.cloudant.com/laikacms \
+COUCHDB_BEARER=<iam-token> \
+pnpm dev
+```
