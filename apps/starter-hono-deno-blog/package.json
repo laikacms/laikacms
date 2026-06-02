@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-hono-deno-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog using Hono natively on Deno 2. Deno.serve(app.fetch) — no adapter. serveStatic from hono/deno. Completes the Hono runtime triad: Node (@hono/node-server), Bun (export default), Deno (Deno.serve).",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && deno task dev",
+    "build": "pnpm build:admin",
+    "start": "deno task start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
