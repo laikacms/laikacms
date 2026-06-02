@@ -1,0 +1,17 @@
+doctype html
+html(lang="en")
+  head
+    meta(charset="utf-8")
+    meta(name="viewport" content="width=device-width, initial-scale=1.0")
+    title #{title} — My Blog
+    style.
+      body { font-family: system-ui, sans-serif; max-width: 48rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+      nav { margin-bottom: 2rem; }
+      nav a { margin-right: 1rem; }
+      article h1 { margin-bottom: 0.25rem; }
+      time { color: #666; font-size: 0.875rem; }
+  body
+    nav
+      a(href="/") Home
+      a(href="/admin/") Admin
+    block content
