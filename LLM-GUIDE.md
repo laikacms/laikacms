@@ -75,7 +75,7 @@ const { items } = await collectStream(
   laika.documents.listRecordSummaries({
     folder: 'posts',
     depth: 1,
-    pagination: { page: 1, perPage: 100 },  // NOT { offset, limit }
+    pagination: { page: 1, perPage: 100 }, // NOT { offset, limit }
     type: 'published',
   }),
 );
@@ -83,7 +83,7 @@ const { items } = await collectStream(
 // Read one published document by key:
 try {
   const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
-  const { title, body } = doc.content as { title?: string; body?: string };
+  const { title, body } = doc.content as { title?: string, body?: string };
 } catch (err) {
   if (err instanceof NotFoundError) {
     /* render 404 */

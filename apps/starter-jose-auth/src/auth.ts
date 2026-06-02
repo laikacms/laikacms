@@ -6,7 +6,7 @@ const secretEnv = process.env.JWT_SECRET ?? 'dev-secret-change-me-before-product
 const secret = new TextEncoder().encode(secretEnv);
 
 // Hard-coded demo credentials — in production use a database + hashed passwords.
-const DEMO_USERS: Record<string, { password: string; email: string; name: string }> = {
+const DEMO_USERS: Record<string, { password: string, email: string, name: string }> = {
   admin: {
     password: process.env.ADMIN_PASSWORD ?? 'password',
     email: 'admin@example.com',

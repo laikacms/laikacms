@@ -3,8 +3,8 @@ import { Hono } from 'hono';
 import { collectStream, runTask } from 'laikacms/compat';
 import { NotFoundError } from 'laikacms/core';
 
-import { decapConfig, laika } from './laika.js';
 import { decapAdminHtml } from '@laikacms/decap-integrations/embedded';
+import { decapConfig, laika } from './laika.js';
 
 const PER_PAGE = 5;
 

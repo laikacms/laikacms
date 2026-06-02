@@ -18,10 +18,10 @@ pnpm install      # install laikacms workspace packages
 deno task dev     # starts both Lume (port 3000) and admin sidecar (port 3001)
 ```
 
-| URL                              | What                    |
-| -------------------------------- | ----------------------- |
-| http://localhost:3000            | Lume blog (SSG)         |
-| http://localhost:3001/admin      | Decap CMS admin editor  |
+| URL                         | What                   |
+| --------------------------- | ---------------------- |
+| http://localhost:3000       | Lume blog (SSG)        |
+| http://localhost:3001/admin | Decap CMS admin editor |
 
 ## Project layout
 
@@ -74,7 +74,7 @@ package.json           # LaikaCMS workspace deps (for pnpm install)
 Lume already knows how to read markdown files. The build pipeline just reads `content/posts/*.md`
 directly from the filesystem — no Effect, no `runTask`, no HTTP call needed.
 
-You *can* use `laika.documents.*` in `_config.ts` if you want programmatic access to the content
+You _can_ use `laika.documents.*` in `_config.ts` if you want programmatic access to the content
 (e.g. to compute derived data, add full-text search index, or filter by custom fields):
 
 ```ts

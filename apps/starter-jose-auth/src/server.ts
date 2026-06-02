@@ -1,9 +1,9 @@
 import { serve } from '@hono/node-server';
 import { decapAdminHtml } from '@laikacms/decap-integrations/embedded';
+import { Hono } from 'hono';
+import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { collectStream, runTask } from 'laikacms/compat';
 import { NotFoundError } from 'laikacms/core';
-import { Hono } from 'hono';
-import { getCookie, setCookie, deleteCookie } from 'hono/cookie';
 
 import { signToken, validateCredentials, verifyToken } from './auth.ts';
 import { laika } from './laika.ts';
@@ -113,7 +113,7 @@ app.get('/', async c => {
     }),
   );
 
-  type Summary = { key: string; type: string; updatedAt?: string };
+  type Summary = { key: string, type: string, updatedAt?: string };
   const posts = (items as Summary[])
     .filter(r => r.type === 'published-summary')
     .map(r => ({
@@ -128,11 +128,16 @@ app.get('/', async c => {
   <h1>My Blog</h1>
   <a href="/admin">CMS Admin</a>
   <hr />
-  ${posts.length === 0
-    ? '<p>No posts yet. <a href="/admin">Write one.</a></p>'
-    : `<ul>${posts.map(p =>
-        `<li><a href="/posts/${p.slug}">${p.slug}</a>${p.updatedAt ? ` · <time>${new Date(p.updatedAt).toLocaleDateString()}</time>` : ''}</li>`
-      ).join('')}</ul>`
+  ${
+    posts.length === 0
+      ? '<p>No posts yet. <a href="/admin">Write one.</a></p>'
+      : `<ul>${
+        posts.map(p =>
+          `<li><a href="/posts/${p.slug}">${p.slug}</a>${
+            p.updatedAt ? ` · <time>${new Date(p.updatedAt).toLocaleDateString()}</time>` : ''
+          }</li>`
+        ).join('')
+      }</ul>`
   }
 </body>
 </html>`);
@@ -142,7 +147,7 @@ app.get('/posts/:slug', async c => {
   const { slug } = c.req.param();
   try {
     const doc = await runTask(laika.documents.getDocument(`posts/${slug}`));
-    const content = doc.content as { title?: string; body?: string };
+    const content = doc.content as { title?: string, body?: string };
     return c.html(`<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="utf-8" /><title>${content.title ?? slug}</title></head>

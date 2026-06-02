@@ -10,14 +10,13 @@ categories:
 
 Welcome to your new Hexo blog powered by **LaikaCMS**!
 
-This post was created by the starter template. You can edit it — and create new
-posts — from the Decap CMS admin interface at `http://localhost:3001/admin`.
+This post was created by the starter template. You can edit it — and create new posts — from the
+Decap CMS admin interface at `http://localhost:3001/admin`.
 
 ## How it works
 
-Hexo reads markdown files from `source/_posts/`. The LaikaCMS admin sidecar
-server listens on port 3001 and writes changes to the same directory. Run both
-together with `pnpm dev`.
+Hexo reads markdown files from `source/_posts/`. The LaikaCMS admin sidecar server listens on port
+3001 and writes changes to the same directory. Run both together with `pnpm dev`.
 
 ## Quick start
 
