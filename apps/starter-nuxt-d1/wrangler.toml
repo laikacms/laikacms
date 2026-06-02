@@ -1,0 +1,8 @@
+name = "laikacms-starter-nuxt-d1"
+compatibility_date = "2026-01-01"
+pages_build_output_dir = ".output/public"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "laikacms-nuxt-d1"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"

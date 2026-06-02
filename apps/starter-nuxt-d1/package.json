@@ -1,0 +1,31 @@
+{
+  "name": "@laikacms/starter-nuxt-d1",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Nuxt 3 blog deployed to Cloudflare Pages backed by D1 (SQLite) via DrizzleStorageRepository. Demonstrates event.context.cloudflare.env.DB binding access and per-request createCustomLaika.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev --compatibility-date=2026-01-01 -- nuxt dev",
+    "build": "nuxt build",
+    "deploy": "nuxt build && wrangler pages deploy .output/public",
+    "typecheck": "nuxt typecheck",
+    "db:migrate:local": "wrangler d1 execute laikacms-nuxt-d1 --local --file migrations/0001_create_atoms.sql",
+    "db:migrate:remote": "wrangler d1 execute laikacms-nuxt-d1 --remote --file migrations/0001_create_atoms.sql"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "drizzle-orm": "^0.44.0",
+    "laikacms": "workspace:*",
+    "nuxt": "^3.0.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260512.0",
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vue-tsc": "^3.0.0",
+    "wrangler": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
