@@ -1,0 +1,23 @@
+{
+  "name": "@laikacms/starter-custom-auth",
+  "description": "Starter: LaikaCMS with mode:'custom' auth — API-key bearer tokens validated server-side. Shows how to replace dev mode for production deployments.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@hono/node-server": "catalog:server",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}
