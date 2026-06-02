@@ -46,6 +46,7 @@ export default tseslint.config(
       '**/.vinxi/**',
       // Built static assets (esbuild bundles, etc.)
       '**/public/admin/bundle.js',
+      '**/static/admin/bundle.js',
     ],
   },
 );
