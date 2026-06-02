@@ -259,6 +259,20 @@ These are the things that consistently bite first-time integrators:
     }
     ```
 
+11. **Integration packages need a `dist/` before their starters can be type-checked.** Only a
+    handful of `packages/integrations/*` have pre-built dists committed to the repo. If you run
+    `pnpm --filter @laikacms/starter-foo exec tsc --noEmit` directly and get
+    `Cannot find module '@laikacms/foo/storage-bar'`, build the integration first:
+    ```
+    pnpm --filter @laikacms/foo build
+    ```
+    The correct way to typecheck in CI or as a one-shot command is the root-level turbo task, which
+    builds upstream dependencies automatically:
+    ```
+    pnpm run typecheck              # builds all integration packages, then checks all starters
+    pnpm run typecheck --filter ... # scoped to specific packages
+    ```
+
 ---
 
 ## 5. Decision tree
