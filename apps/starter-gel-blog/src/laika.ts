@@ -1,6 +1,9 @@
-import { GelDataSource, GelStorageRepository } from '@laikacms/gel/storage-gel';
 import { createCustomLaika, minimalBlogConfig } from '@laikacms/decap-integrations/custom';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { GelDataSource, GelStorageRepository } from '@laikacms/gel/storage-gel';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
+import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
 /**
  * Gel (formerly EdgeDB) storage for LaikaCMS.
@@ -36,7 +39,13 @@ const dataSource = new GelDataSource({
 
 const storage = new GelStorageRepository({
   dataSource,
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: {
+    md: markdownSerializer,
+    yaml: yamlSerializer,
+    yml: yamlSerializer,
+    json: jsonSerializer,
+    raw: rawSerializer,
+  },
   defaultFileExtension: 'md',
 });
 

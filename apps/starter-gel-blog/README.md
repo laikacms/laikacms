@@ -3,10 +3,9 @@
 Blog using **[Gel](https://gel.com)** (formerly EdgeDB) as the content store via
 `GelStorageRepository` + `createCustomLaika`.
 
-Gel is an object-relational database with EdgeQL — a next-generation query
-language where every parameter carries a type and every relationship is a
-first-class link. This starter demonstrates three EdgeQL patterns that don't
-appear in any other backend in the LaikaCMS suite.
+Gel is an object-relational database with EdgeQL — a next-generation query language where every
+parameter carries a type and every relationship is a first-class link. This starter demonstrates
+three EdgeQL patterns that don't appear in any other backend in the LaikaCMS suite.
 
 ## Quick start
 
@@ -54,15 +53,16 @@ type LaikaFolder {
 }
 ```
 
-The `constraint exclusive` on `path` gives atomic uniqueness — Gel
-surfaces `ConstraintViolationError`, which `GelStorageRepository` maps to
-`EntryAlreadyExistsError` (same error all other backends return).
+The `constraint exclusive` on `path` gives atomic uniqueness — Gel surfaces
+`ConstraintViolationError`, which `GelStorageRepository` maps to `EntryAlreadyExistsError` (same
+error all other backends return).
 
 ## What makes Gel different
 
 Three EdgeQL traits that don't appear in any other LaikaCMS backend:
 
 ### 1. `:=` vs `=`
+
 In EdgeQL, `:=` is assignment and `=` is equality:
 
 ```edgeql
@@ -73,31 +73,35 @@ INSERT LaikaFile { path := <str>$path, content := <str>$content }
 SELECT LaikaFile FILTER .path = <str>$path
 ```
 
-All other backends (libSQL, SurrealDB, PostgreSQL, MongoDB…) use `=` for
-both. This means you can't copy-paste SQL snippets into EdgeQL.
+All other backends (libSQL, SurrealDB, PostgreSQL, MongoDB…) use `=` for both. This means you can't
+copy-paste SQL snippets into EdgeQL.
 
 ### 2. `<type>$param` typed parameter casts
+
 ```edgeql
 SELECT LaikaFile FILTER .parent = <str>$parent AND .name = <str>$name LIMIT 1
 ```
-Every parameter declares its type inline — `<str>$path`, `<array<str>>$paths`,
-`<int64>$limit`. The Gel wire protocol propagates this to the planner.
+
+Every parameter declares its type inline — `<str>$path`, `<array<str>>$paths`, `<int64>$limit`. The
+Gel wire protocol propagates this to the planner.
 
 ### 3. `FOR x IN array_unpack(…) UNION (…)` for batch deletes
+
 ```edgeql
 FOR p IN array_unpack(<array<str>>$paths) UNION (
   DELETE LaikaFile FILTER .path = p
 )
 ```
-One statement, one transaction. `removeAtoms(N)` in `GelStorageRepository`
-ships all N deletes as a single EdgeQL query — the 15th structurally
-distinct atomic-multi-write mechanism in the LaikaCMS backend suite.
+
+One statement, one transaction. `removeAtoms(N)` in `GelStorageRepository` ships all N deletes as a
+single EdgeQL query — the 15th structurally distinct atomic-multi-write mechanism in the LaikaCMS
+backend suite.
 
 ## `createCustomLaika` usage
 
 ```ts
-import { GelDataSource, GelStorageRepository } from '@laikacms/gel/storage-gel';
 import { createCustomLaika, minimalBlogConfig } from '@laikacms/decap-integrations/custom';
+import { GelDataSource, GelStorageRepository } from '@laikacms/gel/storage-gel';
 import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
 
 const dataSource = new GelDataSource({
@@ -122,8 +126,8 @@ const laika = createCustomLaika({
 
 ## Branches
 
-Gel supports multiple branches per instance, similar to git branches. This
-is useful for content staging:
+Gel supports multiple branches per instance, similar to git branches. This is useful for content
+staging:
 
 ```bash
 # Create a staging branch

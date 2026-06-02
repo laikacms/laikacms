@@ -184,8 +184,10 @@ These are the things that consistently bite first-time integrators:
    - The Decap backend lives at `@laikacms/decap-integrations/decap-cms-backend-laika` — a subpath
      of `@laikacms/decap-integrations`, NOT a separate `@laikacms/decap-cms-backend-laika` package.
 
-4. **`createEmbeddedLaika` is Node-only.** It calls `node:fs.mkdirSync` at module-load time. Don't
-   import it from Workers/edge code. Use `createWorkersLaika` instead.
+4. **`createEmbeddedLaika` is not for Workers/edge — but it works fine on Deno 2.** The real
+   constraint is "requires a writable filesystem" (it calls `node:fs.mkdirSync` at module-load
+   time). Node.js, Bun, and Deno 2 all satisfy this; V8-isolate runtimes (Workers, Lambda, Vercel
+   Edge) do not. For Workers/edge use `createWorkersLaika` instead.
 
 5. **Workers/edge storage is currently R2-only.** Vercel Blob, Netlify Blobs, Deno KV, Bun S3 don't
    have first-party `StorageRepository` adapters yet. The Vercel Edge and Netlify Functions starters
@@ -203,6 +205,18 @@ These are the things that consistently bite first-time integrators:
 
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** When adding a new
    starter under `apps/`, mirror this convention — see existing starters' `package.json`.
+
+8. **Integration packages under `packages/integrations/*` must be built before use.** They are
+   private workspace packages compiled by `tsc`. If you add `"@laikacms/gel": "workspace:*"` to a
+   starter but `packages/integrations/gel/dist/` is missing, TypeScript will error "Cannot find
+   module '@laikacms/gel/...'". Fix: `pnpm --filter @laikacms/gel build` (or `pnpm build` at the
+   workspace root). The root `pnpm install` does NOT auto-build integration packages.
+
+9. **Gel starter `tsconfig.json` pattern** — use `"lib": ["ESNext", "DOM"]`, `"types": ["node"]`,
+   and `"moduleResolution": "bundler"` (not `"NodeNext"`). Without `"DOM"` lib, globals like
+   `Request`, `Response`, `fetch`, `URL` are missing. Without `"types": ["node"]`, `process` and
+   `console` are missing. Without `"bundler"` resolution, workspace package subpath exports don't
+   resolve.
 
 ---
 
@@ -243,6 +257,15 @@ These are the things that consistently bite first-time integrators:
 │  AWS Lambda?         → starter-lambda-blog                        │
 │  Vercel Edge?        → starter-vercel-edge 🟡 (PoC — storage gap)  │
 │  Netlify Functions?  → starter-netlify-functions 🟡 (dev only)     │
+└──────────────────────────────────────────────────────────────────┘
+
+┌─ BYO storage (createCustomLaika)? ───────────────────────────────┐
+│                                                                  │
+│  SQLite / Turso?     → starter-drizzle-sqlite-blog               │
+│  S3 / MinIO / B2?   → starter-s3-storage                         │
+│  GitHub repo?        → starter-github-storage                     │
+│  Gel / EdgeDB?       → starter-gel-blog                           │
+│  Any SQL (Drizzle)?  → starter-drizzle-sqlite-blog (swap dialect) │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
