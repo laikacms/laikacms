@@ -1,0 +1,34 @@
+{
+  "name": "@laikacms/starter-nestjs-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with NestJS + LaikaCMS. Demonstrates createEmbeddedLaika with a NestJS controller and DI pattern.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/main.ts",
+    "build": "pnpm build:admin && tsc -p tsconfig.build.json",
+    "start": "node dist/main.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@nestjs/common": "^11.0.0",
+    "@nestjs/core": "^11.0.0",
+    "@nestjs/platform-express": "^11.0.0",
+    "express": "^5.1.0",
+    "laikacms": "workspace:*",
+    "reflect-metadata": "^0.2.0",
+    "rxjs": "~7.8.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

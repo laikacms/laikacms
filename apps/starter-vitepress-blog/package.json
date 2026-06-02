@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/starter-vitepress-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with VitePress + LaikaCMS. VitePress renders markdown files that LaikaCMS manages via the Decap CMS. A Vite plugin wires the Decap JSON:API into the VitePress dev server — no separate backend process needed during development.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=docs/public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && vitepress dev docs",
+    "build": "pnpm build:admin && vitepress build docs",
+    "preview": "vitepress preview docs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*",
+    "vitepress": "^1.6.3",
+    "vue": "^3.5.17"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

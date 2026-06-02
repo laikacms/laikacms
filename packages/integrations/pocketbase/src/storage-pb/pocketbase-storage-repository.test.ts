@@ -1,5 +1,8 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { pocketbaseContractCase } from './testing/index.js';
 
 import { PocketBaseStorageRepository } from './pocketbase-storage-repository.js';
 
@@ -362,3 +365,5 @@ describe('PocketBaseStorageRepository folder semantics', () => {
     expect(attempt.recoverableErrors).toHaveLength(1);
   });
 });
+
+runStorageRepositoryContract(pocketbaseContractCase);

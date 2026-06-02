@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { OneDriveDataSource, type OneDriveItem } from './onedrive-datasource.js';
 import { OneDriveStorageRepository } from './onedrive-storage-repository.js';
+import { oneDriveContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(oneDriveContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Microsoft Graph / OneDrive mock.

@@ -1,0 +1,23 @@
+{
+  "name": "@laikacms/starter-cloudflare-pages",
+  "description": "Starter: Cloudflare Pages (static assets) + Pages Functions (/api/*) + R2 binding. Hostable for free, edge-distributed.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler pages dev public --port 3000",
+    "deploy": "wrangler pages deploy public",
+    "typecheck": "wrangler types && tsc --noEmit",
+    "types": "wrangler types"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "*",
+    "typescript": "catalog:tools",
+    "wrangler": "catalog:tools"
+  }
+}

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Content Manager</title>
+    <!--
+      Must be set before the CDN script loads Decap.
+      Prevents Decap from auto-initialising before the laika backend is registered.
+    -->
+    <script>
+      window.CMS_MANUAL_INIT = true;
+    </script>
+  </head>
+  <body>
+    <!-- Decap CMS UI from CDN — synchronously sets window.CMS -->
+    <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+
+    <!--
+      Pre-built by esbuild (pnpm build:admin):
+        src/admin-client.ts → public/admin/bundle.js
+
+      type="module" defers execution until after the synchronous CDN script
+      above, so window.CMS is already defined when this runs.
+
+      The bundle registers the laika backend and calls CMS.init() with the
+      shared collection config from src/decap-config.ts.
+    -->
+    <script src="/admin/bundle.js" type="module"></script>
+  </body>
+</html>

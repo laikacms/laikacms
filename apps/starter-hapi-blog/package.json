@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/starter-hapi-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Hapi.js v21 + LaikaCMS. Demonstrates Hapi's payload.output:'data' pattern for bridging Node.js IncomingMessage to WHATWG Request.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && node --import tsx/esm src/index.ts",
+    "start": "pnpm build:admin && node src/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hapi/hapi": "^21.0.0",
+    "@hapi/inert": "^7.0.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/contentful",
   "version": "1.0.0",
+  "private": true,
   "description": "Contentful-backed StorageRepository for Laika CMS via the Contentful Management API. Treats content types as folders and entries as objects. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",

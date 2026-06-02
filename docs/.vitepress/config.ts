@@ -5,6 +5,9 @@ export default defineConfig({
   description: 'Modular, runtime-agnostic content management software for your own custom or existing UIs.',
   cleanUrls: true,
   lastUpdated: true,
+  // starters.md links into ../apps/starter-* (the source dirs on disk / GitHub),
+  // not into vitepress pages — those are intentionally not built as docs.
+  ignoreDeadLinks: [/\/apps\//],
   themeConfig: {
     nav: [
       { text: 'Guide', link: '/getting-started' },

@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-trpc",
+  "description": "Starter: tRPC v11 + Hono. Type-safe RPC over LaikaCMS — the TypeScript ecosystem's typed-API path, complementing the GraphQL starter.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@hono/trpc-server": "^0.4.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@trpc/server": "^11.0.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

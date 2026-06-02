@@ -1,0 +1,30 @@
+{
+  "name": "@laikacms/starter-vue-ssr-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog using bare Vue 3 SSR + Hono + LaikaCMS. No meta-framework — shows what Nuxt abstracts away: @vue/server-renderer renderToString, h() create-element calls, and server-side data fetching.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@vue/server-renderer": "^3.5.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "vue": "^3.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ClickHouseDataSource, parseNdjson, serializeNdjson } from './clickhouse-datasource.js';
 import { ClickHouseStorageRepository } from './clickhouse-storage-repository.js';
+import { clickhouseContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(clickhouseContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory ClickHouse mock.

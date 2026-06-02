@@ -1,0 +1,25 @@
+{
+  "name": "@laikacms/starter-nuxt-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Nuxt 3 + LaikaCMS. Demonstrates createEmbeddedLaika, documents via server/api routes + useFetch, and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "preview": "nuxt preview",
+    "typecheck": "nuxt typecheck"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*",
+    "nuxt": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

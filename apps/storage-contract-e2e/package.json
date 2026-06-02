@@ -1,0 +1,20 @@
+{
+  "name": "@laikacms/storage-contract-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "effect": "catalog:default",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  }
+}

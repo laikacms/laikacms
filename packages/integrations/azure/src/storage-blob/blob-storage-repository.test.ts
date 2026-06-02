@@ -1,5 +1,8 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { azureContractCase } from './testing/index.js';
 
 import type { BlobEntry, BlobOps, BlobProperties } from './blob-datasource.js';
 import { AzureBlobStorageRepository } from './blob-storage-repository.js';
@@ -268,3 +271,5 @@ describe('AzureBlobStorageRepository BlobOps abstraction', () => {
     expect(repo).toBeInstanceOf(AzureBlobStorageRepository);
   });
 });
+
+runStorageRepositoryContract(azureContractCase);

@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/starter-eleventy-jamstack",
+  "description": "Starter: Eleventy (11ty) Jamstack site reading from LaikaCMS content/, with a sidecar Hono admin server.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "site:dev": "eleventy --serve --port 3000",
+    "site:build": "eleventy",
+    "admin:dev": "tsx watch server/admin.ts",
+    "dev": "concurrently -n site,admin -c green,blue \"pnpm site:dev\" \"pnpm admin:dev\"",
+    "build": "pnpm site:build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@11ty/eleventy": "^3.0.0",
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "concurrently": "^9.0.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

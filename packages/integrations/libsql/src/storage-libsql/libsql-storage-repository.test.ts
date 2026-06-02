@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { bind, type LibSqlArg, LibSqlDataSource, type LibSqlExecuteResult } from './libsql-datasource.js';
 import { LibSqlStorageRepository } from './libsql-storage-repository.js';
+import { libSqlContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(libSqlContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory libSQL hrana mock.

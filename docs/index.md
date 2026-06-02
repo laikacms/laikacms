@@ -34,6 +34,7 @@ features:
 ## Quick Links
 
 - [Getting Started](./getting-started.md) — Installation and basic usage
+- [Starter templates](./starters.md) — Reference apps for each frontend framework
 - [Architecture](./architecture.md) — How Laika CMS is structured
 - [API Reference](./api-reference.md) — Complete API documentation
 - [Packages](./packages.md) — Overview of all packages

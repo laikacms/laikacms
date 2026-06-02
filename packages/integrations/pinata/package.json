@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/pinata",
   "version": "1.0.0",
+  "private": true,
   "description": "Pinata (IPFS)-backed StorageRepository for Laika CMS. Content-addressed storage with a mutable name-index. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
@@ -24,7 +25,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-ipfs": {
       "types": "./dist/storage-ipfs/index.d.ts",
@@ -50,5 +56,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

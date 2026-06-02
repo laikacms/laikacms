@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/airtable",
   "version": "1.0.0",
+  "private": true,
   "description": "Airtable-backed StorageRepository for Laika CMS. `filterByFormula` for queries, chunked batch mutations (Airtable's 10-record cap). Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
@@ -22,7 +23,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-airtable": {
       "types": "./dist/storage-airtable/index.d.ts",
@@ -48,5 +54,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

@@ -1,0 +1,30 @@
+{
+  "name": "@laikacms/starter-sveltekit-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with SvelteKit + LaikaCMS. Demonstrates createEmbeddedLaika, documents via laikacms/compat, and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "typecheck": "pnpm check"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-node": "^5.0.0",
+    "@sveltejs/kit": "^2.0.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

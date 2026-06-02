@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-azure-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog deployed as Azure Functions v4 + LaikaCMS. Demonstrates the v4 programming model (app.http registration), WHATWG Request bridging from HttpRequest, and static file serving via Azure Static Web Apps.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "build": "pnpm build:admin && tsc -p tsconfig.build.json",
+    "dev": "pnpm build:admin && func start",
+    "start": "func start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@azure/functions": "^4.7.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

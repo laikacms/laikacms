@@ -1,7 +1,11 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { DropboxStorageRepository } from './dropbox-storage-repository.js';
+import { dropboxContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(dropboxContractCase);
 
 // ---------------------------------------------------------------------------
 // Tiny in-memory Dropbox — handles the subset of the v2 API the repository

@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { EtcdDataSource, prefixRangeEnd } from './etcd-datasource.js';
 import { EtcdStorageRepository } from './etcd-storage-repository.js';
+import { etcdContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(etcdContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory etcd v3 JSON gateway mock.

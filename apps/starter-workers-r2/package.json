@@ -1,0 +1,23 @@
+{
+  "name": "@laikacms/starter-workers-r2",
+  "description": "Starter: Cloudflare Worker + R2 bucket exposing LaikaCMS over JSON:API + a Decap admin shell.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --port 3000",
+    "deploy": "wrangler deploy",
+    "typecheck": "wrangler types && tsc --noEmit",
+    "types": "wrangler types"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "*",
+    "typescript": "catalog:tools",
+    "wrangler": "catalog:tools"
+  }
+}

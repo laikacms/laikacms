@@ -1,4 +1,4 @@
-import type { AssetVariation } from './domain';
+import type { AssetVariation } from './domain/index.js';
 
 interface BuildUrlOptions {
   width?: number;

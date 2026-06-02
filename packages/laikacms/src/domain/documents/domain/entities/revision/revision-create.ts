@@ -1,6 +1,6 @@
 import * as S from 'effect/Schema';
 import { StorageObjectContentSchema } from 'laikacms/storage';
-import { DocumentLanguage } from '../record/record-language';
+import { DocumentLanguage } from '../record/record-language.js';
 
 export const RevisionCreateSchema = S.toStandardSchemaV1(S.Struct({
   key: S.String.pipe(S.check(S.isMaxLength(1023))),

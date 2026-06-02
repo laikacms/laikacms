@@ -1,5 +1,8 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { couchdbContractCase } from './testing/index.js';
 
 import { CouchDbDataSource, type StorageDoc } from './couchdb-datasource.js';
 import { CouchDbStorageRepository } from './couchdb-storage-repository.js';
@@ -408,3 +411,5 @@ describe('CouchDbStorageRepository', () => {
     expect(updated.metadata?.revisionId).toMatch(/^100-/);
   });
 });
+
+runStorageRepositoryContract(couchdbContractCase);

@@ -1,0 +1,16 @@
+<%- include('partials/header', { title: post.title || slug }) %>
+
+<article>
+  <h1><%= post.title || slug %></h1>
+  <% if (post.date) { %>
+    <time><%= new Date(post.date).toLocaleDateString() %></time>
+  <% } %>
+  <% if (post.description) { %>
+    <p><em><%= post.description %></em></p>
+  <% } %>
+  <pre style="white-space:pre-wrap;font-family:inherit"><%= post.body || '' %></pre>
+</article>
+
+<p><a href="/">← Back</a></p>
+
+<%- include('partials/footer') %>

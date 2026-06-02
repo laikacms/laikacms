@@ -1,0 +1,14 @@
+{
+  "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
+  "tasks": {
+    "dev": "deno run --allow-net --allow-read --allow-write --watch src/main.ts",
+    "start": "deno run --allow-net --allow-read --allow-write src/main.ts",
+    "check": "deno check src/main.ts"
+  },
+  "nodeModulesDir": "auto",
+  "compilerOptions": {
+    "lib": ["ESNext", "DOM"],
+    "strict": true,
+    "noImplicitAny": true
+  }
+}

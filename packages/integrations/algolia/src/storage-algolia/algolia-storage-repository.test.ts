@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type AlgoliaRecord, PARENT_ATTR, TYPE_ATTR } from './algolia-datasource.js';
 import { AlgoliaStorageRepository } from './algolia-storage-repository.js';
+import { algoliaContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(algoliaContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Algolia mock — handles the four endpoints the repository hits:

@@ -1,0 +1,22 @@
+{
+  "name": "@laikacms/starter-fastify-backend",
+  "description": "Starter: Fastify 5 backend exposing LaikaCMS over JSON:API + a Decap admin shell. Uses the same web-standard adapter pattern as the Express starter.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "fastify": "^5.1.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

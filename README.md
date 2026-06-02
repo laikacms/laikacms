@@ -70,6 +70,8 @@ See [docs/packages.md](./docs/packages.md) for the full list of subpath exports.
 
 ## Documentation
 
+- **[LLM-GUIDE.md](./LLM-GUIDE.md) — start here if you're an LLM/agent or want the 5-minute
+  version**
 - [Getting Started](./docs/getting-started.md)
 - [Architecture](./docs/architecture.md)
 - [API Reference](./docs/api-reference.md)

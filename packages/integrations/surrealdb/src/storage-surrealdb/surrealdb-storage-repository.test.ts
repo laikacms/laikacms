@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type SurqlStatementResult, SurrealDbDataSource } from './surrealdb-datasource.js';
 import { SurrealDbStorageRepository } from './surrealdb-storage-repository.js';
+import { surrealdbContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(surrealdbContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory SurrealDB mock.

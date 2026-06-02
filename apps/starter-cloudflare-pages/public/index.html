@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LaikaCMS Cloudflare Pages starter</title>
+  </head>
+  <body
+    style="font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 2rem 1rem; line-height: 1.6;"
+  >
+    <header style="margin-bottom: 2rem;">
+      <h1 style="margin: 0;">LaikaCMS blog</h1>
+      <nav style="margin-top: 0.5rem;">
+        <a href="/" style="margin-right: 1rem;">Home</a>
+        <a href="/api/admin">Admin</a>
+      </nav>
+    </header>
+    <main>
+      <p>
+        This index page is a <strong>static asset</strong> served directly by Cloudflare Pages —
+        no Function invocation. The post list below is fetched from
+        <code>/api/posts</code>, which routes through the Pages Function in
+        <code>functions/api/[[catchall]].ts</code>.
+      </p>
+      <ul id="post-list" style="list-style: none; padding: 0;">
+        <li><em>Loading…</em></li>
+      </ul>
+    </main>
+    <script type="module">
+      const res = await fetch('/api/posts');
+      const { posts } = await res.json();
+      const ul = document.getElementById('post-list');
+      ul.innerHTML = posts.length === 0
+        ? '<li><em>No posts yet — add one in the admin UI.</em></li>'
+        : posts.map(p => {
+          const slug = p.key.replace(/^posts\//, '').replace(/\.md$/, '');
+          const title = (p.content && p.content.title) || slug;
+          return `<li style="margin-bottom: 1rem;"><a href="/posts/${slug}">${title}</a></li>`;
+        }).join('');
+    </script>
+  </body>
+</html>

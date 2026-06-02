@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-app-runner-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Blog deployable to AWS App Runner — managed container service that auto-scales from zero. Uses decapAdminHtml() for a zero-build admin and apprunner.yaml for config-as-code deployment.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.14.4",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "^4.7.11",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -55,7 +55,40 @@ That's the entire server. `createEmbeddedLaika` constructs the filesystem-backed
 ContentBase document + asset repos, and the `decapApi(...)` router. The first run seeds
 `content/config.yml` from your `decapConfig` so the editor and the server agree on the schema.
 
+> **Node.js only.** `createEmbeddedLaika` hardcodes `FileSystemStorageRepository`, which requires
+> `node:fs`. It is incompatible with edge runtimes (Cloudflare Workers, Deno Deploy, etc.). For edge
+> deployments, wire the pieces manually using `decapApi` — see
+> [Standalone Worker](#standalone-worker-byo-storage) below.
+
 ### Client — Decap admin shell
+
+Two ways to serve the admin UI:
+
+**Option A — `decapAdminHtml()` (simpler, no build step)**
+
+When you already have a running server, the simplest admin shell is a single function call. No
+esbuild step, no `public/admin/bundle.js`, no React dependency. Available from all three presets
+(`/embedded`, `/custom`, `/workers`):
+
+```ts
+import { decapAdminHtml, minimalBlogConfig } from '@laikacms/decap-integrations/custom';
+
+const decapConfig = minimalBlogConfig();
+const ADMIN_HTML = decapAdminHtml({ decapConfig, title: 'My Admin' });
+
+// Hono
+app.get('/admin', c => c.html(ADMIN_HTML));
+// Express
+app.get('/admin', (_req, res) => res.send(ADMIN_HTML));
+```
+
+The function inlines the Decap config into a `<script>` that loads Decap from CDN and registers the
+Laika backend. Dev-mode auth is wired automatically when `auth: { mode: 'dev' }` is passed to
+`createCustomLaika` / `createEmbeddedLaika`.
+
+**Option B — React island (full control, smaller bundle)**
+
+Use when you need custom widgets or the Decap React tree:
 
 ```ts
 // src/components/DecapAdmin.tsx (a React island)
@@ -156,6 +189,68 @@ app.all('/api/decap/*', async c => {
 
 ---
 
+## `createCustomLaika` — BYO storage preset
+
+Between `createEmbeddedLaika` (filesystem, simple) and the raw `decapApi` wiring above sits
+`createCustomLaika`. It takes a **pre-built `StorageRepository`** of any kind and wires the rest
+automatically (content/asset repos, config seeding, Decap API, dev auth).
+
+```ts
+import { createCustomLaika } from '@laikacms/decap-integrations/custom';
+// also re-exported from /embedded and /workers
+
+const laika = createCustomLaika({
+  storage, // any StorageRepository
+  decapConfig,
+  basePath: '/api/decap',
+  auth: { mode: 'dev' },
+});
+app.all('/api/decap/*', c => laika.fetch(c.req.raw));
+```
+
+Available `StorageRepository` implementations:
+
+| Subpath                    | Class                           | Where                           |
+| -------------------------- | ------------------------------- | ------------------------------- |
+| `laikacms/storage-fs`      | `FileSystemStorageRepository`   | Node.js local disk              |
+| `laikacms/storage-r2`      | `R2StorageRepository`           | Cloudflare R2                   |
+| `laikacms/storage-s3`      | S3 shim → `R2StorageRepository` | AWS S3 / MinIO / B2 / DO Spaces |
+| `laikacms/storage-drizzle` | `DrizzleStorageRepository`      | Any SQL DB via Drizzle ORM      |
+| `laikacms/storage-webdav`  | `WebDavStorageRepository`       | Any RFC 4918 WebDAV server      |
+
+### WebDAV storage
+
+`WebDavStorageRepository` works with Nextcloud, ownCloud, Apache `mod_dav`, nginx-dav, rclone, and
+any other RFC 4918 server. Only a URL (and optionally Basic auth) is needed:
+
+```ts
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
+import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
+import { WebDavStorageRepository } from 'laikacms/storage-webdav';
+
+const storage = new WebDavStorageRepository(
+  {
+    baseUrl: process.env.WEBDAV_URL, // https://cloud.example.com/remote.php/dav/files/alice
+    auth: { username: 'alice', password: '…' }, // omit for anonymous / token auth
+  },
+  { md: markdownSerializer, yml: yamlSerializer, json: jsonSerializer, raw: rawSerializer },
+  'md', // default extension for new documents
+);
+
+export const laika = createCustomLaika({
+  storage,
+  decapConfig,
+  basePath: '/api/decap',
+  auth: { mode: 'dev' },
+});
+```
+
+See `apps/starter-webdav-blog` for a complete example including an embedded local-dev WebDAV server.
+
+---
+
 ## Widgets
 
 | Widget       | Subpath                                                     |
@@ -188,3 +283,332 @@ There are **two** packages in the laika-cms ecosystem with confusingly similar n
   Lives in this repo under `packages/decap/`.
 
 Their subpath exports do not overlap, so you can `pnpm add` both side by side.
+
+---
+
+## Framework setup notes
+
+Gaps discovered while building the canonical starter apps (LCMS-023). Each note is a one-time
+footgun — do it once and forget it.
+
+### Framework adapter matrix
+
+`laika.fetch` (and `api.fetch`) expects a **Web API `Request`**. The table below shows what each
+framework gives you at the route handler boundary and whether you need a bridge.
+
+| Framework                         | What you receive                                 | Bridge needed?                                                                          |
+| --------------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| **Astro**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
+| **SvelteKit**                     | Web API `Request`                                | None — pass directly: `laika.fetch(event.request)`                                      |
+| **Remix**                         | Web API `Request`                                | None — pass directly: `laika.fetch(request)`                                            |
+| **Next.js (App Router)**          | `NextRequest` (extends Web API `Request`)        | None — pass directly: `laika.fetch(request)`                                            |
+| **Hono**                          | Hono `HonoRequest` wrapper                       | None — use `c.req.raw`: `laika.fetch(c.req.raw)`                                        |
+| **TanStack Start**                | Web API `Request`                                | None — pass directly from the server route handler                                      |
+| **Cloudflare Workers**            | Web API `Request`                                | None — Workers environment is spec-compliant                                            |
+| **Nuxt / h3**                     | h3 `H3Event`                                     | `toWebRequest(event)` from `h3`: `laika.fetch(toWebRequest(event))`                     |
+| **Express / plain `http.Server`** | Node.js `IncomingMessage`                        | Manual bridge — see [Express bridge](#express--plain-httpserver--manual-bridge) below   |
+| **AdonisJS v6**                   | AdonisJS `HttpContext` (wraps `IncomingMessage`) | `ctx.request.request` + `ctx.response.response` — same Express bridge in a controller   |
+| **NestJS (Express adapter)**      | Node.js `IncomingMessage` (via Express)          | Manual bridge in `NestMiddleware.use(req, res)` — same as Express                       |
+| **Fastify**                       | Fastify `FastifyRequest`                         | `request.raw` → same Express bridge inside a Fastify route handler                      |
+| **AWS Lambda (via http bridge)**  | Lambda event object                              | Manual bridge — convert Lambda event → WHATWG `Request` before passing to `laika.fetch` |
+
+### Express / plain `http.Server` — manual bridge
+
+Express and the raw Node.js `http` module use `IncomingMessage` / `ServerResponse`, which predate
+the Web API. You must construct a WHATWG `Request` manually and pipe the response back:
+
+```ts
+import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
+import { Readable } from 'node:stream';
+
+async function bridgeToLaika(
+  req: ExpressRequest,
+  res: ExpressResponse,
+  laika: { fetch(r: Request): Promise<Response> },
+) {
+  const url = `${req.protocol}://${req.headers.host}${req.originalUrl}`;
+
+  // Collect the body (Node streams are not Web ReadableStreams)
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  const bodyBuffer = chunks.length ? Buffer.concat(chunks) : null;
+
+  const webRequest = new Request(url, {
+    method: req.method,
+    headers: req.headers as Record<string, string>,
+    // TS6: pass .buffer (concrete ArrayBuffer), not the Buffer/Uint8Array directly
+    body: bodyBuffer
+      ? bodyBuffer.buffer.slice(
+        bodyBuffer.byteOffset,
+        bodyBuffer.byteOffset + bodyBuffer.byteLength,
+      ) as ArrayBuffer
+      : null,
+    // Required when forwarding a body
+    duplex: 'half',
+  } as RequestInit);
+
+  const webResponse = await laika.fetch(webRequest);
+
+  res.status(webResponse.status);
+  webResponse.headers.forEach((value, key) => res.setHeader(key, value));
+
+  if (webResponse.body) {
+    Readable.fromWeb(webResponse.body as import('stream/web').ReadableStream).pipe(res);
+  } else {
+    res.end();
+  }
+}
+```
+
+Wire it into Express:
+
+```ts
+app.all('/api/decap/*', (req, res) => bridgeToLaika(req, res, laika));
+```
+
+### TypeScript 6 — `BodyInit` regression with `Buffer` / `Uint8Array`
+
+TypeScript 6 tightened the `BodyInit` type. `Buffer` and `Uint8Array<ArrayBufferLike>` are **no
+longer assignable** to `BodyInit` because `ArrayBufferLike` is wider than `ArrayBuffer`. The
+`Request` body constructor requires a **concrete `ArrayBuffer`**.
+
+```ts
+// TS6: Wrong — Buffer / Uint8Array<ArrayBufferLike> is not assignable to BodyInit
+const req = new Request(url, { body: buffer }); // TS error in TS6
+const req2 = new Request(url, { body: uint8Array }); // TS error in TS6 (ArrayBufferLike)
+
+// TS6: Correct — extract the concrete ArrayBuffer slice
+const req = new Request(url, {
+  body: buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength,
+  ) as ArrayBuffer,
+});
+```
+
+This affects the Express bridge above and any place you build a `Request` from a Node.js `Buffer`.
+The `.buffer` property of a `Buffer` is the **underlying shared** `ArrayBuffer`; always slice with
+`byteOffset`/`byteLength` to avoid passing a larger backing buffer to the `Request`.
+
+### VitePress / Docusaurus — Vite-based dev servers
+
+VitePress and Docusaurus both run Node.js-based dev servers (Vite's Connect middleware and
+webpack-dev-server respectively). You must register `laika.fetch` as a middleware rather than a
+route handler, which means you get `IncomingMessage`/`ServerResponse` — not a Web API `Request`.
+
+**VitePress** — use a Vite plugin with `configureServer`:
+
+```ts
+// .vitepress/config.mts
+import { defineConfig } from 'vitepress';
+import { laika } from '../src/laika.js';
+
+export default defineConfig({
+  vite: {
+    plugins: [{
+      name: 'laika-decap-api',
+      configureServer(server) {
+        server.middlewares.use('/api/decap', async (req, res) => {
+          const webReq = await toWebRequest(req); // IncomingMessage → Request bridge
+          const webRes = await laika.fetch(webReq);
+          res.writeHead(webRes.status, Object.fromEntries(webRes.headers));
+          res.end(Buffer.from(await webRes.arrayBuffer()));
+        });
+      },
+    }],
+  },
+});
+```
+
+This approach means your VitePress `contentDir` and the LaikaCMS `contentDir` can be the same folder
+— Decap CMS writes markdown files that VitePress renders directly.
+
+**Docusaurus v3** — use `configureWebpack` (not `configureDevServer`):
+
+> **Important:** Docusaurus v3's `Plugin` interface does **not** have a `configureDevServer`
+> lifecycle hook, despite older documentation suggesting it does. The correct approach is to return
+> a partial webpack config from `configureWebpack` using webpack-dev-server v5's `setupMiddlewares`:
+
+```ts
+// src/laika-plugin.ts
+import type { Plugin } from '@docusaurus/types';
+
+export default function laikaPlugin(): Plugin {
+  return {
+    name: 'laika-decap-api',
+    configureWebpack(_config, isServer) {
+      if (isServer) return;
+      return {
+        devServer: {
+          // webpack-dev-server v5: setupMiddlewares replaces the old before/after hooks
+          setupMiddlewares(middlewares: any[], devServer: any) {
+            devServer.app.use('/api/decap', async (req: any, res: any) => {
+              const webReq = await toWebRequest(req);
+              const webRes = await laika.fetch(webReq);
+              res.writeHead(webRes.status, Object.fromEntries(webRes.headers));
+              res.end(Buffer.from(await webRes.arrayBuffer()));
+            });
+            return middlewares;
+          },
+        },
+      } as any; // webpack-dev-server types are transitive, not direct deps
+    },
+  };
+}
+```
+
+Register the plugin in `docusaurus.config.ts`:
+
+```ts
+import laikaPlugin from './src/laika-plugin.js';
+const config: Config = {
+  plugins: [laikaPlugin],
+  // ...
+};
+```
+
+### HonoX — typed layout props with `ContextRenderer`
+
+HonoX uses `jsxRenderer` for layouts. The `c.render(content, extraProps)` overload that passes extra
+props to the layout is only accepted by TypeScript when you augment the `ContextRenderer` interface:
+
+```ts
+// app/_renderer.tsx
+import { jsxRenderer } from 'hono/jsx-renderer';
+
+// Tell TypeScript that c.render() accepts { title?: string }
+declare module 'hono' {
+  interface ContextRenderer {
+    (content: string | Promise<string>, props?: { title?: string }): Response;
+  }
+}
+
+export default jsxRenderer(({ children, title }: { children?: unknown, title?: string }) => (
+  <html>
+    <head>
+      <title>{title ?? 'My Blog'}</title>
+    </head>
+    <body>{children}</body>
+  </html>
+));
+```
+
+Without this augmentation, `c.render(<JSX />, { title: 'My Blog' })` produces a TypeScript error
+(`Expected 1 arguments, but got 2`).
+
+### Astro — use `laikacms/compat`, not `laikacms/core`
+
+`runTask` and `collectStream` must be imported from `laikacms/compat`. The `laikacms/core` subpath
+does not export them (this was a README bug fixed in PR #41).
+
+```ts
+// correct
+import { collectStream, runTask } from 'laikacms/compat';
+
+// wrong — named exports do not exist here
+import { collectStream, runTask } from 'laikacms/core';
+```
+
+### Next.js (App Router) — admin page must be a client component
+
+The `/admin` page must be a `'use client'` component that injects the Decap CDN script via
+`useEffect`. There is no server-rendered equivalent: `next/script` with
+`strategy="beforeInteractive"` does not work for third-party CDN scripts in Server Components.
+
+```tsx
+// app/admin/page.tsx
+'use client';
+
+import { useEffect } from 'react';
+
+export default function AdminPage() {
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/decap-cms@^3/dist/decap-cms.js';
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
+
+  return <div id="nc-root" />;
+}
+```
+
+### AdonisJS v6 — access the raw Node.js request via `ctx.request.request`
+
+AdonisJS v6 is **ESM-native** — it can import `laikacms` and `@laikacms/decap-integrations` directly
+without the dynamic `import()` workaround required by CommonJS frameworks like NestJS.
+
+AdonisJS wraps `IncomingMessage` in its own `Request` class. The raw Node.js objects are:
+
+```ts
+// app/controllers/decap_controller.ts
+import type { HttpContext } from '@adonisjs/core/http';
+import { Readable } from 'node:stream';
+
+export default class DecapController {
+  async proxy({ request, response }: HttpContext) {
+    const req = request.request; // raw IncomingMessage
+    const res = response.response; // raw ServerResponse
+
+    const url = new URL(req.url!, `http://${req.headers.host}`);
+
+    // Collect body (same bridge as Express)
+    const chunks: Buffer[] = [];
+    for await (const chunk of req) chunks.push(chunk as Buffer);
+    const body = Buffer.concat(chunks);
+
+    const webRequest = new Request(url.toString(), {
+      method: req.method,
+      headers: req.headers as Record<string, string>,
+      body: body.byteLength > 0 && req.method !== 'GET' && req.method !== 'HEAD'
+        ? (body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer)
+        : null,
+      ...(body.byteLength > 0 ? { duplex: 'half' } : {}),
+    } as RequestInit);
+
+    const webResponse = await laika.fetch(webRequest);
+
+    res.statusCode = webResponse.status;
+    webResponse.headers.forEach((value, name) => res.setHeader(name, value));
+    if (webResponse.body) {
+      Readable.fromWeb(webResponse.body as import('stream/web').ReadableStream).pipe(res);
+    } else {
+      res.end();
+    }
+
+    // Prevent AdonisJS from sending a second response
+    response.finish();
+  }
+}
+```
+
+Wire the catch-all route in `start/routes.ts`:
+
+```ts
+import router from '@adonisjs/core/services/router';
+const DecapController = () => import('#controllers/decap_controller');
+router.any('/api/decap/*', [DecapController, 'proxy']);
+```
+
+### SvelteKit — `src/app.html` is required
+
+SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js, you must create
+`src/app.html` explicitly or the dev server will error on startup.
+
+```html
+<!-- src/app.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    %sveltekit.head%
+  </head>
+  <body data-sveltekit-preload-data="hover">
+    <div style="display: contents">%sveltekit.body%</div>
+  </body>
+</html>
+```

@@ -1,6 +1,6 @@
 import * as S from 'effect/Schema';
 import { AtomBaseSchema } from 'laikacms/storage';
-import { DocumentLanguage } from '../record/record-language';
+import { DocumentLanguage } from '../record/record-language.js';
 
 /**
  * Summary schema for unpublished documents (used in list operations)

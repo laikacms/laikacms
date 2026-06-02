@@ -1,0 +1,24 @@
+{
+  "name": "@laikacms/starter-websocket",
+  "description": "Starter: WebSocket-driven real-time content updates with Hono + @hono/node-ws. Bidirectional complement to the SSE starter.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@hono/node-ws": "^1.0.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Admin · LaikaCMS Express starter</title>
+  </head>
+  <body>
+    <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+    <script type="module">
+      import { createLaikaBackend } from 'https://esm.sh/@laikacms/decap-integrations/decap-cms-backend-laika';
+      import { DEFAULT_DEV_TOKEN } from 'https://esm.sh/@laikacms/decap-integrations/embedded';
+
+      const CMS = window.CMS;
+      CMS.registerBackend('laika', createLaikaBackend());
+
+      CMS.init({
+        config: {
+          backend: {
+            name: 'laika',
+            branch: 'main',
+            base_url: window.location.origin,
+            dev_token: DEFAULT_DEV_TOKEN,
+          },
+          media_folder: 'public/uploads',
+          public_folder: '/uploads',
+          collections: [
+            {
+              name: 'posts',
+              label: 'Posts',
+              folder: 'posts',
+              create: true,
+              slug: '{{slug}}',
+              extension: 'md',
+              fields: [
+                { name: 'title', label: 'Title', widget: 'string' },
+                { name: 'date', label: 'Date', widget: 'datetime' },
+                { name: 'body', label: 'Body', widget: 'markdown' },
+              ],
+            },
+          ],
+        },
+      });
+    </script>
+  </body>
+</html>

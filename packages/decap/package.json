@@ -39,6 +39,16 @@
       "import": "./dist/embedded/index.js",
       "default": "./dist/embedded/index.js"
     },
+    "./workers": {
+      "types": "./dist/workers/index.d.ts",
+      "import": "./dist/workers/index.js",
+      "default": "./dist/workers/index.js"
+    },
+    "./custom": {
+      "types": "./dist/custom/index.d.ts",
+      "import": "./dist/custom/index.js",
+      "default": "./dist/custom/index.js"
+    },
     "./decap-config-types": {
       "types": "./dist/decap-config-types/index.d.ts",
       "import": "./dist/decap-config-types/index.js",

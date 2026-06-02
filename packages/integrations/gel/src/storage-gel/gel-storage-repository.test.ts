@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { GelDataSource } from './gel-datasource.js';
 import { GelStorageRepository } from './gel-storage-repository.js';
+import { gelContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(gelContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Gel HTTP EdgeQL mock.

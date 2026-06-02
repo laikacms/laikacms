@@ -1,0 +1,25 @@
+{
+  "name": "@laikacms/starter-hono-rpc",
+  "description": "Starter: typed Hono routes + Hono's built-in hc() client. Third typed-API surface alongside tRPC and GraphQL, with no codegen or extra dependency tree.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@hono/zod-validator": "^0.4.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

@@ -1,7 +1,11 @@
 import { LaikaStream, LaikaTask, NotFoundError, VersionMismatchError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { ContentfulStorageRepository } from './contentful-storage-repository.js';
+import { contentfulContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(contentfulContractCase);
 
 // ---------------------------------------------------------------------------
 // Tiny in-memory Contentful CMA mock — handles the subset the repository

@@ -1,0 +1,29 @@
+{
+  "name": "@laikacms/starter-hono-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Hono + LaikaCMS on Node.js. Demonstrates createEmbeddedLaika, SSR blog routes, documents via laikacms/compat, and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/index.ts",
+    "build": "pnpm build:admin",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

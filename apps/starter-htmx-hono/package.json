@@ -1,0 +1,23 @@
+{
+  "name": "@laikacms/starter-htmx-hono",
+  "description": "Starter: server-rendered HTML via hono/jsx + HTMX for hypermedia interactivity. Zero client framework, zero virtual DOM, full LaikaCMS.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.tsx",
+    "start": "tsx src/server.tsx",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

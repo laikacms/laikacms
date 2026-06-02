@@ -783,7 +783,20 @@ function mapStateToProps(state: State, ownProps: AiChatControlProps) {
   };
 }
 
-const ConnectedAiChatControl = connect(mapStateToProps, null, null, { forwardRef: true })(AiChatControl);
+// react-redux v7's connect() is typed against @types/react@18, which clashes with
+// React 19's ReactNode (adds bigint | Promise<ReactNode>). Re-type the curried
+// factory in React 19's vocabulary so the component itself stays unambiguously
+// typed and the emitted .d.ts is portable for downstream consumers.
+type ConnectedFactory = <P>(
+  c: React.ComponentType<P>,
+) => React.ComponentType<Omit<P, keyof ReturnType<typeof mapStateToProps>>>;
+
+const ConnectedAiChatControl = (connect(
+  mapStateToProps,
+  null,
+  null,
+  { forwardRef: true },
+) as unknown as ConnectedFactory)(AiChatControl);
 
 export default ConnectedAiChatControl;
 

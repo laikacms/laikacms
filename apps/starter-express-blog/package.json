@@ -1,0 +1,29 @@
+{
+  "name": "@laikacms/starter-express-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Express + LaikaCMS on Node.js. Shows how to bridge Express req/res to the Web API Request/Response that laika.fetch expects.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/index.ts",
+    "build": "pnpm build:admin",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "express": "^5.1.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.3",
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

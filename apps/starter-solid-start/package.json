@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-solid-start",
+  "description": "Starter: SolidStart SSR blog with embedded LaikaCMS. Completes the Solid trio (Solid SPA, this, and Qwik-adjacent resumability).",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vinxi dev --port 3000",
+    "build": "vinxi build",
+    "start": "vinxi start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@solidjs/router": "^0.15.0",
+    "@solidjs/start": "^1.0.0",
+    "laikacms": "workspace:*",
+    "solid-js": "^1.9.0",
+    "vinxi": "^0.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools"
+  }
+}

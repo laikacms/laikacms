@@ -1,0 +1,32 @@
+# Render.com infrastructure-as-code.
+#
+# https://render.com/docs/blueprint-spec
+#
+# Push this file to your GitHub repo; from the Render dashboard click
+# "New > Blueprint" and pick your repo. Render reads this file, creates the
+# service + disk + env vars in one shot, and auto-deploys on every push to
+# the configured branch.
+
+services:
+  - type: web
+    name: laikacms-starter-render
+    runtime: docker
+    dockerfilePath: ./apps/starter-render/Dockerfile
+    dockerContext: ./
+    plan: free                  # 512 MB RAM, sleeps after 15 min idle. Upgrade for prod.
+    healthCheckPath: /
+    autoDeploy: true            # any push to the branch triggers a new deploy
+
+    envVars:
+      - key: PORT
+        value: 10000             # Render's expected port
+      - key: CONTENT_DIR
+        value: /var/laikacms/content
+      # Replace these in the dashboard before going public:
+      - key: NODE_ENV
+        value: production
+
+    disk:
+      name: laikacms-content
+      mountPath: /var/laikacms
+      sizeGB: 1                 # smallest paid disk; free tier is in-memory only

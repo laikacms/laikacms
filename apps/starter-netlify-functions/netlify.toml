@@ -1,0 +1,14 @@
+[build]
+publish = "public"
+functions = "netlify/functions"
+
+[functions]
+node_bundler = "esbuild"
+external_node_modules = ["laikacms", "@laikacms/decap-integrations"]
+
+# Catch-all: every request goes to the laika function. The function sees the
+# original path via the Request URL and routes internally with Hono.
+[[redirects]]
+from = "/*"
+to = "/.netlify/functions/laika"
+status = 200

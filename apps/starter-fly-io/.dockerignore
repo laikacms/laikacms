@@ -1,0 +1,17 @@
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/.wrangler
+**/.vinxi
+**/.output
+**/.svelte-kit
+**/.vercel
+**/.netlify
+**/.expo
+**/.nuxt
+**/data
+**/.env*
+**/*.log
+.git
+.fly

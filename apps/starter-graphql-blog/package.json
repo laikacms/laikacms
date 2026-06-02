@@ -1,0 +1,30 @@
+{
+  "name": "@laikacms/starter-graphql-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog exposing LaikaCMS content over a GraphQL API (GraphQL Yoga) served by Hono. Demonstrates: GraphQL resolvers over laika.documents.*, typed casting of doc.content (Record<string,unknown>), and Web-API-native integration with no IncomingMessage bridge.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "graphql": "^16.9.0",
+    "graphql-yoga": "^5.10.4",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

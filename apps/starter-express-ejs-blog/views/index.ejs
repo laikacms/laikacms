@@ -1,0 +1,20 @@
+<%- include('partials/header', { title: 'My Blog' }) %>
+
+<h1>My Blog</h1>
+
+<% if (posts.length === 0) { %>
+  <p>No posts yet. <a href="/admin/">Open the CMS</a> to write your first post.</p>
+<% } else { %>
+  <ul class="post-list">
+    <% posts.forEach(function(post) { %>
+      <li>
+        <a href="/blog/<%= post.slug %>"><%= post.slug %></a>
+        <% if (post.updatedAt) { %>
+          <time><%= new Date(post.updatedAt).toLocaleDateString() %></time>
+        <% } %>
+      </li>
+    <% }) %>
+  </ul>
+<% } %>
+
+<%- include('partials/footer') %>

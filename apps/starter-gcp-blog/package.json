@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-gcp-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog deployed as a GCP Cloud Functions v2 HTTP function + LaikaCMS. Uses @google-cloud/functions-framework with Express-compatible Request/Response. Completes the Big Three cloud serverless platforms alongside starter-lambda-blog and starter-azure-blog.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && functions-framework --target=blog --port=3000",
+    "start": "functions-framework --target=blog",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.4.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

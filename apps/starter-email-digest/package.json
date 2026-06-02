@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-email-digest",
+  "description": "Starter: subscribe by email + scheduled digest. New posts since the subscriber's last send → one summary email via Resend.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "send-digest": "tsx src/send-digest.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@hono/zod-validator": "^0.4.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "resend": "^4.0.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

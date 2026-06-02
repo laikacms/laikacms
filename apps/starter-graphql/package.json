@@ -1,0 +1,25 @@
+{
+  "name": "@laikacms/starter-graphql",
+  "description": "Starter: GraphQL API over LaikaCMS via graphql-yoga. Demonstrates that the repo layer can expose any API shape — JSON:API is one possibility, GraphQL is another.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "graphql": "^16.10.0",
+    "graphql-yoga": "^5.10.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

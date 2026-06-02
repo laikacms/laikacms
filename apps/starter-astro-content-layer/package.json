@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-astro-content-layer",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter: Astro 5 hybrid mode with Content Layer — static blog pages prerendered from LaikaCMS, SSR admin routes for the embedded CMS. Demonstrates the build-time document API path.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.0.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "astro": "^5.0.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

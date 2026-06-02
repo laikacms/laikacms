@@ -1,5 +1,8 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { bitbucketContractCase } from './testing/index.js';
 
 import { BitbucketStorageRepository } from './bitbucket-storage-repository.js';
 
@@ -268,3 +271,5 @@ describe('BitbucketStorageRepository auth', () => {
     expect(bb.lastAuth()).toBe('Bearer oauth-xyz');
   });
 });
+
+runStorageRepositoryContract(bitbucketContractCase);

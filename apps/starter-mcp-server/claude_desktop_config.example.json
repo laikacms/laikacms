@@ -1,0 +1,16 @@
+{
+  "_comment": "Paste the `mcpServers` entry into your real Claude Desktop config at ~/Library/Application Support/Claude/claude_desktop_config.json (macOS) or %APPDATA%\\Claude\\claude_desktop_config.json (Windows).",
+  "mcpServers": {
+    "laikacms": {
+      "command": "node",
+      "args": [
+        "--import",
+        "tsx",
+        "/REPLACE_WITH_ABSOLUTE_PATH/laika-cms/apps/starter-mcp-server/src/server.ts"
+      ],
+      "env": {
+        "LAIKA_CONTENT_DIR": "/REPLACE_WITH_ABSOLUTE_PATH/laika-cms/apps/starter-mcp-server/content"
+      }
+    }
+  }
+}

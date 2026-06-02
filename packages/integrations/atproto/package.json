@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/atproto",
   "version": "1.0.0",
+  "private": true,
   "description": "AT Protocol-backed StorageRepository for Laika CMS. Content-addressable records with DID-identified repos, lexicon-typed collections, and atomic applyWrites batches. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
@@ -26,7 +27,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-atproto": {
       "types": "./dist/storage-atproto/index.d.ts",
@@ -53,5 +59,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

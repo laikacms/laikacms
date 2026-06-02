@@ -1,0 +1,29 @@
+{
+  "name": "@laikacms/starter-lit-spa",
+  "description": "Starter: framework-less Web Components SPA (Vite + Lit) + sidecar Hono backend. First starter to use the new decapAdminHtml helper.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "spa:dev": "vite --port 3000",
+    "spa:build": "tsc --noEmit && vite build",
+    "api:dev": "tsx watch server/server.ts",
+    "dev": "concurrently -n spa,api -c green,blue \"pnpm spa:dev\" \"pnpm api:dev\"",
+    "build": "pnpm spa:build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.server.json"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "concurrently": "^9.0.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "lit": "^3.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools"
+  }
+}

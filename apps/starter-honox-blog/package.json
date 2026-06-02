@@ -1,0 +1,31 @@
+{
+  "name": "@laikacms/starter-honox-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with HonoX (Hono meta-framework with file-based routing) + LaikaCMS. laika.fetch plugs directly into Hono route handlers via c.req.raw — no bridge needed.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && vite",
+    "build": "pnpm build:admin && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "honox": "^0.1.56",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@hono/vite-dev-server": "^0.26.0",
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

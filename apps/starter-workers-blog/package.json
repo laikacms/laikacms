@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-workers-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Cloudflare Workers + D1 + LaikaCMS. Shows lower-level decapApi wiring for edge runtimes where createEmbeddedLaika (Node.js / FileSystem) is not available.",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "wrangler d1 migrations apply starter-workers-blog-db"
+  },
+  "dependencies": {
+    "@laikacms/cloudflare": "workspace:*",
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260512.0",
+    "typescript": "catalog:tools",
+    "wrangler": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

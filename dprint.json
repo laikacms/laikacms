@@ -44,7 +44,14 @@
     "**/coverage",
     "**/tmp",
     "types/**",
-    "pnpm-lock.yaml"
+    "pnpm-lock.yaml",
+    "**/.svelte-kit",
+    "**/.nuxt",
+    "**/.next",
+    "**/.output",
+    "**/.vinxi",
+    "**/_site",
+    "**/public/admin"
   ],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.93.3.wasm",

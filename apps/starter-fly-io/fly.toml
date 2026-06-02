@@ -1,0 +1,48 @@
+# Fly.io launch config for LaikaCMS.
+#
+# Default deployment shape:
+#   - Single shared-cpu-1x machine in IAD.
+#   - Persistent volume mounted at /data — content lives there so it survives
+#     deploys and machine restarts.
+#   - Health check on the root route.
+#
+# To deploy:
+#   fly launch --no-deploy                # only the first time, to create the app
+#   fly volumes create laikacms_content --size 1 --region iad
+#   fly deploy
+#
+# For multi-region/Tigris (S3), see README — change CONTENT_DIR + add Tigris
+# bindings; this fly.toml stays the same.
+
+app = "laikacms-starter-fly"
+primary_region = "iad"
+
+[build]
+dockerfile = "Dockerfile"
+
+[env]
+PORT = "8080"
+CONTENT_DIR = "/data/content"
+
+[[mounts]]
+source = "laikacms_content"
+destination = "/data"
+
+[http_service]
+internal_port = 8080
+force_https = true
+auto_stop_machines = "stop" # scale to zero when idle
+auto_start_machines = true
+min_machines_running = 0
+
+[[http_service.checks]]
+grace_period = "10s"
+interval = "30s"
+method = "GET"
+timeout = "5s"
+path = "/"
+
+[[vm]]
+cpu_kind = "shared"
+cpus = 1
+memory_mb = 256 # plenty for the embedded preset

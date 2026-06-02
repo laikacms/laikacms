@@ -1,0 +1,32 @@
+{
+  "name": "@laikacms/starter-vite-vue-spa",
+  "description": "Starter: pure-client Vue 3 SPA (Vite) + sidecar Hono backend, stitched via Vite proxy for single-origin DX.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "spa:dev": "vite --port 3000",
+    "spa:build": "vue-tsc -b && vite build",
+    "api:dev": "tsx watch server/server.ts",
+    "dev": "concurrently -n spa,api -c green,blue \"pnpm spa:dev\" \"pnpm api:dev\"",
+    "build": "pnpm spa:build",
+    "typecheck": "vue-tsc --noEmit && tsc --noEmit -p tsconfig.server.json"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "concurrently": "^9.0.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "vue": "^3.5.0",
+    "vue-router": "^4.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "@vitejs/plugin-vue": "^5.2.0",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vue-tsc": "^2.1.0"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-gitlab-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by a GitLab repository. Each post is a markdown file committed to the repo via the GitLab REST v4 API; works with gitlab.com and self-hosted instances; Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/gitlab": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

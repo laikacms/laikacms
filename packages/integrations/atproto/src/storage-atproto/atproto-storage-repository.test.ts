@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto';
 
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { atprotoContractCase } from './testing/index.js';
 
 import { type ApplyWritesAction, AtprotoDataSource, pathToRkey, rkeyToPath } from './atproto-datasource.js';
 import { AtprotoStorageRepository } from './atproto-storage-repository.js';
@@ -492,3 +495,5 @@ describe('AtprotoStorageRepository', () => {
 
 // Reference unused symbols to keep lints quiet.
 void getRecordCount;
+
+runStorageRepositoryContract(atprotoContractCase);

@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-upstash-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Hono + Upstash Redis + LaikaCMS. Uses @laikacms/upstash/storage-redis — the most portable LaikaCMS storage adapter (pure fetch, no Node.js required). The same adapter works in Cloudflare Workers, Vercel Edge, Deno Deploy, and any other edge runtime.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/upstash": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

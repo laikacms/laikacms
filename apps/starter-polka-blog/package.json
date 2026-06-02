@@ -1,0 +1,29 @@
+{
+  "name": "@laikacms/starter-polka-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Polka + LaikaCMS. Polka is a tiny Express alternative (~33 LOC router) used internally by SvelteKit's dev server.",
+  "type": "module",
+  "scripts": {
+    "build": "pnpm build:admin",
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*",
+    "polka": "^1.0.0-next.28",
+    "sirv": "^3.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

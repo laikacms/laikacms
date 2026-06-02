@@ -1,0 +1,18 @@
+{
+  "name": "@laikacms/starter-deno-backend",
+  "exports": "./src/main.ts",
+  "nodeModulesDir": "auto",
+  "tasks": {
+    "dev": "deno run --allow-net --allow-read --allow-write --allow-env --allow-sys --watch src/main.ts",
+    "start": "deno run --allow-net --allow-read --allow-write --allow-env --allow-sys src/main.ts"
+  },
+  "imports": {
+    "laikacms/compat": "npm:laikacms/compat",
+    "laikacms/core": "npm:laikacms/core",
+    "@laikacms/decap-integrations/embedded": "npm:@laikacms/decap-integrations/embedded"
+  },
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["deno.ns", "deno.window", "dom", "esnext"]
+  }
+}

@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/microsoft",
   "version": "1.0.0",
+  "private": true,
   "description": "Microsoft Graph-backed storage implementations for Laika CMS. First export: OneDrive / SharePoint document libraries via the Microsoft Graph $batch endpoint. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
@@ -25,7 +26,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-onedrive": {
       "types": "./dist/storage-onedrive/index.d.ts",
@@ -52,5 +58,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

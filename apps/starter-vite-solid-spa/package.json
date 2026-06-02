@@ -1,0 +1,31 @@
+{
+  "name": "@laikacms/starter-vite-solid-spa",
+  "description": "Starter: pure-client Solid.js SPA (Vite) + sidecar Hono backend exposing LaikaCMS over JSON:API.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "spa:dev": "vite --port 3000",
+    "spa:build": "tsc --noEmit && vite build",
+    "api:dev": "tsx watch server/server.ts",
+    "dev": "concurrently -n spa,api -c green,blue \"pnpm spa:dev\" \"pnpm api:dev\"",
+    "build": "pnpm spa:build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.server.json"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@solidjs/router": "^0.15.0",
+    "concurrently": "^9.0.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "solid-js": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vite-plugin-solid": "^2.11.0"
+  }
+}

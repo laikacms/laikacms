@@ -73,6 +73,11 @@
       "import": "./dist/domain/storage/index.js",
       "default": "./dist/domain/storage/index.js"
     },
+    "./storage/testing": {
+      "types": "./dist/domain/storage/testing/index.d.ts",
+      "import": "./dist/domain/storage/testing/index.js",
+      "default": "./dist/domain/storage/testing/index.js"
+    },
     "./assets-contentbase": {
       "types": "./dist/impl/assets-contentbase/index.d.ts",
       "import": "./dist/impl/assets-contentbase/index.js",
@@ -142,6 +147,11 @@
       "types": "./dist/impl/storage-r2/index.d.ts",
       "import": "./dist/impl/storage-r2/index.js",
       "default": "./dist/impl/storage-r2/index.js"
+    },
+    "./storage-s3": {
+      "types": "./dist/impl/storage-s3/index.d.ts",
+      "import": "./dist/impl/storage-s3/index.js",
+      "default": "./dist/impl/storage-s3/index.js"
     },
     "./storage-webdav": {
       "types": "./dist/impl/storage-webdav/index.d.ts",

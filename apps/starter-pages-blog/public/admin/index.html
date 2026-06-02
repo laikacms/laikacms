@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Blog Admin</title>
+    <script>
+      window.CMS_MANUAL_INIT = true;
+    </script>
+    <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+  </head>
+  <body>
+    <script type="module">
+      const { default: createLaikaBackend } = await import(
+        'https://unpkg.com/@laikacms/decap-cms-backend-laika@latest/dist/index.js'
+      );
+
+      window.CMS.registerBackend('laika', createLaikaBackend());
+
+      window.CMS.init({
+        config: {
+          backend: {
+            name: 'laika',
+            api_url: '/api/decap',
+            // Dev-mode auto-login — remove for production and configure real OAuth
+            dev_token: 'dev-local-laika-token',
+          },
+          media_folder: 'uploads',
+          public_folder: '/uploads',
+          collections: [
+            {
+              name: 'posts',
+              label: 'Blog Posts',
+              folder: 'posts',
+              create: true,
+              slug: '{{slug}}',
+              sortable_fields: ['title', 'date'],
+              fields: [
+                { label: 'Title', name: 'title', widget: 'string' },
+                { label: 'Date', name: 'date', widget: 'datetime' },
+                { label: 'Description', name: 'description', widget: 'string', required: false },
+                { label: 'Body', name: 'body', widget: 'markdown' },
+              ],
+            },
+          ],
+        },
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+[build]
+publish = "public"
+functions = "netlify/functions"
+command = "pnpm build"
+
+[dev]
+framework = "#custom"
+command = "pnpm build:admin"
+targetPort = 8888
+port = 8888
+publish = "public"

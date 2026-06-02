@@ -1,5 +1,10 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { ldapContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(ldapContractCase);
 
 import {
   andFilter,

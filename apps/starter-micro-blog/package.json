@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-micro-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with micro v10 + LaikaCMS. Demonstrates micro's buffer() utility as a clean alternative to manual stream draining for the IncomingMessage-to-WHATWG-Request bridge.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && node --import tsx/esm src/index.ts",
+    "start": "node src/index.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*",
+    "micro": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

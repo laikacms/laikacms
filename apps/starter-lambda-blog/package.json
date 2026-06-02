@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/starter-lambda-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with AWS Lambda (Node.js) + LaikaCMS. Demonstrates createEmbeddedLaika with a Lambda handler adapter (ALB / API Gateway HTTP API v2).",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/local.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/local.js",
+    "typecheck": "tsc --noEmit",
+    "bundle": "esbuild src/handler.ts --bundle --platform=node --target=node22 --format=esm --outfile=dist/handler.mjs --external:node:*"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "catalog:types",
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

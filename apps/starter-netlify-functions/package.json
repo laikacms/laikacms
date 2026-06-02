@@ -1,0 +1,24 @@
+{
+  "name": "@laikacms/starter-netlify-functions",
+  "description": "Starter: LaikaCMS on Netlify Functions (Node runtime). Hono routing + createEmbeddedLaika. Documents Netlify Blobs for production storage.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "netlify dev --port 3000",
+    "deploy": "netlify deploy --prod",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@netlify/blobs": "^8.0.0",
+    "@netlify/functions": "^2.8.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "netlify-cli": "^17.0.0",
+    "typescript": "catalog:tools"
+  }
+}

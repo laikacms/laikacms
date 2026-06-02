@@ -1,0 +1,15 @@
+---
+// SSR — must not be prerendered so the admin is a live endpoint.
+export const prerender = false;
+
+import { decapAdminHtml } from '@laikacms/decap-integrations/embedded';
+import { laika } from '../lib/laika.js';
+
+// laika is imported to ensure the embedded server is initialised before
+// the first /api/decap/* request hits the route handler.
+void laika;
+
+const html = decapAdminHtml({ title: 'Admin · Astro Content Layer Blog' });
+---
+
+<Fragment set:html={html} />

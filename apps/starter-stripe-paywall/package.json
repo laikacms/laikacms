@@ -1,0 +1,24 @@
+{
+  "name": "@laikacms/starter-stripe-paywall",
+  "description": "Starter: Stripe Checkout + paywall. Free preview snippet; subscribers see full body. Signed session cookie + Stripe webhook for promotion.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*",
+    "stripe": "^17.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

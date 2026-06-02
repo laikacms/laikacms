@@ -1,0 +1,15 @@
+{
+  "name": "@laikacms/starter-deno-backend",
+  "description": "Starter: Deno 2 backend exposing LaikaCMS over JSON:API + a Decap admin shell. Workspace deps are bridged via Deno's nodeModulesDir mode.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "deno run --allow-net --allow-read --allow-write --allow-env --allow-sys --watch src/main.ts",
+    "start": "deno run --allow-net --allow-read --allow-write --allow-env --allow-sys src/main.ts"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  }
+}

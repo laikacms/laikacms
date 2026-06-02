@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { FOLDER_MIME_TYPE } from './drive-datasource.js';
 import { GoogleDriveStorageRepository } from './drive-storage-repository.js';
+import { googleDriveContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(googleDriveContractCase);
 
 // ---------------------------------------------------------------------------
 // Tiny in-memory Drive — just enough of the REST v3 surface to drive the

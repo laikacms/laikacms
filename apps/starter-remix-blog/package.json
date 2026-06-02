@@ -1,0 +1,35 @@
+{
+  "name": "@laikacms/starter-remix-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Remix + LaikaCMS. Demonstrates createEmbeddedLaika, documents via loader functions, and Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "remix vite:dev",
+    "build": "remix vite:build",
+    "start": "remix-serve ./build/server/index.js",
+    "typecheck": "tsc"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@remix-run/node": "^2.0.0",
+    "@remix-run/react": "^2.0.0",
+    "@remix-run/serve": "^2.0.0",
+    "isbot": "^4",
+    "laikacms": "workspace:*",
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "^2.0.0",
+    "@types/node": "catalog:types",
+    "@types/react": "catalog:types",
+    "@types/react-dom": "catalog:types",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vite-tsconfig-paths": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

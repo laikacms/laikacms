@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/upstash",
   "version": "1.0.0",
+  "private": true,
   "description": "Upstash service implementations for Laika CMS — Redis over HTTPS, edge-friendly, runtime-agnostic. Only depends on `fetch`.",
   "keywords": [
     "headless-cms",

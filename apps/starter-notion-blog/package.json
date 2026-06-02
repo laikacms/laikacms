@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-notion-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by Notion + LaikaCMS. Content lives in a Notion page tree; Decap CMS reads/writes it via NotionStorageRepository.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/notion": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

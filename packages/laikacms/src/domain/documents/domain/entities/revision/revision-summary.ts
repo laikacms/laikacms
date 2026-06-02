@@ -1,6 +1,6 @@
 import * as S from 'effect/Schema';
 import { AtomBaseSchema } from 'laikacms/storage';
-import { DocumentLanguage } from '../record/record-language';
+import { DocumentLanguage } from '../record/record-language.js';
 
 export const RevisionSummarySchema = S.toStandardSchemaV1(S.Struct({
   ...AtomBaseSchema.fields,

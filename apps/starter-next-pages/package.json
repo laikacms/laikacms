@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-next-pages",
+  "description": "Starter: Next.js 15 with the Pages Router (legacy). Complement to the App Router variant. Uses getServerSideProps for content fetching.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next dev -p 3000",
+    "build": "next build",
+    "start": "next start -p 3000",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*",
+    "next": "^15.0.0",
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "@types/react": "catalog:types",
+    "@types/react-dom": "catalog:types",
+    "typescript": "catalog:tools"
+  }
+}

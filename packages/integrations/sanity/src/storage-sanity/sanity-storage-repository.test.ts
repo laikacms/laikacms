@@ -1,8 +1,12 @@
 import { LaikaStream, LaikaTask, NotFoundError, VersionMismatchError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { type SanityDocument, type SanityMutation, TYPE_FILE, TYPE_FOLDER } from './sanity-datasource.js';
 import { SanityStorageRepository } from './sanity-storage-repository.js';
+import { sanityContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(sanityContractCase);
 
 // ---------------------------------------------------------------------------
 // In-memory Sanity Content Lake — handles the exact GROQ queries this

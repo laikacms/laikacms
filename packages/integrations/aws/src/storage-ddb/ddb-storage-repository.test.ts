@@ -2,9 +2,13 @@ import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
 import { DeleteCommand, DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
 import { mockClient } from 'aws-sdk-client-mock';
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { DdbStorageRepository } from './ddb-storage-repository.js';
+import { ddbContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(ddbContractCase);
 
 // ---------------------------------------------------------------------------
 // Wire the official aws-sdk-client-mock to an in-memory Map<pk, Map<sk, row>>
@@ -130,7 +134,7 @@ describe('DdbStorageRepository listing', () => {
     seedFile('', '11.md');
 
     const collected = await LaikaStream.runPromiseCollect(
-      makeRepo().listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+      makeRepo().listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
 
     expect(collected.data.map(s => s.key)).toEqual(['1', '2', '10', '11', 'root-marker']);
@@ -142,7 +146,7 @@ describe('DdbStorageRepository listing', () => {
     seedFile('', 'top.md');
 
     const collected = await LaikaStream.runPromiseCollect(
-      makeRepo().listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+      makeRepo().listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
     const byKey = Object.fromEntries(collected.data.map(s => [s.key, s.type] as const));
     expect(byKey).toEqual({ notes: 'folder-summary', top: 'object-summary' });
@@ -150,7 +154,7 @@ describe('DdbStorageRepository listing', () => {
 
   it('reports a missing folder as a recoverable NotFoundError, not a fatal failure', async () => {
     const collected = await LaikaStream.runPromiseCollect(
-      makeRepo().listAtomSummaries('does/not/exist', { pagination: { offset: 0, limit: 100 } }),
+      makeRepo().listAtomSummaries('does/not/exist', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
     expect(collected.data).toEqual([]);
     expect(collected.recoverableErrors).toHaveLength(1);
@@ -211,7 +215,7 @@ describe('DdbStorageRepository CRUD round-trip', () => {
     expect(ctx.store.get('STORAGE#')?.get('notes')?.Type).toBe('folder');
 
     const collected = await LaikaStream.runPromiseCollect(
-      repo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+      repo.listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
     expect(collected.data.map(s => s.key)).toEqual(['notes']);
     expect(collected.data[0].type).toBe('folder-summary');

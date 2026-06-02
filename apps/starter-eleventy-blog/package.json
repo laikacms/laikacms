@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-eleventy-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Eleventy (11ty) + LaikaCMS. Jamstack pattern: Eleventy SSG reads content at build time via laika.documents.*, and the dev server middleware wires up the Decap JSON:API at /api/decap/*.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && eleventy --serve",
+    "build": "pnpm build:admin && eleventy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@11ty/eleventy": "^3.0.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

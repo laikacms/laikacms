@@ -2,7 +2,7 @@
  * Dutch translations for core i18n
  */
 
-import type { Translation } from './en';
+import type { Translation } from './en.js';
 
 export const nl: Translation = {
   ok: 'OK',

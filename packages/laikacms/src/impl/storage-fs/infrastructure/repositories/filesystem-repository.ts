@@ -1,3 +1,6 @@
+import * as fs from 'fs/promises';
+import * as path from 'path';
+
 import * as Effect from 'effect/Effect';
 import * as Result from 'effect/Result';
 
@@ -135,7 +138,9 @@ export class FileSystemStorageRepository extends StorageRepository {
   getAtom(key: string): LaikaTask.LaikaTask<Atom> {
     return LaikaTask.make<Atom>(() =>
       Effect.gen({ self: this }, function*() {
-        const isDir = yield* Effect.promise(() => this.fileSystemDataSource.isDir(this.rootDirectory, key));
+        const isDir = yield* Effect.promise(() =>
+          this.fileSystemDataSource.isDir(this.rootDirectory, key).catch(() => false)
+        );
         if (isDir) {
           return yield* LaikaTask.runValue(this.getFolder(key)) as Effect.Effect<Atom, LaikaError>;
         }
@@ -241,7 +246,7 @@ export class FileSystemStorageRepository extends StorageRepository {
             this.rootDirectory,
             pathCombine(folderCreate.key, '.keep'),
             '',
-            '',
+            'keep',
           ),
         );
         return yield* LaikaTask.runValue(this.getFolder(folderCreate.key));
@@ -253,11 +258,44 @@ export class FileSystemStorageRepository extends StorageRepository {
     return LaikaStream.make<string, RemoveAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
         const batches = yield* Effect.promise(async () => {
+          // Resolve each key to its actual on-disk path (with extension)
+          const availableExtensions = Object.keys(this.serializerRegistry);
+          const resolvedEntries: Array<{ path: string, type: 'file' | 'dir' }> = [];
+          for (const key of keys) {
+            try {
+              const stat = await fs.stat(path.join(this.rootDirectory, key));
+              if (stat.isDirectory()) {
+                resolvedEntries.push({ path: key, type: 'dir' });
+                continue;
+              }
+              resolvedEntries.push({ path: key, type: 'file' });
+            } catch {
+              // Not a raw path — try with each known extension
+              const keyWithoutExt = key.includes('.')
+                ? key.slice(0, key.lastIndexOf('.'))
+                : key;
+              let found = false;
+              for (const ext of availableExtensions) {
+                const candidate = `${keyWithoutExt}.${ext}`;
+                try {
+                  await fs.access(path.join(this.rootDirectory, candidate));
+                  resolvedEntries.push({ path: candidate, type: 'file' });
+                  found = true;
+                  break;
+                } catch { /* try next */ }
+              }
+              if (!found) {
+                // Not found — pass as-is so deleteEntries reports it as skipped
+                resolvedEntries.push({ path: key, type: 'file' });
+              }
+            }
+          }
+
           const out: LaikaResult<{ path: string }[]>[] = [];
           for await (
             const batch of this.fileSystemDataSource.deleteEntries(
               this.rootDirectory,
-              keys.map(path => ({ path, type: 'file' as const })),
+              resolvedEntries,
             )
           ) out.push(batch);
           return out;

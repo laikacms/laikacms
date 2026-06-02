@@ -1,0 +1,14 @@
+html lang="en"
+  head
+    meta charset="utf-8"
+    meta name="viewport" content="width=device-width, initial-scale=1"
+    title -- LaikaCMS Marko starter
+  body style="font-family: system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 2rem 1rem; line-height: 1.6;"
+    header style="margin-bottom: 2rem;"
+      a href="/" style="text-decoration: none; color: inherit;"
+        h1 style="margin: 0;" -- LaikaCMS blog
+      nav style="margin-top: 0.5rem;"
+        a href="/" style="margin-right: 1rem;" -- Home
+        a href="/admin" -- Admin
+    main
+      <${input.renderBody}/>

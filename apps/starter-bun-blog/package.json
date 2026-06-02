@@ -1,0 +1,25 @@
+{
+  "name": "@laikacms/starter-bun-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Bun's native HTTP server + LaikaCMS. Zero-adaptation laika.fetch integration via WHATWG Request/Response.",
+  "type": "module",
+  "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/index.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && bun --watch src/server.ts",
+    "start": "pnpm build:admin && bun src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "esbuild": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "bun": ">=1.0.0"
+  }
+}

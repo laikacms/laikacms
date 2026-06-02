@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/solid",
   "version": "1.0.0",
+  "private": true,
   "description": "Solid Pod / Linked Data Platform-backed StorageRepository for Laika CMS. RDF/Turtle wire format with ldp:contains hierarchy and URI-as-identity addressing. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
@@ -27,7 +28,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-solid": {
       "types": "./dist/storage-solid/index.d.ts",
@@ -54,5 +60,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

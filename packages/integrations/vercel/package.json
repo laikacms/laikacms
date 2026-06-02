@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/vercel",
   "version": "1.0.0",
+  "private": true,
   "description": "Vercel Blob-backed StorageRepository for Laika CMS. Path-flat blob storage with URL-suffix avoidance and POST-to-delete-by-URL. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
@@ -24,7 +25,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-blob": {
       "types": "./dist/storage-blob/index.d.ts",
@@ -51,5 +57,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

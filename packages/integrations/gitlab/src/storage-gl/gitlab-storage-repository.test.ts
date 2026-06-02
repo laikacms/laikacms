@@ -1,7 +1,11 @@
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { GitlabStorageRepository } from './gitlab-storage-repository.js';
+import { gitlabContractCase } from './testing/index.js';
+
+runStorageRepositoryContract(gitlabContractCase);
 
 // ---------------------------------------------------------------------------
 // Tiny in-memory GitLab REST v4 mock — implements just enough of the surface

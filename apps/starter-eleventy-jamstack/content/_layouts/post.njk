@@ -1,0 +1,10 @@
+---
+layout: base.njk
+---
+<article>
+  <h2 style="margin-bottom: 0.25rem;">{{ title }}</h2>
+  {% if date %}
+    <small style="color: #666;">{{ date.toLocaleDateString() }}</small>
+  {% endif %}
+  <div style="margin-top: 1.5rem;">{{ content | safe }}</div>
+</article>

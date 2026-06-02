@@ -1,6 +1,6 @@
 import * as S from 'effect/Schema';
 import { AtomBaseSchema, StorageObjectContentSchema } from 'laikacms/storage';
-import { DocumentLanguage } from '../record/record-language';
+import { DocumentLanguage } from '../record/record-language.js';
 
 export const DocumentSchema = S.toStandardSchemaV1(S.Struct({
   ...AtomBaseSchema.fields,

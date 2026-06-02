@@ -1,0 +1,24 @@
+{
+  "name": "@laikacms/starter-fly-io",
+  "description": "Starter: deploy LaikaCMS to Fly.io. Hono backend + persistent volume for content. Tigris (S3) path documented as the multi-region alternative.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit",
+    "deploy": "fly deploy"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@laikacms/starter-convex-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog backed by Convex — reactive TypeScript database. Content lives in laika_files/laika_folders tables; full CRUD via Convex HTTP RPC; Decap admin from CDN.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/convex": "workspace:*",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "convex": "^1.0.0",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -1,0 +1,20 @@
+---
+layout: base.njk
+title: My Blog
+---
+<h1>My Blog</h1>
+
+{% if posts.length == 0 %}
+  <p>No posts yet. <a href="/admin/">Open the CMS</a> to write your first post.</p>
+{% else %}
+  <ul style="list-style:none;padding:0">
+  {% for post in posts %}
+    <li style="margin-bottom:1.5rem">
+      <a href="/blog/{{ post.slug }}/">{{ post.title }}</a>
+      {% if post.date %} · <time>{{ post.date }}</time>{% endif %}
+    </li>
+  {% endfor %}
+  </ul>
+{% endif %}
+
+<p><a href="/admin/">Admin →</a></p>

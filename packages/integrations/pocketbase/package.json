@@ -1,6 +1,7 @@
 {
   "name": "@laikacms/pocketbase",
   "version": "1.0.0",
+  "private": true,
   "description": "PocketBase-backed StorageRepository for Laika CMS. Self-hostable, SQLite-backed, REST + JWT. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
@@ -23,7 +24,12 @@
   "repository": "https://github.com/laikacms/laikacms",
   "type": "module",
   "sideEffects": false,
-  "files": ["dist", "README.md", "LICENSE", "CHANGELOG.md"],
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "exports": {
     "./storage-pb": {
       "types": "./dist/storage-pb/index.d.ts",
@@ -49,5 +55,7 @@
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
   },
-  "engines": { "node": ">=22" }
+  "engines": {
+    "node": ">=22"
+  }
 }

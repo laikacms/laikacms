@@ -1,0 +1,12 @@
+name = "laikacms-starter-workers-r2"
+main = "src/index.ts"
+compatibility_date = "2026-05-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Local dev: wrangler will create a `.wrangler/state/v3/r2` mock bucket
+# automatically. For production, `wrangler r2 bucket create laikacms-content`
+# first, then deploy.
+[[r2_buckets]]
+binding = "CONTENT"
+bucket_name = "laikacms-content"
+preview_bucket_name = "laikacms-content-preview"

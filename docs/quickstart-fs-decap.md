@@ -1,49 +1,49 @@
 # Self-Hosting Quickstart: FileSystem + Decap CMS
 
-This guide walks you through running LaikaCMS on a plain Node.js server using
-`@laikacms/storage-fs` (local filesystem storage) and
-`@laikacms/decap-cms-backend-laika` as the Decap CMS backend. It is the
-simplest possible self-hosted setup — no cloud provider account required.
+This guide walks you through running LaikaCMS on a plain Node.js server using `@laikacms/storage-fs`
+(local filesystem storage) and `@laikacms/decap-cms-backend-laika` as the Decap CMS backend. It is
+the simplest possible self-hosted setup — no cloud provider account required.
 
-For a broader overview of the system see [architecture](./architecture.md), and
-for Cloudflare Workers or AWS Lambda deployments see [deployment](./deployment.md).
+For a broader overview of the system see [architecture](./architecture.md), and for Cloudflare
+Workers or AWS Lambda deployments see [deployment](./deployment.md).
 
 ---
 
 ## Prerequisites
 
-| Requirement | Version |
-| ----------- | ------- |
-| Node.js     | 22.x    |
+| Requirement | Version    |
+| ----------- | ---------- |
+| Node.js     | 22.x       |
 | npm or pnpm | any recent |
 
 ---
 
 ## 1. Install packages
 
-Install the storage implementation, the HTTP API layer, and a serializer for
-the file format you want to store content in:
+Install the LaikaCMS package and a Node.js server runtime. Storage, API, and serializers are all
+subpath exports of the single `laikacms` package:
 
 ```bash
 # npm
-npm install @laikacms/storage-fs @laikacms/storage-api \
-  @laikacms/storage-serializers-json @hono/node-server
+npm install laikacms @hono/node-server
 
 # pnpm
-pnpm add @laikacms/storage-fs @laikacms/storage-api \
-  @laikacms/storage-serializers-json @hono/node-server
+pnpm add laikacms @hono/node-server
 ```
 
-| Package | Purpose |
-| ------- | ------- |
-| `@laikacms/storage-fs` | `FileSystemStorageRepository` — reads/writes files on disk |
-| `@laikacms/storage-api` | `buildJsonApi` — Hono-based JSON:API HTTP server |
-| `@laikacms/storage-serializers-json` | Serializes content objects to/from `.json` files |
-| `@hono/node-server` | Runs the Hono app on Node.js |
+| Package             | Purpose                                                            |
+| ------------------- | ------------------------------------------------------------------ |
+| `laikacms`          | Core: storage repos, API factories, serializers (subpath exports). |
+| `@hono/node-server` | Runs the Hono app on Node.js                                       |
 
-> **Other formats:** swap `@laikacms/storage-serializers-json` for
-> `@laikacms/storage-serializers-yaml` if you prefer YAML files, and change
-> `'json'` to `'yaml'` in the snippet below.
+> **Subpath exports:** the snippet below imports from `laikacms/storage-fs`, `laikacms/storage-api`,
+> and `laikacms/storage-serializers-json`. These are subpath exports of the single `laikacms`
+> package — there is no separate `@laikacms/storage-fs` package on npm. See
+> [packages.md](./packages.md) for the full list of subpaths.
+
+> **Other formats:** swap `laikacms/storage-serializers-json` for
+> `laikacms/storage-serializers-yaml` if you prefer YAML files, and change `'json'` to `'yaml'` in
+> the snippet below.
 
 ---
 
@@ -54,9 +54,9 @@ Create `server.mjs` (or `server.ts` if you have a TypeScript build step):
 ```js
 // server.mjs
 import { serve } from '@hono/node-server';
-import { buildJsonApi } from '@laikacms/storage-api';
-import { FileSystemStorageRepository } from '@laikacms/storage-fs';
-import { jsonSerializer } from '@laikacms/storage-serializers-json';
+import { buildJsonApi } from 'laikacms/storage-api';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
 // 1. Build a serializer registry — maps file extensions to serializers.
 const serializerRegistry = {
@@ -71,9 +71,9 @@ const serializerRegistry = {
 //      ignoreList?           // glob patterns to exclude (optional)
 //    )
 const repo = new FileSystemStorageRepository(
-  './content',          // rootDirectory — created automatically on first write
+  './content', // rootDirectory — created automatically on first write
   serializerRegistry,
-  'json',               // new objects are stored as <key>.json
+  'json', // new objects are stored as <key>.json
 );
 
 // 3. Wrap the repository in a JSON:API HTTP server.
@@ -85,9 +85,9 @@ serve({ fetch: api.fetch, port: 3000 }, () => {
 });
 ```
 
-> **basePath:** if you mount the storage API under a sub-path (e.g. behind a
-> reverse proxy at `/api/storage`), pass `basePath: '/api/storage'` to
-> `buildJsonApi` so that URL routing is handled correctly.
+> **basePath:** if you mount the storage API under a sub-path (e.g. behind a reverse proxy at
+> `/api/storage`), pass `basePath: '/api/storage'` to `buildJsonApi` so that URL routing is handled
+> correctly.
 
 ---
 
@@ -126,17 +126,20 @@ You should receive a JSON:API response describing the available endpoints.
 
 ```bash
 # npm
-npm install @laikacms/decap-cms-backend-laika decap-cms-app
+npm install @laikacms/decap-integrations decap-cms-app
 
 # pnpm
-pnpm add @laikacms/decap-cms-backend-laika decap-cms-app
+pnpm add @laikacms/decap-integrations decap-cms-app
 ```
+
+> The `laika` backend lives at the `@laikacms/decap-integrations/decap-cms-backend-laika` subpath
+> export. There is no separate `@laikacms/decap-cms-backend-laika` package on npm.
 
 ### 4b. Register the backend
 
 ```typescript
 // admin/index.ts (or admin/index.js)
-import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
+import { createLaikaBackend } from '@laikacms/decap-integrations/decap-cms-backend-laika';
 import CMS from 'decap-cms-app';
 
 const LaikaBackend = createLaikaBackend({
@@ -170,12 +173,11 @@ collections:
       - { name: body,  label: Body,  widget: markdown }
 ```
 
-The `base_url` and `api_root` together tell the backend where the LaikaCMS
-storage API is running. For a production deployment replace
-`http://localhost:3000` with your public API URL.
+The `base_url` and `api_root` together tell the backend where the LaikaCMS storage API is running.
+For a production deployment replace `http://localhost:3000` with your public API URL.
 
-See [Decap Integration](./decap-integration.md) for the full integration guide
-including OAuth2 setup and available widgets.
+See [Decap Integration](./decap-integration.md) for the full integration guide including OAuth2
+setup and available widgets.
 
 ---
 
@@ -191,30 +193,25 @@ npm start
 npx serve admin/
 ```
 
-Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap
-CMS admin UI.
+Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS admin UI.
 
 ---
 
 ## 6. Production deployment
 
-The storage API is a standard Node.js process and can be deployed anywhere that
-supports Node.js 22.
+The storage API is a standard Node.js process and can be deployed anywhere that supports Node.js 22.
 
 ### Key requirement
 
-`FileSystemStorageRepository` reads and writes files at `rootDirectory`.
-In production you need a **persistent volume** attached to that path so content
-survives restarts and redeploys.
+`FileSystemStorageRepository` reads and writes files at `rootDirectory`. In production you need a
+**persistent volume** attached to that path so content survives restarts and redeploys.
 
 ### Railway
 
 1. Push your code to a GitHub repository.
 2. Create a new Railway project and connect the repo.
-3. Add a **Persistent Volume** and mount it at `/app/content` (or wherever you
-   set `rootDirectory`).
-4. Set `NODE_ENV=production` and any other environment variables in the Railway
-   dashboard.
+3. Add a **Persistent Volume** and mount it at `/app/content` (or wherever you set `rootDirectory`).
+4. Set `NODE_ENV=production` and any other environment variables in the Railway dashboard.
 5. Railway will run `npm start` automatically.
 
 ### Fly.io
@@ -225,19 +222,19 @@ app = "my-laika-api"
 primary_region = "iad"
 
 [build]
-  dockerfile = "Dockerfile"
+dockerfile = "Dockerfile"
 
 [mounts]
-  source = "content_data"
-  destination = "/app/content"
+source = "content_data"
+destination = "/app/content"
 
 [[services]]
-  internal_port = 3000
-  protocol = "tcp"
+internal_port = 3000
+protocol = "tcp"
 
-  [[services.ports]]
-    port = 443
-    handlers = ["tls", "http"]
+[[services.ports]]
+port = 443
+handlers = ["tls", "http"]
 ```
 
 ```bash
@@ -270,12 +267,12 @@ docker run -p 3000:3000 -v $(pwd)/content:/app/content laika-api
 
 ## Environment variables
 
-| Variable | Description |
-| -------- | ----------- |
+| Variable | Description                                                       |
+| -------- | ----------------------------------------------------------------- |
 | `PORT`   | Port the server listens on (default: `3000` in the example above) |
 
-> `buildJsonApi` does not read environment variables directly — pass values
-> from `process.env` when constructing the repository and calling `serve`.
+> `buildJsonApi` does not read environment variables directly — pass values from `process.env` when
+> constructing the repository and calling `serve`.
 
 ---
 

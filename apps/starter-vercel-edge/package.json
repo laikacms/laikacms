@@ -1,0 +1,23 @@
+{
+  "name": "@laikacms/starter-vercel-edge",
+  "description": "Starter: LaikaCMS on the Vercel Edge runtime via Hono. Uses createWorkersLaika with a @vercel/blob-shaped R2 adapter.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev --listen 3000",
+    "deploy": "vercel deploy --prod",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@vercel/blob": "^0.27.0",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vercel": "^39.0.0"
+  }
+}

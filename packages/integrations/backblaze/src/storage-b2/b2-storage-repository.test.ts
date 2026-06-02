@@ -1,7 +1,10 @@
 import { createHash } from 'node:crypto';
 
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+
+import { backblazeContractCase } from './testing/index.js';
 
 import { B2DataSource, type B2FileVersion, computeSha1Hex } from './b2-datasource.js';
 import { B2StorageRepository } from './b2-storage-repository.js';
@@ -540,3 +543,5 @@ describe('B2StorageRepository', () => {
 // Reference unused symbols.
 void getUploadUrlCount;
 void uploadCount;
+
+runStorageRepositoryContract(backblazeContractCase);

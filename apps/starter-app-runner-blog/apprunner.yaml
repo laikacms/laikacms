@@ -1,0 +1,37 @@
+# apprunner.yaml — AWS App Runner source-based deployment config.
+# https://docs.aws.amazon.com/apprunner/latest/dg/config-file-reference.html
+#
+# App Runner builds from this config when you point it at a GitHub repo.
+# No ECR / Docker knowledge needed — it uses the managed Node.js runtime.
+#
+# Quick-deploy steps:
+#   1. Push this repo to GitHub.
+#   2. AWS Console → App Runner → Create service → Source: Repository
+#   3. Select your repo, branch, and configuration: "Use a configuration file"
+#   4. App Runner reads this file, builds, and deploys automatically.
+#
+# Persistent content:
+#   App Runner has no built-in volumes. Use @laikacms/s3 and set:
+#     AWS_REGION, S3_BUCKET_NAME env vars in the App Runner service config.
+#   Or connect an EFS filesystem via VPC Connector (advanced).
+
+version: 1.0
+runtime: nodejs22
+
+build:
+  commands:
+    pre-build:
+      - npm install --global pnpm
+    build:
+      - pnpm install --frozen-lockfile
+
+run:
+  command: pnpm --filter @laikacms/starter-app-runner-blog start
+  network:
+    port: 8080
+    env: PORT
+  env:
+    - name: NODE_ENV
+      value: production
+    - name: CONTENT_DIR
+      value: /tmp/content

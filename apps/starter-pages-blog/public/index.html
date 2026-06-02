@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My Blog</title>
+    <style>
+      body { font-family: system-ui, sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; }
+      a { color: #0070f3; }
+      nav { margin-bottom: 2rem; }
+      #posts li { margin-bottom: 1.5rem; list-style: none; }
+      time { color: #666; font-size: 0.875rem; }
+    </style>
+  </head>
+  <body>
+    <nav><a href="/">Home</a> · <a href="/admin/">Admin</a></nav>
+    <h1>My Blog</h1>
+    <ul id="posts"><li>Loading…</li></ul>
+
+    <script type="module">
+      const list = document.getElementById('posts');
+      try {
+        const res = await fetch('/api/posts');
+        const posts = await res.json();
+        if (!Array.isArray(posts) || posts.length === 0) {
+          list.innerHTML = '<li>No posts yet. <a href="/admin/">Open the CMS</a> to write your first post.</li>';
+        } else {
+          list.innerHTML = posts.map(p => {
+            const date = p.updatedAt
+              ? ` · <time>${new Date(p.updatedAt).toLocaleDateString()}</time>`
+              : '';
+            return `<li><a href="/blog/${p.slug}">${p.slug}</a>${date}</li>`;
+          }).join('');
+        }
+      } catch {
+        list.innerHTML = '<li>Error loading posts.</li>';
+      }
+    </script>
+  </body>
+</html>

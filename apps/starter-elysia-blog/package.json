@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-elysia-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Elysia + Bun + LaikaCMS. Elysia's context.request is a Web API Request, so laika.fetch works with zero adaptation.",
+  "scripts": {
+    "build:admin": "bun build src/admin-client.ts --outfile=public/admin/bundle.js",
+    "dev": "bun run build:admin && bun run --hot src/server.ts",
+    "start": "bun run src/server.ts",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.admin.json --noEmit"
+  },
+  "dependencies": {
+    "@elysiajs/static": "^1.1.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "elysia": "^1.3.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}

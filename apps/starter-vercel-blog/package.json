@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-vercel-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Vercel Edge Functions + Vercel Blob + LaikaCMS. Uses @laikacms/vercel/storage-blob with decapApi — no createEmbeddedLaika since Edge Functions run on V8, not Node.js.",
+  "type": "module",
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel --prod",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/vercel": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "@vercel/edge": "^1.1.0",
+    "typescript": "catalog:tools",
+    "vercel": "^54.0.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

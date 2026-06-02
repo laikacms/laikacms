@@ -35,7 +35,17 @@ export default tseslint.config(
       '**/coverage/**',
       '**/build/**',
       '**/worker-configuration.d.ts',
+      '**/next-env.d.ts',
       'types/**',
+      // Framework-generated artifact directories — never manually edited
+      '**/.astro/**',
+      '**/.next/**',
+      '**/.svelte-kit/**',
+      '**/.nuxt/**',
+      '**/.output/**',
+      '**/.vinxi/**',
+      // Built static assets (esbuild bundles, etc.)
+      '**/public/admin/bundle.js',
     ],
   },
 );

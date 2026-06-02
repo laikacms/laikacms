@@ -1,0 +1,20 @@
+{
+  "name": "@laikacms/starter-bun-backend",
+  "description": "Starter: headless backend on the Bun runtime exposing LaikaCMS over JSON:API + a Decap admin shell.",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "bun --watch src/server.ts",
+    "start": "bun src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.1.0",
+    "typescript": "catalog:tools"
+  }
+}

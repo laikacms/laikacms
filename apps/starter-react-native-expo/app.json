@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "laikacms-starter-rn",
+    "slug": "laikacms-starter-rn",
+    "version": "0.0.1",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "laikacms",
+    "newArchEnabled": true,
+    "ios": { "supportsTablet": true },
+    "android": { "adaptiveIcon": { "backgroundColor": "#ffffff" } },
+    "web": { "bundler": "metro" },
+    "plugins": ["expo-router"],
+    "experiments": { "typedRoutes": true }
+  }
+}
