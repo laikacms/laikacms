@@ -38,16 +38,16 @@ const stringBody = (body: string) => ({
 const notFoundError = () => {
   const err = new Error('NoSuchKey');
   (err as { name: string }).name = 'NoSuchKey';
-  (err as { $metadata: unknown }).$metadata = { httpStatusCode: 404 };
+  (err as unknown as { $metadata: unknown }).$metadata = { httpStatusCode: 404 };
   return err;
 };
 
 const setupMock = () => {
   const store = new Map<string, StoredObject>();
   let etagCounter = 0;
-  const s3 = mockClient(S3Client);
+  const s3 = mockClient(S3Client as never);
 
-  s3.on(HeadObjectCommand).callsFake(input => {
+  s3.on(HeadObjectCommand as never).callsFake(input => {
     const obj = store.get(input.Key);
     if (!obj) throw notFoundError();
     return {
@@ -58,7 +58,7 @@ const setupMock = () => {
     };
   });
 
-  s3.on(GetObjectCommand).callsFake(input => {
+  s3.on(GetObjectCommand as never).callsFake(input => {
     const obj = store.get(input.Key);
     if (!obj) throw notFoundError();
     return {
@@ -69,7 +69,7 @@ const setupMock = () => {
     };
   });
 
-  s3.on(PutObjectCommand).callsFake(input => {
+  s3.on(PutObjectCommand as never).callsFake(input => {
     etagCounter += 1;
     store.set(input.Key, {
       body: typeof input.Body === 'string' ? input.Body : '',
@@ -80,12 +80,12 @@ const setupMock = () => {
     return { ETag: `etag-${etagCounter}` };
   });
 
-  s3.on(DeleteObjectCommand).callsFake(input => {
+  s3.on(DeleteObjectCommand as never).callsFake(input => {
     store.delete(input.Key);
     return {};
   });
 
-  s3.on(ListObjectsV2Command).callsFake(input => {
+  s3.on(ListObjectsV2Command as never).callsFake(input => {
     const prefix = input.Prefix ?? '';
     const delimiter = input.Delimiter;
     const maxKeys = input.MaxKeys ?? 1000;
@@ -156,7 +156,7 @@ describe('S3StorageRepository listing', () => {
     seed('11.md');
 
     const collected = await LaikaStream.runPromiseCollect(
-      makeRepo().listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+      makeRepo().listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
 
     expect(collected.data.map(s => s.key)).toEqual(['1', '2', '10', '11']);
@@ -168,7 +168,7 @@ describe('S3StorageRepository listing', () => {
     seed('top.md');
 
     const collected = await LaikaStream.runPromiseCollect(
-      makeRepo().listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+      makeRepo().listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
 
     const byKey = Object.fromEntries(collected.data.map(s => [s.key, s.type] as const));
@@ -181,7 +181,7 @@ describe('S3StorageRepository listing', () => {
     seed('other/ignored.md');
 
     const collected = await LaikaStream.runPromiseCollect(
-      makeRepo('content').listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+      makeRepo('content').listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
 
     const keys = collected.data.map(s => s.key).sort();
@@ -233,7 +233,7 @@ describe('S3StorageRepository CRUD round-trip', () => {
     expect(ctx.store.has('notes/.keep')).toBe(true);
 
     const collected = await LaikaStream.runPromiseCollect(
-      repo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+      repo.listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
     expect(collected.data.map(s => s.key)).toEqual(['notes']);
     expect(collected.data[0].type).toBe('folder-summary');

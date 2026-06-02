@@ -30,14 +30,14 @@ const BUCKET = 'test-assets';
 const setupMock = () => {
   const store = new Map<string, StoredObject>();
   let etagCounter = 0;
-  const s3 = mockClient(S3Client);
+  const s3 = mockClient(S3Client as never);
 
-  s3.on(HeadObjectCommand).callsFake(input => {
+  s3.on(HeadObjectCommand as never).callsFake(input => {
     const obj = store.get(input.Key);
     if (!obj) {
       const err = new Error('NotFound');
       (err as { name: string }).name = 'NotFound';
-      (err as { $metadata: unknown }).$metadata = { httpStatusCode: 404 };
+      (err as unknown as { $metadata: unknown }).$metadata = { httpStatusCode: 404 };
       throw err;
     }
     const bodyLength = typeof obj.body === 'string' ? obj.body.length : obj.body.byteLength;
@@ -51,7 +51,7 @@ const setupMock = () => {
     };
   });
 
-  s3.on(PutObjectCommand).callsFake(input => {
+  s3.on(PutObjectCommand as never).callsFake(input => {
     etagCounter += 1;
     store.set(input.Key, {
       body: (input.Body as Uint8Array | string) ?? new Uint8Array(),
@@ -64,12 +64,12 @@ const setupMock = () => {
     return { ETag: `"etag-${etagCounter}"` };
   });
 
-  s3.on(DeleteObjectCommand).callsFake(input => {
+  s3.on(DeleteObjectCommand as never).callsFake(input => {
     store.delete(input.Key);
     return {};
   });
 
-  s3.on(ListObjectsV2Command).callsFake(input => {
+  s3.on(ListObjectsV2Command as never).callsFake(input => {
     const prefix = input.Prefix ?? '';
     const delimiter = input.Delimiter;
     const maxKeys = input.MaxKeys ?? 1000;
@@ -184,7 +184,7 @@ describe('S3AssetsRepository CRUD', () => {
     );
 
     const collected = await LaikaStream.runPromiseCollect(repo.deleteAssets(['a', 'b']));
-    expect(collected.data.sort()).toEqual(['a', 'b']);
+    expect([...collected.data].sort()).toEqual(['a', 'b']);
     expect(collected.done).toEqual({ removed: 2, skipped: 0 });
   });
 });

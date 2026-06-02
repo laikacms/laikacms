@@ -134,7 +134,7 @@ describe('DdbStorageRepository listing', () => {
     seedFile('', '11.md');
 
     const collected = await LaikaStream.runPromiseCollect(
-      makeRepo().listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+      makeRepo().listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
 
     expect(collected.data.map(s => s.key)).toEqual(['1', '2', '10', '11', 'root-marker']);
@@ -146,7 +146,7 @@ describe('DdbStorageRepository listing', () => {
     seedFile('', 'top.md');
 
     const collected = await LaikaStream.runPromiseCollect(
-      makeRepo().listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+      makeRepo().listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
     const byKey = Object.fromEntries(collected.data.map(s => [s.key, s.type] as const));
     expect(byKey).toEqual({ notes: 'folder-summary', top: 'object-summary' });
@@ -154,7 +154,7 @@ describe('DdbStorageRepository listing', () => {
 
   it('reports a missing folder as a recoverable NotFoundError, not a fatal failure', async () => {
     const collected = await LaikaStream.runPromiseCollect(
-      makeRepo().listAtomSummaries('does/not/exist', { pagination: { offset: 0, limit: 100 } }),
+      makeRepo().listAtomSummaries('does/not/exist', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
     expect(collected.data).toEqual([]);
     expect(collected.recoverableErrors).toHaveLength(1);
@@ -215,7 +215,7 @@ describe('DdbStorageRepository CRUD round-trip', () => {
     expect(ctx.store.get('STORAGE#')?.get('notes')?.Type).toBe('folder');
 
     const collected = await LaikaStream.runPromiseCollect(
-      repo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+      repo.listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
     );
     expect(collected.data.map(s => s.key)).toEqual(['notes']);
     expect(collected.data[0].type).toBe('folder-summary');
