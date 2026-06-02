@@ -3075,6 +3075,49 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-polka-eta-blog:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      eta:
+        specifier: ^3.5.0
+        version: 3.5.0
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+      polka:
+        specifier: ^1.0.0-next.28
+        version: 1.0.0-next.28
+      rehype-stringify:
+        specifier: ^10.0.0
+        version: 10.0.1
+      remark:
+        specifier: ^15.0.0
+        version: 15.0.1
+      remark-rehype:
+        specifier: ^11.0.0
+        version: 11.1.2
+      sirv:
+        specifier: ^3.0.1
+        version: 3.0.2
+      unified:
+        specifier: ^11.0.5
+        version: 11.0.5
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      esbuild:
+        specifier: catalog:tools
+        version: 0.27.7
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-preact-blog:
     dependencies:
       '@hono/node-server':
@@ -21531,6 +21574,10 @@ packages:
   esutils@2.0.3:
     resolution: {integrity: sha512-kVscqXk4OCp68SZ0dkgEKVi6/8ij300KBWTJq32P/dYeWTSwK41WyTxalN1eRmA5Z9UU/LX9D7FWSmV9SAYx6g==}
     engines: {node: '>=0.10.0'}
+
+  eta@3.5.0:
+    resolution: {integrity: sha512-e3x3FBvGzeCIHhF+zhK8FZA2vC5uFn6b4HJjegUbIWrDb4mJ7JjTGMJY9VGIbRVpmSwHopNiaJibhjIr+HfLug==}
+    engines: {node: '>=6.0.0'}
 
   etag@1.8.1:
     resolution: {integrity: sha512-aIL5Fx7mawVa300al2BnEE4iNvo1qETxLrPI/o05L7z6go7fCw1J6EQmbK4FmJ2AS7kgVF/KEZWufBfdClMcPg==}
@@ -48608,6 +48655,8 @@ snapshots:
       '@types/estree': 1.0.9
 
   esutils@2.0.3: {}
+
+  eta@3.5.0: {}
 
   etag@1.8.1: {}
 
