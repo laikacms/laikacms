@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-nitro-turso",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Nitro standalone blog backed by Turso (libSQL). toWebRequest(event) bridges H3 to laika.fetch() — deploys to Node, Workers, Vercel, Netlify.",
+  "type": "module",
+  "scripts": {
+    "dev": "nitro dev",
+    "build": "nitro build",
+    "start": "node .output/server/index.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/libsql": "workspace:*",
+    "h3": "^1.15.0",
+    "laikacms": "workspace:*",
+    "nitropack": "^2.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
