@@ -2,20 +2,17 @@
   "name": "@laikacms/starter-fresh-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog built with Fresh 2 (Deno's official web framework) + LaikaCMS. Demonstrates file-based routing, createEmbeddedLaika, Preact SSR, and Decap admin from CDN.",
+  "description": "Starter blog built with Deno Fresh 1 + LaikaCMS. Demonstrates WHATWG-native handler integration (no adapter), createEmbeddedLaika with Deno node:fs compat, and Decap admin from CDN.",
   "type": "module",
   "scripts": {
-    "dev": "deno task dev",
-    "start": "deno task start",
-    "typecheck": "tsc --noEmit"
+    "dev": "deno task start",
+    "build": "deno task build",
+    "start": "deno task preview",
+    "typecheck": "deno check routes/**/*.ts routes/**/*.tsx lib/*.ts main.ts"
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
     "laikacms": "workspace:*"
-  },
-  "devDependencies": {
-    "@types/node": "catalog:types",
-    "preact": "^10.26.2"
   },
   "engines": {
     "node": "22.x"
