@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-hexo-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Hexo 8 SSG + LaikaCMS. Demonstrates the SSG sidecar pattern: LaikaCMS manages source/_posts/ via a Hexo server middleware, Hexo reads the same files at build time.",
+  "scripts": {
+    "dev": "hexo server",
+    "build": "hexo generate",
+    "clean": "hexo clean",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "hexo": "^8.0.0",
+    "hexo-renderer-ejs": "^2.0.0",
+    "hexo-renderer-marked": "^6.0.0",
+    "hexo-server": "^3.0.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
