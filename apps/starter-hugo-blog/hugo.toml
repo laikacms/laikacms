@@ -1,0 +1,11 @@
+baseURL = "http://localhost:1313/"
+title = "My Blog"
+languageCode = "en"
+
+# Permalink pattern — produces /blog/my-post/ URLs
+[permalinks]
+posts = "/blog/:slug/"
+
+[markup.goldmark.renderer]
+# Allow raw HTML inside markdown (Decap may include it for images)
+unsafe = true
