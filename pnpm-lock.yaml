@@ -2196,6 +2196,61 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-koa-liquid-blog:
+    dependencies:
+      '@koa/router':
+        specifier: ^13.1.0
+        version: 13.1.1
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      koa:
+        specifier: ^2.16.1
+        version: 2.16.4
+      koa-static:
+        specifier: ^5.0.0
+        version: 5.0.0
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+      liquidjs:
+        specifier: ^10.0.0
+        version: 10.27.0
+      rehype-stringify:
+        specifier: ^10.0.0
+        version: 10.0.1
+      remark:
+        specifier: ^15.0.0
+        version: 15.0.1
+      remark-rehype:
+        specifier: ^11.0.0
+        version: 11.1.2
+      unified:
+        specifier: ^11.0.5
+        version: 11.0.5
+    devDependencies:
+      '@types/koa':
+        specifier: ^2.15.0
+        version: 2.15.2
+      '@types/koa-static':
+        specifier: ^4.0.4
+        version: 4.0.4
+      '@types/koa__router':
+        specifier: ^12.0.4
+        version: 12.0.5
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      esbuild:
+        specifier: catalog:tools
+        version: 0.27.7
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-lambda-blog:
     dependencies:
       '@laikacms/decap-integrations':
