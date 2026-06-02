@@ -1,22 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "target": "ESNext",
     "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "allowImportingTsExtensions": true,
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "lib": ["ESNext", "DOM"],
     "strict": true,
     "noImplicitAny": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "preact"
+    "skipLibCheck": true,
+    "allowImportingTsExtensions": true,
+    "noEmit": true,
+    "types": ["node"]
   },
-  "include": [
-    "main.ts",
-    "dev.ts",
-    "fresh.config.ts",
-    "fresh.gen.ts",
-    "routes/**/*.ts",
-    "routes/**/*.tsx",
-    "lib/**/*.ts"
-  ]
+  "include": ["main.ts", "lib", "routes", "deno.d.ts", "types"]
 }

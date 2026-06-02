@@ -1,19 +1,15 @@
 {
-  "$schema": "https://deno.land/x/deno/cli/schemas/config-file.v1.json",
-  "tasks": {
-    "dev": "deno run -A --watch=routes/,lib/ dev.ts",
-    "start": "deno run -A main.ts",
-    "build": "deno run -A dev.ts build",
-    "check": "deno check main.ts routes/index.tsx routes/admin.tsx \"routes/blog/[slug].tsx\" \"routes/api/decap/[...path].ts\" lib/laika.ts"
-  },
   "imports": {
-    "$fresh/": "https://deno.land/x/fresh@1.7.3/",
-    "preact": "npm:preact@^10.23.1",
-    "preact/": "npm:preact@^10.23.1/",
-    "@preact/signals": "npm:@preact/signals@^1.2.1",
-    "@preact/signals-core": "npm:@preact/signals-core@^1.5.1"
+    "fresh": "jsr:@fresh/core@^2.0.0",
+    "preact": "npm:preact@^10.0.0",
+    "preact/hooks": "npm:preact@^10.0.0/hooks",
+    "preact/jsx-runtime": "npm:preact@^10.0.0/jsx-runtime"
   },
-  "nodeModulesDir": "auto",
+  "tasks": {
+    "dev": "deno serve --port ${PORT:-3000} --allow-net --allow-read --allow-write --allow-env --watch main.ts",
+    "start": "deno serve --port ${PORT:-3000} --allow-net --allow-read --allow-write --allow-env main.ts",
+    "check": "deno check main.ts routes/**/*.ts routes/**/*.tsx lib/**/*.ts"
+  },
   "compilerOptions": {
     "jsx": "react-jsx",
     "jsxImportSource": "preact",
@@ -21,5 +17,5 @@
     "strict": true,
     "noImplicitAny": true
   },
-  "exclude": ["**/_fresh/*"]
+  "nodeModulesDir": "auto"
 }

@@ -1,8 +1,8 @@
 import { resolve } from 'node:path';
 
-import { createEmbeddedLaika } from '@laikacms/decap-integrations/embedded';
+import { createEmbeddedLaika, decapAdminHtml, minimalBlogConfig } from '@laikacms/decap-integrations/embedded';
 
-import { blogCollections } from './decap-config.ts';
+export const decapConfig = minimalBlogConfig();
 
 /**
  * Singleton EmbeddedLaika instance.
@@ -14,17 +14,17 @@ import { blogCollections } from './decap-config.ts';
  *      packages land in node_modules/ where Deno can resolve them).
  *   2. Deno is run with --allow-read and --allow-write permissions.
  *
- * Use Deno.cwd() instead of process.cwd() — both work in Deno 2 compat mode,
- * but Deno.cwd() is idiomatic and avoids the need for node:process.
+ * import.meta.dirname is preferred over Deno.cwd() — it gives the module
+ * file's directory regardless of where `deno serve` is invoked from.
  */
 export const laika = createEmbeddedLaika({
-  contentDir: resolve(Deno.cwd(), 'content'),
+  contentDir: resolve(import.meta.dirname!, '..', 'content'),
   basePath: '/api/decap',
   auth: { mode: 'dev' },
-  decapConfig: {
-    backend: { name: 'laika', api_url: '/api/decap' },
-    media_folder: 'public/uploads',
-    public_folder: '/uploads',
-    collections: blogCollections,
-  },
+  decapConfig,
+});
+
+export const ADMIN_HTML = decapAdminHtml({
+  decapConfig,
+  title: 'Admin · LaikaCMS Fresh starter',
 });

@@ -1,24 +1,14 @@
-import type { Handlers } from '$fresh/server.ts';
+// Decap JSON:API proxy.
+//
+// Fresh 2's ctx.req IS the native WHATWG Request — identical to what
+// laika.fetch expects — so we pass it directly. No bridging needed.
+//
+// The single-function form of define.handlers handles all HTTP methods,
+// which is what we need: Decap sends GET, POST, PUT, DELETE, PATCH.
+import { createDefine } from 'fresh';
 
 import { laika } from '../../../lib/laika.ts';
 
-/**
- * Catch-all Decap JSON:API proxy.
- *
- * Fresh's Handlers receive a WHATWG Request — the same type laika.fetch
- * expects — so no bridging is needed, the proxy is a single line per method.
- *
- * Fresh resolves [...path] catch-all segments, so /api/decap/config.yml,
- * /api/decap/health, and all nested paths land here.
- */
-const proxy = (req: Request) => laika.fetch(req);
+const define = createDefine<Record<never, never>>();
 
-export const handler: Handlers = {
-  GET: proxy,
-  POST: proxy,
-  PUT: proxy,
-  DELETE: proxy,
-  PATCH: proxy,
-  HEAD: proxy,
-  OPTIONS: proxy,
-};
+export const handler = define.handlers(ctx => laika.fetch(ctx.req));
