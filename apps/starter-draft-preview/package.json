@@ -1,0 +1,26 @@
+{
+  "name": "@laikacms/starter-draft-preview",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter showing LaikaCMS draft-preview workflow. Demonstrates getUnpublished() to serve draft content on a protected /preview route while the public blog only shows published posts.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
