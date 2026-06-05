@@ -120,3 +120,7 @@ Thumbs.db
 
 tmp/
 temp/
+
+# Remote test session — local secrets & generated tunnel config
+scripts/remote-session/config.env
+scripts/remote-session/cloudflared.yml
