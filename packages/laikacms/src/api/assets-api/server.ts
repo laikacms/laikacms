@@ -5,6 +5,7 @@ import * as S from 'effect/Schema';
 import type { Asset, AssetCreate, AssetMetadata, AssetsRepository, AssetUpdate, FetchHints } from 'laikacms/assets';
 import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
 import { BadRequestError, errorStatus, InternalError, LaikaError, LaikaStream, LaikaTask } from 'laikacms/core';
+import { recoverableErrorsToWarnings } from 'laikacms/json-api';
 
 /** Convert any caught throw into a LaikaError, preserving LaikaError instances and wrapping defects in InternalError. */
 const toLaikaError = (err: unknown): LaikaError => {
@@ -18,6 +19,18 @@ const toLaikaError = (err: unknown): LaikaError => {
  * both typed failures AND defects so route handlers always produce a
  * JSON:API response instead of leaking text/plain 500s.
  */
+const firstResultWithMetadata = async <T>(
+  task: LaikaTask.LaikaTask<T>,
+): Promise<LaikaResult<{ value: T, recoverableErrors: ReadonlyArray<LaikaError> }>> => {
+  try {
+    const r = await Effect.runPromise(Effect.result(LaikaTask.runCollect(task)));
+    if (Result.isFailure(r)) return Result.fail(r.failure);
+    return Result.succeed({ value: r.success.value, recoverableErrors: r.success.recoverableErrors });
+  } catch (err) {
+    return Result.fail(toLaikaError(err));
+  }
+};
+
 const firstResult = async <T>(task: LaikaTask.LaikaTask<T>): Promise<LaikaResult<T>> => {
   try {
     return await Effect.runPromise(Effect.result(LaikaTask.runValue(task)));
@@ -46,11 +59,21 @@ const runStream = async <A, D extends LaikaDone>(
  */
 const runStreamWithDone = async <A, D extends LaikaDone>(
   stream: LaikaStream.LaikaStream<A, D>,
-): Promise<LaikaResult<{ data: ReadonlyArray<A>, done: D }>> => {
+): Promise<
+  LaikaResult<{
+    data: ReadonlyArray<A>,
+    done: D,
+    recoverableErrors: ReadonlyArray<LaikaError>,
+  }>
+> => {
   try {
     const r = await Effect.runPromise(Effect.result(LaikaStream.runCollect(stream)));
     if (Result.isFailure(r)) return Result.fail(r.failure);
-    return Result.succeed({ data: r.success.data, done: r.success.done });
+    return Result.succeed({
+      data: r.success.data,
+      done: r.success.done,
+      recoverableErrors: r.success.recoverableErrors,
+    });
   } catch (err) {
     return Result.fail(toLaikaError(err));
   }
@@ -160,10 +183,15 @@ function respondResource(
   resource: JsonApiResource,
   included?: JsonApiResource[],
   basePath: string = '',
+  recoverableErrors?: ReadonlyArray<LaikaError>,
 ): Response {
   const response: JsonApiResponse = { data: withAssetsSelfLink(resource, basePath) };
   if (included && included.length > 0) {
     response.included = included;
+  }
+  const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
+  if (warnings) {
+    response.meta = { warnings };
   }
   return json(response);
 }
@@ -363,12 +391,13 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           pagination.cursor,
         );
 
-        // Navigation lives in `links` per JSON:API §8 — `hasMore` is
-        // implicit in the presence of `links.next`, and the current cursor
-        // is encoded in the request URL itself. `meta.page` only carries
-        // aggregate counts the backend supplies.
-        const meta: Record<string, unknown> | undefined = typeof batchDone.total === 'number'
-          ? { page: { total: batchDone.total } }
+        // `meta.page` carries aggregate counts; `meta.warnings` carries
+        // per-item recoverable errors collected during the walk (an
+        // unreadable subfolder, a missing variation, etc.).
+        const warnings = recoverableErrorsToWarnings(batch.success.recoverableErrors);
+        const page = typeof batchDone.total === 'number' ? { total: batchDone.total } : undefined;
+        const meta: Record<string, unknown> | undefined = page || warnings
+          ? { ...(page ? { page } : {}), ...(warnings ? { warnings } : {}) }
           : undefined;
 
         return respondCollection(resources, included, links, meta, basePath);
@@ -379,11 +408,11 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       if (path.startsWith(`${basePath}/resources/`) && method === 'GET') {
         const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
 
-        const result = await firstResult(repository.getResource(key, { hints }));
+        const result = await firstResultWithMetadata(repository.getResource(key, { hints }));
         if (Result.isFailure(result)) {
           return respondError(result.failure, errorStatus.NOT_FOUND);
         }
-        const resourceData = result.success[0];
+        const resourceData = result.success.value[0];
         if (!resourceData) {
           return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
         }
@@ -417,7 +446,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           advertiseRelationships: { urls: hints.urls, variations: hints.variations },
         });
 
-        return respondResource(resource, included, basePath);
+        return respondResource(resource, included, basePath, result.success.recoverableErrors);
       }
 
       // Route: POST /resources
@@ -480,7 +509,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           const cacheControl = cacheControlField || metadata?.cacheControl;
           const content = await file.arrayBuffer();
 
-          const result = await firstResult(repository.createAsset({
+          const result = await firstResultWithMetadata(repository.createAsset({
             key: assetKey,
             mimeType,
             content,
@@ -491,7 +520,12 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           if (Result.isFailure(result)) {
             return respondError(result.failure, errorStatus.BAD_REQUEST);
           }
-          return respondResource(assetToJsonApi(result.success), undefined, basePath);
+          return respondResource(
+            assetToJsonApi(result.success.value),
+            undefined,
+            basePath,
+            result.success.recoverableErrors,
+          );
         }
 
         // Handle JSON:API request for folder creation
@@ -514,11 +548,16 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
               key: parsed.id,
               type: 'folder',
             };
-            const result = await firstResult(repository.createFolder(folderCreate));
+            const result = await firstResultWithMetadata(repository.createFolder(folderCreate));
             if (Result.isFailure(result)) {
               return respondError(result.failure, errorStatus.BAD_REQUEST);
             }
-            return respondResource(folderToJsonApi(result.success), undefined, basePath);
+            return respondResource(
+              folderToJsonApi(result.success.value),
+              undefined,
+              basePath,
+              result.success.recoverableErrors,
+            );
           }
 
           // Asset creation via JSON (content must be base64 encoded)
@@ -558,11 +597,16 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
               content: bytes.buffer,
             };
 
-            const result = await firstResult(repository.createAsset(assetCreate));
+            const result = await firstResultWithMetadata(repository.createAsset(assetCreate));
             if (Result.isFailure(result)) {
               return respondError(result.failure, errorStatus.BAD_REQUEST);
             }
-            return respondResource(assetToJsonApi(result.success), undefined, basePath);
+            return respondResource(
+              assetToJsonApi(result.success.value),
+              undefined,
+              basePath,
+              result.success.recoverableErrors,
+            );
           }
 
           return respondError(
@@ -602,11 +646,16 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           customMetadata: parsed.attributes.customMetadata,
         };
 
-        const result = await firstResult(repository.updateAsset(assetUpdate));
+        const result = await firstResultWithMetadata(repository.updateAsset(assetUpdate));
         if (Result.isFailure(result)) {
           return respondError(result.failure, errorStatus.BAD_REQUEST);
         }
-        return respondResource(assetToJsonApi(result.success), undefined, basePath);
+        return respondResource(
+          assetToJsonApi(result.success.value),
+          undefined,
+          basePath,
+          result.success.recoverableErrors,
+        );
       }
 
       // Route: DELETE /resources/:key
@@ -626,19 +675,21 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         }
         const resourceType = firstResource.type;
 
-        if (resourceType === 'folder') {
-          const r = await firstResult(repository.deleteFolder(key, recursive));
-          if (Result.isFailure(r)) {
-            return respondError(r.failure, errorStatus.BAD_REQUEST);
-          }
-        } else {
-          const r = await firstResult(repository.deleteAsset(key));
-          if (Result.isFailure(r)) {
-            return respondError(r.failure, errorStatus.BAD_REQUEST);
-          }
+        const deleteTask = resourceType === 'folder'
+          ? repository.deleteFolder(key, recursive)
+          : repository.deleteAsset(key);
+        const r = await firstResultWithMetadata(deleteTask);
+        if (Result.isFailure(r)) {
+          return respondError(r.failure, errorStatus.BAD_REQUEST);
         }
-
-        return new Response(null, { status: 204 });
+        // Clean success → 204 No Content (back-compat). Partial success with
+        // recoverable warnings → 200 + a small body so the warnings can ride
+        // along; HTTP 204 forbids a response body.
+        const warnings = recoverableErrorsToWarnings(r.success.recoverableErrors);
+        if (!warnings) {
+          return new Response(null, { status: 204 });
+        }
+        return json({ meta: { deleted: true, warnings } });
       }
 
       // 404 Not Found

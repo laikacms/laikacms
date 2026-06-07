@@ -340,11 +340,11 @@ export class FileSystemStorageRepository extends StorageRepository {
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
-            const r = yield* Effect.result(LaikaTask.runValue(this.getObject(summary.key)));
+            const r = yield* Effect.result(LaikaTask.runValueForwarding(this.getObject(summary.key), emit));
             if (Result.isFailure(r)) yield* emit.recoverableError(r.failure);
             else yield* emit.data(r.success);
           } else {
-            const r = yield* Effect.result(LaikaTask.runValue(this.getFolder(summary.key)));
+            const r = yield* Effect.result(LaikaTask.runValueForwarding(this.getFolder(summary.key), emit));
             if (Result.isFailure(r)) yield* emit.recoverableError(r.failure);
             else yield* emit.data(r.success);
           }

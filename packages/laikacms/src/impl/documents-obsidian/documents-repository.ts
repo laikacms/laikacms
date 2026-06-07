@@ -26,10 +26,16 @@ import type {
 import { DocumentsCompatibilityDate, DocumentsRepository } from 'laikacms/documents';
 import type { Key, StorageObject, StorageObjectContent, StorageRepository } from 'laikacms/storage';
 
-/** Run a LaikaStream to completion and collect its data into a flat array. */
+/**
+ * Run a child LaikaStream and collect data into a flat array, forwarding any
+ * recoverable errors / progress to the outer task's emit so warnings flow
+ * through the delegation boundary.
+ */
 const collectStreamData = <A, D extends LaikaDone, R>(
   stream: LaikaStream.LaikaStream<A, D, R>,
-): Effect.Effect<ReadonlyArray<A>, LaikaError, R> => Effect.map(LaikaStream.runCollect(stream), r => r.data);
+  emit: LaikaTask.LaikaMetadataEmit,
+): Effect.Effect<ReadonlyArray<A>, LaikaError, R> =>
+  Effect.map(LaikaStream.runCollectForwarding(stream, emit), r => r.data);
 
 /**
  * Configuration for {@link ObsidianDocumentsRepository}.
@@ -84,9 +90,9 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
   }
 
   getCapabilities(): LaikaTask.LaikaTask<DocumentsCapabilities> {
-    return LaikaTask.make<DocumentsCapabilities>(() =>
+    return LaikaTask.make<DocumentsCapabilities>(emit =>
       Effect.gen({ self: this }, function*() {
-        const caps = yield* LaikaTask.runValue(this.storageRepository.getCapabilities());
+        const caps = yield* LaikaTask.runValueForwarding(this.storageRepository.getCapabilities(), emit);
         return {
           compatibilityDate: DocumentsCompatibilityDate.make('2026-05-19'),
           pagination: caps.pagination,
@@ -185,9 +191,9 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
   // ===== Documents (published) =====
 
   getDocument(key: Key): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const obj = yield* LaikaTask.runValue(this.storageRepository.getObject(key));
+        const obj = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(key), emit);
         if (!this.isPublished(obj.content)) {
           return yield* Effect.fail(
             new NotFoundError(`Note '${key}' exists but is not a published document`),
@@ -199,11 +205,12 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
   }
 
   createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
         const content = this.asPublishedContent(this.withLanguage(create.content, create.language));
-        const obj = yield* LaikaTask.runValue(
+        const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({ type: 'object', key: create.key, content }),
+          emit,
         );
         return this.toDocument(create.key, obj);
       })
@@ -211,15 +218,16 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
   }
 
   updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const existing = yield* LaikaTask.runValue(this.getDocument(update.key));
+        const existing = yield* LaikaTask.runValueForwarding(this.getDocument(update.key), emit);
         const merged = update.content ?? existing.content;
         const content = this.asPublishedContent(
           this.withLanguage(merged, update.language ?? existing.language),
         );
-        const obj = yield* LaikaTask.runValue(
+        const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.updateObject({ key: update.key, content }),
+          emit,
         );
         return this.toDocument(update.key, obj);
       })
@@ -227,22 +235,23 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
   }
 
   deleteDocument(key: Key): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() =>
+    return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
         // Confirm it is a published note before removing it.
-        yield* LaikaTask.runValue(this.getDocument(key));
-        yield* collectStreamData(this.storageRepository.removeAtoms([key]));
+        yield* LaikaTask.runValueForwarding(this.getDocument(key), emit);
+        yield* collectStreamData(this.storageRepository.removeAtoms([key]), emit);
       })
     );
   }
 
   unpublish(key: Key, status: string): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const document = yield* LaikaTask.runValue(this.getDocument(key));
+        const document = yield* LaikaTask.runValueForwarding(this.getDocument(key), emit);
         const content = this.asUnpublishedContent(document.content, status);
-        const obj = yield* LaikaTask.runValue(
+        const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.updateObject({ key, content }),
+          emit,
         );
         return this.toUnpublished(key, obj);
       })
@@ -252,9 +261,9 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
   // ===== Unpublished (drafts) =====
 
   getUnpublished(key: Key): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const obj = yield* LaikaTask.runValue(this.storageRepository.getObject(key));
+        const obj = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(key), emit);
         if (this.isPublished(obj.content)) {
           return yield* Effect.fail(
             new NotFoundError(`Note '${key}' exists but is published, not an unpublished draft`),
@@ -266,14 +275,15 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
   }
 
   createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         const content = this.asUnpublishedContent(
           this.withLanguage(create.content, create.language),
           create.status,
         );
-        const obj = yield* LaikaTask.runValue(
+        const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({ type: 'object', key: create.key, content }),
+          emit,
         );
         return this.toUnpublished(create.key, obj);
       })
@@ -281,16 +291,17 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
   }
 
   updateUnpublished(update: UnpublishedUpdate): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const existing = yield* LaikaTask.runValue(this.getUnpublished(update.key));
+        const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(update.key), emit);
         const merged = update.content ?? existing.content;
         const content = this.asUnpublishedContent(
           this.withLanguage(merged, update.language ?? existing.language),
           update.status ?? existing.status,
         );
-        const obj = yield* LaikaTask.runValue(
+        const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.updateObject({ key: update.key, content }),
+          emit,
         );
         return this.toUnpublished(update.key, obj);
       })
@@ -298,22 +309,23 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
   }
 
   deleteUnpublished(key: Key): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() =>
+    return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
         // Confirm it is a draft before removing it.
-        yield* LaikaTask.runValue(this.getUnpublished(key));
-        yield* collectStreamData(this.storageRepository.removeAtoms([key]));
+        yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
+        yield* collectStreamData(this.storageRepository.removeAtoms([key]), emit);
       })
     );
   }
 
   publish(key: Key): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const unpublished = yield* LaikaTask.runValue(this.getUnpublished(key));
+        const unpublished = yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
         const content = this.asPublishedContent(unpublished.content);
-        const obj = yield* LaikaTask.runValue(
+        const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.updateObject({ key, content }),
+          emit,
         );
         return this.toDocument(key, obj);
       })
@@ -330,6 +342,7 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
             pagination: options.pagination,
             depth: options.depth,
           }),
+          emit,
         );
         let total = 0;
         for (const atom of atoms) {
@@ -354,6 +367,7 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
             pagination: options.pagination,
             depth: options.depth,
           }),
+          emit,
         );
         let total = 0;
         for (const atom of atoms) {

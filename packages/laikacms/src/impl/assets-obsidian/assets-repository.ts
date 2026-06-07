@@ -250,8 +250,9 @@ export class ObsidianAssetsRepository extends AssetsRepository {
     return LaikaStream.make<Resource, ListResourcesDone>(emit =>
       Effect.gen({ self: this }, function*() {
         const maxDepth = Math.max(1, options.depth ?? 1);
-        const collected = yield* liftResult(this.walk(folderKey, maxDepth));
-        const sorted = [...collected].sort((a, b) => naturalCompare(a.key, b.key));
+        const { resources, warnings } = yield* liftResult(this.walk(folderKey, maxDepth));
+        for (const w of warnings) yield* emit.recoverableError(w);
+        const sorted = [...resources].sort((a, b) => naturalCompare(a.key, b.key));
         const page = applyPagination(sorted, options.pagination);
         for (const resource of page) yield* emit.data(resource);
         return { total: page.length };
@@ -259,18 +260,34 @@ export class ObsidianAssetsRepository extends AssetsRepository {
     );
   }
 
-  /** Recursively collect assets and folders under `folderKey` up to `maxDepth` levels. */
-  private async walk(folderKey: string, maxDepth: number): Promise<LaikaResult<Resource[]>> {
+  /**
+   * Recursively collect assets and folders under `folderKey` up to `maxDepth`
+   * levels. The root directory failing is fatal; sub-directory failures are
+   * surfaced as `warnings` so the caller can emit recoverable errors and still
+   * return the resources that were enumerable.
+   */
+  private async walk(
+    folderKey: string,
+    maxDepth: number,
+  ): Promise<LaikaResult<{ resources: Resource[], warnings: LaikaError[] }>> {
     const pathResult = this.toFsPath(folderKey);
     if (Result.isFailure(pathResult)) return Result.fail(pathResult.failure);
 
     const out: Resource[] = [];
-    const visit = async (dirPath: string, depth: number): Promise<LaikaError | undefined> => {
+    const warnings: LaikaError[] = [];
+    const visit = async (
+      dirPath: string,
+      depth: number,
+      isRoot: boolean,
+    ): Promise<LaikaError | undefined> => {
       let entries: import('node:fs').Dirent[];
       try {
         entries = await fs.readdir(dirPath, { withFileTypes: true });
       } catch (error) {
-        return fsError(error, this.toKey(dirPath));
+        const err = fsError(error, this.toKey(dirPath));
+        if (isRoot) return err;
+        warnings.push(err);
+        return undefined;
       }
       for (const entry of entries) {
         if (this.ignore.has(entry.name)) continue;
@@ -284,7 +301,7 @@ export class ObsidianAssetsRepository extends AssetsRepository {
         }
         if (entry.isDirectory()) {
           out.push(this.folderFromStat(childKey, stat));
-          if (depth < maxDepth) await visit(childPath, depth + 1);
+          if (depth < maxDepth) await visit(childPath, depth + 1, false);
         } else if (entry.isFile() && !this.isDocument(childKey)) {
           out.push(this.assetFromStat(childKey, stat));
         }
@@ -292,9 +309,9 @@ export class ObsidianAssetsRepository extends AssetsRepository {
       return undefined;
     };
 
-    const error = await visit(pathResult.success, 1);
+    const error = await visit(pathResult.success, 1, true);
     if (error) return Result.fail(error);
-    return Result.succeed(out);
+    return Result.succeed({ resources: out, warnings });
   }
 
   // ===== Assets =====
@@ -390,7 +407,7 @@ export class ObsidianAssetsRepository extends AssetsRepository {
         let removed = 0;
         let skipped = 0;
         for (const key of keys) {
-          const result = yield* Effect.result(LaikaTask.runValue(this.deleteAsset(key)));
+          const result = yield* Effect.result(LaikaTask.runValueForwarding(this.deleteAsset(key), emit));
           if (Result.isFailure(result)) {
             yield* emit.recoverableError(result.failure);
             skipped += 1;
@@ -472,7 +489,7 @@ export class ObsidianAssetsRepository extends AssetsRepository {
   }
 
   createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
-    return LaikaTask.make<Folder>(() =>
+    return LaikaTask.make<Folder>(emit =>
       Effect.gen({ self: this }, function*() {
         const fsPath = yield* Effect.fromResult(this.toFsPath(folderCreate.key));
         yield* liftResult(
@@ -481,7 +498,7 @@ export class ObsidianAssetsRepository extends AssetsRepository {
             e => Result.fail(fsError(e, folderCreate.key)),
           ),
         );
-        return yield* LaikaTask.runValue(this.getFolder(folderCreate.key));
+        return yield* LaikaTask.runValueForwarding(this.getFolder(folderCreate.key), emit);
       })
     );
   }

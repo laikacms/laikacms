@@ -17,7 +17,7 @@ import {
   type Resource,
 } from 'laikacms/assets';
 import { InternalError, InvalidData, type LaikaDone, type LaikaError, LaikaStream, LaikaTask } from 'laikacms/core';
-import type { JsonApiCollectionResponse } from 'laikacms/json-api';
+import { type JsonApiCollectionResponse, warningsFromMeta } from 'laikacms/json-api';
 import { type Folder, type FolderCreate } from 'laikacms/storage';
 
 import { parseAsset, parseAssetUrl, parseAssetVariations, parseFolder, parseResource } from './jsonapi.js';
@@ -206,7 +206,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     key: string,
     options?: GetResourceOptions,
   ): LaikaTask.LaikaTask<ReadonlyArray<Resource>> {
-    return LaikaTask.make<ReadonlyArray<Resource>>(() =>
+    return LaikaTask.make<ReadonlyArray<Resource>>(emit =>
       Effect.gen({ self: this }, function*() {
         const params = new URLSearchParams();
         const includes: string[] = [];
@@ -219,9 +219,10 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         if (options?.hints?.metadata) params.set('meta', 'true');
         const queryString = params.toString();
 
-        const json = yield* this.fetchJson<{ data: JsonApiResource, included?: JsonApiResource[] }>(
-          `/resources/${encodeURIComponent(key)}${queryString ? `?${queryString}` : ''}`,
-        );
+        const json = yield* this.fetchJson<
+          { data: JsonApiResource, included?: JsonApiResource[], meta?: unknown }
+        >(`/resources/${encodeURIComponent(key)}${queryString ? `?${queryString}` : ''}`);
+        for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
         const resource = parseResource(json.data) as Resource;
         this.cacheMetaFromAsset(json.data);
         this.storeIncludedResources(json.included);
@@ -268,6 +269,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         const json = yield* this.fetchJson<JsonApiCollectionResponse>(
           `/resources${queryString ? `?${queryString}` : ''}`,
         );
+        for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
 
         let emitted = 0;
         for (const item of json.data as JsonApiResource[]) {
@@ -297,7 +299,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   }
 
   createAsset(create: AssetCreate): LaikaTask.LaikaTask<Asset> {
-    return LaikaTask.make<Asset>(() =>
+    return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
         const formData = new FormData();
         formData.append('key', create.key);
@@ -340,17 +342,18 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         const file = new File([blobContent], filename, { type: create.mimeType });
         formData.append('file', file, filename);
 
-        const json = yield* this.fetchJson<{ data: JsonApiResource }>(
+        const json = yield* this.fetchJson<{ data: JsonApiResource, meta?: unknown }>(
           `/resources`,
           { method: 'POST', multipart: formData },
         );
+        for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
         return parseAsset(json.data);
       })
     );
   }
 
   updateAsset(update: AssetUpdate): LaikaTask.LaikaTask<Asset> {
-    return LaikaTask.make<Asset>(() =>
+    return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
         const jsonApiData = {
           type: 'asset',
@@ -361,10 +364,11 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
             ...(update.cacheControl && { cacheControl: update.cacheControl }),
           },
         };
-        const json = yield* this.fetchJson<{ data: JsonApiResource }>(
+        const json = yield* this.fetchJson<{ data: JsonApiResource, meta?: unknown }>(
           `/resources/${encodeURIComponent(update.key)}`,
           { method: 'PATCH', body: { data: jsonApiData } },
         );
+        for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
         return parseAsset(json.data);
       })
     );
@@ -524,12 +528,13 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   }
 
   createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
-    return LaikaTask.make<Folder>(() =>
+    return LaikaTask.make<Folder>(emit =>
       Effect.gen({ self: this }, function*() {
-        const json = yield* this.fetchJson<{ data: JsonApiResource }>(
+        const json = yield* this.fetchJson<{ data: JsonApiResource, meta?: unknown }>(
           `/resources`,
           { method: 'POST', body: { data: { type: 'folder', id: folderCreate.key, attributes: {} } } },
         );
+        for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
         return parseFolder(json.data);
       })
     );

@@ -68,11 +68,19 @@ export const fromEffect = <A, R = never>(
     })
   );
 
-/** Emit-API exposed to a `make` builder for tasks. Metadata events only. */
-export interface LaikaTaskEmit {
+/**
+ * Structural shape shared by {@link LaikaTaskEmit} and `LaikaStreamEmit` for
+ * the metadata channel (recoverable errors + progress). Helpers that forward
+ * metadata between LaikaTask and LaikaStream accept this minimal interface
+ * so either emit shape can be plugged in.
+ */
+export interface LaikaMetadataEmit {
   readonly recoverableError: (error: LaikaError) => Effect.Effect<void>;
   readonly progress: (progress: LaikaProgress) => Effect.Effect<void>;
 }
+
+/** Emit-API exposed to a `make` builder for tasks. Metadata events only. */
+export type LaikaTaskEmit = LaikaMetadataEmit;
 
 /**
  * Generator-style builder for arbitrary LaikaTasks. The builder receives a
@@ -124,6 +132,11 @@ export const make = <A, R = never>(
 /**
  * Drain a LaikaTask collecting all recoverable errors and progress events, and
  * return the resolved value.
+ *
+ * When the caller is itself the body of a `LaikaTask.make` (i.e. it's
+ * forwarding through a delegation chain), prefer {@link runValueForwarding}
+ * — it pipes the inner task's warnings into the outer task's `emit` instead
+ * of leaving the caller to manually re-emit them.
  */
 export const runCollect = <A, R>(
   self: LaikaTask<A, R>,
@@ -150,9 +163,37 @@ export const runCollect = <A, R>(
   );
 };
 
-/** Drain a LaikaTask ignoring metadata; return only the resolved value. */
+/**
+ * Drain a LaikaTask ignoring metadata; return only the resolved value.
+ *
+ * Use in non-delegation contexts (test code, top-level runners) where the
+ * caller genuinely doesn't care about recoverable warnings or progress. When
+ * the caller is itself a `LaikaTask.make` body delegating to another task,
+ * use {@link runValueForwarding} instead — otherwise the inner task's
+ * recoverable warnings die at the delegation boundary.
+ */
 export const runValue = <A, R>(self: LaikaTask<A, R>): Effect.Effect<A, LaikaError, R> =>
   drainWithValue(self, () => Effect.void);
+
+/**
+ * Drain a child LaikaTask, forwarding every recoverableError and progress
+ * event to the given outer `emit`, and return the resolved value. Use this
+ * when a higher-level repository delegates to a lower-level one and wants
+ * the inner repo's warnings to flow through its own outer task — otherwise
+ * the lower-level's recoverableErrors die at the boundary because
+ * {@link runValue} discards metadata.
+ */
+export const runValueForwarding = <A, R>(
+  self: LaikaTask<A, R>,
+  emit: LaikaMetadataEmit,
+): Effect.Effect<A, LaikaError, R> =>
+  drainWithValue(self, chunk =>
+    Effect.gen(function*() {
+      for (const el of chunk) {
+        if (el._tag === recoverableErrorTag) yield* emit.recoverableError(el.error);
+        else yield* emit.progress(el.progress);
+      }
+    }));
 
 /**
  * Promise-shaped entry point for non-Effect consumers. Drops metadata; the

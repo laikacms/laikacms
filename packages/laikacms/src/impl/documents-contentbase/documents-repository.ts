@@ -37,10 +37,16 @@ import { basename, pathCombine, pathToSegments } from 'laikacms/storage';
 const liftPromiseResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
   Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
 
-/** Run a LaikaStream and collect data into a flat array. */
+/**
+ * Run a child LaikaStream and collect data into a flat array, forwarding any
+ * recoverable errors / progress to the outer task's emit so warnings flow
+ * through the delegation boundary.
+ */
 const collectStreamData = <A, D extends LaikaDone, R>(
   stream: LaikaStream.LaikaStream<A, D, R>,
-): Effect.Effect<ReadonlyArray<A>, LaikaError, R> => Effect.map(LaikaStream.runCollect(stream), r => r.data);
+  emit: LaikaTask.LaikaMetadataEmit,
+): Effect.Effect<ReadonlyArray<A>, LaikaError, R> =>
+  Effect.map(LaikaStream.runCollectForwarding(stream, emit), r => r.data);
 
 export class ContentBaseDocumentsRepository extends DocumentsRepository {
   constructor(
@@ -51,9 +57,9 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   }
 
   getCapabilities(): LaikaTask.LaikaTask<DocumentsCapabilities> {
-    return LaikaTask.make<DocumentsCapabilities>(() =>
+    return LaikaTask.make<DocumentsCapabilities>(emit =>
       Effect.gen({ self: this }, function*() {
-        const caps = yield* LaikaTask.runValue(this.storageRepository.getCapabilities());
+        const caps = yield* LaikaTask.runValueForwarding(this.storageRepository.getCapabilities(), emit);
         return {
           compatibilityDate: DocumentsCompatibilityDate.make('2026-05-11'),
           pagination: caps.pagination,
@@ -127,10 +133,10 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   // ===== DOCUMENTS (PUBLISHED) =====
 
   getDocument(key: string): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getDocumentPath(key));
-        const obj = yield* LaikaTask.runValue(this.storageRepository.getObject(path));
+        const obj = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(path), emit);
         return {
           ...obj,
           key,
@@ -143,14 +149,17 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   }
 
   createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getDocumentPath(create.key));
-        const obj = yield* LaikaTask.runValue(this.storageRepository.createObject({
-          type: 'object',
-          key: path,
-          content: create.content,
-        }));
+        const obj = yield* LaikaTask.runValueForwarding(
+          this.storageRepository.createObject({
+            type: 'object',
+            key: path,
+            content: create.content,
+          }),
+          emit,
+        );
         const now = new Date().toISOString();
         return {
           ...obj,
@@ -166,15 +175,18 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   }
 
   updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getDocumentPath(update.key));
-        const existing = yield* LaikaTask.runValue(this.getDocument(update.key));
+        const existing = yield* LaikaTask.runValueForwarding(this.getDocument(update.key), emit);
         const newContent = update.content ?? existing.content;
-        yield* LaikaTask.runValue(this.storageRepository.updateObject({
-          key: path,
-          content: newContent,
-        }));
+        yield* LaikaTask.runValueForwarding(
+          this.storageRepository.updateObject({
+            key: path,
+            content: newContent,
+          }),
+          emit,
+        );
         return {
           ...existing,
           content: newContent,
@@ -185,10 +197,10 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   }
 
   deleteDocument(key: string): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() =>
+    return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getDocumentPath(key));
-        yield* collectStreamData(this.storageRepository.removeAtoms([path]));
+        yield* collectStreamData(this.storageRepository.removeAtoms([path]), emit);
       })
     );
   }
@@ -196,7 +208,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   // ===== UNPUBLISHED =====
 
   getUnpublished(key: string): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         const { collection, remainder } = this.parseKey(key);
         if (!collection) {
@@ -210,7 +222,9 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
         for (const [status, statusConfig] of Object.entries(unpublishedStatuses)) {
           const basePath = `.contentbase/${collection}/${statusConfig.directory}`;
           const fullPath = remainder ? pathCombine(basePath, remainder) : basePath;
-          const r = yield* Effect.result(LaikaTask.runValue(this.storageRepository.getObject(fullPath)));
+          const r = yield* Effect.result(
+            LaikaTask.runValueForwarding(this.storageRepository.getObject(fullPath), emit),
+          );
           if (Result.isSuccess(r)) {
             return {
               ...r.success,
@@ -229,14 +243,17 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   }
 
   createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getUnpublishedPath(create.key, create.status));
-        const obj = yield* LaikaTask.runValue(this.storageRepository.createObject({
-          type: 'object',
-          key: path,
-          content: create.content,
-        }));
+        const obj = yield* LaikaTask.runValueForwarding(
+          this.storageRepository.createObject({
+            type: 'object',
+            key: path,
+            content: create.content,
+          }),
+          emit,
+        );
         const now = new Date().toISOString();
         return {
           ...obj,
@@ -252,20 +269,23 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   }
 
   updateUnpublished(update: UnpublishedUpdate): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const existing = yield* LaikaTask.runValue(this.getUnpublished(update.key));
+        const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(update.key), emit);
         const newContent = update.content || existing.content;
 
         if (update.status && update.status !== existing.status) {
-          return yield* LaikaTask.runValue(this.updateUnpublishedStatus(update.key, update.status));
+          return yield* LaikaTask.runValueForwarding(this.updateUnpublishedStatus(update.key, update.status), emit);
         }
 
         const path = yield* liftPromiseResult(this.getUnpublishedPath(update.key, existing.status));
-        yield* LaikaTask.runValue(this.storageRepository.updateObject({
-          key: path,
-          content: newContent,
-        }));
+        yield* LaikaTask.runValueForwarding(
+          this.storageRepository.updateObject({
+            key: path,
+            content: newContent,
+          }),
+          emit,
+        );
         return {
           ...existing,
           content: newContent,
@@ -277,18 +297,21 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
   /** Move an unpublished document to a different status directory. */
   private updateUnpublishedStatus(key: string, newStatus: string): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const existing = yield* LaikaTask.runValue(this.getUnpublished(key));
+        const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
         const oldPath = yield* liftPromiseResult(this.getUnpublishedPath(key, existing.status));
         const newPath = yield* liftPromiseResult(this.getUnpublishedPath(key, newStatus));
 
-        yield* LaikaTask.runValue(this.storageRepository.createObject({
-          type: 'object',
-          key: newPath,
-          content: existing.content,
-        }));
-        yield* collectStreamData(this.storageRepository.removeAtoms([oldPath]));
+        yield* LaikaTask.runValueForwarding(
+          this.storageRepository.createObject({
+            type: 'object',
+            key: newPath,
+            content: existing.content,
+          }),
+          emit,
+        );
+        yield* collectStreamData(this.storageRepository.removeAtoms([oldPath]), emit);
 
         return {
           ...existing,
@@ -300,28 +323,31 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   }
 
   deleteUnpublished(key: string): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() =>
+    return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
-        const existing = yield* LaikaTask.runValue(this.getUnpublished(key));
+        const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
         const path = yield* liftPromiseResult(this.getUnpublishedPath(key, existing.status));
-        yield* collectStreamData(this.storageRepository.removeAtoms([path]));
+        yield* collectStreamData(this.storageRepository.removeAtoms([path]), emit);
       })
     );
   }
 
   unpublish(key: string, status: string): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const document = yield* LaikaTask.runValue(this.getDocument(key));
+        const document = yield* LaikaTask.runValueForwarding(this.getDocument(key), emit);
         const documentPath = yield* liftPromiseResult(this.getDocumentPath(key));
         const unpublishedPath = yield* liftPromiseResult(this.getUnpublishedPath(key, status));
 
-        yield* LaikaTask.runValue(this.storageRepository.createObject({
-          type: 'object',
-          key: unpublishedPath,
-          content: document.content,
-        }));
-        yield* collectStreamData(this.storageRepository.removeAtoms([documentPath]));
+        yield* LaikaTask.runValueForwarding(
+          this.storageRepository.createObject({
+            type: 'object',
+            key: unpublishedPath,
+            content: document.content,
+          }),
+          emit,
+        );
+        yield* collectStreamData(this.storageRepository.removeAtoms([documentPath]), emit);
 
         return {
           key,
@@ -337,18 +363,21 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   }
 
   publish(key: string): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const unpublished = yield* LaikaTask.runValue(this.getUnpublished(key));
+        const unpublished = yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
         const unpublishedPath = yield* liftPromiseResult(this.getUnpublishedPath(key, unpublished.status));
         const documentPath = yield* liftPromiseResult(this.getDocumentPath(key));
 
-        yield* LaikaTask.runValue(this.storageRepository.createObject({
-          type: 'object',
-          key: documentPath,
-          content: unpublished.content,
-        }));
-        yield* collectStreamData(this.storageRepository.removeAtoms([unpublishedPath]));
+        yield* LaikaTask.runValueForwarding(
+          this.storageRepository.createObject({
+            type: 'object',
+            key: documentPath,
+            content: unpublished.content,
+          }),
+          emit,
+        );
+        yield* collectStreamData(this.storageRepository.removeAtoms([unpublishedPath]), emit);
 
         return {
           key,
@@ -409,6 +438,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           if (mode === 'full') {
             const atoms = yield* collectStreamData(
               this.storageRepository.listAtoms(folderPath, listOptions),
+              emit,
             );
             for (const atom of atoms) {
               if (atom.type !== 'object') continue;
@@ -424,6 +454,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           } else {
             const summaries = yield* collectStreamData(
               this.storageRepository.listAtomSummaries(folderPath, listOptions),
+              emit,
             );
             for (const atom of summaries) {
               if (atom.type !== 'object-summary') continue;
@@ -454,7 +485,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
             if (mode === 'full') {
               const r = yield* Effect.result(
-                collectStreamData(this.storageRepository.listAtoms(folderPath, listOptions)),
+                collectStreamData(this.storageRepository.listAtoms(folderPath, listOptions), emit),
               );
               if (Result.isFailure(r)) {
                 // Ignore NotFound for status dirs that don't exist yet.
@@ -474,7 +505,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
               }
             } else {
               const r = yield* Effect.result(
-                collectStreamData(this.storageRepository.listAtomSummaries(folderPath, listOptions)),
+                collectStreamData(this.storageRepository.listAtomSummaries(folderPath, listOptions), emit),
               );
               if (Result.isFailure(r)) {
                 if (r.failure.code !== NotFoundError.CODE) yield* emit.recoverableError(r.failure);
@@ -503,10 +534,10 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   // ===== REVISIONS =====
 
   getRevision(key: string, revision: string): LaikaTask.LaikaTask<Revision> {
-    return LaikaTask.make<Revision>(() =>
+    return LaikaTask.make<Revision>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getRevisionPath(key, revision));
-        const obj = yield* LaikaTask.runValue(this.storageRepository.getObject(path));
+        const obj = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(path), emit);
         if (!obj.createdAt) {
           return yield* Effect.fail(new InvalidData('Revision is missing createdAt date'));
         }
@@ -523,14 +554,17 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   }
 
   createRevision(create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
-    return LaikaTask.make<Revision>(() =>
+    return LaikaTask.make<Revision>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getRevisionPath(create.key, create.revision));
-        const obj = yield* LaikaTask.runValue(this.storageRepository.createObject({
-          type: 'object',
-          key: path,
-          content: create.content,
-        }));
+        const obj = yield* LaikaTask.runValueForwarding(
+          this.storageRepository.createObject({
+            type: 'object',
+            key: path,
+            content: create.content,
+          }),
+          emit,
+        );
         const now = new Date().toISOString();
         return {
           ...obj,
@@ -557,6 +591,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
             pagination: options.pagination,
             depth: 1,
           }),
+          emit,
         );
         let emitted = 0;
         for (const atom of atoms) {

@@ -144,8 +144,11 @@ export class R2AssetsRepository extends AssetsRepository {
               const folders = resources.filter(r => r.type === 'folder');
               for (const folder of folders) {
                 const sub = yield* Effect.result(listRecursive(folder.key, currentDepth + 1));
-                if (Result.isSuccess(sub)) resources.push(...sub.success);
-                // Continue even if a subfolder fails
+                if (Result.isSuccess(sub)) {
+                  resources.push(...sub.success);
+                } else {
+                  yield* emit.recoverableError(sub.failure);
+                }
               }
             }
             return resources;
@@ -193,7 +196,7 @@ export class R2AssetsRepository extends AssetsRepository {
   }
 
   createAsset(create: AssetCreate): LaikaTask.LaikaTask<Asset> {
-    return LaikaTask.make<Asset>(() =>
+    return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
         let body: Uint8Array;
 
@@ -238,13 +241,13 @@ export class R2AssetsRepository extends AssetsRepository {
             customMetadata: create.customMetadata,
           }),
         );
-        return yield* LaikaTask.runValue(this.getAsset(create.key));
+        return yield* this.readbackOrSynthesizeAsset(create.key, body.byteLength, create, emit);
       })
     );
   }
 
   updateAsset(update: AssetUpdate): LaikaTask.LaikaTask<Asset> {
-    return LaikaTask.make<Asset>(() =>
+    return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
         const existing = yield* liftResult(this.datasource.getObjectBody(update.key));
         yield* liftResult(
@@ -254,9 +257,48 @@ export class R2AssetsRepository extends AssetsRepository {
             customMetadata: update.customMetadata || existing.meta.customMetadata,
           }),
         );
-        return yield* LaikaTask.runValue(this.getAsset(update.key));
+        return yield* this.readbackOrSynthesizeAsset(
+          update.key,
+          existing.meta.size,
+          { mimeType: update.mimeType ?? existing.meta.contentType, customMetadata: update.customMetadata },
+          emit,
+        );
       })
     );
+  }
+
+  /**
+   * After a confirmed-successful putObject, try `getAsset` to return the
+   * canonical server-side view. If R2's eventual-consistency window means
+   * the readback fails, emit a recoverableError and synthesize the Asset
+   * from the write input — the bytes we wrote ARE durable, so failing
+   * fatally would be misleading. Timestamps are synthesized (the only
+   * fields we can't recover); key, size, content-type are authoritative.
+   */
+  private readbackOrSynthesizeAsset(
+    key: string,
+    size: number,
+    hints: { mimeType?: string | undefined, customMetadata?: Record<string, string> | undefined },
+    emit: LaikaTask.LaikaTaskEmit,
+  ): Effect.Effect<Asset, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const readback = yield* Effect.result(LaikaTask.runValueForwarding(this.getAsset(key), emit));
+      if (readback._tag === 'Success') return readback.success;
+      yield* emit.recoverableError(readback.failure);
+      const now = new Date().toISOString();
+      return {
+        type: 'asset' as const,
+        key,
+        createdAt: now,
+        updatedAt: now,
+        content: {
+          size,
+          etag: undefined as unknown as string,
+          contentType: hints.mimeType,
+          customMetadata: hints.customMetadata,
+        },
+      } satisfies Asset;
+    });
   }
 
   deleteAsset(key: string): LaikaTask.LaikaTask<void> {

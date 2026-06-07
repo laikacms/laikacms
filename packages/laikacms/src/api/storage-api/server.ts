@@ -14,7 +14,7 @@ import {
   NotFoundError,
 } from 'laikacms/core';
 import type { JsonApiError, JsonApiResponse } from 'laikacms/json-api';
-import { errorToJsonApiMapper } from 'laikacms/json-api';
+import { errorToJsonApiMapper, recoverableErrorsToWarnings } from 'laikacms/json-api';
 import type {
   Folder,
   FolderCreate,
@@ -71,9 +71,14 @@ function respondResourceWithConverter<T, R extends JsonApiResource>(
   result: LaikaResult<T>,
   converter: (data: T) => R,
   basePath: string,
+  recoverableErrors?: ReadonlyArray<LaikaError>,
 ) {
   if (Result.isFailure(result)) return respondError(result);
-  return json({ data: withSelfLink(converter(result.success), basePath) });
+  const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
+  return json({
+    data: withSelfLink(converter(result.success), basePath),
+    ...(warnings ? { meta: { warnings } } : {}),
+  });
 }
 
 function respondCollectionWithConverter<T, R extends JsonApiResource>(
@@ -83,6 +88,7 @@ function respondCollectionWithConverter<T, R extends JsonApiResource>(
   baseUrl: string,
   basePath: string,
   done?: LaikaDone,
+  recoverableErrors?: ReadonlyArray<LaikaError>,
 ) {
   const url = new URL(request.url);
   const queryParams = Object.fromEntries(url.searchParams.entries());
@@ -107,16 +113,14 @@ function respondCollectionWithConverter<T, R extends JsonApiResource>(
       ? items.length === requestedLimit
       : false);
 
-  // Navigation lives in `links` per JSON:API §8 — `next` is present iff
-  // there's another page, which carries the `hasMore` signal implicitly.
-  // The current cursor lives in the request URL itself.
   const links = buildPaginationLinks(baseUrl, pagination, hasMore, lastCursor, firstCursor, lastCursor);
 
-  // `meta.page` only carries aggregate counts the backend supplies — never
-  // values that should be derived from links.
-  const meta = typeof done?.total === 'number'
-    ? { page: { total: done.total } }
-    : undefined;
+  // `meta.page` carries aggregate counts; `meta.warnings` carries per-item
+  // recoverable errors collected during the stream (so the response stays
+  // 200 OK with partial data + an explicit list of what didn't work).
+  const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
+  const page = typeof done?.total === 'number' ? { total: done.total } : undefined;
+  const meta = page || warnings ? { ...(page ? { page } : {}), ...(warnings ? { warnings } : {}) } : undefined;
 
   const response: JsonApiCollectionResponse = {
     data: items.map(item => withSelfLink(converter(item), basePath)),
@@ -142,6 +146,24 @@ const toLaikaError = (err: unknown): LaikaError => {
 const runTask = async <T>(task: LaikaTask.LaikaTask<T>): Promise<LaikaResult<T>> => {
   try {
     return await Effect.runPromise(Effect.result(LaikaTask.runValue(task)));
+  } catch (err) {
+    return Result.fail(toLaikaError(err));
+  }
+};
+
+/**
+ * Like {@link runTask} but preserves any LaikaTask recoverableErrors so the
+ * caller can surface them as `meta.warnings` on a single-resource response —
+ * needed for the create/update routes where the backing impl may emit
+ * recoverable warnings (e.g. R2 readback fallback after a write).
+ */
+const runTaskWithMetadata = async <T>(
+  task: LaikaTask.LaikaTask<T>,
+): Promise<LaikaResult<{ value: T, recoverableErrors: ReadonlyArray<LaikaError> }>> => {
+  try {
+    const r = await Effect.runPromise(Effect.result(LaikaTask.runCollect(task)));
+    if (Result.isFailure(r)) return Result.fail(r.failure);
+    return Result.succeed({ value: r.success.value, recoverableErrors: r.success.recoverableErrors });
   } catch (err) {
     return Result.fail(toLaikaError(err));
   }
@@ -307,6 +329,7 @@ export function buildJsonApi(options: StorageApiOptions) {
           request.url,
           basePath,
           result.success.done,
+          result.success.recoverableErrors,
         );
       };
 
@@ -324,6 +347,7 @@ export function buildJsonApi(options: StorageApiOptions) {
           request.url,
           basePath,
           result.success.done,
+          result.success.recoverableErrors,
         );
       };
 
@@ -351,22 +375,32 @@ export function buildJsonApi(options: StorageApiOptions) {
       else if (resource === 'atom-summaries' && request.method === 'GET') return listAtomSummaries();
       else if (resource === 'objects' && request.method === 'GET') {
         if (!key) return respondError(Result.fail(new InvalidData('Missing object key')), 400);
-        const result = await runTask(repo.getObject(key));
+        const result = await runTaskWithMetadata(repo.getObject(key));
         if (Result.isFailure(result)) {
           const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
             ?? 400;
           return respondError(result, status);
         }
-        return respondResourceWithConverter(result, storageObjectToJsonApi, basePath);
+        return respondResourceWithConverter(
+          Result.succeed(result.success.value),
+          storageObjectToJsonApi,
+          basePath,
+          result.success.recoverableErrors,
+        );
       } else if (resource === 'folders' && request.method === 'GET') {
         if (!key) return respondError(Result.fail(new InvalidData('Missing folder key')), 400);
-        const result = await runTask(repo.getFolder(key));
+        const result = await runTaskWithMetadata(repo.getFolder(key));
         if (Result.isFailure(result)) {
           const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
             ?? 400;
           return respondError(result, status);
         }
-        return respondResourceWithConverter(result, folderToJsonApi, basePath);
+        return respondResourceWithConverter(
+          Result.succeed(result.success.value),
+          folderToJsonApi,
+          basePath,
+          result.success.recoverableErrors,
+        );
       } else if (resource === 'objects' && request.method === 'POST') {
         let body: StorageObjectCreateBody;
         try {
@@ -381,8 +415,14 @@ export function buildJsonApi(options: StorageApiOptions) {
           content: body.data.attributes.content || {},
           ...(body.data.meta ? { metadata: body.data.meta } : {}),
         };
-        const result = await runTask(repo.createObject(data));
-        return respondResourceWithConverter(result, storageObjectToJsonApi, basePath);
+        const result = await runTaskWithMetadata(repo.createObject(data));
+        if (Result.isFailure(result)) return respondError(result);
+        return respondResourceWithConverter(
+          Result.succeed(result.success.value),
+          storageObjectToJsonApi,
+          basePath,
+          result.success.recoverableErrors,
+        );
       }
 
       if (path.startsWith('objects') && request.method === 'PATCH') {
@@ -407,8 +447,14 @@ export function buildJsonApi(options: StorageApiOptions) {
           content: body.data.attributes.content,
           ...(body.data.meta ? { metadata: body.data.meta } : {}),
         };
-        const result = await runTask(repo.updateObject(data));
-        return respondResourceWithConverter(result, storageObjectToJsonApi, basePath);
+        const result = await runTaskWithMetadata(repo.updateObject(data));
+        if (Result.isFailure(result)) return respondError(result);
+        return respondResourceWithConverter(
+          Result.succeed(result.success.value),
+          storageObjectToJsonApi,
+          basePath,
+          result.success.recoverableErrors,
+        );
       } else if (path === 'operations' && request.method === 'POST') {
         let body: AtomicOperationsRequest;
         try {
@@ -441,13 +487,15 @@ export function buildJsonApi(options: StorageApiOptions) {
                     type: 'object',
                     content: operation.data.attributes.content || {},
                   };
-                  return runTask(repo.createObject(createData)).then(r => ({ op: r, operation }));
+                  return runTaskWithMetadata(repo.createObject(createData))
+                    .then(r => ({ op: r, operation }));
                 } else if (operation.data.type === 'folder') {
                   const createData: FolderCreate = {
                     key: operation.data.id,
                     type: 'folder',
                   };
-                  return runTask(repo.createFolder(createData)).then(r => ({ op: r, operation }));
+                  return runTaskWithMetadata(repo.createFolder(createData))
+                    .then(r => ({ op: r, operation }));
                 }
                 return Promise.resolve({
                   op: Result.fail(new InvalidData(`Unsupported add type`)),
@@ -460,7 +508,8 @@ export function buildJsonApi(options: StorageApiOptions) {
                     type: 'object',
                     content: operation.data.attributes.content,
                   };
-                  return runTask(repo.updateObject(updateData)).then(r => ({ op: r, operation }));
+                  return runTaskWithMetadata(repo.updateObject(updateData))
+                    .then(r => ({ op: r, operation }));
                 }
                 return Promise.resolve({
                   op: Result.fail(new InvalidData(`Unsupported update type`)),
@@ -495,26 +544,46 @@ export function buildJsonApi(options: StorageApiOptions) {
 
         const atomicsSettled = await Promise.allSettled(atomicOperations);
 
-        const atomicResults: Array<{ data: JsonApiResource }> = [];
+        type AtomicResultEntry =
+          | { data: JsonApiResource, meta?: { warnings: JsonApiError['errors'] } }
+          | { meta: { deleted: true, ref: { type: string, id: string } } };
+        const atomicResults: AtomicResultEntry[] = [];
         for (const promiseResult of atomicsSettled) {
           if (promiseResult.status === 'rejected') continue;
           const value = promiseResult.value;
-          if (Result.isSuccess(value.op)) {
+          const op = value.op as LaikaResult<unknown>;
+          if (Result.isSuccess(op)) {
             if (value.operation.op === 'add' || value.operation.op === 'update') {
-              const data = value.op.success;
+              // add/update results came from runTaskWithMetadata so the
+              // success carries {value, recoverableErrors}; remove results
+              // came from the batched removalResult and don't reach this
+              // branch.
+              const carrier = op.success as {
+                value: unknown,
+                recoverableErrors: ReadonlyArray<LaikaError>,
+              };
+              const data = carrier.value;
+              const warnings = recoverableErrorsToWarnings(carrier.recoverableErrors);
               if (typeof data === 'object' && data !== null && 'type' in data) {
                 const typedData = data as { type: string };
-                if (typedData.type === 'object') {
-                  atomicResults.push({ data: storageObjectToJsonApi(data as StorageObject) });
-                } else {
-                  atomicResults.push({ data: folderToJsonApi(data as Folder) });
-                }
+                const jsonApiData = typedData.type === 'object'
+                  ? storageObjectToJsonApi(data as StorageObject)
+                  : folderToJsonApi(data as Folder);
+                atomicResults.push(warnings ? { data: jsonApiData, meta: { warnings } } : { data: jsonApiData });
               }
+            } else if (value.operation.op === 'remove') {
+              // Per JSON:API atomic ops spec, a successful remove has no
+              // `data` (the resource is gone); the result body documents
+              // what was deleted via `meta`.
+              const ref = op.success as { type: string, key: string };
+              atomicResults.push({
+                meta: { deleted: true, ref: { type: ref.type, id: ref.key } },
+              });
             }
           }
         }
 
-        return json({ 'atomic:results': atomicResults });
+        return json({ 'atomic:results': atomicResults } as unknown as JsonApiResponse);
       } else {
         options.logger?.debug('storage endpoint not found:', path);
         return respondError(

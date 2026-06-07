@@ -162,6 +162,30 @@ describe('LaikaTask — run helpers', () => {
     await Effect.runPromise(Task.runValue(tapped));
     expect(observed).toEqual([{ stage: 'a' }, { stage: 'b' }]);
   });
+
+  it('runValueForwarding drains a child task and re-emits its warnings + progress into the outer emit', async () => {
+    // The "child" is a delegate (e.g. a storage layer). The "outer" is the
+    // higher-level repo. Without forwarding, the child's recoverableError
+    // would die at the boundary.
+    const childWarning = new NotFoundError('child:stale-readback');
+    const child = Task.make<string>(emit =>
+      Effect.gen(function*() {
+        yield* emit.recoverableError(childWarning);
+        yield* emit.progress({ stage: 'child-mid' });
+        return 'child-value';
+      })
+    );
+    const outer = Task.make<string>(outerEmit =>
+      Effect.gen(function*() {
+        const v = yield* Task.runValueForwarding(child, outerEmit);
+        return `outer:${v}`;
+      })
+    );
+    const collected = await Effect.runPromise(Task.runCollect(outer));
+    expect(collected.value).toBe('outer:child-value');
+    expect(collected.recoverableErrors).toEqual([childWarning]);
+    expect(collected.progress).toEqual([{ stage: 'child-mid' }]);
+  });
 });
 
 describe('LaikaTask — Promise helpers (non-Effect consumers)', () => {

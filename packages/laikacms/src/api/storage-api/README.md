@@ -64,3 +64,36 @@ interface StorageApiOptions {
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'>;
 }
 ```
+
+## Partial success: `meta.warnings`
+
+Every response — single-resource, collection, void (delete), and per-result inside `atomic:results`
+— may carry a `meta.warnings` array. Each entry is a JSON:API error object describing a non-fatal
+recoverable issue surfaced by the backing repository. Common producers: an R2 eventual-consistency
+readback fell back to a synthesised resource, a corrupt row was skipped during a list, a sub-folder
+was unreadable during a recursive walk.
+
+`meta.warnings` is **additive** to the success of the operation. The response status is still `200`
+(or `201` for the create path); the resource you asked for is delivered; the warnings list tells you
+what else didn't go cleanly. Fatal failures continue to populate the top-level `errors` array with a
+non-2xx status.
+
+```jsonc
+{
+  "data": { "type": "object", "id": "notes/hello", "attributes": {/* ... */} },
+  "meta": {
+    "warnings": [
+      {
+        "code": "not_found",
+        "status": "404",
+        "title": "Not Found",
+        "detail": "readback failed; synthesized from write input"
+      }
+    ]
+  }
+}
+```
+
+Proxy backends (`@laikacms/storage-jsonapi-proxy` etc.) read `meta.warnings` from the upstream
+response and re-emit each entry as a `LaikaTask` / `LaikaStream` `recoverableError`, so warnings
+survive arbitrary proxy chains end-to-end.

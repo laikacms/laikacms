@@ -285,6 +285,75 @@ describe('LaikaBackend.getEntry()', () => {
 
     expect(entry.data).toBe(raw);
   });
+
+  it('logs a recoverableError emitted by the repo via console.warn while still returning the entry', async () => {
+    const Effect = await import('effect/Effect');
+    const doc = { key: 'articles/warned', content: { title: 'Warned' }, type: 'published' };
+    // Build a LaikaTask that emits a recoverableError mid-stream then resolves.
+    // Mirrors what an R2-proxy readback fallback would produce: the operation
+    // succeeds with a synthesised value AND a warning.
+    const taskWithWarning = LaikaTask.make<typeof doc>(emit =>
+      Effect.gen(function*() {
+        yield* emit.recoverableError(new NotFoundError('readback fell back to synthesis'));
+        return doc;
+      })
+    );
+    mockDocRepo.getDocument.mockReturnValue(taskWithWarning);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const entry = await backend.getEntry('articles/warned');
+      expect(entry).toMatchObject({ file: { path: 'articles/warned' } });
+      expect(warnSpy).toHaveBeenCalled();
+      const message = warnSpy.mock.calls.map(call => call[0]).join('\n');
+      expect(message).toContain('readback fell back to synthesis');
+      expect(message).toContain('not_found');
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('routes recoverableErrors to a custom onWarning handler when configured', async () => {
+    const Effect = await import('effect/Effect');
+    const doc = { key: 'articles/onwarning', content: { title: 'OW' }, type: 'published' };
+
+    const observed: NotFoundError[] = [];
+    const localMockRepo = makeMockDocumentsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => localMockRepo as any,
+      getAssetsRepository: () => makeMockAssetsRepository() as any,
+      onWarning: (e: any) => {
+        observed.push(e);
+      },
+    });
+    const localBackend = new LaikaBackend(makeConfig()) as any;
+    localBackend.documentsRepository = localMockRepo;
+    localBackend.tokenPromise = () => Promise.resolve('fake-token');
+
+    const taskWithWarning = LaikaTask.make<typeof doc>(emit =>
+      Effect.gen(function*() {
+        yield* emit.recoverableError(new NotFoundError('readback fell back to synthesis'));
+        return doc;
+      })
+    );
+    localMockRepo.getDocument.mockReturnValue(taskWithWarning);
+
+    // Spy on console.warn too — the custom handler should preempt it.
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const entry = await localBackend.getEntry('articles/onwarning');
+      expect(entry).toMatchObject({ file: { path: 'articles/onwarning' } });
+      expect(observed).toHaveLength(1);
+      expect(observed[0]).toBeInstanceOf(NotFoundError);
+      expect(observed[0]?.message).toContain('readback fell back to synthesis');
+      // The custom handler took over; console.warn should NOT have been
+      // called for the recoverable warning.
+      const warnFromRecoverable = warnSpy.mock.calls.some(call => String(call[0]).includes('readback fell back'));
+      expect(warnFromRecoverable).toBe(false);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -36,6 +36,7 @@ import {
 } from 'laikacms/storage-api';
 
 import { paginationCodec } from '../../shared/json-api/pagination-codec.js';
+import { warningsFromMeta } from '../../shared/json-api/utilities.js';
 
 export interface StorageJsonApiProxyRepositoryOptions {
   baseUrl: string;
@@ -78,6 +79,23 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   ): Effect.Effect<T, LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const json = yield* this.fetchJson(path, init);
+      return json.data as T;
+    });
+  }
+
+  /**
+   * Like {@link fetchResource} but also re-emits upstream `meta.warnings` as
+   * recoverableErrors on the outer LaikaTask. Used by single-resource
+   * write/read routes so warnings flow end-to-end through proxy chains.
+   */
+  private fetchResourceWithWarnings<T>(
+    path: string,
+    init: { method: string, body?: unknown },
+    emit: LaikaTask.LaikaTaskEmit,
+  ): Effect.Effect<T, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const json = yield* this.fetchJson(path, init);
+      for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
       return json.data as T;
     });
   }
@@ -147,10 +165,12 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   }
 
   getObject(key: string): LaikaTask.LaikaTask<StorageObject> {
-    return LaikaTask.make<StorageObject>(() =>
+    return LaikaTask.make<StorageObject>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<JsonApiStorageObject>(
+        const raw = yield* this.fetchResourceWithWarnings<JsonApiStorageObject>(
           `/objects/${encodeURIComponent(key)}`,
+          { method: 'GET' },
+          emit,
         );
         return yield* this.decodeStorageObject(raw);
       })
@@ -158,11 +178,12 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   }
 
   updateObject(update: StorageObjectUpdate): LaikaTask.LaikaTask<StorageObject> {
-    return LaikaTask.make<StorageObject>(() =>
+    return LaikaTask.make<StorageObject>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<JsonApiStorageObject>(
+        const raw = yield* this.fetchResourceWithWarnings<JsonApiStorageObject>(
           `/objects/${encodeURIComponent(update.key)}`,
           { method: 'PATCH', body: { data: storageObjectUpdateToJsonApi(update) } },
+          emit,
         );
         return yield* this.decodeStorageObject(raw);
       })
@@ -170,11 +191,12 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   }
 
   createObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
-    return LaikaTask.make<StorageObject>(() =>
+    return LaikaTask.make<StorageObject>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<JsonApiStorageObject>(
+        const raw = yield* this.fetchResourceWithWarnings<JsonApiStorageObject>(
           `/objects`,
           { method: 'POST', body: { data: storageObjectCreateToJsonApi(create) } },
+          emit,
         );
         return yield* this.decodeStorageObject(raw);
       })
@@ -182,28 +204,31 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   }
 
   createOrUpdateObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
-    return LaikaTask.make<StorageObject>(() =>
+    return LaikaTask.make<StorageObject>(emit =>
       Effect.gen({ self: this }, function*() {
-        const existing = yield* Effect.result(LaikaTask.runValue(this.getObject(create.key)));
+        const existing = yield* Effect.result(LaikaTask.runValueForwarding(this.getObject(create.key), emit));
         if (existing._tag === 'Success') {
-          return yield* LaikaTask.runValue(
+          return yield* LaikaTask.runValueForwarding(
             this.updateObject({
               key: create.key,
               content: create.content,
               metadata: create.metadata,
             }),
+            emit,
           );
         }
-        return yield* LaikaTask.runValue(this.createObject(create));
+        return yield* LaikaTask.runValueForwarding(this.createObject(create), emit);
       })
     );
   }
 
   getFolder(key: string): LaikaTask.LaikaTask<Folder> {
-    return LaikaTask.make<Folder>(() =>
+    return LaikaTask.make<Folder>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<JsonApiFolder>(
+        const raw = yield* this.fetchResourceWithWarnings<JsonApiFolder>(
           `/folders/${encodeURIComponent(key)}`,
+          { method: 'GET' },
+          emit,
         );
         return yield* this.decodeFolder(raw);
       })
@@ -211,11 +236,12 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   }
 
   createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
-    return LaikaTask.make<Folder>(() =>
+    return LaikaTask.make<Folder>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<JsonApiFolder>(
+        const raw = yield* this.fetchResourceWithWarnings<JsonApiFolder>(
           `/atoms`,
           { method: 'POST', body: { data: folderCreateToJsonApi(folderCreate) } },
+          emit,
         );
         return yield* this.decodeFolder(raw);
       })
@@ -223,11 +249,11 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   }
 
   getAtom(key: string): LaikaTask.LaikaTask<Atom> {
-    return LaikaTask.make<Atom>(() =>
+    return LaikaTask.make<Atom>(emit =>
       Effect.gen({ self: this }, function*() {
-        const asObject = yield* Effect.result(LaikaTask.runValue(this.getObject(key)));
+        const asObject = yield* Effect.result(LaikaTask.runValueForwarding(this.getObject(key), emit));
         if (asObject._tag === 'Success') return asObject.success;
-        return yield* LaikaTask.runValue(this.getFolder(key));
+        return yield* LaikaTask.runValueForwarding(this.getFolder(key), emit);
       })
     );
   }
@@ -244,6 +270,9 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
           : `/atoms?${params}`;
         const json = yield* this.fetchJson(path);
         const collection = json as unknown as JsonApiCollectionResponse;
+        // Re-emit upstream `meta.warnings` first so they stay associated with
+        // this listing rather than getting mixed into per-item decode failures.
+        for (const w of warningsFromMeta(collection.meta)) yield* emit.recoverableError(w);
         let emitted = 0;
         for (const item of collection.data) {
           const decoded = yield* Effect.result(
@@ -276,6 +305,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
           : `/atom-summaries?${params}`;
         const json = yield* this.fetchJson(path);
         const collection = json as unknown as JsonApiCollectionResponse;
+        for (const w of warningsFromMeta(collection.meta)) yield* emit.recoverableError(w);
         let emitted = 0;
         for (const item of collection.data) {
           const decoded = yield* Effect.result(
@@ -307,11 +337,21 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
           method: 'POST',
           body: { 'atomic:operations': operations },
         });
-        const results = (json['atomic:results'] as Array<{ errors?: unknown }> | undefined) ?? [];
+        // Top-level meta.warnings ride alongside batch-level warnings (e.g.
+        // upstream listed but couldn't fully enumerate).
+        for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
+        const results = (json['atomic:results'] as
+          | Array<{ errors?: unknown, meta?: unknown }>
+          | undefined) ?? [];
         let removed = 0;
         let skipped = 0;
         for (let i = 0; i < results.length; i++) {
-          if (results[i]!.errors) {
+          const entry = results[i]!;
+          // Per-entry meta.warnings: a successful remove may still have
+          // surfaced a warning (e.g. an orphaned sidecar couldn't be cleaned
+          // up). Forward them regardless of success/failure of the op itself.
+          for (const w of warningsFromMeta(entry.meta)) yield* emit.recoverableError(w);
+          if (entry.errors) {
             yield* emit.recoverableError(new InvalidData(`Failed to remove "${keys[i]}"`));
             skipped += 1;
           } else {

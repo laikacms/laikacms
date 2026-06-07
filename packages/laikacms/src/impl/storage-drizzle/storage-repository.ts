@@ -1,7 +1,9 @@
 import * as Effect from 'effect/Effect';
+import * as Result from 'effect/Result';
 
 import {
   EntryAlreadyExistsError,
+  InternalError,
   InvalidData,
   type LaikaError,
   LaikaStream,
@@ -98,16 +100,35 @@ export class DrizzleStorageRepository extends StorageRepository {
     return LaikaStream.make<string, RemoveAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
         let removed = 0;
+        let skipped = 0;
         for (const key of keys) {
-          yield* Effect.promise(() =>
-            this.options.callbacks.delete({
-              where: this.options.queryBuilders.keyEquals(key),
-            })
+          const attempt = yield* Effect.result(
+            Effect.tryPromise({
+              try: () =>
+                this.options.callbacks.delete({
+                  where: this.options.queryBuilders.keyEquals(key),
+                }),
+              catch: cause =>
+                new InternalError(
+                  `Failed to remove "${key}": ${cause instanceof Error ? cause.message : String(cause)}`,
+                  { cause },
+                ),
+            }),
           );
+          if (Result.isFailure(attempt)) {
+            yield* emit.recoverableError(attempt.failure);
+            skipped += 1;
+            continue;
+          }
+          if (attempt.success.length === 0) {
+            yield* emit.recoverableError(new NotFoundError(`No atom found at key "${key}"`));
+            skipped += 1;
+            continue;
+          }
           yield* emit.data(key);
           removed += 1;
         }
-        return { removed, skipped: 0 };
+        return { removed, skipped };
       })
     );
   }
@@ -131,11 +152,11 @@ export class DrizzleStorageRepository extends StorageRepository {
   }
 
   getAtom(key: string): LaikaTask.LaikaTask<Atom> {
-    return LaikaTask.make<Atom>(() =>
+    return LaikaTask.make<Atom>(emit =>
       Effect.gen({ self: this }, function*() {
-        const asObject = yield* Effect.result(LaikaTask.runValue(this.getObject(key)));
+        const asObject = yield* Effect.result(LaikaTask.runValueForwarding(this.getObject(key), emit));
         if (asObject._tag === 'Success') return asObject.success;
-        return yield* LaikaTask.runValue(this.getFolder(key));
+        return yield* LaikaTask.runValueForwarding(this.getFolder(key), emit);
       })
     );
   }

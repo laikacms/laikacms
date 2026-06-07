@@ -82,13 +82,6 @@ export const drizzleStorageContractCase: StorageContractCase = {
     const { queryBuilders, callbacks } = makeInMemoryStore();
     return new DrizzleStorageRepository({ queryBuilders, callbacks });
   },
-  /**
-   * The current Drizzle storage repo doesn't read the row count from the
-   * delete callback — it assumes every key in the input was removed and
-   * always reports `skipped: 0`. The "removes keys" half passes on its own
-   * but ships paired with the "skipped > 0" half under the same capability.
-   */
-  skip: ['removeAtoms'],
 };
 
 storageContractRegistry.push(drizzleStorageContractCase);

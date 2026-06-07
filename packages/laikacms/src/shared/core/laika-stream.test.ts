@@ -20,6 +20,7 @@ import {
   mapElements,
   paginate,
   runCollect,
+  runCollectForwarding,
   runDone,
   runPromise,
   runPromiseCollect,
@@ -249,6 +250,31 @@ describe('LaikaStream — run helpers', () => {
     const err = new NotFoundError('boom');
     const exit = await Effect.runPromiseExit(runDone(fail(err)));
     expect(exit._tag).toBe('Failure');
+  });
+
+  it('runCollectForwarding returns data + done, and re-emits child warnings + progress into the outer emit', async () => {
+    const childWarning = new NotFoundError('child:missing-row');
+    const child = make<number, LaikaDone>(emit =>
+      Effect.gen(function*() {
+        yield* emit.data(1);
+        yield* emit.recoverableError(childWarning);
+        yield* emit.data(2);
+        yield* emit.progress({ stage: 'child-done' });
+        return { total: 2 };
+      })
+    );
+    const outer = make<string, LaikaDone>(outerEmit =>
+      Effect.gen(function*() {
+        const { data, done } = yield* runCollectForwarding(child, outerEmit);
+        for (const n of data) yield* outerEmit.data(`v${n}`);
+        return done;
+      })
+    );
+    const collected = await Effect.runPromise(runCollect(outer));
+    expect(collected.data).toEqual(['v1', 'v2']);
+    expect(collected.done).toEqual({ total: 2 });
+    expect(collected.recoverableErrors).toEqual([childWarning]);
+    expect(collected.progress).toEqual([{ stage: 'child-done' }]);
   });
 
   it('drainWithDone invokes onChunk for each chunk', async () => {
