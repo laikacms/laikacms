@@ -13,6 +13,7 @@ import type { LaikaError } from 'laikacms/core';
 import * as Element from './laika-element.js';
 import type { LaikaElement } from './laika-element.js';
 import { attachAsyncIterator } from './laika-iterator.js';
+import type { LaikaMetadataEmit } from './laika-task.js';
 import type { LaikaDone, LaikaProgress } from './laika-types.js';
 
 // ---------------------------------------------------------------------------
@@ -104,10 +105,8 @@ export const fromEffect = <A, D extends LaikaDone, R = never>(
  * Emit-API exposed to a `make` builder. Each method offers one element into
  * the underlying queue and returns a void Effect.
  */
-export interface LaikaStreamEmit<A> {
+export interface LaikaStreamEmit<A> extends LaikaMetadataEmit {
   readonly data: (value: A) => Effect.Effect<void>;
-  readonly recoverableError: (error: LaikaError) => Effect.Effect<void>;
-  readonly progress: (progress: LaikaProgress) => Effect.Effect<void>;
   readonly dataMany: (values: ReadonlyArray<A>) => Effect.Effect<void>;
 }
 
@@ -235,7 +234,14 @@ export const drainWithDone = <A, D extends LaikaDone, R>(
     }),
   );
 
-/** Collect a LaikaStream into its three buckets plus the done value. */
+/**
+ * Collect a LaikaStream into its three buckets plus the done value.
+ *
+ * When the caller is itself the body of a `LaikaStream.make` or
+ * `LaikaTask.make` (i.e. it's forwarding through a delegation chain), prefer
+ * {@link runCollectForwarding} — it pipes the inner stream's warnings into
+ * the outer `emit` instead of leaving the caller to manually re-emit them.
+ */
 export const runCollect = <A, D extends LaikaDone, R>(
   self: LaikaStream<A, D, R>,
 ): Effect.Effect<
@@ -264,10 +270,44 @@ export const runCollect = <A, D extends LaikaDone, R>(
   );
 };
 
-/** Drain a LaikaStream, ignoring all elements; return only the done value. */
+/**
+ * Drain a LaikaStream, ignoring all elements; return only the done value.
+ *
+ * Use in non-delegation contexts where the caller genuinely doesn't care
+ * about data, recoverable warnings, or progress. When the caller is itself
+ * forwarding through a `make` body, use {@link runCollectForwarding} so the
+ * inner stream's warnings flow to the outer `emit`.
+ */
 export const runDone = <A, D extends LaikaDone, R>(
   self: LaikaStream<A, D, R>,
 ): Effect.Effect<D, LaikaError, R> => drainWithDone(self, () => Effect.void);
+
+/**
+ * Drain a child LaikaStream, forwarding every recoverableError and progress
+ * event to the given outer `emit` (data and the done value are returned to
+ * the caller). Use this when a higher-level repository's stream delegates to
+ * a lower-level stream and wants the inner repo's warnings to flow through
+ * its own outer stream — otherwise the lower-level's recoverableErrors die
+ * at the boundary because {@link runCollect} returns them but the caller
+ * almost always discards them.
+ */
+export const runCollectForwarding = <A, D extends LaikaDone, R>(
+  self: LaikaStream<A, D, R>,
+  emit: LaikaMetadataEmit,
+): Effect.Effect<{ data: ReadonlyArray<A>, done: D }, LaikaError, R> => {
+  const data: A[] = [];
+  return Effect.map(
+    drainWithDone(self, chunk =>
+      Effect.gen(function*() {
+        for (const el of chunk) {
+          if (Element.isData(el)) data.push(el.value);
+          else if (Element.isRecoverableError(el)) yield* emit.recoverableError(el.error);
+          else yield* emit.progress(el.progress);
+        }
+      })),
+    done => ({ data, done }),
+  );
+};
 
 /**
  * Promise-shaped entry point for non-Effect consumers. Drops data and

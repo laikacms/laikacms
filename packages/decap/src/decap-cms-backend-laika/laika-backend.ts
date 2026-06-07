@@ -38,49 +38,14 @@ import type { DocumentsRepository } from 'laikacms/documents';
 import { DocumentsJsonApiProxyRepository } from 'laikacms/documents-jsonapi-proxy';
 
 /**
- * Drain a LaikaTask to its resolved value via the AsyncIterable interface
- * (no Effect dependency). Returns a LaikaResult mirroring the old
- * `AsyncGenerator<LaikaResult<T>>` shape: success carries the resolved value,
- * failure carries the fatal LaikaError if one was thrown.
- *
- * Metadata events (warnings, progress) inside the chunks are discarded.
+ * The default recoverable-warning handler: log to console.warn so devtools
+ * surface partial-success states (e.g. an R2 readback fallback that
+ * synthesized the resource + emitted a warning) that would otherwise vanish
+ * silently at this user-facing edge.
  */
-async function firstResult<T>(task: LaikaTask.LaikaTask<T>): Promise<LaikaResult<T>> {
-  const it = task[Symbol.asyncIterator]();
-  try {
-    while (true) {
-      const step = await it.next();
-      if (step.done) return Result.succeed(step.value);
-      // step.value is a chunk of LaikaMetadata — discarded
-    }
-  } catch (err) {
-    if (err instanceof LaikaError) return Result.fail(err);
-    throw err;
-  }
-}
-
-/**
- * Drain a LaikaStream collecting all data items into a flat array, mirroring
- * the old AsyncGenerator-Result shape. No Effect dependency — iterates the
- * native AsyncIterable directly. Recoverable errors and progress events are
- * discarded.
- */
-async function collectStream<A>(
-  stream: LaikaStream.LaikaStream<A>,
-): Promise<LaikaResult<ReadonlyArray<A>>> {
-  const data: A[] = [];
-  try {
-    for await (const chunk of stream) {
-      for (const el of chunk) {
-        if (el._tag === 'Data') data.push(el.value);
-      }
-    }
-    return Result.succeed(data);
-  } catch (err) {
-    if (err instanceof LaikaError) return Result.fail(err);
-    throw err;
-  }
-}
+const defaultWarningHandler = (error: LaikaError): void => {
+  console.warn(`Laika Backend: recoverable warning [${error.code}] ${error.message}`);
+};
 
 /**
  * Configuration for the Laika backend
@@ -138,6 +103,17 @@ export interface CreateLaikaBackendOptions {
    * Base URL for the assets API (used by default factory)
    */
   assetsApiBaseUrl?: string;
+
+  /**
+   * Optional handler invoked for every recoverable warning emitted by a
+   * LaikaTask or LaikaStream the backend drains. Use this to route warnings
+   * into your own observability (toasts, Sentry, metrics, structured logs).
+   *
+   * Defaults to a `console.warn` line, so partial-success states surface in
+   * the Decap UI's devtools even if the host application doesn't wire its
+   * own handler.
+   */
+  onWarning?: (error: LaikaError) => void;
 }
 
 /**
@@ -155,7 +131,55 @@ export default function createLaikaBackend(
     getAssetsRepository: customGetAssetsRepository,
     documentsApiBaseUrl,
     assetsApiBaseUrl,
+    onWarning,
   } = options;
+
+  const handleRecoverableWarning = onWarning ?? defaultWarningHandler;
+
+  /**
+   * Drain a LaikaTask to its resolved value via the AsyncIterable interface
+   * (no Effect dependency). Recoverable warnings emitted by the task are
+   * routed to the configured `onWarning` handler (defaults to
+   * {@link defaultWarningHandler}); progress events are dropped.
+   */
+  const firstResult = async <T>(task: LaikaTask.LaikaTask<T>): Promise<LaikaResult<T>> => {
+    const it = task[Symbol.asyncIterator]();
+    try {
+      while (true) {
+        const step = await it.next();
+        if (step.done) return Result.succeed(step.value);
+        for (const el of step.value) {
+          if (el._tag === 'RecoverableError') handleRecoverableWarning(el.error);
+        }
+      }
+    } catch (err) {
+      if (err instanceof LaikaError) return Result.fail(err);
+      throw err;
+    }
+  };
+
+  /**
+   * Drain a LaikaStream collecting all data items into a flat array.
+   * Recoverable warnings are routed to the configured `onWarning` handler;
+   * progress events are dropped.
+   */
+  const collectStream = async <A>(
+    stream: LaikaStream.LaikaStream<A>,
+  ): Promise<LaikaResult<ReadonlyArray<A>>> => {
+    const data: A[] = [];
+    try {
+      for await (const chunk of stream) {
+        for (const el of chunk) {
+          if (el._tag === 'Data') data.push(el.value);
+          else if (el._tag === 'RecoverableError') handleRecoverableWarning(el.error);
+        }
+      }
+      return Result.succeed(data);
+    } catch (err) {
+      if (err instanceof LaikaError) return Result.fail(err);
+      throw err;
+    }
+  };
 
   /**
    * Default factory for DocumentsRepository using JSON:API proxy

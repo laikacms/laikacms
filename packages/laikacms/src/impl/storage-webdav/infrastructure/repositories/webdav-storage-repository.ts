@@ -319,11 +319,11 @@ export class WebDavStorageRepository extends StorageRepository {
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
-            const result = yield* Effect.result(LaikaTask.runValue(this.getObject(summary.key)));
+            const result = yield* Effect.result(LaikaTask.runValueForwarding(this.getObject(summary.key), emit));
             if (Result.isFailure(result)) yield* emit.recoverableError(result.failure);
             else yield* emit.data(result.success);
           } else {
-            const result = yield* Effect.result(LaikaTask.runValue(this.getFolder(summary.key)));
+            const result = yield* Effect.result(LaikaTask.runValueForwarding(this.getFolder(summary.key), emit));
             if (Result.isFailure(result)) yield* emit.recoverableError(result.failure);
             else yield* emit.data(result.success);
           }

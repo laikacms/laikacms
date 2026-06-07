@@ -76,9 +76,9 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   }
 
   getCapabilities(): LaikaTask.LaikaTask<AssetsCapabilities> {
-    return LaikaTask.make<AssetsCapabilities>(() =>
+    return LaikaTask.make<AssetsCapabilities>(emit =>
       Effect.gen({ self: this }, function*() {
-        const caps = yield* LaikaTask.runValue(this.storageRepository.getCapabilities());
+        const caps = yield* LaikaTask.runValueForwarding(this.storageRepository.getCapabilities(), emit);
         return {
           compatibilityDate: AssetsCompatibilityDate.make('2026-05-11'),
           pagination: caps.pagination,
@@ -200,10 +200,10 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
     key: string,
     _options?: GetResourceOptions,
   ): LaikaTask.LaikaTask<ReadonlyArray<Resource>> {
-    return LaikaTask.make<ReadonlyArray<Resource>>(() =>
+    return LaikaTask.make<ReadonlyArray<Resource>>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getAssetPath(key));
-        const atom = yield* LaikaTask.runValue(this.storageRepository.getAtom(path.physical));
+        const atom = yield* LaikaTask.runValueForwarding(this.storageRepository.getAtom(path.physical), emit);
         return [this.atomToResource(atom, path.directory, path.collection)];
       })
     );
@@ -225,10 +225,13 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
         const physicalFolder = remainder ? pathCombine(resolved.directory, remainder) : resolved.directory;
 
         const summaries = yield* Effect.map(
-          LaikaStream.runCollect(this.storageRepository.listAtomSummaries(physicalFolder, {
-            pagination: options.pagination,
-            depth: options.depth,
-          })),
+          LaikaStream.runCollectForwarding(
+            this.storageRepository.listAtomSummaries(physicalFolder, {
+              pagination: options.pagination,
+              depth: options.depth,
+            }),
+            emit,
+          ),
           r => r.data,
         );
 
@@ -245,10 +248,10 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   // ===== Asset Operations =====
 
   getAsset(key: string, _options?: GetResourceOptions): LaikaTask.LaikaTask<Asset> {
-    return LaikaTask.make<Asset>(() =>
+    return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getAssetPath(key));
-        const obj = yield* LaikaTask.runValue(this.storageRepository.getObject(path.physical));
+        const obj = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(path.physical), emit);
         return {
           type: 'asset',
           key,
@@ -261,7 +264,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   }
 
   createAsset(create: AssetCreate): LaikaTask.LaikaTask<Asset> {
-    return LaikaTask.make<Asset>(() =>
+    return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getAssetPath(create.key));
         if (
@@ -286,11 +289,14 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
         if (create.customMetadata) storedContent.customMetadata = create.customMetadata;
         if (create.cacheControl) storedContent.cacheControl = create.cacheControl;
 
-        const result = yield* LaikaTask.runValue(this.storageRepository.createOrUpdateObject({
-          type: 'object',
-          key: path.physical,
-          content: storedContent,
-        }));
+        const result = yield* LaikaTask.runValueForwarding(
+          this.storageRepository.createOrUpdateObject({
+            type: 'object',
+            key: path.physical,
+            content: storedContent,
+          }),
+          emit,
+        );
         return {
           type: 'asset',
           key: create.key,
@@ -303,19 +309,22 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   }
 
   updateAsset(update: AssetUpdate): LaikaTask.LaikaTask<Asset> {
-    return LaikaTask.make<Asset>(() =>
+    return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getAssetPath(update.key));
-        const existing = yield* LaikaTask.runValue(this.storageRepository.getObject(path.physical));
+        const existing = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(path.physical), emit);
         const merged: Record<string, unknown> = { ...existing.content };
         if (update.mimeType) merged.mimeType = update.mimeType;
         if (update.cacheControl) merged.cacheControl = update.cacheControl;
         if (update.customMetadata) merged.customMetadata = update.customMetadata;
 
-        const result = yield* LaikaTask.runValue(this.storageRepository.updateObject({
-          key: path.physical,
-          content: merged,
-        }));
+        const result = yield* LaikaTask.runValueForwarding(
+          this.storageRepository.updateObject({
+            key: path.physical,
+            content: merged,
+          }),
+          emit,
+        );
         return {
           type: 'asset',
           key: update.key,
@@ -328,11 +337,11 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   }
 
   deleteAsset(key: string): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() =>
+    return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getAssetPath(key));
         yield* Effect.map(
-          LaikaStream.runCollect(this.storageRepository.removeAtoms([path.physical])),
+          LaikaStream.runCollectForwarding(this.storageRepository.removeAtoms([path.physical]), emit),
           r => r.data,
         );
       })
@@ -356,7 +365,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
         if (physicalKeys.length === 0) return { removed: 0, skipped: keys.length };
 
         const removed = yield* Effect.map(
-          LaikaStream.runCollect(this.storageRepository.removeAtoms(physicalKeys)),
+          LaikaStream.runCollectForwarding(this.storageRepository.removeAtoms(physicalKeys), emit),
           r => r.data,
         );
         let count = 0;
@@ -410,7 +419,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
             continue;
           }
           const objR = yield* Effect.result(
-            LaikaTask.runValue(this.storageRepository.getObject(pathR.success.physical)),
+            LaikaTask.runValueForwarding(this.storageRepository.getObject(pathR.success.physical), emit),
           );
           if (Result.isFailure(objR)) {
             yield* emit.recoverableError(objR.failure);
@@ -434,34 +443,37 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   // ===== Folder Operations =====
 
   getFolder(key: string): LaikaTask.LaikaTask<Folder> {
-    return LaikaTask.make<Folder>(() =>
+    return LaikaTask.make<Folder>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getAssetPath(key));
-        const folder = yield* LaikaTask.runValue(this.storageRepository.getFolder(path.physical));
+        const folder = yield* LaikaTask.runValueForwarding(this.storageRepository.getFolder(path.physical), emit);
         return { ...folder, key };
       })
     );
   }
 
   createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
-    return LaikaTask.make<Folder>(() =>
+    return LaikaTask.make<Folder>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getAssetPath(folderCreate.key));
-        const folder = yield* LaikaTask.runValue(this.storageRepository.createFolder({
-          type: 'folder',
-          key: path.physical,
-        }));
+        const folder = yield* LaikaTask.runValueForwarding(
+          this.storageRepository.createFolder({
+            type: 'folder',
+            key: path.physical,
+          }),
+          emit,
+        );
         return { ...folder, key: folderCreate.key };
       })
     );
   }
 
   deleteFolder(key: string, _recursive?: boolean): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() =>
+    return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* liftPromiseResult(this.getAssetPath(key));
         yield* Effect.map(
-          LaikaStream.runCollect(this.storageRepository.removeAtoms([path.physical])),
+          LaikaStream.runCollectForwarding(this.storageRepository.removeAtoms([path.physical]), emit),
           r => r.data,
         );
       })

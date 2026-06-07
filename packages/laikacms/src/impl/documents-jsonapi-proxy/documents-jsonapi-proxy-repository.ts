@@ -50,6 +50,7 @@ import {
 } from 'laikacms/documents-api';
 
 import { paginationCodec } from '../../shared/json-api/pagination-codec.js';
+import { warningsFromMeta } from '../../shared/json-api/utilities.js';
 
 export interface DocumentsJsonApiProxyRepositoryOptions {
   baseUrl: string;
@@ -92,6 +93,23 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   ): Effect.Effect<T, LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const json = yield* this.fetchJson(path, init);
+      return json.data as T;
+    });
+  }
+
+  /**
+   * Like {@link fetchResource} but also re-emits upstream `meta.warnings` as
+   * recoverableErrors on the outer LaikaTask. Used by single-resource
+   * write/read routes so warnings flow end-to-end through proxy chains.
+   */
+  private fetchResourceWithWarnings<T>(
+    path: string,
+    init: { method: string, body?: unknown },
+    emit: LaikaTask.LaikaTaskEmit,
+  ): Effect.Effect<T, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const json = yield* this.fetchJson(path, init);
+      for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
       return json.data as T;
     });
   }
@@ -194,6 +212,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
         const json = yield* this.fetchJson(`/records?${params}`);
         const collection = json as unknown as JsonApiCollectionResponse;
+        for (const w of warningsFromMeta(collection.meta)) yield* emit.recoverableError(w);
 
         let emitted = 0;
         for (const item of collection.data) {
@@ -241,6 +260,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
         const json = yield* this.fetchJson(`/record-summaries?${params}`);
         const collection = json as unknown as JsonApiCollectionResponse;
+        for (const w of warningsFromMeta(collection.meta)) yield* emit.recoverableError(w);
 
         let emitted = 0;
         for (const item of collection.data) {
@@ -282,10 +302,12 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   // ===== DOCUMENTS (PUBLISHED) =====
 
   getDocument(key: string): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<DocumentJsonApi>(
+        const raw = yield* this.fetchResourceWithWarnings<DocumentJsonApi>(
           `/published/${encodeURIComponent(key)}`,
+          { method: 'GET' },
+          emit,
         );
         return yield* Effect.try({
           try: () => documentFromJsonApi(raw),
@@ -296,11 +318,12 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<DocumentJsonApi>(
+        const raw = yield* this.fetchResourceWithWarnings<DocumentJsonApi>(
           `/published`,
           { method: 'POST', body: { data: documentCreateToJsonApi(create) } },
+          emit,
         );
         return yield* Effect.try({
           try: () => documentFromJsonApi(raw),
@@ -311,11 +334,12 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<DocumentJsonApi>(
+        const raw = yield* this.fetchResourceWithWarnings<DocumentJsonApi>(
           `/published/${encodeURIComponent(update.key)}`,
           { method: 'PATCH', body: { data: documentUpdateToJsonApi(update) } },
+          emit,
         );
         return yield* Effect.try({
           try: () => documentFromJsonApi(raw),
@@ -332,10 +356,12 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   // ===== UNPUBLISHED =====
 
   getUnpublished(key: string): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<UnpublishedJsonApi>(
+        const raw = yield* this.fetchResourceWithWarnings<UnpublishedJsonApi>(
           `/unpublished/${encodeURIComponent(key)}`,
+          { method: 'GET' },
+          emit,
         );
         return yield* Effect.try({
           try: () => unpublishedFromJsonApi(raw),
@@ -346,11 +372,12 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<UnpublishedJsonApi>(
+        const raw = yield* this.fetchResourceWithWarnings<UnpublishedJsonApi>(
           `/unpublished`,
           { method: 'POST', body: { data: unpublishedCreateToJsonApi(create) } },
+          emit,
         );
         return yield* Effect.try({
           try: () => unpublishedFromJsonApi(raw),
@@ -361,11 +388,12 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   updateUnpublished(update: UnpublishedUpdate): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<UnpublishedJsonApi>(
+        const raw = yield* this.fetchResourceWithWarnings<UnpublishedJsonApi>(
           `/unpublished/${encodeURIComponent(update.key)}`,
           { method: 'PATCH', body: { data: unpublishedUpdateToJsonApi(update) } },
+          emit,
         );
         return yield* Effect.try({
           try: () => unpublishedFromJsonApi(raw),
@@ -380,11 +408,12 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   publish(key: string): LaikaTask.LaikaTask<Document> {
-    return LaikaTask.make<Document>(() =>
+    return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<DocumentJsonApi>(
+        const raw = yield* this.fetchResourceWithWarnings<DocumentJsonApi>(
           `/unpublished/${encodeURIComponent(key)}/publish`,
           { method: 'POST' },
+          emit,
         );
         return yield* Effect.try({
           try: () => documentFromJsonApi(raw),
@@ -395,14 +424,15 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   unpublish(key: string, status: string): LaikaTask.LaikaTask<Unpublished> {
-    return LaikaTask.make<Unpublished>(() =>
+    return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<UnpublishedJsonApi>(
+        const raw = yield* this.fetchResourceWithWarnings<UnpublishedJsonApi>(
           `/published/${encodeURIComponent(key)}/unpublish`,
           {
             method: 'POST',
             body: { data: { type: 'unpublished', attributes: { status } } },
           },
+          emit,
         );
         return yield* Effect.try({
           try: () => unpublishedFromJsonApi(raw),
@@ -415,10 +445,12 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   // ===== REVISIONS =====
 
   getRevision(key: string, revision: string): LaikaTask.LaikaTask<Revision> {
-    return LaikaTask.make<Revision>(() =>
+    return LaikaTask.make<Revision>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<RevisionJsonApi>(
+        const raw = yield* this.fetchResourceWithWarnings<RevisionJsonApi>(
           `/revisions/${encodeURIComponent(key)}/${encodeURIComponent(revision)}`,
+          { method: 'GET' },
+          emit,
         );
         return yield* Effect.try({
           try: () => revisionFromJsonApi(raw),
@@ -429,11 +461,12 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   createRevision(create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
-    return LaikaTask.make<Revision>(() =>
+    return LaikaTask.make<Revision>(emit =>
       Effect.gen({ self: this }, function*() {
-        const raw = yield* this.fetchResource<RevisionJsonApi>(
+        const raw = yield* this.fetchResourceWithWarnings<RevisionJsonApi>(
           `/revisions`,
           { method: 'POST', body: { data: revisionCreateToJsonApi(create) } },
+          emit,
         );
         return yield* Effect.try({
           try: () => revisionFromJsonApi(raw),
@@ -452,6 +485,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         const params = paginationCodec.encode(options.pagination);
         const json = yield* this.fetchJson(`/revisions/${encodeURIComponent(key)}?${params}`);
         const collection = json as unknown as JsonApiCollectionResponse;
+        for (const w of warningsFromMeta(collection.meta)) yield* emit.recoverableError(w);
 
         let emitted = 0;
         for (const item of collection.data) {

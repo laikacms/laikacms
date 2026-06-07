@@ -6,7 +6,12 @@ import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
 import { BadRequestError, InternalError, LaikaError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { DocumentsRepository } from 'laikacms/documents';
 import type { JsonApiCollectionResponse, JsonApiError, JsonApiResource, JsonApiResponse } from 'laikacms/json-api';
-import { buildPaginationLinks, errorToJsonApiMapper, parsePaginationQuery } from 'laikacms/json-api';
+import {
+  buildPaginationLinks,
+  errorToJsonApiMapper,
+  parsePaginationQuery,
+  recoverableErrorsToWarnings,
+} from 'laikacms/json-api';
 import {
   documentCreateFromJsonApi,
   type DocumentCreateJsonApi,
@@ -91,6 +96,7 @@ function respondResource<T, R extends JsonApiResource>(
   result: LaikaResult<T>,
   transformer: (data: T) => R,
   basePath: string,
+  recoverableErrors?: ReadonlyArray<LaikaError>,
 ) {
   if (Result.isFailure(result)) {
     // Check if this is a "not found" error and return 404
@@ -98,16 +104,54 @@ function respondResource<T, R extends JsonApiResource>(
       || result.failure.message?.toLowerCase().includes('not found');
     return respondError(result, isNotFound ? 404 : 400);
   }
-  // Wrap the resource in a "data" field per JSON:API spec
-  return json({ data: withDocsSelfLink(transformer(result.success), basePath) });
+  const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
+  return json({
+    data: withDocsSelfLink(transformer(result.success), basePath),
+    ...(warnings ? { meta: { warnings } } : {}),
+  });
+}
+
+/**
+ * Run a LaikaTask and respond with the resulting resource — surfacing any
+ * recoverable warnings (e.g. R2 readback fallback on writes, content-parse
+ * fallback on reads) into `meta.warnings`. Equivalent to
+ * `respondResource(await firstResult(...), ...)` but threads metadata through.
+ */
+async function respondResourceWithWarnings<T, R extends JsonApiResource>(
+  task: LaikaTask.LaikaTask<T>,
+  transformer: (data: T) => R,
+  basePath: string,
+) {
+  const r = await firstResultWithMetadata(task);
+  if (Result.isFailure(r)) {
+    return respondResource(Result.fail(r.failure) as LaikaResult<T>, transformer, basePath);
+  }
+  return respondResource(
+    Result.succeed(r.success.value),
+    transformer,
+    basePath,
+    r.success.recoverableErrors,
+  );
 }
 
 // JSON:API success response for void result (delete operations)
-function respondVoid(result: LaikaResult<void>) {
+function respondVoid(result: LaikaResult<void>, recoverableErrors?: ReadonlyArray<LaikaError>) {
   if (Result.isFailure(result)) {
     return respondError(result);
   }
-  return json({ meta: { deleted: true } });
+  const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
+  return json({ meta: { deleted: true, ...(warnings ? { warnings } : {}) } });
+}
+
+/**
+ * Run a delete LaikaTask and respond via {@link respondVoid}, surfacing any
+ * recoverableErrors emitted during the delete as `meta.warnings` (e.g. a
+ * folder partially-removed-with-skipped-children warning).
+ */
+async function respondVoidWithWarnings(task: LaikaTask.LaikaTask<void>) {
+  const r = await firstResultWithMetadata(task);
+  if (Result.isFailure(r)) return respondVoid(Result.fail(r.failure) as LaikaResult<void>);
+  return respondVoid(Result.succeed(undefined), r.success.recoverableErrors);
 }
 
 // JSON:API success response for resource collection with pagination
@@ -118,6 +162,7 @@ async function respondCollection<T, R extends JsonApiResource>(
   baseUrl: string,
   basePath: string,
   done?: { total?: number },
+  recoverableErrors?: ReadonlyArray<LaikaError>,
 ) {
   const url = new URL(request.url);
   const queryParams = Object.fromEntries(url.searchParams.entries());
@@ -131,13 +176,13 @@ async function respondCollection<T, R extends JsonApiResource>(
     ? items.length === requestedLimit
     : false;
 
-  // Navigation lives in `links` per JSON:API §8; `meta` only carries
-  // aggregate counts the backend supplies.
   const links = buildPaginationLinks(baseUrl, pagination, hasMore, lastCursor);
 
-  const meta = typeof done?.total === 'number'
-    ? { page: { total: done.total } }
-    : undefined;
+  // `meta.page` carries aggregate counts; `meta.warnings` carries per-item
+  // recoverable errors collected during the stream.
+  const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
+  const page = typeof done?.total === 'number' ? { total: done.total } : undefined;
+  const meta = page || warnings ? { ...(page ? { page } : {}), ...(warnings ? { warnings } : {}) } : undefined;
 
   const response: JsonApiCollectionResponse = {
     data: items.map(item => withDocsSelfLink(transformer(item), basePath)),
@@ -169,30 +214,47 @@ async function firstResult<T>(task: LaikaTask.LaikaTask<T>): Promise<LaikaResult
   }
 }
 
-/** Run a LaikaStream and collect data into a Result of the data array. Catches defects, same as {@link firstResult}. */
-async function runStream<A, D extends LaikaDone>(
-  stream: LaikaStream.LaikaStream<A, D>,
-): Promise<LaikaResult<ReadonlyArray<A>>> {
+/**
+ * Like {@link firstResult} but preserves any LaikaTask recoverableErrors so
+ * the caller can surface them as `meta.warnings` on a single-resource
+ * response — needed for the create/update routes where the backing impl
+ * may emit recoverable warnings (e.g. R2 readback fallback after a write).
+ */
+async function firstResultWithMetadata<T>(
+  task: LaikaTask.LaikaTask<T>,
+): Promise<LaikaResult<{ value: T, recoverableErrors: ReadonlyArray<LaikaError> }>> {
   try {
-    const r = await Effect.runPromise(Effect.result(LaikaStream.runCollect(stream)));
+    const r = await Effect.runPromise(Effect.result(LaikaTask.runCollect(task)));
     if (Result.isFailure(r)) return Result.fail(r.failure);
-    return Result.succeed(r.success.data);
+    return Result.succeed({ value: r.success.value, recoverableErrors: r.success.recoverableErrors });
   } catch (err) {
     return Result.fail(toLaikaError(err));
   }
 }
 
 /**
- * Like `runStream` but preserves the stream's terminal `Done` value so we
- * can surface `meta.page.total` on the JSON:API response.
+ * Run a LaikaStream and collect data, the terminal `Done` value, and any
+ * per-item recoverableErrors so we can surface `meta.page.total` and
+ * `meta.warnings` on the JSON:API response. Catches defects, same as
+ * {@link firstResult}.
  */
 async function runStreamWithDone<A, D extends LaikaDone>(
   stream: LaikaStream.LaikaStream<A, D>,
-): Promise<LaikaResult<{ data: ReadonlyArray<A>, done: D }>> {
+): Promise<
+  LaikaResult<{
+    data: ReadonlyArray<A>,
+    done: D,
+    recoverableErrors: ReadonlyArray<LaikaError>,
+  }>
+> {
   try {
     const r = await Effect.runPromise(Effect.result(LaikaStream.runCollect(stream)));
     if (Result.isFailure(r)) return Result.fail(r.failure);
-    return Result.succeed({ data: r.success.data, done: r.success.done });
+    return Result.succeed({
+      data: r.success.data,
+      done: r.success.done,
+      recoverableErrors: r.success.recoverableErrors,
+    });
   } catch (err) {
     return Result.fail(toLaikaError(err));
   }
@@ -483,6 +545,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           request.url,
           basePath,
           { total: result.success.done.total },
+          result.success.recoverableErrors,
         );
       };
 
@@ -529,6 +592,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           request.url,
           basePath,
           { total: result.success.done.total },
+          result.success.recoverableErrors,
         );
       };
 
@@ -561,8 +625,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
 
       // ===== DOCUMENTS (PUBLISHED) =====
       if (resource === 'published' && request.method === 'GET' && key) {
-        return respondResource(
-          await firstResult(repo.getDocument(key)),
+        return respondResourceWithWarnings(
+          repo.getDocument(key),
           documentToJsonApi,
           basePath,
         );
@@ -576,8 +640,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       ) {
         const body = await request.json();
         const { data } = decodeUnpublishBody(body);
-        return respondResource(
-          await firstResult(repo.unpublish(key, data.attributes.status)),
+        return respondResourceWithWarnings(
+          repo.unpublish(key, data.attributes.status),
           unpublishedToJsonApi,
           basePath,
         );
@@ -591,8 +655,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           id: data.id ?? '',
           attributes: data.attributes,
         } as DocumentCreateJsonApi);
-        return respondResource(
-          await firstResult(repo.createDocument(createData)),
+        return respondResourceWithWarnings(
+          repo.createDocument(createData),
           documentToJsonApi,
           basePath,
         );
@@ -605,20 +669,20 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           key,
           ...data.attributes,
         };
-        return respondResource(
-          await firstResult(repo.updateDocument(updateData)),
+        return respondResourceWithWarnings(
+          repo.updateDocument(updateData),
           documentToJsonApi,
           basePath,
         );
       }
 
       if (resource === 'published' && request.method === 'DELETE' && key) {
-        return respondVoid(await firstResult(repo.deleteDocument(key)));
+        return respondVoidWithWarnings(repo.deleteDocument(key));
       }
 
       if (resource === 'unpublished' && request.method === 'GET' && key) {
-        return respondResource(
-          await firstResult(repo.getUnpublished(key)),
+        return respondResourceWithWarnings(
+          repo.getUnpublished(key),
           unpublishedToJsonApi,
           basePath,
         );
@@ -630,8 +694,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         && request.method === 'POST'
         && key
       ) {
-        return respondResource(
-          await firstResult(repo.publish(key)),
+        return respondResourceWithWarnings(
+          repo.publish(key),
           documentToJsonApi,
           basePath,
         );
@@ -645,8 +709,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           id: data.id ?? '',
           attributes: data.attributes,
         } as UnpublishedCreateJsonApi);
-        return respondResource(
-          await firstResult(repo.createUnpublished(createData)),
+        return respondResourceWithWarnings(
+          repo.createUnpublished(createData),
           unpublishedToJsonApi,
           basePath,
         );
@@ -660,15 +724,15 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           id: bodyData.id,
           attributes: bodyData.attributes,
         } as UnpublishedUpdateJsonApi);
-        return respondResource(
-          await firstResult(repo.updateUnpublished({ ...updateData, key })),
+        return respondResourceWithWarnings(
+          repo.updateUnpublished({ ...updateData, key }),
           unpublishedToJsonApi,
           basePath,
         );
       }
 
       if (resource === 'unpublished' && request.method === 'DELETE' && key) {
-        return respondVoid(await firstResult(repo.deleteUnpublished(key)));
+        return respondVoidWithWarnings(repo.deleteUnpublished(key));
       }
 
       // ===== REVISIONS =====
@@ -680,8 +744,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           id: data.id ?? '',
           attributes: data.attributes,
         } as RevisionCreateJsonApi);
-        return respondResource(
-          await firstResult(repo.createRevision(createData)),
+        return respondResourceWithWarnings(
+          repo.createRevision(createData),
           revisionToJsonApi,
           basePath,
         );
@@ -693,17 +757,19 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         && key
         && !action
       ) {
-        const result = await runStream(
+        const result = await runStreamWithDone(
           repo.listRevisions(key, { pagination: parsePaginationQuery(queryParams) }),
         );
         if (Result.isFailure(result)) return respondError(result);
 
         return respondCollection(
           request,
-          result.success as ReadonlyArray<Parameters<typeof revisionSummaryToJsonApi>[0]>,
+          result.success.data as ReadonlyArray<Parameters<typeof revisionSummaryToJsonApi>[0]>,
           revisionSummaryToJsonApi,
           request.url,
           basePath,
+          { total: result.success.done.total },
+          result.success.recoverableErrors,
         );
       }
 
@@ -713,8 +779,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         && key
         && action
       ) {
-        return respondResource(
-          await firstResult(repo.getRevision(key, action)),
+        return respondResourceWithWarnings(
+          repo.getRevision(key, action),
           revisionToJsonApi,
           basePath,
         );
@@ -741,7 +807,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                   id: op.data.id ?? '',
                   attributes: op.data.attributes,
                 } as UnpublishedCreateJsonApi);
-                result = await firstResult(repo.createUnpublished(createData));
+                result = await firstResultWithMetadata(repo.createUnpublished(createData));
                 transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
               } else if (
                 'data' in operation
@@ -753,7 +819,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                   id: op.data.id ?? '',
                   attributes: op.data.attributes,
                 } as DocumentCreateJsonApi);
-                result = await firstResult(repo.createDocument(createData));
+                result = await firstResultWithMetadata(repo.createDocument(createData));
                 transformer = documentToJsonApi as (data: unknown) => JsonApiResource;
               } else {
                 result = Result.fail(
@@ -772,7 +838,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                 switch (href) {
                   case '/publish':
                     if (ref.type === 'unpublished') {
-                      result = await firstResult(repo.publish(ref.id));
+                      result = await firstResultWithMetadata(repo.publish(ref.id));
                       transformer = documentToJsonApi as (data: unknown) => JsonApiResource;
                     } else {
                       result = Result.fail(
@@ -792,7 +858,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                         );
                         break;
                       }
-                      result = await firstResult(repo.unpublish(
+                      result = await firstResultWithMetadata(repo.unpublish(
                         ref.id,
                         data.attributes.status,
                       ));
@@ -820,7 +886,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                   id: op.data.id,
                   attributes: op.data.attributes,
                 } as UnpublishedUpdateJsonApi);
-                result = await firstResult(repo.updateUnpublished(updateData));
+                result = await firstResultWithMetadata(repo.updateUnpublished(updateData));
                 transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
               } else {
                 result = Result.fail(
@@ -835,10 +901,10 @@ export function buildJsonApi(options: DocumentsApiOptions) {
             if (operation.op === 'remove') {
               const { ref } = operation as RemoveOp;
               if (ref.type === 'document') {
-                result = await firstResult(repo.deleteDocument(ref.id));
+                result = await firstResultWithMetadata(repo.deleteDocument(ref.id));
                 transformer = null;
               } else if (ref.type === 'unpublished') {
-                result = await firstResult(repo.deleteUnpublished(ref.id));
+                result = await firstResultWithMetadata(repo.deleteUnpublished(ref.id));
                 transformer = null;
               } else {
                 result = Result.fail(
@@ -892,20 +958,40 @@ export function buildJsonApi(options: DocumentsApiOptions) {
             };
           }
 
-          // For remove operations, return meta instead of data
+          // For remove operations, return meta instead of data. When the
+          // underlying delete task emitted recoverable warnings (e.g. an
+          // orphaned sidecar that couldn't be cleaned up), surface them via
+          // meta.warnings on this entry.
           if (operation.op === 'remove') {
             const removeOp = operation as RemoveOp;
+            // op.success here is {value: void, recoverableErrors: [...]} from
+            // firstResultWithMetadata when ref.type is document/unpublished,
+            // or `undefined` when the route fell through to a fail branch.
+            const carrier = op.success as
+              | { value: void, recoverableErrors: ReadonlyArray<LaikaError> }
+              | undefined;
+            const warnings = carrier
+              ? recoverableErrorsToWarnings(carrier.recoverableErrors)
+              : undefined;
             return {
-              meta: {
-                deleted: true,
-                ref: removeOp.ref,
-              },
+              meta: warnings
+                ? { deleted: true, ref: removeOp.ref, warnings }
+                : { deleted: true, ref: removeOp.ref },
             };
           }
 
-          // For other operations, return the transformed data
+          // For other operations, the success now carries {value,
+          // recoverableErrors} from firstResultWithMetadata. Surface per-op
+          // recoverable warnings under each result's `meta.warnings` so a
+          // single atomic batch can report partial-success state per row.
           if (transformer) {
-            return { data: transformer(op.success) };
+            const carrier = op.success as {
+              value: unknown,
+              recoverableErrors: ReadonlyArray<LaikaError>,
+            };
+            const warnings = recoverableErrorsToWarnings(carrier.recoverableErrors);
+            const data = transformer(carrier.value);
+            return warnings ? { data, meta: { warnings } } : { data };
           }
 
           return { data: null };

@@ -175,7 +175,7 @@ export class R2StorageRepository extends StorageRepository {
   }
 
   createObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
-    return LaikaTask.make<StorageObject>(() =>
+    return LaikaTask.make<StorageObject>(emit =>
       Effect.gen({ self: this }, function*() {
         if (!create.content) {
           return yield* Effect.fail(new InvalidData('Object content is required for creation'));
@@ -191,13 +191,13 @@ export class R2StorageRepository extends StorageRepository {
         const ext = this.resolveExtension(create.key, create.metadata);
         const stringified = yield* Effect.promise(() => this.serialize(ext, create.content!));
         yield* liftResult(this.r2DataSource.createOrUpdate(create.key, stringified, ext));
-        return yield* LaikaTask.runValue(this.getObject(create.key));
+        return yield* this.readbackOrSynthesize(create, ext, emit);
       })
     );
   }
 
   createOrUpdateObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
-    return LaikaTask.make<StorageObject>(() =>
+    return LaikaTask.make<StorageObject>(emit =>
       Effect.gen({ self: this }, function*() {
         const existingExt = yield* Effect.promise(() => this.r2DataSource.findExistingObjectExtension(create.key));
         const ext = existingExt ?? this.resolveExtension(create.key, create.metadata);
@@ -205,9 +205,39 @@ export class R2StorageRepository extends StorageRepository {
           ? yield* Effect.promise(() => this.serialize(ext, create.content!))
           : '';
         yield* liftResult(this.r2DataSource.createOrUpdate(create.key, stringified, ext));
-        return yield* LaikaTask.runValue(this.getObject(create.key));
+        return yield* this.readbackOrSynthesize(create, ext, emit);
       })
     );
+  }
+
+  /**
+   * After a confirmed-successful write, try `getObject` to return the
+   * canonical server-side view. If R2's eventual-consistency window means
+   * the readback fails, emit a recoverableError and synthesize the
+   * StorageObject from the write input — the data we just wrote IS what's
+   * durable, so failing fatally would be misleading. Timestamps are
+   * synthesized (the only field we can't recover); content + key are
+   * authoritative.
+   */
+  private readbackOrSynthesize(
+    create: StorageObjectCreate,
+    ext: string,
+    emit: LaikaTask.LaikaTaskEmit,
+  ): Effect.Effect<StorageObject, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const readback = yield* Effect.result(LaikaTask.runValueForwarding(this.getObject(create.key), emit));
+      if (readback._tag === 'Success') return readback.success;
+      yield* emit.recoverableError(readback.failure);
+      const now = new Date().toISOString();
+      return {
+        type: 'object' as const,
+        key: create.key,
+        createdAt: now,
+        updatedAt: now,
+        content: create.content ?? {},
+        metadata: { extension: ext },
+      } satisfies StorageObject;
+    });
   }
 
   private resolveExtension(
@@ -280,11 +310,11 @@ export class R2StorageRepository extends StorageRepository {
         const summaries = yield* this.collectFilteredSummaries(folderKey, options);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
-            const r = yield* Effect.result(LaikaTask.runValue(this.getObject(summary.key)));
+            const r = yield* Effect.result(LaikaTask.runValueForwarding(this.getObject(summary.key), emit));
             if (Result.isFailure(r)) yield* emit.recoverableError(r.failure);
             else yield* emit.data(r.success);
           } else {
-            const r = yield* Effect.result(LaikaTask.runValue(this.getFolder(summary.key)));
+            const r = yield* Effect.result(LaikaTask.runValueForwarding(this.getFolder(summary.key), emit));
             if (Result.isFailure(r)) yield* emit.recoverableError(r.failure);
             else yield* emit.data(r.success);
           }

@@ -116,6 +116,24 @@ export const PaginationMetaSchema = S.toStandardSchemaV1(S.Struct({
     total: S.optional(S.Number),
     estimatedTotal: S.optional(S.Number),
   })),
+  /**
+   * Per-item recoverable errors emitted while assembling this response.
+   * Surfaces `LaikaStream` recoverableErrors (per-key delete failures,
+   * unreadable subfolders, corrupt rows, …) without aborting the response.
+   * Same shape as a top-level JSON:API error object.
+   */
+  warnings: S.optional(S.Array(
+    S.Struct({
+      code: S.String,
+      status: S.String,
+      title: S.String,
+      detail: S.String,
+      source: S.optional(S.Struct({
+        pointer: S.optional(S.String),
+        parameter: S.optional(S.String),
+      })),
+    }),
+  )),
 }));
 
 export const JsonApiResourceSchema = S.toStandardSchemaV1(S.Struct({

@@ -1,5 +1,9 @@
-import type { DocumentsRepository } from 'laikacms/documents';
+import * as Effect from 'effect/Effect';
+import type { DocumentsRepository, ListRecordsDone, ListRecordsOptions } from 'laikacms/documents';
 import { describe, expect, it } from 'vitest';
+
+import { InvalidData, LaikaStream, LaikaTask } from 'laikacms/core';
+
 import { buildJsonApi } from './server.js';
 
 const stubRepo = {} as DocumentsRepository;
@@ -17,5 +21,118 @@ describe('documents-api Cache-Control', () => {
     const res = await api.fetch(new Request('http://localhost/does-not-exist'));
     expect(res.status).toBe(404);
     expect(res.headers.get('Cache-Control')).toBe('no-store');
+  });
+});
+
+describe('documents-api meta.warnings', () => {
+  it('surfaces recoverableErrors from listRecords into the response meta.warnings', async () => {
+    const partialRepo = {
+      listRecords: (_options: ListRecordsOptions) =>
+        LaikaStream.make<
+          { type: 'published', key: string, status: string, createdAt: string, updatedAt: string, content: object },
+          ListRecordsDone
+        >(emit =>
+          Effect.gen(function*() {
+            yield* emit.data({
+              type: 'published',
+              key: 'posts/good',
+              status: 'published',
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+              content: { title: 'Good post' },
+            });
+            yield* emit.recoverableError(new InvalidData('posts/corrupt: failed to parse content'));
+            return { total: 1 };
+          })
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/records'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      data: Array<{ id: string }>,
+      meta?: { warnings?: Array<{ code: string, detail: string }> },
+    };
+
+    expect(body.data.map(d => d.id)).toEqual(['posts/good']);
+    expect(body.meta?.warnings).toHaveLength(1);
+    expect(body.meta?.warnings?.[0]?.code).toBe('invalid_data');
+    expect(body.meta?.warnings?.[0]?.detail).toContain('posts/corrupt');
+  });
+
+  it('surfaces recoverableErrors from deleteDocument into the void response meta.warnings', async () => {
+    const partialRepo = {
+      deleteDocument: (_key: string) =>
+        LaikaTask.make<void>(emit =>
+          Effect.gen(function*() {
+            yield* emit.recoverableError(
+              new InvalidData('orphaned sidecar metadata could not be cleaned up'),
+            );
+            return undefined;
+          })
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fhello', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      meta: { deleted: boolean, warnings?: Array<{ code: string, detail: string }> },
+    };
+
+    expect(body.meta.deleted).toBe(true);
+    expect(body.meta.warnings).toHaveLength(1);
+    expect(body.meta.warnings?.[0]?.code).toBe('invalid_data');
+    expect(body.meta.warnings?.[0]?.detail).toContain('orphaned sidecar');
+  });
+
+  it('surfaces recoverableErrors on per-op meta.warnings for atomic remove results', async () => {
+    const partialRepo = {
+      deleteDocument: (_key: string) =>
+        LaikaTask.make<void>(emit =>
+          Effect.gen(function*() {
+            yield* emit.recoverableError(
+              new InvalidData('orphaned sidecar metadata could not be cleaned up'),
+            );
+            return undefined;
+          })
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          'atomic:operations': [
+            { op: 'remove', ref: { type: 'document', id: 'posts/old' } },
+          ],
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      'atomic:results': Array<{
+        meta?: {
+          deleted?: boolean,
+          ref?: { type: string, id: string },
+          warnings?: Array<{ code: string, detail: string }>,
+        },
+      }>,
+    };
+
+    expect(body['atomic:results']).toHaveLength(1);
+    expect(body['atomic:results'][0]?.meta?.deleted).toBe(true);
+    expect(body['atomic:results'][0]?.meta?.ref?.id).toBe('posts/old');
+    expect(body['atomic:results'][0]?.meta?.warnings).toHaveLength(1);
+    expect(body['atomic:results'][0]?.meta?.warnings?.[0]?.code).toBe('invalid_data');
+    expect(body['atomic:results'][0]?.meta?.warnings?.[0]?.detail).toContain('orphaned sidecar');
   });
 });

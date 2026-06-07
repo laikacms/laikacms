@@ -92,6 +92,70 @@ export const errorToJsonApiMapper = (
 };
 
 /**
+ * Map a list of recoverable {@link LaikaError}s to JSON:API error objects
+ * suitable for `meta.warnings`. Returns `undefined` for an empty input so the
+ * caller can omit the field entirely instead of writing `warnings: []`.
+ */
+export const recoverableErrorsToWarnings = (
+  errs: ReadonlyArray<unknown>,
+): JsonApiError['errors'] | undefined => {
+  if (errs.length === 0) return undefined;
+  return errs.map(e => errorToJsonApiMapper(e).errors[0]!);
+};
+
+type LaikaErrorCtor = { new(message?: string): LaikaError, CODE?: unknown };
+
+/**
+ * Look up the LaikaError subclass whose static `CODE` matches `code`. Falls
+ * back to `UnknownError` for codes the local errors module doesn't know
+ * (e.g. a newer upstream emitting an unfamiliar error). Used to round-trip
+ * upstream JSON:API error objects back into typed LaikaErrors on the proxy.
+ */
+const laikaErrorClassForCode = (code: string): LaikaErrorCtor => {
+  // The errors module re-exports value constants alongside the classes;
+  // filter to constructors with a static CODE that matches.
+  const ErrorMap = { ...errors, LaikaError: undefined } as Record<string, unknown>;
+  const candidate = Object.values(ErrorMap).find(
+    (cls): cls is LaikaErrorCtor =>
+      typeof cls === 'function' && 'CODE' in (cls as object) && (cls as LaikaErrorCtor).CODE === code,
+  );
+  if (!candidate || (candidate as unknown) === LaikaError) return errors.UnknownError;
+  return candidate;
+};
+
+/**
+ * Convert one JSON:API error object back into a typed LaikaError, looking
+ * the class up by its `code` field.
+ */
+export const laikaErrorFromJsonApiError = (
+  err: JsonApiError['errors'][number],
+): LaikaError => {
+  const Cls = laikaErrorClassForCode(err.code);
+  return new Cls(err.detail);
+};
+
+/**
+ * Extract upstream JSON:API `meta.warnings` from a parsed response body and
+ * convert each into a typed LaikaError. Used by JSON:API proxy backends to
+ * re-emit upstream warnings as local `recoverableError`s so warnings flow
+ * end-to-end through a proxy chain instead of dying at every hop.
+ *
+ * Tolerant: unrecognized shapes return `[]` rather than throw — a proxy
+ * should never make its caller's stream blow up just because the upstream
+ * meta was malformed.
+ */
+export const warningsFromMeta = (meta: unknown): ReadonlyArray<LaikaError> => {
+  if (!meta || typeof meta !== 'object') return [];
+  const warnings = (meta as { warnings?: unknown }).warnings;
+  if (!Array.isArray(warnings)) return [];
+  return warnings
+    .filter((w): w is JsonApiError['errors'][number] =>
+      !!w && typeof w === 'object' && typeof (w as { code?: unknown }).code === 'string'
+    )
+    .map(laikaErrorFromJsonApiError);
+};
+
+/**
  * Convert a schema parse error issue to a JSON:API error response
  *
  * @param issue - The parse error issue to convert
