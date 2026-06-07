@@ -1,6 +1,6 @@
 node_modules
 dist
-server
+/server
 .env*.local
 .turbo
 .qwik
