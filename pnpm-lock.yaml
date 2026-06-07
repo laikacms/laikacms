@@ -3181,6 +3181,9 @@ importers:
       typescript:
         specifier: catalog:tools
         version: 6.0.3
+      vue-tsc:
+        specifier: ^2.1.0
+        version: 2.2.12(typescript@6.0.3)
 
   apps/starter-openapi:
     dependencies:
@@ -46103,7 +46106,7 @@ snapshots:
   babel-dead-code-elimination@1.0.12:
     dependencies:
       '@babel/core': 7.29.7
-      '@babel/parser': 7.29.3
+      '@babel/parser': 7.29.7
       '@babel/traverse': 7.29.0
       '@babel/types': 7.29.0
     transitivePeerDependencies:
