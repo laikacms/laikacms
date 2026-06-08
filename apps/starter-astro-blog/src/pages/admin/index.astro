@@ -6,8 +6,12 @@
  *   1. window.CMS_MANUAL_INIT = true prevents Decap from auto-starting before
  *      the laika backend is registered.
  *   2. decap-cms.js from CDN provides the global CMS object.
- *   3. The bundled <script> (below) imports the laika backend from the npm
- *      package, registers it, and calls CMS.init() with the inline config.
+ *   3. The bundled module script (below) imports the laika backend from the
+ *      npm package, registers it, and calls CMS.init() with the inline config.
+ *
+ * NOTE: avoid the literal tag name in this frontmatter comment — Vite's
+ * dependency scanner mis-detects it as a real script tag and tries to parse
+ * the prose as JS ("Expected ';' but found ...").
  *
  * The page is prerendered (static HTML) because the admin is purely
  * client-side once the scripts are loaded.
