@@ -8,7 +8,71 @@
       name="description"
       content="Laika is a modular, runtime-agnostic, open-source CMS. One content interface across 40+ swappable storage backends. MIT-licensed and self-hostable."
     />
+    <link rel="canonical" href="https://laikacms.com/" />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Laika CMS contributors" />
+    <meta name="theme-color" content="#3F51B5" />
+
+    <!-- Open Graph — scrapers don't run JS, so these live statically here -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Laika CMS" />
+    <meta property="og:title" content="Laika CMS — one content API, any backend" />
+    <meta
+      property="og:description"
+      content="Modular, runtime-agnostic, open-source CMS. One content interface across 40+ swappable storage backends. MIT-licensed and self-hostable."
+    />
+    <meta property="og:url" content="https://laikacms.com/" />
+    <meta property="og:image" content="https://laikacms.com/assets/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Laika CMS — one content API, 40+ swappable backends." />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter / X card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Laika CMS — one content API, any backend" />
+    <meta
+      name="twitter:description"
+      content="Modular, runtime-agnostic, open-source CMS. One content interface across 40+ swappable storage backends. MIT-licensed and self-hostable."
+    />
+    <meta name="twitter:image" content="https://laikacms.com/assets/og-image.png" />
+    <meta name="twitter:image:alt" content="Laika CMS — one content API, 40+ swappable backends." />
+
     <link rel="icon" href="/assets/laika-icon.png" />
+    <link rel="apple-touch-icon" href="/assets/laika-icon.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "SoftwareApplication",
+            "name": "Laika CMS",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Node, Bun, Deno, Cloudflare Workers, Browser",
+            "description": "Modular, runtime-agnostic, open-source CMS. One content interface across 40+ swappable storage backends.",
+            "url": "https://laikacms.com/",
+            "license": "https://opensource.org/licenses/MIT",
+            "softwareHelp": "https://github.com/laikacms/laikacms/blob/develop/docs",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "publisher": { "@id": "https://laikacms.com/#org" }
+          },
+          {
+            "@type": "Organization",
+            "@id": "https://laikacms.com/#org",
+            "name": "Laika CMS",
+            "url": "https://laikacms.com/",
+            "logo": "https://laikacms.com/assets/laika-icon.png",
+            "sameAs": ["https://github.com/laikacms/laikacms"]
+          }
+        ]
+      }
+    </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
