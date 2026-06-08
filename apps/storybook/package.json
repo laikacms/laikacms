@@ -1,0 +1,37 @@
+{
+  "name": "@laikacloud/storybook",
+  "description": "Storybook for Laika CMS's React UI packages: the Lexical editor widget's component library, the Portable Text editor widget, and the Decap icon widgets.",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@laikacloud/portabletext-core": "workspace:*",
+    "@laikacms/decap-ai": "workspace:*",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@storybook/addon-a11y": "^10.4.2",
+    "@storybook/addon-docs": "^10.4.2",
+    "@storybook/react-vite": "^10.4.2",
+    "@types/node": "catalog:types",
+    "@types/react": "catalog:types",
+    "@types/react-dom": "catalog:types",
+    "@vitejs/plugin-react": "catalog:react",
+    "decap-cms-widget-lexicaleditor": "workspace:*",
+    "decap-cms-widget-portabletext-editor": "workspace:*",
+    "immutable": "catalog:legacy",
+    "lucide-react": "catalog:icons",
+    "react": "catalog:react",
+    "react-dom": "catalog:react",
+    "react-redux": "^7.2.0",
+    "storybook": "^10.4.2",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
