@@ -27,10 +27,6 @@ lower-priority extensions to it.
       strings from each backend. Define a translation-key convention (or attach
       `translation.message` per `LaikaError`) so the Decap UI can localise them when it gains a
       partial-success affordance.
-- [ ] **`assets-jsonapi-proxy.deleteAssets` per-item warning round-trip** —
-      `storage-jsonapi-proxy.removeAtoms` already reads `atomic:results[i].meta.warnings`;
-      assets-jsonapi-proxy's `deleteAssets` should do the same once the upstream assets-api gains
-      atomic-batch delete (it currently iterates per-key).
 - [ ] **`documents-jsonapi-proxy` atomic-batch warnings** — same pattern: when the proxy starts
       sending `/operations` POSTs (rather than individual HTTP calls per op), it should forward
       per-result `meta.warnings` from the upstream response.

@@ -166,6 +166,23 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   /**
+   * Like {@link fetchVoid} but re-emits upstream `meta.warnings` to the
+   * caller's `emit`. The upstream documents-api returns
+   * `{meta: {deleted: true, warnings?: [...]}}` on DELETE — warnings get
+   * dropped by the plain `fetchVoid` because it discards the body.
+   */
+  private fetchVoidWithWarnings(
+    path: string,
+    init: { method: string, body?: unknown },
+    emit: LaikaTask.LaikaMetadataEmit,
+  ): Effect.Effect<void, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const json = yield* this.fetchJson(path, init);
+      for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
+    });
+  }
+
+  /**
    * Cached upstream capabilities. The remote documents-api exposes
    * `GET /capabilities` returning the real backing repo's capabilities, so
    * we fetch + cache it per repo instance. Falls back to a conservative
@@ -350,7 +367,13 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   deleteDocument(key: string): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() => this.fetchVoid(`/published/${encodeURIComponent(key)}`, { method: 'DELETE' }));
+    return LaikaTask.make<void>(emit =>
+      this.fetchVoidWithWarnings(
+        `/published/${encodeURIComponent(key)}`,
+        { method: 'DELETE' },
+        emit,
+      )
+    );
   }
 
   // ===== UNPUBLISHED =====
@@ -404,7 +427,13 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   }
 
   deleteUnpublished(key: string): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() => this.fetchVoid(`/unpublished/${encodeURIComponent(key)}`, { method: 'DELETE' }));
+    return LaikaTask.make<void>(emit =>
+      this.fetchVoidWithWarnings(
+        `/unpublished/${encodeURIComponent(key)}`,
+        { method: 'DELETE' },
+        emit,
+      )
+    );
   }
 
   publish(key: string): LaikaTask.LaikaTask<Document> {
