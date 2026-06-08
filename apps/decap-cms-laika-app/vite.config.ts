@@ -23,9 +23,17 @@ const vendorDist = fileURLToPath(new URL('./.vendor/laikacms-decap/dist', import
  */
 export default defineConfig({
   resolve: {
+    // decap-cms-core + decap-cms-lib-widgets import Node's `path` (#286); Vite
+    // externalizes it for the browser, which crashes /admin/ with
+    // "path.dirname externalized". Polyfill it with path-browserify.
+    // dedupe react/react-dom so the vendored fork and the app share a single
+    // React instance (#290) — otherwise the editor dies with "Invalid hook
+    // call / Cannot read properties of null (reading 'useMemo')" at the Provider.
+    dedupe: ['react', 'react-dom'],
     alias: [
       { find: /^@laikacms\/decap\/(.+)$/, replacement: `${vendorDist}/$1/index.js` },
       { find: /^@laikacms\/decap$/, replacement: `${vendorDist}/app/index.js` },
+      { find: /^path$/, replacement: 'path-browserify' },
     ],
   },
   plugins: [
