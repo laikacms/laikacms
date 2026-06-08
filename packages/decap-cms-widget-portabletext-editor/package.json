@@ -32,7 +32,7 @@
     "dev": "tsc -p tsconfig.json -w",
     "clean": "rimraf dist",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@laikacloud/portabletext-core": "workspace:*",

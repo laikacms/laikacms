@@ -8,7 +8,7 @@
     "site:dev": "hugo server --source . --port 1313 --buildDrafts",
     "admin:dev": "tsx watch server/admin.ts",
     "dev": "concurrently -n site,admin -c green,blue \"pnpm site:dev\" \"pnpm admin:dev\"",
-    "build": "hugo --source . --destination _site",
+    "site:build": "hugo --source . --destination _site",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

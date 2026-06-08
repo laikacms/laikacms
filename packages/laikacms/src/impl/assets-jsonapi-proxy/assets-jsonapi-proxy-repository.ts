@@ -118,6 +118,21 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     path: string,
     init: { method: string } = { method: 'GET' },
   ): Effect.Effect<void, LaikaError> {
+    return this.fetchVoidWithWarnings(path, init);
+  }
+
+  /**
+   * Issue a void/DELETE request, surface non-2xx as a typed failure, and
+   * (on success with a JSON body) re-emit any `meta.warnings` to the
+   * caller's `emit`. The upstream assets-api returns 204 No Content on a
+   * clean delete and 200 + `{meta: {deleted, warnings}}` when warnings
+   * exist — both shapes are handled.
+   */
+  private fetchVoidWithWarnings(
+    path: string,
+    init: { method: string },
+    emit?: LaikaTask.LaikaMetadataEmit,
+  ): Effect.Effect<void, LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const headers = yield* Effect.promise(() => this.getHeaders());
       const response = yield* Effect.tryPromise({
@@ -133,6 +148,14 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
           new InvalidData(errors.map(e => e.detail || e.title || 'Unknown error').join(', ')),
         );
       }
+      // 204 No Content carries no body; 200 + JSON may have meta.warnings.
+      if (!emit || response.status === 204) return;
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('json')) return;
+      const json = yield* Effect.promise(() => response.json().catch(() => ({}))) as Effect.Effect<
+        Record<string, unknown>
+      >;
+      for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
     });
   }
 
@@ -375,7 +398,13 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   }
 
   deleteAsset(key: string): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() => this.fetchVoid(`/resources/${encodeURIComponent(key)}`, { method: 'DELETE' }));
+    return LaikaTask.make<void>(emit =>
+      this.fetchVoidWithWarnings(
+        `/resources/${encodeURIComponent(key)}`,
+        { method: 'DELETE' },
+        emit,
+      )
+    );
   }
 
   deleteAssets(keys: readonly string[]): LaikaStream.LaikaStream<string, DeleteAssetsDone> {
@@ -385,7 +414,11 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         let skipped = 0;
         for (const key of keys) {
           const r = yield* Effect.result(
-            this.fetchVoid(`/resources/${encodeURIComponent(key)}`, { method: 'DELETE' }),
+            this.fetchVoidWithWarnings(
+              `/resources/${encodeURIComponent(key)}`,
+              { method: 'DELETE' },
+              emit,
+            ),
           );
           if (r._tag === 'Failure') {
             yield* emit.recoverableError(r.failure);
@@ -401,13 +434,14 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   }
 
   deleteFolder(key: string, recursive?: boolean): LaikaTask.LaikaTask<void> {
-    return LaikaTask.make<void>(() => {
+    return LaikaTask.make<void>(emit => {
       const params = new URLSearchParams();
       if (recursive) params.set('recursive', 'true');
       const queryString = params.toString();
-      return this.fetchVoid(
+      return this.fetchVoidWithWarnings(
         `/resources/${encodeURIComponent(key)}${queryString ? `?${queryString}` : ''}`,
         { method: 'DELETE' },
+        emit,
       );
     });
   }

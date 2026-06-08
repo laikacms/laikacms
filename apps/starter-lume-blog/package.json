@@ -7,9 +7,7 @@
   "scripts": {
     "site:dev": "deno task site:dev",
     "admin:dev": "deno task admin:dev",
-    "dev": "deno task dev",
-    "build": "deno task build",
-    "typecheck": "deno check _config.ts server/admin.ts lib/laika.ts lib/decap-config.ts"
+    "dev": "deno task dev"
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
