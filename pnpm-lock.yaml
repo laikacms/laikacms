@@ -3181,6 +3181,9 @@ importers:
       typescript:
         specifier: catalog:tools
         version: 6.0.3
+      vue-tsc:
+        specifier: ^2.1.0
+        version: 2.2.12(typescript@6.0.3)
 
   apps/starter-openapi:
     dependencies:
@@ -7610,21 +7613,6 @@ importers:
       '@hono/node-server':
         specifier: ^2.0.2
         version: 2.0.2(hono@4.12.18)
-      '@laikacms/github':
-        specifier: workspace:*
-        version: link:../../integrations/github
-      '@laikacms/surrealdb':
-        specifier: workspace:*
-        version: link:../../integrations/surrealdb
-      '@laikacms/trello':
-        specifier: workspace:*
-        version: link:../../integrations/trello
-      '@laikacms/upstash':
-        specifier: workspace:*
-        version: link:../../integrations/upstash
-      '@laikacms/vercel':
-        specifier: workspace:*
-        version: link:../../integrations/vercel
       '@types/js-yaml':
         specifier: ^4.0.9
         version: 4.0.9
@@ -46118,7 +46106,7 @@ snapshots:
   babel-dead-code-elimination@1.0.12:
     dependencies:
       '@babel/core': 7.29.7
-      '@babel/parser': 7.29.3
+      '@babel/parser': 7.29.7
       '@babel/traverse': 7.29.0
       '@babel/types': 7.29.0
     transitivePeerDependencies:
