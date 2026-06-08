@@ -7,8 +7,13 @@ const INSTALL_CMD = 'pnpm add laikacms';
 
 const STARTER_CODE = `import { buildJsonApi } from "laikacms/storage-api";
 import { FileSystemStorageRepository } from "laikacms/storage-fs";
+import { jsonSerializer } from "laikacms/storage-serializers-json";
 
-const repo = new FileSystemStorageRepository({ basePath: "./content" });
+const repo = new FileSystemStorageRepository(
+  "./content",
+  { json: jsonSerializer },
+  "json",
+);
 const api = buildJsonApi({ repo });
 
 export default { fetch: api.fetch };`;

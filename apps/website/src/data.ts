@@ -175,14 +175,14 @@ export const LAIKA_SWAP: SwapItem[] = [
     label: 'Filesystem',
     cls: 'FileSystemStorageRepository',
     path: 'laikacms/storage-fs',
-    ctor: 'new FileSystemStorageRepository({ basePath: "./content" })',
+    ctor: 'new FileSystemStorageRepository("./content", serializers, "json")',
   },
   {
     id: 'r2',
     label: 'Cloudflare R2',
     cls: 'R2StorageRepository',
     path: 'laikacms/storage-r2',
-    ctor: 'new R2StorageRepository({ bucket: env.CONTENT_BUCKET })',
+    ctor: 'new R2StorageRepository(env.CONTENT_BUCKET, serializers, "json")',
   },
   {
     id: 'gh',
