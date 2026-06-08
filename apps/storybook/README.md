@@ -16,12 +16,12 @@ The dev server needs no prior build of the other packages — see "How it resolv
 
 ## What's covered
 
-| Sidebar section        | Package                                   | Notes                                       |
-| ---------------------- | ----------------------------------------- | ------------------------------------------- |
-| Lexical Editor / UI    | `decap-cms-widget-lexicaleditor`          | The `editor/ui/*` component library         |
-| Decap Integrations     | `@laikacms/decap-integrations`            | Lucide + Radix icon widgets (mocked props)  |
-| Portable Text Editor   | `decap-cms-widget-portabletext-editor`    | Live `PortableTextEditorView` + toolbar     |
-| Decap AI               | `@laikacms/decap-ai`                       | Chat control shell (mock store + stub fetch)|
+| Sidebar section      | Package                                | Notes                                        |
+| -------------------- | -------------------------------------- | -------------------------------------------- |
+| Lexical Editor / UI  | `decap-cms-widget-lexicaleditor`       | The `editor/ui/*` component library          |
+| Decap Integrations   | `@laikacms/decap-integrations`         | Lucide + Radix icon widgets (mocked props)   |
+| Portable Text Editor | `decap-cms-widget-portabletext-editor` | Live `PortableTextEditorView` + toolbar      |
+| Decap AI             | `@laikacms/decap-ai`                   | Chat control shell (mock store + stub fetch) |
 
 `decap-cms-lexical-core` is documented on the Introduction page rather than mounted: it exposes a
 Lexical `DecoratorNode` subclass and a React context provider, not a standalone visual component.

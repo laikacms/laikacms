@@ -6,7 +6,11 @@ const meta = {
   title: 'Lexical Editor/UI/Tabs',
   component: Tabs,
   tags: ['autodocs'],
-  decorators: [Story => <div style={{ maxWidth: 420 }}><Story /></div>],
+  decorators: [Story => (
+    <div style={{ maxWidth: 420 }}>
+      <Story />
+    </div>
+  )],
 } satisfies Meta<typeof Tabs>;
 
 export default meta;

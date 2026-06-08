@@ -16,7 +16,11 @@ const meta = {
     disabled: false,
     type: 'text',
   },
-  decorators: [Story => <div style={{ maxWidth: 320 }}><Story /></div>],
+  decorators: [Story => (
+    <div style={{ maxWidth: 320 }}>
+      <Story />
+    </div>
+  )],
 } satisfies Meta<typeof Input>;
 
 export default meta;

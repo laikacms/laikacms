@@ -85,8 +85,7 @@ const meta = {
   parameters: {
     docs: {
       description: {
-        component:
-          'The AI chat control is normally a react-redux-connected Decap widget driven by a streaming '
+        component: 'The AI chat control is normally a react-redux-connected Decap widget driven by a streaming '
           + 'backend (`useChat`). This story mounts it with a minimal mock redux store and a stubbed '
           + 'fetch so the chat shell renders standalone — actually sending a message still needs a live '
           + 'AI endpoint.',
