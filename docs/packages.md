@@ -65,9 +65,12 @@ utilities. Imported via subpath exports.
 
 AWS service implementations.
 
-| Subpath                                  | Description                          |
-| ---------------------------------------- | ------------------------------------ |
-| `@laikacms/aws/contentbase-settings-ddb` | DynamoDB-backed contentbase settings |
+| Subpath                                  | Description                                                                            |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| `@laikacms/aws/contentbase-settings-ddb` | DynamoDB-backed contentbase settings                                                   |
+| `@laikacms/aws/storage-s3`               | S3-backed StorageRepository (also works with MinIO, Backblaze B2, DigitalOcean Spaces) |
+| `@laikacms/aws/storage-ddb`              | DynamoDB single-table StorageRepository                                                |
+| `@laikacms/aws/assets-s3`                | S3-backed AssetsRepository                                                             |
 
 ## `@laikacms/decap`
 
