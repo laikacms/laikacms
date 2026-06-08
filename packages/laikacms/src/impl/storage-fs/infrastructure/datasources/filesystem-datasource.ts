@@ -318,10 +318,13 @@ export class FileSystemDataSource {
       }));
       return Result.succeed(remapped);
     } catch (error) {
-      console.error(error);
       if (get(error, 'code') === 'ENOENT') {
+        // Expected when listing a folder that doesn't exist yet (e.g. a new
+        // collection or an empty media folder) — surface as NotFound without
+        // logging an error on the normal path.
         return Result.fail(new NotFoundError(`The directory at ${fullPath} does not exist`));
       } else {
+        console.error(error);
         return Result.fail(
           new InternalError(
             `Failed to get directory contents: ${error instanceof Error ? error.message : String(error)}`,
@@ -344,13 +347,11 @@ export class FileSystemDataSource {
     const dirPath = path.dirname(fullPath);
 
     try {
-      // Check if the directory exists, if not create it
-      try {
-        await fs.access(dirPath);
-      } catch (error: unknown) {
-        console.warn(`Directory ${dirPath} does not exist, creating it...`, error);
-        await fs.mkdir(dirPath, { recursive: true });
-      }
+      // Ensure the parent directory exists. `mkdir -p` is a no-op when the
+      // directory already exists and never throws ENOENT, so there's no need to
+      // probe with access() first — the old check-then-create logged an error
+      // (and was a TOCTOU race) on the normal "first write to a new folder" path.
+      await fs.mkdir(dirPath, { recursive: true });
 
       // Write the file
       await fs.writeFile(fullPath, content);
