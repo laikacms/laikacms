@@ -64,12 +64,6 @@ Trade-off: writing to disk on every comment submission means this scales to ~tho
 per post, not millions. For high-volume use cases, swap the storage repository for the SQL adapter
 via `createCustomLaika` — same API, different write path.
 
-## Rate limiting
-
-In-memory token bucket (5 comments / IP / 5 min). For a real deployment behind a load balancer, swap
-`createRateLimit` for a Redis-backed limiter (`rate-limiter-flexible`) so the count is shared across
-instances.
-
 ## Anti-spam suggestions (not included)
 
 - Honeypot field: add a hidden form field; reject submissions where it's non-empty.
