@@ -1,4 +1,4 @@
-# @laikacms/integrations-github
+# @laikacms/github
 
 GitHub-backed `StorageRepository` for Laika CMS. Stores content as commits in a GitHub repository;
 pairs with the FS adapter for local dev so the same flow works against a real git repo with no FS
@@ -6,10 +6,10 @@ required.
 
 ## Auth modes
 
-The package supports two authentication shapes. **Pick the one that matches your identity model —
-they are not interchangeable.**
+The package currently ships with **one** authentication shape: **GitHub App (installation token)**.
+OAuth user-token auth is planned but not yet implemented — see the TODO section below.
 
-### OAuth (user token) — _default for self-hosted gateways and `@laikacms/local`_
+### OAuth (user token) — _planned; not yet implemented_
 
 Use when the user editing content **is** the GitHub user whose identity will appear on the commits.
 This is the right choice for:
