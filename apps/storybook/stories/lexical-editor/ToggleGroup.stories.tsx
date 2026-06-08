@@ -17,9 +17,15 @@ type Story = StoryObj<typeof meta>;
 export const Multiple: Story = {
   render: () => (
     <ToggleGroup type="multiple" variant="outline">
-      <ToggleGroupItem value="bold" aria-label="Bold"><Bold /></ToggleGroupItem>
-      <ToggleGroupItem value="italic" aria-label="Italic"><Italic /></ToggleGroupItem>
-      <ToggleGroupItem value="underline" aria-label="Underline"><Underline /></ToggleGroupItem>
+      <ToggleGroupItem value="bold" aria-label="Bold">
+        <Bold />
+      </ToggleGroupItem>
+      <ToggleGroupItem value="italic" aria-label="Italic">
+        <Italic />
+      </ToggleGroupItem>
+      <ToggleGroupItem value="underline" aria-label="Underline">
+        <Underline />
+      </ToggleGroupItem>
     </ToggleGroup>
   ),
 };
@@ -27,9 +33,15 @@ export const Multiple: Story = {
 export const SingleSelection: Story = {
   render: () => (
     <ToggleGroup type="single" defaultValue="left">
-      <ToggleGroupItem value="left" aria-label="Align left"><AlignLeft /></ToggleGroupItem>
-      <ToggleGroupItem value="center" aria-label="Align center"><AlignCenter /></ToggleGroupItem>
-      <ToggleGroupItem value="right" aria-label="Align right"><AlignRight /></ToggleGroupItem>
+      <ToggleGroupItem value="left" aria-label="Align left">
+        <AlignLeft />
+      </ToggleGroupItem>
+      <ToggleGroupItem value="center" aria-label="Align center">
+        <AlignCenter />
+      </ToggleGroupItem>
+      <ToggleGroupItem value="right" aria-label="Align right">
+        <AlignRight />
+      </ToggleGroupItem>
     </ToggleGroup>
   ),
 };

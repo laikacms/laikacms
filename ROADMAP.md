@@ -30,9 +30,6 @@ lower-priority extensions to it.
 - [ ] **`documents-jsonapi-proxy` atomic-batch warnings** — same pattern: when the proxy starts
       sending `/operations` POSTs (rather than individual HTTP calls per op), it should forward
       per-result `meta.warnings` from the upstream response.
-- [ ] **Telemetry conventions for warnings** — Decap backend now offers an `onWarning` hook;
-      establish recommended Sentry / OpenTelemetry tagging conventions (`laika.warning.code`,
-      `laika.warning.repo`) so distributed traces can correlate warnings across the pipeline.
 
 ## Completed
 

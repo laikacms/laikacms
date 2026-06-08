@@ -64,3 +64,40 @@ Same rule for streams: `LaikaStream.runCollectForwarding(stream, emit)` instead 
 `runValue` / `runCollect` are still correct for top-level boundary code (an API server draining a
 task into a Promise, test setup, etc.) — they're only a footgun inside a `make` body that's part of
 a delegation chain.
+
+### Routing warnings into observability
+
+The Decap backend's `onWarning` hook is the recommended attach point for routing recoverable
+warnings into a host app's observability stack. The callback receives the typed `LaikaError`
+directly, so its `.code` / `.message` / `.cause` / `.translation` fields are all available for
+tagging.
+
+When tagging warnings into Sentry / OpenTelemetry / Datadog / etc., prefer the following conventions
+so distributed traces stay correlatable across the pipeline:
+
+| Tag / attribute       | Source                          | Notes                                              |
+| --------------------- | ------------------------------- | -------------------------------------------------- |
+| `laika.warning.code`  | `error.code` (e.g. `not_found`) | The typed LaikaError code; stable across releases. |
+| `laika.warning.title` | `error.title`                   | Human-readable group label.                        |
+| `laika.warning.repo`  | host-supplied                   | Which repository surfaced it (e.g. `storage-r2`).  |
+| `laika.warning.op`    | host-supplied                   | The operation in progress (e.g. `createObject`).   |
+
+Treat warnings as **breadcrumbs**, not exceptions — they describe partial-success states, so
+recording them at `level: 'warning'` (Sentry) / severity `WARN` (OTel) keeps alerting on real
+failures, not user-visible partial successes. Example:
+
+```ts
+const LaikaBackend = createLaikaBackend({
+  onWarning: e => {
+    Sentry.addBreadcrumb({
+      category: 'laika.warning',
+      level: 'warning',
+      message: e.message,
+      data: { 'laika.warning.code': e.code, 'laika.warning.title': e.title },
+    });
+  },
+});
+```
+
+If you also send a metric counter, use a `laika_warning_total` counter labelled by `code` — not by
+`message`, since messages carry per-call detail strings that would explode cardinality.

@@ -16,7 +16,11 @@ const meta = {
   title: 'Lexical Editor/UI/Field',
   component: Field,
   tags: ['autodocs'],
-  decorators: [Story => <div style={{ maxWidth: 380 }}><Story /></div>],
+  decorators: [Story => (
+    <div style={{ maxWidth: 380 }}>
+      <Story />
+    </div>
+  )],
 } satisfies Meta<typeof Field>;
 
 export default meta;

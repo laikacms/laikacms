@@ -21,9 +21,15 @@ type Story = StoryObj<typeof meta>;
 export const Horizontal: Story = {
   render: () => (
     <ButtonGroup>
-      <Button variant="outline" size="icon" aria-label="Bold"><Bold /></Button>
-      <Button variant="outline" size="icon" aria-label="Italic"><Italic /></Button>
-      <Button variant="outline" size="icon" aria-label="Underline"><Underline /></Button>
+      <Button variant="outline" size="icon" aria-label="Bold">
+        <Bold />
+      </Button>
+      <Button variant="outline" size="icon" aria-label="Italic">
+        <Italic />
+      </Button>
+      <Button variant="outline" size="icon" aria-label="Underline">
+        <Underline />
+      </Button>
     </ButtonGroup>
   ),
 };
