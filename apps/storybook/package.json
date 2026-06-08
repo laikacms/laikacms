@@ -11,6 +11,7 @@
   },
   "devDependencies": {
     "@laikacloud/portabletext-core": "workspace:*",
+    "@laikacms/decap-ai": "workspace:*",
     "@laikacms/decap-integrations": "workspace:*",
     "@storybook/addon-a11y": "^10.4.2",
     "@storybook/addon-docs": "^10.4.2",
@@ -21,9 +22,11 @@
     "@vitejs/plugin-react": "catalog:react",
     "decap-cms-widget-lexicaleditor": "workspace:*",
     "decap-cms-widget-portabletext-editor": "workspace:*",
+    "immutable": "catalog:legacy",
     "lucide-react": "catalog:icons",
     "react": "catalog:react",
     "react-dom": "catalog:react",
+    "react-redux": "^7.2.0",
     "storybook": "^10.4.2",
     "typescript": "catalog:tools",
     "vite": "catalog:tools"

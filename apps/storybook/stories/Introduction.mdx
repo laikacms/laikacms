@@ -31,14 +31,15 @@ A Decap widget backed by `@portabletext/editor`. The `PortableTextEditorView` is
 (it owns its `EditorProvider`), so it renders as a live editor with its toolbar under
 **Portable Text Editor**.
 
+### `@laikacms/decap-ai`
+
+Its `AiChatControl` is a `react-redux`-connected widget driven by a streaming chat backend
+(`useChat`). The **Decap AI** story mounts it with a minimal mock redux store and a stubbed `fetch`,
+so the chat shell renders standalone — actually sending a message still needs a live AI endpoint.
+(`AiChatPreview` renders `null`, so it has no story.)
+
 ## Packages without isolated stories
 
-Two packages contain React code that is not meaningfully renderable in isolation, so they are
-documented here rather than mounted as stories:
-
-- **`@laikacms/decap-ai`** — its `AiChatControl` is a `react-redux`-connected widget driven by a
-  streaming chat backend (`useChat`), and `AiChatPreview` renders `null`. It needs a populated
-  Decap redux store and a live AI endpoint, neither of which exists in isolation.
 - **`decap-cms-lexical-core`** — exposes a Lexical `DecoratorNode` subclass and a React context
   provider for custom blocks. The block UI itself lives in the Lexical widget package; core has no
   standalone presentational component to show.

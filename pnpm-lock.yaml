@@ -4656,6 +4656,9 @@ importers:
       '@laikacloud/portabletext-core':
         specifier: workspace:*
         version: link:../../packages/portable-text/portabletext-core
+      '@laikacms/decap-ai':
+        specifier: workspace:*
+        version: link:../../packages/decap-ai
       '@laikacms/decap-integrations':
         specifier: workspace:*
         version: link:../../packages/decap
@@ -4686,6 +4689,9 @@ importers:
       decap-cms-widget-portabletext-editor:
         specifier: workspace:*
         version: link:../../packages/decap-cms-widget-portabletext-editor
+      immutable:
+        specifier: catalog:legacy
+        version: 5.1.5
       lucide-react:
         specifier: catalog:icons
         version: 1.14.0(react@19.2.6)
@@ -4695,6 +4701,9 @@ importers:
       react-dom:
         specifier: catalog:react
         version: 19.2.6(react@19.2.6)
+      react-redux:
+        specifier: ^7.2.0
+        version: 7.2.9(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       storybook:
         specifier: ^10.4.2
         version: 10.4.2(@testing-library/dom@10.4.1)(@types/react@19.2.14)(prettier@3.8.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)

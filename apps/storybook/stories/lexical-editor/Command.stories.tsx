@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Calendar as CalendarIcon, Link as LinkIcon, Quote, Smile } from 'lucide-react';
+import { expect, userEvent, within } from 'storybook/test';
 
 import {
   Command,
@@ -48,4 +49,10 @@ export const SlashMenu: Story = {
       </CommandList>
     </Command>
   ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByPlaceholderText(/type a command/i), 'quote');
+    await expect(await canvas.findByText('Quote')).toBeInTheDocument();
+    await expect(canvas.queryByText('Emoji')).not.toBeInTheDocument();
+  },
 };

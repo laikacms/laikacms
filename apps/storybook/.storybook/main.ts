@@ -17,6 +17,7 @@ const lexicalSrc = packageSrc('decap-cms-widget-lexicaleditor');
 const lexicalCoreSrc = packageSrc('decap-cms-lexical-core');
 const portableTextEditorSrc = packageSrc('decap-cms-widget-portabletext-editor');
 const decapSrc = packageSrc('decap');
+const decapAiSrc = packageSrc('decap-ai');
 const portableTextCoreSrc = packageSrc('portable-text/portabletext-core');
 
 /**
@@ -44,6 +45,8 @@ const config: StorybookConfig = {
           { find: /^decap-cms-lexical-core$/, replacement: `${lexicalCoreSrc}/index.ts` },
           { find: /^decap-cms-lexical-core\/(.*)$/, replacement: `${lexicalCoreSrc}/$1` },
           { find: /^@laikacms\/decap-integrations\/(.*)$/, replacement: `${decapSrc}/$1` },
+          { find: /^@laikacms\/decap-ai$/, replacement: `${decapAiSrc}/index.ts` },
+          { find: /^@laikacms\/decap-ai\/(.*)$/, replacement: `${decapAiSrc}/$1` },
           { find: /^@laikacloud\/portabletext-core$/, replacement: `${portableTextCoreSrc}/index.ts` },
           { find: /^@laikacloud\/portabletext-core\/(.*)$/, replacement: `${portableTextCoreSrc}/$1` },
         ],

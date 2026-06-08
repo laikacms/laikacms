@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, userEvent, within } from 'storybook/test';
 
 import { Button } from 'decap-cms-widget-lexicaleditor/editor/ui/button';
 import {
@@ -29,4 +30,9 @@ export const Default: Story = {
       </Tooltip>
     </TooltipProvider>
   ),
+  play: async ({ canvasElement }) => {
+    await userEvent.hover(within(canvasElement).getByRole('button', { name: /hover me/i }));
+    const matches = await within(document.body).findAllByText('Add to library');
+    await expect(matches.length).toBeGreaterThan(0);
+  },
 };

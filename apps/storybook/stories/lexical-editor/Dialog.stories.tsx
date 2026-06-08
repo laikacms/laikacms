@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, userEvent, within } from 'storybook/test';
 
 import { Button } from 'decap-cms-widget-lexicaleditor/editor/ui/button';
 import {
@@ -48,4 +49,10 @@ export const Default: Story = {
       </DialogContent>
     </Dialog>
   ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /insert embed/i }));
+    const dialog = await within(document.body).findByRole('dialog');
+    await expect(dialog).toBeInTheDocument();
+    await expect(await within(dialog).findByText(/paste a url/i)).toBeInTheDocument();
+  },
 };

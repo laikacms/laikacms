@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, userEvent, within } from 'storybook/test';
 
 import { Button } from 'decap-cms-widget-lexicaleditor/editor/ui/button';
 import {
@@ -43,4 +44,8 @@ export const Default: Story = {
       </DropdownMenuContent>
     </DropdownMenu>
   ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /open menu/i }));
+    await expect(await within(document.body).findByRole('menuitem', { name: /duplicate/i })).toBeInTheDocument();
+  },
 };

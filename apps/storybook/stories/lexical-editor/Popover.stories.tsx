@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
+import { expect, userEvent, within } from 'storybook/test';
 
 import { Button } from 'decap-cms-widget-lexicaleditor/editor/ui/button';
 import { Input } from 'decap-cms-widget-lexicaleditor/editor/ui/input';
@@ -40,4 +41,8 @@ export const Default: Story = {
       </PopoverContent>
     </Popover>
   ),
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /edit link/i }));
+    await expect(await within(document.body).findByText(/set the destination/i)).toBeInTheDocument();
+  },
 };
