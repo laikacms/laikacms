@@ -22,15 +22,14 @@ pnpm add laikacms/file-sanitizer
 ## Usage
 
 ```typescript
-import { detectFileType, sanitizeFile } from 'laikacms/file-sanitizer';
+import { sanitizeFile } from 'laikacms/file-sanitizer';
 
-const file = await request.blob();
-const result = await sanitizeFile(file);
+const blob = await request.blob();
+const data = new Uint8Array(await blob.arrayBuffer());
 
-if (result.safe) {
-  // File passed basic sanitization
-  const sanitized = result.data;
-}
+// sanitizeFile returns on success and throws on unsupported/dangerous/corrupted input
+const result = await sanitizeFile(data);
+const sanitized = result.data; // Uint8Array with metadata stripped
 ```
 
 ## Supported Formats
