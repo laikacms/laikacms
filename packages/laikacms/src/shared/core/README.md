@@ -32,8 +32,8 @@ import { InvalidData, LaikaError, LaikaResult, NotFoundError } from 'laikacms/co
 type LaikaResult<T> = Result<T, LaikaError>;
 ```
 
-Compatible with Effect's Result type internally, but exposed via Standard Schema for
-interoperability with Zod, Valibot, etc.
+Compatible with Effect's `Result` type. Use the `laikacms/compat` helpers (`runTask`,
+`collectStream`) to consume tasks/streams without importing Effect directly.
 
 ## Compat helpers (`laikacms/compat`)
 
