@@ -44,6 +44,8 @@ export default tseslint.config(
       '**/.nuxt/**',
       '**/.output/**',
       '**/.vinxi/**',
+      '**/.cache/**',
+      'apps/starter-gatsby-blog/public/**',
       // Built static assets (esbuild bundles, etc.)
       '**/public/admin/bundle.js',
       '**/static/admin/bundle.js',

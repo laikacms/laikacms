@@ -2,12 +2,15 @@ import { createAppAuth } from '@octokit/auth-app';
 import { Octokit } from '@octokit/rest';
 import * as Result from 'effect/Result';
 import {
+  AuthenticationError,
+  AuthorizationError,
   ConflictError,
   DirInsteadOfFile,
   FileInsteadOfDir,
   ForbiddenError,
   InternalError,
   NotFoundError,
+  TooManyRequestsError,
   VersionMismatchError,
 } from 'laikacms/core';
 import type { LaikaResult } from 'laikacms/core';
@@ -56,7 +59,16 @@ function textToBase64(text: string): string {
   return btoa(binary);
 }
 
-const isOctokitError = (e: unknown): e is { status: number, message?: string } =>
+interface OctokitError {
+  status: number;
+  message?: string;
+  response?: {
+    headers?: Record<string, string | number | undefined>,
+    data?: unknown,
+  };
+}
+
+const isOctokitError = (e: unknown): e is OctokitError =>
   typeof e === 'object' && e !== null && 'status' in e && typeof (e as { status: unknown }).status === 'number';
 
 /**
@@ -344,10 +356,26 @@ export class GithubDataSource {
       case 404:
         return Result.fail(new NotFoundError(`The file at ${contextPath} does not exist`));
       case 401:
-      case 403:
         return Result.fail(
-          new ForbiddenError(`Access denied for ${contextPath}: ${error.message ?? 'forbidden'}`),
+          new AuthenticationError(`Not authenticated for ${contextPath}: ${error.message ?? 'unauthorized'}`),
         );
+      case 403: {
+        const rateLimitRemaining = error.response?.headers?.['x-ratelimit-remaining'];
+        if (rateLimitRemaining === '0' || rateLimitRemaining === 0) {
+          return Result.fail(
+            new TooManyRequestsError(`GitHub rate limit exceeded for ${contextPath}`),
+          );
+        }
+        const msg = error.message ?? '';
+        if (msg.includes('Resource not accessible by')) {
+          return Result.fail(
+            new ForbiddenError(`Resource not accessible for ${contextPath}: ${msg}`),
+          );
+        }
+        return Result.fail(
+          new AuthorizationError(`Insufficient permissions for ${contextPath}: ${msg || 'forbidden'}`),
+        );
+      }
       case 409:
       case 422:
         return Result.fail(
