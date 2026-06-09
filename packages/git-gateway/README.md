@@ -67,8 +67,21 @@ backend:
 | ALL    | `/github/*` | ✓    | Proxies to `https://api.github.com/repos/{owner}/{repo}/*` using an installation token. |
 
 `/github/*` only lets through endpoints that match the same allow-list as Netlify's gateway:
-`git/*`, `contents/*`, `pulls/*`, `branches/*`, `merges/*`, `statuses/*`, `compare/*`, `commits/*`,
-and `issues/:n/labels`. Anything else returns `403 FORBIDDEN`.
+`git/*`, `contents/*`, `statuses/*`, `compare/*`, and `issues/:n/labels`. Anything else returns
+`403 FORBIDDEN`.
+
+For `pulls`, `branches`, `merges`, and `commits` the allow-list uses a `(\/|$|\?)` pattern, so bare
+collection endpoints and query-string variants are also proxied:
+
+| Pattern matched                        | Examples                                                              |
+| -------------------------------------- | --------------------------------------------------------------------- |
+| `pulls`, `pulls/*`, `pulls?…`          | `GET /pulls`, `GET /pulls/123`, `GET /pulls?state=open`               |
+| `branches`, `branches/*`, `branches?…` | `GET /branches`, `GET /branches/main`, `GET /branches?protected=true` |
+| `merges`, `merges/*`, `merges?…`       | `POST /merges`, `GET /merges/abc`                                     |
+| `commits`, `commits/*`, `commits?…`    | `GET /commits`, `GET /commits/abc123`, `GET /commits?sha=main`        |
+
+Decap CMS relies on `GET /pulls` (no sub-path) to list editorial PRs, so the bare-collection form
+must be allowed.
 
 ## Role-based access
 
