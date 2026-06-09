@@ -8,9 +8,8 @@ Best-effort file sanitization for uploaded content.
 
 ## Features
 
-- Image sanitization (JPEG, PNG, GIF, WebP, TIFF)
-- PDF scanning for embedded JavaScript
-- MP4 container validation
+- Image sanitization (JPEG, PNG, GIF, WebP) — metadata stripped, sanitized data returned
+- Dangerous-content scanning for TIFF, PDF, MP4 — rejected if dangerous content found
 - MIME type verification
 
 ## Installation
@@ -34,15 +33,34 @@ const sanitized = result.data; // Uint8Array with metadata stripped
 
 ## Supported Formats
 
-| Format | Sanitization                         |
-| ------ | ------------------------------------ |
-| JPEG   | EXIF stripping, structure validation |
-| PNG    | Chunk validation                     |
-| GIF    | Structure validation                 |
-| WebP   | Container validation                 |
-| TIFF   | Tag validation                       |
-| PDF    | JavaScript detection                 |
-| MP4    | Container structure validation       |
+### Sanitized formats — metadata stripped, sanitized data returned
+
+These file types are fully processed: dangerous metadata is stripped and the sanitized `Uint8Array`
+is returned to the caller.
+
+| Format | Sanitization                                            |
+| ------ | ------------------------------------------------------- |
+| JPEG   | EXIF/IPTC/XMP stripping, marker-based validation        |
+| PNG    | Privacy-sensitive chunk stripping (tEXt, eXIf, tIME, …) |
+| GIF    | Block-based structure validation                        |
+| WebP   | RIFF container validation                               |
+
+### Scanned formats — rejected if dangerous content found
+
+These file types are **not sanitized**. `sanitizeFile` scans them for dangerous content (e.g.
+embedded GPS coordinates, scripts, or privacy-sensitive metadata) and then always throws an error:
+
+- `DangerousFileTypeError` — dangerous content was detected
+- `UnsupportedFileTypeError` — no dangerous content, but the type cannot be sanitized
+
+| Format | Scan performed                        |
+| ------ | ------------------------------------- |
+| TIFF   | Tag-level scan for dangerous metadata |
+| PDF    | Embedded JavaScript detection         |
+| MP4    | Container structure scan              |
+
+To pass these types through without any checks, add them to `ignoreExtensions` in `SanitizeOptions`
+— but only when you have other security measures in place.
 
 ## Disclaimer
 
