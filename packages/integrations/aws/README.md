@@ -101,9 +101,11 @@ const storage = new S3StorageRepository({ client, bucket, basePath: 'content', .
 const assets  = new S3AssetsRepository( { client, bucket, basePath: 'assets',  ... });
 ```
 
-`metadata.revisionId` carries the object's ETag; `getMetadata` upgrades to `ImageMetadata` (with
-`width`/`height`) when the upload attached `customMetadata: {width, height}` hints. Otherwise it
-returns `BinaryMetadata`.
+The S3 ETag is exposed as `content.etag` on the returned `Asset` entity. When you call
+`getMetadata()`, the same value surfaces as `metadata.hash` with `metadata.hashAlgorithm === 'etag'`
+on the `AssetMetadata` result. `getMetadata` upgrades to `ImageMetadata` (with `width`/`height`)
+when the upload attached `customMetadata: {width, height}` hints. Otherwise it returns
+`BinaryMetadata`.
 
 ### `@laikacms/aws/storage-ddb`
 

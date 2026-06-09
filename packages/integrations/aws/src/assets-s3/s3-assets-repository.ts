@@ -147,7 +147,9 @@ const extensionFromMime = (mime: string): string | undefined => {
  * - One asset = one S3 object.
  * - Folders are virtual prefixes; an empty folder is materialized as a
  *   `.keep` placeholder so listings can surface it.
- * - `metadata.revisionId` is the object's ETag.
+ * - The S3 ETag is exposed as `content.etag` on the returned `Asset` entity.
+ *   When you call `getMetadata()`, the same value surfaces as `metadata.hash`
+ *   with `metadata.hashAlgorithm === 'etag'` on the `AssetMetadata` result.
  *
  * Pair this with `@laikacms/aws/storage-s3` on the same bucket — they
  * don't conflict because the assets repository writes under different keys
