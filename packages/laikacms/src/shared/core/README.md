@@ -23,7 +23,8 @@ import { InvalidData, LaikaError, LaikaResult, NotFoundError } from 'laikacms/co
 - `NotFoundError` - Resource not found
 - `InvalidData` - Invalid input data
 - `InternalError` - Internal server error
-- `UnauthorizedError` - Authentication required
+- `AuthenticationError` - Authentication required (not logged in; HTTP 401)
+- `AuthorizationError` - Lacks permissions (authenticated but forbidden; HTTP 401)
 - `ForbiddenError` - Access denied
 
 ## Result Type
