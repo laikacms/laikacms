@@ -11,7 +11,14 @@
  *   - Any other S3-API-shaped service
  *
  * @example
- *   import { S3Client } from '@aws-sdk/client-s3';
+ *   import {
+ *     S3Client,
+ *     HeadObjectCommand,
+ *     GetObjectCommand,
+ *     PutObjectCommand,
+ *     DeleteObjectCommand,
+ *     ListObjectsV2Command,
+ *   } from '@aws-sdk/client-s3';
  *   import { createS3Bucket } from 'laikacms/storage-s3';
  *   import { R2StorageRepository } from 'laikacms/storage-r2';
  *
@@ -24,7 +31,17 @@
  *     },
  *   });
  *
- *   const bucket = createS3Bucket({ client: s3, bucketName: 'my-content' });
+ *   const bucket = createS3Bucket({
+ *     client: s3,
+ *     bucketName: 'my-content',
+ *     commands: {
+ *       HeadObjectCommand,
+ *       GetObjectCommand,
+ *       PutObjectCommand,
+ *       DeleteObjectCommand,
+ *       ListObjectsV2Command,
+ *     },
+ *   });
  *   const storage = new R2StorageRepository(bucket, serializers, 'md');
  *
  * Note: this file has no `@laikacms/decap-integrations` dependency — it's a
