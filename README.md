@@ -54,13 +54,13 @@ export default {
 
 ## Packages
 
-| Package                 | Description                                                                                                                                                                           |
-| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `laikacms`              | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
-| `@laikacms/aws`         | AWS service implementations (DynamoDB-backed contentbase settings)                                                                                                                    |
-| `@laikacms/decap`       | Decap CMS integrations: backend, OAuth2, widgets, AI chat                                                                                                                             |
-| `@laikacms/git-gateway` | Drop-in Netlify git-gateway-compatible HTTP handler (Decap `backend: git-gateway`)                                                                                                    |
-| `@laikacms/github`      | GitHub-backed `StorageRepository` (GitHub App auth)                                                                                                                                   |
+| Package                        | Description                                                                                                                                                                           |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laikacms`                     | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
+| `@laikacms/aws`                | AWS service implementations (DynamoDB-backed contentbase settings)                                                                                                                    |
+| `@laikacms/decap-integrations` | Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives in `@laikacms/decap-ai`                                                                              |
+| `@laikacms/git-gateway`        | Drop-in Netlify git-gateway-compatible HTTP handler (Decap `backend: git-gateway`)                                                                                                    |
+| `@laikacms/github`             | GitHub-backed `StorageRepository` (GitHub App auth)                                                                                                                                   |
 
 See [docs/packages.md](./docs/packages.md) for the full list of subpath exports.
 
@@ -87,10 +87,11 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Releasing
 
-All public packages (`laikacms`, `@laikacms/aws`, `@laikacms/decap`, `@laikacms/github`) are
-released together at the same version (changesets `fixed` group). Internal `workspace:*` references
-are pinned to the exact version on publish. `@laikacms/dynamodb-local` is `private` and never
-published — its version stays in lockstep with the rest but is not pushed to npm.
+All public packages (`laikacms`, `@laikacms/aws`, `@laikacms/decap-integrations`,
+`@laikacms/github`) are released together at the same version (changesets `fixed` group). Internal
+`workspace:*` references are pinned to the exact version on publish. `@laikacms/dynamodb-local` is
+`private` and never published — its version stays in lockstep with the rest but is not pushed to
+npm.
 
 ```
 pnpm changeset
