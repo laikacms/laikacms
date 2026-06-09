@@ -1,4 +1,4 @@
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { LaikaStream, LaikaTask, NotFoundError, NotImplementedError } from 'laikacms/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { CloudflareImagesAssetsRepository } from './cf-images-assets-repository.js';
@@ -272,5 +272,17 @@ describe('CloudflareImagesAssetsRepository virtual folders', () => {
     await expect(
       LaikaTask.runPromise(makeRepo().getFolder('does/not/exist')),
     ).rejects.toThrow(NotFoundError);
+  });
+});
+
+describe('CloudflareImagesAssetsRepository updateAsset', () => {
+  it('returns NotImplementedError — Cloudflare Images has no metadata-update endpoint', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(
+      repo.createAsset({ key: 'photos/hero', content: tinyPng(), mimeType: 'image/png' }),
+    );
+    await expect(
+      LaikaTask.runPromise(repo.updateAsset({ key: 'photos/hero', customMetadata: { author: 'test' } })),
+    ).rejects.toThrow(NotImplementedError);
   });
 });
