@@ -19,7 +19,7 @@ Sign up at https://neon.tech and create a project. Copy the **Connection string*
 — it looks like:
 
 ```
-postgres://user:password@ep-xxx.us-east-1.aws.neon.tech/neondb?sslmode=require
+postgresql://<user>:<password>@<endpoint>.us-east-1.aws.neon.tech/<dbname>?sslmode=require
 ```
 
 ### 2. Configure environment
