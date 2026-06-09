@@ -5,8 +5,10 @@
   "description": "Starter blog built with Cloudflare Pages Functions + R2 + LaikaCMS. Shows how to wire decapApi with R2StorageRepository for edge runtimes where createEmbeddedLaika (Node.js / FileSystem) is not available.",
   "type": "module",
   "scripts": {
-    "dev": "wrangler pages dev public --compatibility-date=2024-12-01 --compatibility-flags=nodejs_compat",
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && wrangler pages dev public --compatibility-date=2024-12-01 --compatibility-flags=nodejs_compat",
     "deploy": "wrangler pages deploy public",
+    "build": "pnpm build:admin",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -15,6 +17,7 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260512.0",
+    "esbuild": "catalog:tools",
     "typescript": "catalog:tools",
     "wrangler": "catalog:tools"
   },

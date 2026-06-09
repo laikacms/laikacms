@@ -10,5 +10,6 @@
     "skipLibCheck": true,
     "paths": {}
   },
-  "include": ["src/**/*.ts", "functions/**/*.ts"]
+  "include": ["src/**/*.ts", "functions/**/*.ts"],
+  "exclude": ["node_modules", "src/admin-client.ts"]
 }

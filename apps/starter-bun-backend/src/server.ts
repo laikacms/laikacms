@@ -5,7 +5,7 @@ import { laika } from './lib/laika';
 
 const PORT = Number(process.env.PORT ?? 3000);
 
-const ADMIN_HTML = await Bun.file(new URL('./admin/index.html', import.meta.url)).text();
+const ADMIN_HTML = await Bun.file(new URL('../public/admin/index.html', import.meta.url)).text();
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -62,6 +62,13 @@ const server = Bun.serve({
     if (path === '/admin' && request.method === 'GET') {
       return new Response(ADMIN_HTML, {
         headers: { 'Content-Type': 'text/html; charset=utf-8' },
+      });
+    }
+
+    if (path === '/admin/bundle.js' && request.method === 'GET') {
+      const file = Bun.file(new URL('../public/admin/bundle.js', import.meta.url));
+      return new Response(file, {
+        headers: { 'Content-Type': 'application/javascript' },
       });
     }
 

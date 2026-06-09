@@ -5,8 +5,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && tsx watch src/server.ts",
     "start": "tsx src/server.ts",
+    "build": "pnpm build:admin && tsc -p tsconfig.json",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -17,6 +19,7 @@
   "devDependencies": {
     "@types/express": "^4.17.21",
     "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
     "tsx": "catalog:tools",
     "typescript": "catalog:tools"
   }

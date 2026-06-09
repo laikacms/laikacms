@@ -11,9 +11,12 @@ import { laika } from './lib/laika.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
-const ADMIN_HTML = readFileSync(resolve(__dirname, 'admin/index.html'), 'utf8');
+const ADMIN_HTML = readFileSync(resolve(__dirname, '..', 'public', 'admin', 'index.html'), 'utf8');
 
 const app = express();
+
+// Serve bundled admin assets (bundle.js) from public/.
+app.use(express.static(resolve(__dirname, '..', 'public')));
 
 // IMPORTANT: do NOT mount `express.json()` globally — it would drain the
 // request body before our /api/decap/* handler streams it to laika.fetch.
