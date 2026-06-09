@@ -20,5 +20,5 @@
     "ignoreDeprecations": "6.0"
   },
   "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "server"]
+  "exclude": ["node_modules", "dist", "server", "src/admin-client.ts"]
 }

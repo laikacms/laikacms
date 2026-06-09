@@ -9,5 +9,6 @@
     "noEmit": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "api/**/*.ts"]
+  "include": ["src/**/*.ts", "api/**/*.ts"],
+  "exclude": ["node_modules", "src/admin-client.ts"]
 }

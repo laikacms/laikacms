@@ -5,3 +5,4 @@ dist
 .turbo
 .qwik
 content/.contentbase
+public/admin/bundle.js

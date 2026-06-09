@@ -5,8 +5,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 3000",
-    "build": "qwik build",
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && vite --port 3000",
+    "build": "pnpm build:admin && qwik build",
     "build.client": "vite build",
     "build.server": "vite build -c adapters/node/vite.config.ts",
     "preview": "qwik build preview && vite preview --port 3000",
@@ -21,6 +22,7 @@
     "@builder.io/qwik": "^1.13.0",
     "@builder.io/qwik-city": "^1.13.0",
     "@types/node": "catalog:types",
+    "esbuild": "catalog:tools",
     "typescript": "catalog:tools",
     "vite": "catalog:tools"
   }
