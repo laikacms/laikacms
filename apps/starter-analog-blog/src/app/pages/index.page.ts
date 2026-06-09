@@ -1,5 +1,5 @@
 import { injectLoad, type PageServerLoad, type RouteMeta } from '@analogjs/router';
-import { Component } from '@angular/core';
+import { Component, computed } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { RouterLink } from '@angular/router';
 import { collectStream } from 'laikacms/compat';
@@ -50,11 +50,11 @@ export const load = async (_event: PageServerLoad) => {
   template: `
     <main>
       <h1>Blog</h1>
-      @if ((posts() ?? []).length === 0) {
+      @if (posts().length === 0) {
         <p>No posts yet. <a href="/admin">Open the CMS</a> to write your first post.</p>
       } @else {
         <ul>
-          @for (post of posts() ?? []; track post.key) {
+          @for (post of posts(); track post.key) {
             <li>
               <a [routerLink]="['/blog', slug(post.key)]">{{ slug(post.key) }}</a>
               @if (post.updatedAt) {
@@ -69,7 +69,11 @@ export const load = async (_event: PageServerLoad) => {
   `,
 })
 export default class HomePageComponent {
-  readonly posts = toSignal(injectLoad<typeof load>());
+  private readonly rawPosts = toSignal(injectLoad<typeof load>());
+  readonly posts = computed(() => {
+    const v = this.rawPosts();
+    return Array.isArray(v) ? v : [];
+  });
 
   slug(key: string): string {
     return key.replace(/^posts\//, '').replace(/\.md$/, '');
