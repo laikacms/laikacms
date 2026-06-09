@@ -11,8 +11,9 @@ pnpm add laikacms
 ```typescript
 import { buildJsonApi } from 'laikacms/storage-api';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
 
-const repo = new FileSystemStorageRepository({ basePath: './content' });
+const repo = new FileSystemStorageRepository('./content', { md: rawSerializer }, 'md');
 const api = buildJsonApi({ repo });
 
 export default { fetch: api.fetch };
@@ -23,10 +24,11 @@ export default { fetch: api.fetch };
 ```typescript
 import { buildJsonApi } from 'laikacms/storage-api';
 import { R2StorageRepository } from 'laikacms/storage-r2';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const repo = new R2StorageRepository({ bucket: env.CONTENT_BUCKET });
+    const repo = new R2StorageRepository(env.CONTENT_BUCKET, { md: rawSerializer }, 'md');
     return buildJsonApi({ repo }).fetch(request);
   },
 };
