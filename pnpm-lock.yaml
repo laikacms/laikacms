@@ -2156,6 +2156,9 @@ importers:
       '@types/node':
         specifier: catalog:types
         version: 22.19.18
+      esbuild:
+        specifier: catalog:tools
+        version: 0.27.7
       tsx:
         specifier: catalog:tools
         version: 4.22.3
