@@ -5,8 +5,10 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun --watch src/server.ts",
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
+    "dev": "pnpm build:admin && bun --watch src/server.ts",
     "start": "bun src/server.ts",
+    "build": "pnpm build:admin",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -15,6 +17,7 @@
   },
   "devDependencies": {
     "@types/bun": "^1.1.0",
+    "esbuild": "catalog:tools",
     "typescript": "catalog:tools"
   }
 }

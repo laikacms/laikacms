@@ -6,7 +6,7 @@ import { NotFoundError } from 'laikacms/core';
 import { laika } from './lib/laika.ts';
 
 const PORT = Number(Deno.env.get('PORT') ?? 3000);
-const ADMIN_HTML = await Deno.readTextFile(new URL('./admin/index.html', import.meta.url));
+const ADMIN_HTML = await Deno.readTextFile(new URL('../public/admin/index.html', import.meta.url));
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -49,6 +49,13 @@ Deno.serve({ port: PORT }, async request => {
   if (path === '/admin' && request.method === 'GET') {
     return new Response(ADMIN_HTML, {
       headers: { 'Content-Type': 'text/html; charset=utf-8' },
+    });
+  }
+
+  if (path === '/admin/bundle.js' && request.method === 'GET') {
+    const bundle = await Deno.readFile(new URL('../public/admin/bundle.js', import.meta.url));
+    return new Response(bundle, {
+      headers: { 'Content-Type': 'application/javascript' },
     });
   }
 

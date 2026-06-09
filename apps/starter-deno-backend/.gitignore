@@ -3,3 +3,4 @@ node_modules
 .turbo
 content/.contentbase
 deno.lock
+public/admin/bundle.js

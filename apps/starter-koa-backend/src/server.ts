@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -12,7 +13,7 @@ import { laika } from './lib/laika.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
-const ADMIN_HTML = readFileSync(resolve(__dirname, 'admin/index.html'), 'utf8');
+const ADMIN_HTML = readFileSync(resolve(__dirname, '..', 'public', 'admin', 'index.html'), 'utf8');
 
 const app = new Koa();
 const router = new Router();
@@ -46,6 +47,11 @@ router.get('/', async ctx => {
 router.get('/admin', ctx => {
   ctx.type = 'html';
   ctx.body = ADMIN_HTML;
+});
+
+router.get('/admin/bundle.js', async ctx => {
+  ctx.type = 'application/javascript';
+  ctx.body = await readFile(resolve(__dirname, '..', 'public', 'admin', 'bundle.js'));
 });
 
 // Wildcard with `(.*)` is the @koa/router convention for "match everything

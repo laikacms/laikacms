@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -11,7 +12,7 @@ import { laika } from './lib/laika.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
-const ADMIN_HTML = readFileSync(resolve(__dirname, 'admin/index.html'), 'utf8');
+const ADMIN_HTML = readFileSync(resolve(__dirname, '..', 'public', 'admin', 'index.html'), 'utf8');
 
 const fastify = Fastify({ logger: true });
 
@@ -47,6 +48,12 @@ fastify.get('/', async () => {
 fastify.get('/admin', async (_req, reply) => {
   reply.type('text/html');
   return ADMIN_HTML;
+});
+
+fastify.get('/admin/bundle.js', async (_req, reply) => {
+  const bundle = await readFile(resolve(__dirname, '..', 'public', 'admin', 'bundle.js'));
+  reply.type('application/javascript');
+  return bundle;
 });
 
 // Mount the LaikaCMS web-standard fetch handler at /api/decap/*.

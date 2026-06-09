@@ -5,11 +5,16 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
     "dev": "deno run --allow-net --allow-read --allow-write --allow-env --allow-sys --watch src/main.ts",
-    "start": "deno run --allow-net --allow-read --allow-write --allow-env --allow-sys src/main.ts"
+    "start": "deno run --allow-net --allow-read --allow-write --allow-env --allow-sys src/main.ts",
+    "build": "pnpm build:admin"
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
     "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "esbuild": "catalog:tools"
   }
 }
