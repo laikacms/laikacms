@@ -1,15 +1,11 @@
-import { readFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
 import { serve } from '@hono/node-server';
+import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { collectStream, runTask } from 'laikacms/compat';
 import { NotFoundError } from 'laikacms/core';
 
 import { laika } from './lib/laika.js';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT ?? 3000);
 
 const app = new Hono();
@@ -28,19 +24,13 @@ app.get('/', async c => {
     name: '@laikacms/starter-hono-backend',
     endpoints: {
       'GET /': 'this index',
-      'GET /admin': 'Decap CMS admin shell',
+      'GET /admin/': 'Decap CMS admin shell',
       'ANY /api/decap/*': 'LaikaCMS JSON:API (auth required)',
       'GET /posts': 'sample read endpoint (no auth, reads directly from the repo)',
       'GET /posts/:slug': 'sample single-post endpoint (no auth)',
     },
     samplePostsCount: items.length,
   });
-});
-
-// Decap admin shell — a self-contained HTML doc served from disk.
-app.get('/admin', async c => {
-  const html = await readFile(resolve(__dirname, 'admin/index.html'), 'utf8');
-  return c.html(html);
 });
 
 // Mount the LaikaCMS HTTP API. This is what the Decap admin (and any other
@@ -78,6 +68,11 @@ app.get('/posts/:slug', async c => {
     throw err;
   }
 });
+
+// Serve admin shell and bundled assets from public/.
+// public/admin/index.html   → GET /admin/
+// public/admin/bundle.js    → GET /admin/bundle.js  (built by pnpm build:admin)
+app.use('/*', serveStatic({ root: './public' }));
 
 serve({ fetch: app.fetch, port: PORT }, info => {
   // eslint-disable-next-line no-console

@@ -9,8 +9,8 @@ version: 1.0.0
 ## Overview
 
 Long-lived `starter-*-blog` PR branches go stale against `develop`. When `develop`'s
-`pnpm-lock.yaml` advances (a dependency added/bumped anywhere in the monorepo), the CI install
-step runs `pnpm install --frozen-lockfile` and fails fast (typically 5–15s) with:
+`pnpm-lock.yaml` advances (a dependency added/bumped anywhere in the monorepo), the CI install step
+runs `pnpm install --frozen-lockfile` and fails fast (typically 5–15s) with:
 
 ```
 ERR_PNPM_OUTDATED_LOCKFILE  Cannot install with "frozen-lockfile" because pnpm-lock.yaml is not
