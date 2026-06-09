@@ -97,6 +97,48 @@ are just another shape (`type: 'app-installation'`) returned from the callback.
 
 ---
 
+## Constructor options
+
+All options are passed as a single object to `new GithubStorageRepository(options)`.
+
+### Required
+
+| Option                 | Type                        | Description                                                                                              |
+| ---------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `appId`                | `string \| number`          | GitHub App ID.                                                                                           |
+| `privateKey`           | `string`                    | PEM private key for the App. Literal `\n` sequences and surrounding quotes are normalised automatically. |
+| `installationId`       | `string \| number`          | Installation ID for the App on the target repo.                                                          |
+| `owner`                | `string`                    | Repository owner (user or organisation).                                                                 |
+| `repo`                 | `string`                    | Repository name.                                                                                         |
+| `branch`               | `string`                    | Branch to read from and write to.                                                                        |
+| `serializerRegistry`   | `StorageSerializerRegistry` | Map of file extension → serializer. Drives which extensions the integration can read and write.          |
+| `defaultFileExtension` | `string`                    | Extension used when no other serializer can be determined.                                               |
+
+### Optional
+
+| Option               | Type                              | Default                     | Description                                                                                                                                                                             |
+| -------------------- | --------------------------------- | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ignoreList`         | `string[]`                        | See below                   | Glob patterns for files that are excluded from directory listings. Overrides the built-in list entirely when supplied.                                                                  |
+| `commitAuthor`       | `{ name: string, email: string }` | _(none)_                    | Name and email stamped as the author/committer on every commit written by this repository. Omit to let GitHub default to the App installation's identity.                               |
+| `determineExtension` | `DetermineExtension`              | `defaultDetermineExtension` | Custom resolver that picks the file extension for a new object given its key and metadata. Replaces the built-in logic when provided.                                                   |
+| `tokenTtlSeconds`    | `number`                          | `3000` (50 min)             | How many seconds before the cached installation token is considered stale and a fresh one is minted. GitHub installation tokens last ~1 hour; the default refreshes well before expiry. |
+| `userAgent`          | `string`                          | `'@laikacms/github'`        | `User-Agent` header sent on every Octokit request.                                                                                                                                      |
+
+#### Default `ignoreList`
+
+When `ignoreList` is not supplied the following patterns are excluded:
+
+```
+**/.keep
+**/.DS_Store
+**/Thumbs.db
+**/desktop.ini
+**/.contentbase
+**/.laikacms
+```
+
+---
+
 ## TODO — make this package work without a GitHub App
 
 **Current state.** `GithubDataSourceOptions` requires `appId`, `privateKey`, and `installationId`;
