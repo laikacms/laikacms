@@ -66,13 +66,26 @@ export default {
 | --------------------------------------- | -------------------------------- |
 | `laikacms/storage-fs`                   | Filesystem                       |
 | `laikacms/storage-r2`                   | Cloudflare R2                    |
+| `laikacms/storage-s3`                   | AWS S3                           |
+| `laikacms/storage-webdav`               | WebDAV server                    |
 | `laikacms/storage-drizzle`              | SQL via Drizzle                  |
 | `laikacms/storage-jsonapi-proxy`        | Remote JSON:API server           |
 | `laikacms/documents-contentbase`        | Documents on top of `storage`    |
 | `laikacms/documents-drizzle`            | Documents in SQL                 |
+| `laikacms/documents-jsonapi-proxy`      | Documents via JSON:API proxy     |
+| `laikacms/documents-obsidian`           | Obsidian-vault-backed documents  |
 | `laikacms/assets-contentbase`           | Assets on top of `storage`       |
 | `laikacms/assets-r2`                    | Assets in R2                     |
+| `laikacms/assets-jsonapi-proxy`         | Assets via JSON:API proxy        |
+| `laikacms/assets-obsidian`              | Obsidian-vault-backed assets     |
 | `laikacms/contentbase-settings-default` | In-memory / file-backed settings |
+| `laikacms/contentbase-settings-decap`   | Decap-CMS-compatible settings    |
+
+### Testing utilities
+
+| Export                     | Purpose                               |
+| -------------------------- | ------------------------------------- |
+| `laikacms/storage/testing` | In-memory storage stub for unit tests |
 
 ### Serializers
 
