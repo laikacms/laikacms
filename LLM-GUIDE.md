@@ -259,7 +259,7 @@ These are the things that consistently bite first-time integrators:
     }
     ```
 
-11. **Integration packages need a `dist/` before their starters can be type-checked.** Only a
+12. **Integration packages need a `dist/` before their starters can be type-checked.** Only a
     handful of `packages/integrations/*` have pre-built dists committed to the repo. If you run
     `pnpm --filter @laikacms/starter-foo exec tsc --noEmit` directly and get
     `Cannot find module '@laikacms/foo/storage-bar'`, build the integration first:

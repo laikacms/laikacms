@@ -147,9 +147,9 @@ export class AlgoliaDataSource {
 
   /**
    * PUT a single record. Algolia writes are upserts — the same call creates
-   * or replaces. Returns the server-assigned `objectID`.
+   * or replaces. Returns the server-assigned `objectID` and `taskID`.
    */
-  async putRecord(record: AlgoliaRecord): Promise<LaikaResult<{ objectID: string, taskID?: number }>> {
+  async putRecord(record: AlgoliaRecord): Promise<LaikaResult<{ objectID: string, taskID: number }>> {
     let response: Response;
     try {
       response = await this.request('PUT', this.indexPath(`/${encodeURIComponent(record.objectID)}`), {
@@ -159,8 +159,39 @@ export class AlgoliaDataSource {
       return Result.fail(new ServiceUnavailableError('Algolia unreachable', { cause }));
     }
     if (!response.ok) return errorForResponse(response.status, await safeText(response), record.objectID);
-    const out = (await response.json()) as { objectID: string, taskID?: number };
+    const out = (await response.json()) as { objectID: string, taskID: number };
     return Result.succeed(out);
+  }
+
+  /**
+   * Poll `GET /1/indexes/<indexName>/task/<taskID>` until Algolia reports
+   * `{"status":"published"}`, confirming the write is visible to subsequent reads.
+   *
+   * Use after `putRecord` when your code requires read-after-write consistency:
+   *
+   * ```ts
+   * const put = await dataSource.putRecord(record);
+   * if (Result.isSuccess(put)) {
+   *   await dataSource.waitTask(put.success.taskID);
+   * }
+   * ```
+   */
+  async waitTask(taskID: number): Promise<LaikaResult<void>> {
+    const url = `${this.apiUrl}/1/indexes/${encodeURIComponent(this.indexName)}/task/${taskID}`;
+    while (true) {
+      let response: Response;
+      try {
+        response = await this.request('GET', url);
+      } catch (cause) {
+        return Result.fail(new ServiceUnavailableError('Algolia unreachable', { cause }));
+      }
+      if (!response.ok) {
+        return errorForResponse(response.status, await safeText(response), `task/${taskID}`);
+      }
+      const data = (await response.json()) as { status: string };
+      if (data.status === 'published') return Result.succeed(undefined);
+      await new Promise<void>(resolve => setTimeout(resolve, 200));
+    }
   }
 
   /** DELETE a record. 404 is treated as success — the caller wanted it gone. */

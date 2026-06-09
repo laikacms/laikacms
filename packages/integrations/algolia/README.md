@@ -95,10 +95,21 @@ surfaces as `AuthenticationError` consistently.
   Algolia stores arbitrary JSON, but to keep the storage-contract serializer model consistent we
   don't merge content fields onto the record top-level. A future "structured Algolia" mode could do
   that for search-friendliness — see Contentful for the same pattern done structurally.
-- **Eventual consistency.** Algolia's writes are async — Algolia returns a `taskID` you'd `waitTask`
-  against to be sure subsequent reads see your write. This repository does not wait. If your tests
-  need read-after-write determinism, layer a small `dataSource.waitTask(taskID)` after each
-  `putRecord` (the data source exposes `taskID` in the success result).
+- **Eventual consistency.** Algolia's writes are async — the index may not reflect a write
+  immediately. Both `AlgoliaDataSource` and `AlgoliaStorageRepository` expose a `waitTask(taskID)`
+  method that polls `GET /1/indexes/<index>/task/<taskID>` until Algolia reports
+  `{"status":"published"}`. The `taskID` is always present in a successful `putRecord` result.
+  Example:
+  ```ts
+  import * as Result from 'effect/Result';
+  const put = await dataSource.putRecord(record);
+  if (Result.isSuccess(put)) {
+    await dataSource.waitTask(put.success.taskID);
+    // subsequent reads now see the write
+  }
+  ```
+  The repository itself does not call `waitTask` automatically. If your tests or production code
+  need read-after-write consistency, call it explicitly after each `putRecord`.
 - **Per-record size limit** (10 KB on the default Algolia plan, configurable per-plan up to 100 KB).
   Storing large bodies via Algolia is the wrong tool — use S3 / R2 for the body and Algolia as a
   search-friendly mirror.

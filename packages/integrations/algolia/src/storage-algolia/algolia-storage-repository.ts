@@ -491,6 +491,17 @@ export class AlgoliaStorageRepository extends StorageRepository {
     });
   }
 
+  /**
+   * Wait for an Algolia write task to be fully indexed (status `"published"`).
+   *
+   * Pass the `taskID` from a `putRecord` result to block until subsequent reads
+   * reflect the write — useful in tests or any code that requires read-after-write
+   * consistency.
+   */
+  waitTask(taskID: number): Promise<LaikaResult<void>> {
+    return this.dataSource.waitTask(taskID);
+  }
+
   getCapabilities(): LaikaTask.LaikaTask<Capabilities> {
     return LaikaTask.succeed<Capabilities>({
       compatibilityDate: CompatibilityDate.make('2026-05-20'),
