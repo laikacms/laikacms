@@ -130,7 +130,7 @@ export class BadRequestError extends LaikaError<typeof errorCode.BAD_REQUEST, ty
 }
 export class ForbiddenError extends LaikaError<typeof errorCode.FORBIDDEN, typeof errorStatus.FORBIDDEN> {
   /*
-    use UnauthorizedError if user is not logged in at all
+    use AuthenticationError if user is not logged in at all
     use ForbiddenError if user is logged in but lacks permissions
     */
   public static override TITLE = 'Forbidden';
