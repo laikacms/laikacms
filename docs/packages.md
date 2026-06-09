@@ -72,6 +72,24 @@ AWS service implementations.
 | `@laikacms/aws/storage-ddb`              | DynamoDB single-table StorageRepository                                                |
 | `@laikacms/aws/assets-s3`                | S3-backed AssetsRepository                                                             |
 
+## `@laikacms/decap-ai`
+
+AI chat integration for Decap CMS. Bundles the Vercel AI SDK so consumers share one `ai` runtime.
+Provides a runtime-agnostic server adapter, a React widget, and document-manipulation tools.
+
+| Subpath                                | Description                                                                             |
+| -------------------------------------- | --------------------------------------------------------------------------------------- |
+| `@laikacms/decap-ai`                   | `decapAi()` server adapter factory + Vercel AI SDK re-exports (`tool`, `streamText`, …) |
+| `@laikacms/decap-ai/tools`             | Built-in client-side document tools (`getDocumentData`, `updateDocument`)               |
+| `@laikacms/decap-ai/providers`         | Model provider re-exports (`anthropic`, `openai` and their factories)                   |
+| `@laikacms/decap-ai/widget`            | React widget (`WidgetAiChat`, `AiChatControl`, `AiChatPreview`, `useChat`)              |
+| `@laikacms/decap-ai/widget/i18n/types` | TypeScript types for widget translation strings                                         |
+| `@laikacms/decap-ai/widget/i18n/en`    | English widget UI strings                                                               |
+| `@laikacms/decap-ai/widget/i18n/nl`    | Dutch widget UI strings                                                                 |
+| `@laikacms/decap-ai/i18n/types`        | TypeScript types for server-side translation strings                                    |
+| `@laikacms/decap-ai/i18n/en`           | English server-side strings (errors + default system prompt)                            |
+| `@laikacms/decap-ai/i18n/nl`           | Dutch server-side strings                                                               |
+
 ## `@laikacms/decap-integrations`
 
 Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives in the separate
