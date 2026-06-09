@@ -3,7 +3,19 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["dist/**", "build/**"]
+      "outputs": [
+        "dist/**",
+        "build/**",
+        ".next/**",
+        ".output/**",
+        ".nuxt/**",
+        ".vinxi/**",
+        ".vitepress/dist/**",
+        "docs/.vitepress/dist/**",
+        "public/**",
+        "_site/**",
+        ".marko-run/**"
+      ]
     },
     "dev": {
       "dependsOn": ["^build"],
