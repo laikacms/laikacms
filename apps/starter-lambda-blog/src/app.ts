@@ -28,7 +28,7 @@ const { default: createLaikaBackend } =
   await import('https://unpkg.com/@laikacms/decap-cms-backend-laika@latest/dist/index.js');
 window.CMS.registerBackend('laika', createLaikaBackend());
 window.CMS.init({ config: {
-  backend: { name: 'laika', api_url: '/api/decap' },
+  backend: { name: 'laika', api_root: '/api/decap' },
   media_folder: 'public/uploads',
   public_folder: '/uploads',
   collections: ${JSON.stringify(blogCollections)},

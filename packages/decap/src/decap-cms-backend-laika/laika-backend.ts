@@ -357,7 +357,11 @@ export default function createLaikaBackend(
       this.publicFolder = (config as Config & { public_folder?: string }).public_folder ?? config.media_folder;
 
       this.baseUrl = Url.normalize(config.backend.base_url);
-      this.apiUrl = Url.combine(this.baseUrl, config.backend.api_root);
+      // api_root is the canonical field; api_url is accepted as an alias for
+      // compatibility with starter templates that pre-date this field name.
+      const backendExt = config.backend as Record<string, unknown>;
+      const apiPath = (backendExt.api_root ?? backendExt.api_url) as string | undefined;
+      this.apiUrl = Url.combine(this.baseUrl, apiPath);
       this.devToken = (config.backend as { dev_token?: unknown }).dev_token as string | undefined;
     }
 

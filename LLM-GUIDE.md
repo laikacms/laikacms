@@ -223,7 +223,18 @@ These are the things that consistently bite first-time integrators:
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** When adding a new
    starter under `apps/`, mirror this convention — see existing starters' `package.json`.
 
-8. **Effect Platform 4.x moved HTTP types into `effect/unstable/http/*`.** If you're using
+8. **`api_root` (not `api_url`) in the Decap backend config.** The Laika backend constructor reads
+   `config.backend.api_root` (with `api_url` accepted as a deprecated alias). Without it, all Decap
+   admin API calls resolve to the site root and silently 404.
+   - When using `decapAdminHtml()` + `minimalBlogConfig()`, `api_root: '/api/decap'` is included in
+     the default backend config automatically since v0.x — you only need to pass it explicitly when
+     overriding the `backend` key.
+   - When wiring your own `CMS.init()` (next-blog / astro-blog pattern), use:
+     `backend: { name: 'laika', api_root: '/api/decap' }`
+   - The serializer registry needs all four types: `{ md, yaml, yml, json, raw }`. If you only
+     register `md`, saving YAML or JSON files silently fails.
+
+9. **Effect Platform 4.x moved HTTP types into `effect/unstable/http/*`.** If you're using
    `@effect/platform-node`, import from `effect/unstable/http/HttpRouter`, not
    `@effect/platform/HttpRouter`. The platform-node package only exports the Node.js server
    primitives (`NodeHttpServer`, `NodeRuntime`). Additionally:
@@ -234,6 +245,33 @@ These are the things that consistently bite first-time integrators:
      `HttpRouter.serve(appLayer)`.
    - Bridge `laika.fetch` into Effect HTTP: `yield* HttpServerRequest.toWeb(request)` gives a WHATWG
      `Request`; wrap the result with `HttpServerResponse.fromWeb(response)`.
+
+10. **Pagination shape is `{ page, perPage }`, not `{ offset, limit }`.** Use
+    `listRecordSummaries({ pagination: { page: 1, perPage: 100 } })`. The method `listRecords` does
+    not exist — it's always `listRecordSummaries`.
+
+11. **`NotFoundError` must be imported from `laikacms/core` and re-thrown.** A bare `catch {}`
+    swallows all errors. Always check:
+    ```ts
+    catch (err) {
+      if (err instanceof NotFoundError) return c.notFound();
+      throw err;
+    }
+    ```
+
+11. **Integration packages need a `dist/` before their starters can be type-checked.** Only a
+    handful of `packages/integrations/*` have pre-built dists committed to the repo. If you run
+    `pnpm --filter @laikacms/starter-foo exec tsc --noEmit` directly and get
+    `Cannot find module '@laikacms/foo/storage-bar'`, build the integration first:
+    ```
+    pnpm --filter @laikacms/foo build
+    ```
+    The correct way to typecheck in CI or as a one-shot command is the root-level turbo task, which
+    builds upstream dependencies automatically:
+    ```
+    pnpm run typecheck              # builds all integration packages, then checks all starters
+    pnpm run typecheck --filter ... # scoped to specific packages
+    ```
 
 ---
 

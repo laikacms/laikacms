@@ -24,7 +24,7 @@ export const blogCollections = [
 
 /** Full Decap config — passed to decapApi on the server and to CMS.init() in the browser. */
 export const decapConfig = {
-  backend: { name: 'laika', api_url: '/api/decap' },
+  backend: { name: 'laika', api_root: '/api/decap' },
   media_folder: 'uploads',
   public_folder: '/uploads',
   collections: blogCollections,

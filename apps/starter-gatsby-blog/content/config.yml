@@ -1,6 +1,6 @@
 backend:
   name: laika
-  api_url: /api/decap
+  api_root: /api/decap
 media_folder: static/uploads
 public_folder: /uploads
 collections:
