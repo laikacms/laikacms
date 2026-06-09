@@ -25,6 +25,13 @@ pnpm install
 pnpm --filter @laikacms/starter-hono-backend dev
 ```
 
+> **Note:** `dev` uses `tsx watch src/server.ts`, which resolves workspace packages (`laikacms`,
+> `@laikacms/decap-integrations`) from their compiled `dist/` output. These packages must be built
+> before the dev server starts. The `predev` script in `package.json` handles this automatically —
+> running `turbo build` over those deps before `tsx watch` launches. Alternatively, start from the
+> repo root with `pnpm turbo dev --filter @laikacms/starter-hono-backend`, which also satisfies the
+> `dev → ^build` dependency declared in `turbo.json`.
+
 Then:
 
 - `curl http://localhost:3000/` — endpoint index + sample post count

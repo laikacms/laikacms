@@ -5,6 +5,7 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "turbo run build --filter='laikacms' --filter='@laikacms/decap-integrations'",
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
     "dev": "pnpm build:admin && tsx watch src/server.ts",
     "start": "tsx src/server.ts",
