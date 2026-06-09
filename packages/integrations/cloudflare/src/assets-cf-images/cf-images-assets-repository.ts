@@ -25,6 +25,7 @@ import {
   LaikaStream,
   LaikaTask,
   NotFoundError,
+  NotImplementedError,
 } from 'laikacms/core';
 import { applyPagination, type Folder, type FolderCreate, naturalCompare } from 'laikacms/storage';
 
@@ -175,17 +176,15 @@ export class CloudflareImagesAssetsRepository extends AssetsRepository {
     );
   }
 
-  updateAsset(update: AssetUpdate): LaikaTask.LaikaTask<Asset> {
-    return LaikaTask.make<Asset>(() =>
-      Effect.gen({ self: this }, function*() {
-        // Cloudflare Images doesn't expose a metadata-only PATCH; confirm
-        // the asset exists and return its current state. To rewrite the
-        // binary, call `createAsset` again — Cloudflare overwrites on
-        // matching id when the upload uses the same `id` form field.
-        const resource = yield* liftResult(this.dataSource.getImage(update.key));
-        if (!resource) return yield* Effect.fail(new NotFoundError(`No asset found at key "${update.key}"`));
-        return this.buildAsset(resource);
-      })
+  updateAsset(_update: AssetUpdate): LaikaTask.LaikaTask<Asset> {
+    // Cloudflare Images has no metadata-update endpoint. Silently returning
+    // stale data would hide bugs in callers — fail explicitly instead.
+    // To replace an asset (binary + metadata), call `createAsset` with the
+    // same key; Cloudflare Images overwrites on a matching id.
+    return LaikaTask.fail(
+      new NotImplementedError(
+        '`updateAsset` is not supported by Cloudflare Images. Call `createAsset` with the same key to replace the asset.',
+      ),
     );
   }
 

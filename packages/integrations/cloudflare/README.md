@@ -44,8 +44,10 @@ Other notable quirks:
   accounts; document this trade-off for large ones.
 - **Custom delivery URL override.** Pass `deliveryUrl: ({accountHash, imageId, variant}) => …` to
   point at a Worker-fronted custom domain.
-- **`updateAsset` is metadata-only.** To rewrite the binary, re-call `createAsset` with the same
-  `key` — Cloudflare Images overwrites on a duplicate id.
+- **`updateAsset` is not supported.** Cloudflare Images has no metadata-update endpoint, so
+  `updateAsset` always returns a `NotImplementedError`. To replace an asset (binary and/or
+  metadata), call `createAsset` with the same `key` — Cloudflare Images overwrites on a duplicate
+  id.
 
 ## `@laikacms/cloudflare/storage-d1`
 
