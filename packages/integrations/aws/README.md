@@ -157,7 +157,10 @@ Trade-offs:
 
 - [`laikacms`](https://www.npmjs.com/package/laikacms) — core domain, APIs, serializers
 - [`@laikacms/github`](https://www.npmjs.com/package/@laikacms/github) — GitHub storage
-- [`@laikacms/decap`](https://www.npmjs.com/package/@laikacms/decap) — Decap CMS integrations
+- [`@laikacms/decap-integrations`](https://www.npmjs.com/package/@laikacms/decap-integrations) —
+  Decap CMS integrations
+- [`@laikacms/decap-ai`](https://www.npmjs.com/package/@laikacms/decap-ai) — AI chat features for
+  Decap CMS
 
 ## Documentation
 
