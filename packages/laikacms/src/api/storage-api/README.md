@@ -12,7 +12,7 @@ JSON:API server for storage operations.
 and delete storage objects for any caller that can reach its `fetch`. Do **not** expose it to
 untrusted networks directly.
 
-Wrap it with an authentication layer — e.g. [`laikacms/decap-api`](../../decap/decap-api), which
+Wrap it with an authentication layer — e.g. [`@laikacms/decap-integrations/decap-api`](../../decap/decap-api), which
 validates a Bearer access token before forwarding to this handler — or provide your own middleware:
 
 ```typescript
