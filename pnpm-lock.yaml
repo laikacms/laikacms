@@ -4690,6 +4690,31 @@ importers:
         specifier: catalog:tools
         version: 4.90.1(@cloudflare/workers-types@4.20260531.1)
 
+  apps/starter-workers-turso:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      '@laikacms/libsql':
+        specifier: workspace:*
+        version: link:../../packages/integrations/libsql
+      hono:
+        specifier: catalog:server
+        version: 4.12.18
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: '*'
+        version: 4.20260531.1
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+      wrangler:
+        specifier: catalog:tools
+        version: 4.90.1(@cloudflare/workers-types@4.20260531.1)
+
   apps/starter-workers-upstash:
     dependencies:
       '@laikacms/decap-integrations':
