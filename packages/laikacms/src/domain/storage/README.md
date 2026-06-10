@@ -35,7 +35,8 @@ Methods return one of two effect types from `laikacms/core`:
 - `Folder` - A container for atoms
 - `FolderCreate` - Input type for creating a folder
 - `Capabilities` - Describes what the storage backend supports
-- `ListAtomsDone` - Done value returned by `listAtoms` / `listAtomSummaries`; extends `LaikaDone` with pagination info
+- `ListAtomsDone` - Done value returned by `listAtoms` / `listAtomSummaries`; extends `LaikaDone`
+  with pagination info
 - `RemoveAtomsDone` - Done value returned by `removeAtoms`; includes `removed` and `skipped` counts
 
 ## Repository Interface
