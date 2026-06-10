@@ -5,6 +5,7 @@
   "description": "Starter blog built with Express + LaikaCMS on Node.js. Shows how to bridge Express req/res to the Web API Request/Response that laika.fetch expects.",
   "type": "module",
   "scripts": {
+    "predev": "turbo run build --filter='laikacms' --filter='@laikacms/decap-integrations'",
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
     "dev": "pnpm build:admin && tsx watch src/index.ts",
     "build": "pnpm build:admin",
