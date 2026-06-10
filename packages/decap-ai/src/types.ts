@@ -160,7 +160,7 @@ export interface DecapAiConfig {
    * tools: {
    *   getCmsConfig: tool({
    *     description: 'Get the CMS configuration',
-   *     parameters: z.object({}),
+   *     inputSchema: z.object({}),
    *     execute: async () => ({ configYaml: myConfigYaml }),
    *   }),
    * }
