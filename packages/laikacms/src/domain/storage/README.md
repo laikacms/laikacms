@@ -18,22 +18,54 @@ pnpm add laikacms/storage
 import { Atom, StorageObject, StorageRepository } from 'laikacms/storage';
 ```
 
+## Return types
+
+Methods return one of two effect types from `laikacms/core`:
+
+- `LaikaTask.LaikaTask<T>` — resolves to a single value (async, like a Promise)
+- `LaikaStream.LaikaStream<T, Done>` — emits multiple values and then a done value (streaming)
+
 ## Entities
 
 - `StorageObject` - A stored object with key and content
+- `StorageObjectCreate` - Input type for creating a storage object
+- `StorageObjectUpdate` - Input type for updating a storage object
 - `Atom` - Generic storage item (object or folder)
+- `AtomSummary` - Lightweight summary of an atom, used when listing
 - `Folder` - A container for atoms
-- `Pagination` - Pagination parameters
+- `FolderCreate` - Input type for creating a folder
+- `Capabilities` - Describes what the storage backend supports
+- `ListAtomsDone` - Done value returned by `listAtoms` / `listAtomSummaries`; extends `LaikaDone` with pagination info
+- `RemoveAtomsDone` - Done value returned by `removeAtoms`; includes `removed` and `skipped` counts
 
 ## Repository Interface
 
 ```typescript
 abstract class StorageRepository {
-  abstract getObject(key: Key): ResultStream<StorageObject>;
-  abstract createObject(create: StorageObjectCreate): ResultStream<StorageObject>;
-  abstract updateObject(update: StorageObjectUpdate): ResultStream<StorageObject>;
-  abstract listAtoms(folderKey: Key, options: ListAtomsOptions): ResultStream<readonly Atom[]>;
-  // ...
+  // Storage Objects (formerly Files)
+  abstract getObject(key: Key): LaikaTask.LaikaTask<StorageObject>;
+  abstract createObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject>;
+  abstract updateObject(update: StorageObjectUpdate): LaikaTask.LaikaTask<StorageObject>;
+  abstract createOrUpdateObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject>;
+
+  // Folders (formerly Directories)
+  abstract getFolder(key: Key): LaikaTask.LaikaTask<Folder>;
+  abstract createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder>;
+  abstract listAtomSummaries(
+    folderKey: Key,
+    options: ListAtomsOptions,
+  ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone>;
+  abstract listAtoms(
+    folderKey: Key,
+    options: ListAtomsOptions,
+  ): LaikaStream.LaikaStream<Atom, ListAtomsDone>;
+
+  // Atoms (formerly Entries)
+  abstract getAtom(key: Key): LaikaTask.LaikaTask<Atom>;
+  abstract removeAtoms(keys: readonly Key[]): LaikaStream.LaikaStream<Key, RemoveAtomsDone>;
+
+  // Other
+  abstract getCapabilities(): LaikaTask.LaikaTask<Capabilities>;
 }
 ```
 
