@@ -1,0 +1,30 @@
+{
+  "name": "@laikacms/starter-solidstart-turso",
+  "version": "0.0.1",
+  "private": true,
+  "description": "SolidStart blog backed by Turso (libSQL). Swaps the embedded filesystem backend for createCustomLaika + LibSqlStorageRepository — same query()/createAsync data patterns, same Decap admin shell.",
+  "type": "module",
+  "scripts": {
+    "dev": "vinxi dev",
+    "build": "vinxi build",
+    "start": "vinxi start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/libsql": "workspace:*",
+    "@solidjs/router": "^0.15.3",
+    "@solidjs/start": "^1.0.0",
+    "laikacms": "workspace:*",
+    "solid-js": "^1.9.3",
+    "vinxi": "^0.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
