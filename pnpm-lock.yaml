@@ -1168,6 +1168,22 @@ importers:
         specifier: catalog:tools
         version: 0.27.7
 
+  apps/starter-deno-turso:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      '@laikacms/libsql':
+        specifier: workspace:*
+        version: link:../../packages/integrations/libsql
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+
   apps/starter-draft-preview:
     dependencies:
       '@hono/node-server':
