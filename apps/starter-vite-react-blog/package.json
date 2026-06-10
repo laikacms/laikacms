@@ -2,7 +2,7 @@
   "name": "@laikacms/starter-vite-react-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog using bare Vite SSR + React + Express + LaikaCMS. No meta-framework — shows what Next.js and TanStack Start abstract away: server-side renderToString, Express request handling, and the Decap proxy.",
+  "description": "Starter blog using bare Vite SSR + React + Express + LaikaCMS. No meta-framework \u2014 shows what Next.js and TanStack Start abstract away: server-side renderToString, Express request handling, and the Decap proxy.",
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "express": "^5.1.0",
     "laikacms": "workspace:*",
     "react": "catalog:react",

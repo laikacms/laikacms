@@ -13,6 +13,7 @@
   "dependencies": {
     "@hono/node-server": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "graphql": "^16.9.0",
     "graphql-yoga": "^5.10.4",
     "hono": "catalog:server",

@@ -12,18 +12,13 @@
  * Node.js-only code (fs, path) that cannot be bundled for the browser.
  */
 import createLaikaBackend from '@laikacms/decap-integrations/decap-cms-backend-laika';
+import _CMS from 'decap-cms-app';
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const CMS = _CMS as any; // LCMS-064: decap-cms-app types are stricter than runtime allows
 
 // Keep in sync with DEFAULT_DEV_TOKEN in @laikacms/decap-integrations/embedded.
 const DEV_TOKEN = 'dev-local-laika-token';
 
-declare const window: Window & {
-  CMS: {
-    registerBackend: (name: string, backend: unknown) => void,
-    init: (options: unknown) => void,
-  },
-};
-
-const CMS = window.CMS;
 CMS.registerBackend('laika', createLaikaBackend());
 
 CMS.init({

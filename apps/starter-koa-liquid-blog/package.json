@@ -2,7 +2,7 @@
   "name": "@laikacms/starter-koa-liquid-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog using Koa + LiquidJS templates + remark Markdown rendering + LaikaCMS. Liquid is Shopify's template language — used by Jekyll, GitHub Pages, and Eleventy. Sandboxed: no arbitrary code execution in templates.",
+  "description": "Starter blog using Koa + LiquidJS templates + remark Markdown rendering + LaikaCMS. Liquid is Shopify's template language \u2014 used by Jekyll, GitHub Pages, and Eleventy. Sandboxed: no arbitrary code execution in templates.",
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
@@ -13,10 +13,11 @@
   "dependencies": {
     "@koa/router": "^13.1.0",
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "koa": "^2.16.1",
     "koa-static": "^5.0.0",
-    "liquidjs": "^10.0.0",
     "laikacms": "workspace:*",
+    "liquidjs": "^10.0.0",
     "rehype-stringify": "^10.0.0",
     "remark": "^15.0.0",
     "remark-rehype": "^11.0.0",

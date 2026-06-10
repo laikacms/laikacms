@@ -2,7 +2,7 @@
   "name": "@laikacms/starter-waku-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog built with Waku (minimal React RSC framework) + LaikaCMS. laika.documents.* in React Server Components; laika.fetch in Waku API routes (no IncomingMessage bridge — Waku passes Web API Request natively).",
+  "description": "Starter blog built with Waku (minimal React RSC framework) + LaikaCMS. laika.documents.* in React Server Components; laika.fetch in Waku API routes (no IncomingMessage bridge \u2014 Waku passes Web API Request natively).",
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "laikacms": "workspace:*",
     "react": "catalog:react",
     "react-dom": "catalog:react",

@@ -14,6 +14,7 @@
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
     "@laikacms/libsql": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "laikacms": "workspace:*",
     "react": "catalog:react",
     "react-dom": "catalog:react",

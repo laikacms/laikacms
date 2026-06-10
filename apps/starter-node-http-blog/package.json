@@ -2,7 +2,7 @@
   "name": "@laikacms/starter-node-http-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog using only Node.js built-ins (node:http + node:fs). No framework — the minimum viable LaikaCMS integration. Reference for porting to custom frameworks.",
+  "description": "Starter blog using only Node.js built-ins (node:http + node:fs). No framework \u2014 the minimum viable LaikaCMS integration. Reference for porting to custom frameworks.",
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "laikacms": "workspace:*"
   },
   "devDependencies": {

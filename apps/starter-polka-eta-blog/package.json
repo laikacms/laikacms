@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "eta": "^3.5.0",
     "laikacms": "workspace:*",
     "polka": "^1.0.0-next.28",
