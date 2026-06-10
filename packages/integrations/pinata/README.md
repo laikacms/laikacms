@@ -12,12 +12,12 @@ Runtime-agnostic — only depends on `fetch`.
 
 ```ts
 import { PinataStorageRepository } from '@laikacms/pinata/storage-ipfs';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new PinataStorageRepository({
   auth: { token: process.env.PINATA_JWT! },
   gatewayUrl: 'https://your-dedicated-gateway.mypinata.cloud/ipfs', // optional
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```

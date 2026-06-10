@@ -11,7 +11,7 @@ browser.
 
 ```ts
 import { AlgoliaStorageRepository } from '@laikacms/algolia/storage-algolia';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new AlgoliaStorageRepository({
   auth: {
@@ -19,7 +19,7 @@ const repo = new AlgoliaStorageRepository({
     apiKey: process.env.ALGOLIA_ADMIN_API_KEY!, // admin / write key
   },
   indexName: 'laika-content',
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```

@@ -15,13 +15,13 @@ A `StorageRepository` backed by Redis via the
 
 ```ts
 import { UpstashRedisStorageRepository } from '@laikacms/upstash/storage-redis';
-import { storageSerializerJson } from 'laikacms/storage-serializers-json';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
 const repo = new UpstashRedisStorageRepository({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
   namespace: 'site-a:storage', // optional — defaults to "laika:storage"
-  serializerRegistry: { json: storageSerializerJson },
+  serializerRegistry: { json: jsonSerializer },
   defaultFileExtension: 'json',
 });
 ```

@@ -12,7 +12,7 @@ browser. Caller owns OAuth2 refresh via an optional `tokenProvider`.
 
 ```ts
 import { FirestoreStorageRepository } from '@laikacms/firestore/storage-firestore';
-import { storageSerializerJson } from 'laikacms/storage-serializers-json';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
 const repo = new FirestoreStorageRepository({
   auth: {
@@ -23,7 +23,7 @@ const repo = new FirestoreStorageRepository({
   databaseId: '(default)', // optional — Firestore default db id
   rootCollection: 'laika', // optional — defaults to "laika"
   itemsCollection: 'items', // optional — defaults to "items"
-  serializerRegistry: { json: storageSerializerJson },
+  serializerRegistry: { json: jsonSerializer },
   defaultFileExtension: 'json',
 });
 ```

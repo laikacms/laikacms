@@ -16,7 +16,7 @@ placeholders so empty folders surface in listings, blob ETag exposed as `metadat
 ```ts
 import { BlobServiceClient } from '@azure/storage-blob';
 import { AzureBlobStorageRepository, azureContainerOps } from '@laikacms/azure/storage-blob';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const blobServiceClient = BlobServiceClient.fromConnectionString(
   process.env.AZURE_STORAGE_CONNECTION_STRING!,
@@ -26,7 +26,7 @@ const containerClient = blobServiceClient.getContainerClient('laika-content');
 const repo = new AzureBlobStorageRepository({
   ops: azureContainerOps(containerClient),
   basePath: 'site-a', // optional — scope under a prefix
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```

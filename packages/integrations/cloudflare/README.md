@@ -57,7 +57,7 @@ SQLite driver required.
 
 ```ts
 import { D1StorageRepository, schemaDdl } from '@laikacms/cloudflare/storage-d1';
-import { storageSerializerJson } from 'laikacms/storage-serializers-json';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
 const repo = new D1StorageRepository({
   auth: {
@@ -68,7 +68,7 @@ const repo = new D1StorageRepository({
   databaseId: process.env.D1_DATABASE_ID!,
   // optional — defaults to "laika_storage"; must match /^[A-Za-z_][A-Za-z0-9_]*$/
   tableName: 'site_a_storage',
-  serializerRegistry: { json: storageSerializerJson },
+  serializerRegistry: { json: jsonSerializer },
   defaultFileExtension: 'json',
 });
 ```

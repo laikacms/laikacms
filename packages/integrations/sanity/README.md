@@ -11,7 +11,7 @@ Runtime-agnostic — only depends on `fetch` and Web Crypto (`crypto.subtle.dige
 
 ```ts
 import { SanityStorageRepository } from '@laikacms/sanity/storage-sanity';
-import { storageSerializerJson } from 'laikacms/storage-serializers-json';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
 const repo = new SanityStorageRepository({
   projectId: process.env.SANITY_PROJECT_ID!,
@@ -20,7 +20,7 @@ const repo = new SanityStorageRepository({
     token: process.env.SANITY_API_TOKEN!,
     // or: tokenProvider: () => refreshedToken(),
   },
-  serializerRegistry: { json: storageSerializerJson },
+  serializerRegistry: { json: jsonSerializer },
   defaultFileExtension: 'json',
 });
 ```
