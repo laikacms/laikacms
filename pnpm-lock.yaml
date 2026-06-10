@@ -796,7 +796,7 @@ importers:
     dependencies:
       '@astrojs/node':
         specifier: ^9.0.0
-        version: 9.5.5(astro@5.18.2(@azure/storage-blob@12.31.0)(@netlify/blobs@8.2.0)(@types/node@24.12.4)(@vercel/blob@2.4.0)(db0@0.3.4(@libsql/client@0.14.0)(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(react@19.2.6)))(ioredis@5.10.1)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.3)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(typescript@6.0.3)(yaml@2.8.4))
+        version: 9.5.5(astro@5.18.2(@azure/storage-blob@12.31.0)(@netlify/blobs@8.2.0)(@types/node@24.12.4)(@vercel/blob@2.4.0)(db0@0.3.4(@libsql/client@0.14.0)(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(mysql2@3.22.5(@types/node@24.12.4))(react@19.2.6))(mysql2@3.22.5(@types/node@24.12.4)))(ioredis@5.10.1)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.3)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(typescript@6.0.3)(yaml@2.8.4))
       '@laikacms/decap-integrations':
         specifier: workspace:*
         version: link:../../packages/decap
@@ -805,7 +805,7 @@ importers:
         version: link:../../packages/integrations/libsql
       astro:
         specifier: ^5.0.0
-        version: 5.18.2(@azure/storage-blob@12.31.0)(@netlify/blobs@8.2.0)(@types/node@24.12.4)(@vercel/blob@2.4.0)(db0@0.3.4(@libsql/client@0.14.0)(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(react@19.2.6)))(ioredis@5.10.1)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.3)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(typescript@6.0.3)(yaml@2.8.4)
+        version: 5.18.2(@azure/storage-blob@12.31.0)(@netlify/blobs@8.2.0)(@types/node@24.12.4)(@vercel/blob@2.4.0)(db0@0.3.4(@libsql/client@0.14.0)(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(mysql2@3.22.5(@types/node@24.12.4))(react@19.2.6))(mysql2@3.22.5(@types/node@24.12.4)))(ioredis@5.10.1)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.3)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(typescript@6.0.3)(yaml@2.8.4)
       laikacms:
         specifier: workspace:*
         version: link:../../packages/laikacms
@@ -1639,6 +1639,34 @@ importers:
       esbuild:
         specifier: catalog:tools
         version: 0.27.7
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
+  apps/starter-express-turso:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      '@laikacms/libsql':
+        specifier: workspace:*
+        version: link:../../packages/integrations/libsql
+      express:
+        specifier: ^4.21.0
+        version: 4.22.2
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/express':
+        specifier: ^4.17.0
+        version: 4.17.25
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
       tsx:
         specifier: catalog:tools
         version: 4.22.3
@@ -4025,7 +4053,7 @@ importers:
         version: 0.15.4(solid-js@1.9.13)
       '@solidjs/start':
         specifier: ^1.0.0
-        version: 1.3.2(@testing-library/jest-dom@6.9.1)(solid-js@1.9.13)(vinxi@0.4.3(@azure/storage-blob@12.31.0)(@libsql/client@0.14.0)(@netlify/blobs@8.2.0)(@types/node@22.19.18)(@vercel/blob@2.4.0)(db0@0.3.4(@libsql/client@0.14.0)(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(react@19.2.6)))(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(react@19.2.6))(ioredis@5.10.1)(lightningcss@1.32.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0))(vite@8.0.11(@types/node@22.19.18)(esbuild@0.28.0)(jiti@2.7.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.8.4))
+        version: 1.3.2(@testing-library/jest-dom@6.9.1)(solid-js@1.9.13)(vinxi@0.4.3(@azure/storage-blob@12.31.0)(@libsql/client@0.14.0)(@netlify/blobs@8.2.0)(@types/node@22.19.18)(@vercel/blob@2.4.0)(db0@0.3.4(@libsql/client@0.14.0)(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(mysql2@3.22.5(@types/node@22.19.18))(react@19.2.6))(mysql2@3.22.5(@types/node@22.19.18)))(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(mysql2@3.22.5(@types/node@22.19.18))(react@19.2.6))(ioredis@5.10.1)(lightningcss@1.32.0)(mysql2@3.22.5(@types/node@22.19.18))(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0))(vite@8.0.11(@types/node@22.19.18)(esbuild@0.28.0)(jiti@2.7.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.8.4))
       laikacms:
         specifier: workspace:*
         version: link:../../packages/laikacms
@@ -4034,7 +4062,7 @@ importers:
         version: 1.9.13
       vinxi:
         specifier: ^0.4.3
-        version: 0.4.3(@azure/storage-blob@12.31.0)(@libsql/client@0.14.0)(@netlify/blobs@8.2.0)(@types/node@22.19.18)(@vercel/blob@2.4.0)(db0@0.3.4(@libsql/client@0.14.0)(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(react@19.2.6)))(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(react@19.2.6))(ioredis@5.10.1)(lightningcss@1.32.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)
+        version: 0.4.3(@azure/storage-blob@12.31.0)(@libsql/client@0.14.0)(@netlify/blobs@8.2.0)(@types/node@22.19.18)(@vercel/blob@2.4.0)(db0@0.3.4(@libsql/client@0.14.0)(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(mysql2@3.22.5(@types/node@22.19.18))(react@19.2.6))(mysql2@3.22.5(@types/node@22.19.18)))(drizzle-orm@0.36.4(@cloudflare/workers-types@4.20260531.1)(@libsql/client@0.14.0)(@opentelemetry/api@1.9.0)(@types/react@19.2.14)(bun-types@1.3.14)(mysql2@3.22.5(@types/node@22.19.18))(react@19.2.6))(ioredis@5.10.1)(lightningcss@1.32.0)(mysql2@3.22.5(@types/node@22.19.18))(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)
     devDependencies:
       '@types/node':
         specifier: catalog:types
@@ -35445,7 +35473,7 @@ snapshots:
   '@babel/template@7.28.6':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/parser': 7.29.3
+      '@babel/parser': 7.29.7
       '@babel/types': 7.29.7
 
   '@babel/template@7.29.7':
@@ -46050,7 +46078,7 @@ snapshots:
       obug: 2.1.1
       std-env: 4.1.0
       tinyrainbow: 3.1.0
-      vitest: 4.1.5(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@22.19.18)(@vitest/coverage-v8@4.1.5)(happy-dom@20.9.0)(jsdom@20.0.3)(vite@8.0.11(@types/node@22.19.18)(esbuild@0.28.0)(jiti@2.7.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.8.4))
+      vitest: 4.1.5(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.5)(happy-dom@20.9.0)(jsdom@20.0.3)(vite@8.0.11(@types/node@24.12.4)(esbuild@0.28.0)(jiti@2.7.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.8.4))
 
   '@vitest/expect@3.2.4':
     dependencies:
