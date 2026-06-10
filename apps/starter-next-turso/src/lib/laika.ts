@@ -7,12 +7,6 @@ import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
 import { blogCollections } from './decap-config';
 
-function requireEnv(name: string): string {
-  const value = process.env[name];
-  if (!value) throw new Error(`Missing required env var: ${name}`);
-  return value;
-}
-
 /**
  * Module-level singleton — Next.js keeps the Node.js process alive across
  * requests. LibSqlDataSource is stateless (every call is an independent
@@ -27,7 +21,7 @@ function requireEnv(name: string): string {
  *   LIBSQL_TABLE       — Storage table name (default: laika_storage)
  */
 const dataSource = new LibSqlDataSource({
-  url: requireEnv('LIBSQL_URL'),
+  url: process.env['LIBSQL_URL'] ?? '',
   auth: { token: process.env['LIBSQL_AUTH_TOKEN'] },
 });
 
