@@ -24,10 +24,13 @@ import { InvalidData, LaikaError, LaikaResult, NotFoundError } from 'laikacms/co
 - `InvalidData` - Invalid input data
 - `InternalError` - Internal server error
 - `AuthenticationError` - Not logged in; HTTP 401
-- `AuthorizationError` - HTTP 401; used to deserialize or signal an unauthenticated challenge from a remote server. Not for "logged in but no permission" — use `ForbiddenError` for that.
+- `AuthorizationError` - HTTP 401; used to deserialize or signal an unauthenticated challenge from a
+  remote server. Not for "logged in but no permission" — use `ForbiddenError` for that.
 - `ForbiddenError` - Logged in but lacks permissions; HTTP 403
 
-> **Usage guidance:** use `AuthenticationError` when the user is not logged in at all (HTTP 401); use `ForbiddenError` when the user is logged in but lacks permissions (HTTP 403); use `AuthorizationError` when deserializing a 401 from a remote server.
+> **Usage guidance:** use `AuthenticationError` when the user is not logged in at all (HTTP 401);
+> use `ForbiddenError` when the user is logged in but lacks permissions (HTTP 403); use
+> `AuthorizationError` when deserializing a 401 from a remote server.
 
 ## Result Type
 
