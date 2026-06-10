@@ -142,8 +142,14 @@ const { items, done } = await collectStream(myStream, {
 });
 ```
 
-Omitting `options` (or `onProgress`) falls through to the fast-path `runPromise` /
-`runPromiseCollect` helpers, so there is no overhead when the callback is not needed.
+Omitting `options` (or `onProgress`) uses a data-only fast path that avoids allocating metadata
+arrays. Note that when `onProgress` is omitted, **`RecoverableError` and `Progress` events are
+silently discarded** — callers that need to surface warnings or non-fatal errors must supply the
+callback.
+
+`runTask` without `onProgress` uses `LaikaTask.runPromise`, which genuinely has no metadata
+overhead. `collectStream` without `onProgress` uses a data-only drain, so it also avoids allocating
+the recoverable-error and progress arrays.
 
 ## License
 

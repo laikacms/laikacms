@@ -29,12 +29,12 @@ auth — no login required).
 
 ## Scripts
 
-| Script          | What it does                                                    |
-| --------------- | --------------------------------------------------------------- |
-| `pnpm dev`      | Build workspace deps, bundle admin client, start tsx watch      |
-| `pnpm build`    | Bundle admin client for production                              |
-| `pnpm start`    | Run the server (dist must already exist)                        |
-| `pnpm typecheck`| TypeScript type-check only (no emit)                            |
+| Script           | What it does                                               |
+| ---------------- | ---------------------------------------------------------- |
+| `pnpm dev`       | Build workspace deps, bundle admin client, start tsx watch |
+| `pnpm build`     | Bundle admin client for production                         |
+| `pnpm start`     | Run the server (dist must already exist)                   |
+| `pnpm typecheck` | TypeScript type-check only (no emit)                       |
 
 ## Project layout
 
@@ -53,12 +53,12 @@ content/              # Filesystem content root (git-tracked)
 
 ## Routes
 
-| Method | Path           | Description                                              |
-| ------ | -------------- | -------------------------------------------------------- |
-| GET    | `/`            | Blog index — lists all published posts                   |
-| GET    | `/blog/:slug`  | Single post page                                         |
-| GET    | `/admin/`      | Decap CMS admin shell                                    |
-| ANY    | `/api/decap/*` | LaikaCMS JSON:API — used by the Decap admin              |
+| Method | Path           | Description                                 |
+| ------ | -------------- | ------------------------------------------- |
+| GET    | `/`            | Blog index — lists all published posts      |
+| GET    | `/blog/:slug`  | Single post page                            |
+| GET    | `/admin/`      | Decap CMS admin shell                       |
+| ANY    | `/api/decap/*` | LaikaCMS JSON:API — used by the Decap admin |
 
 ## Deployment
 
