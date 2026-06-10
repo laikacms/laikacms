@@ -10,6 +10,7 @@
     "allowImportingTsExtensions": true,
     "strict": true,
     "downlevelIteration": true,
+    "ignoreDeprecations": "6.0",
     "skipLibCheck": true,
     "noEmit": true
   }
