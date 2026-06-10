@@ -2,7 +2,7 @@
   "name": "@laikacms/starter-honox-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog built with HonoX (Hono meta-framework with file-based routing) + LaikaCMS. laika.fetch plugs directly into Hono route handlers via c.req.raw — no bridge needed.",
+  "description": "Starter blog built with HonoX (Hono meta-framework with file-based routing) + LaikaCMS. laika.fetch plugs directly into Hono route handlers via c.req.raw \u2014 no bridge needed.",
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
@@ -14,6 +14,7 @@
   "dependencies": {
     "@hono/node-server": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "hono": "catalog:server",
     "honox": "^0.1.56",
     "laikacms": "workspace:*"

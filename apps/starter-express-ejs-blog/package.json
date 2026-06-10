@@ -2,7 +2,7 @@
   "name": "@laikacms/starter-express-ejs-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog using Express + EJS templates + LaikaCMS. Traditional server-side template rendering — no components, no JSX, just HTML templates with embedded JS expressions.",
+  "description": "Starter blog using Express + EJS templates + LaikaCMS. Traditional server-side template rendering \u2014 no components, no JSX, just HTML templates with embedded JS expressions.",
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "ejs": "^3.1.10",
     "express": "^5.1.0",
     "laikacms": "workspace:*"

@@ -2,7 +2,7 @@
   "name": "@laikacms/starter-hono-bun-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog using Hono natively on Bun. No @hono/node-server — Bun picks up 'export default { fetch }' directly. serveStatic from hono/bun. Zero-adapter laika.fetch.",
+  "description": "Starter blog using Hono natively on Bun. No @hono/node-server \u2014 Bun picks up 'export default { fetch }' directly. serveStatic from hono/bun. Zero-adapter laika.fetch.",
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "hono": "catalog:server",
     "laikacms": "workspace:*"
   },

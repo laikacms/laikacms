@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "express": "^5.1.0",
     "laikacms": "workspace:*",
     "socket.io": "^4.8.0"

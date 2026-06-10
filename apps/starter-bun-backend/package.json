@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "laikacms": "workspace:*"
   },
   "devDependencies": {

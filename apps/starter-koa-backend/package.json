@@ -14,6 +14,7 @@
   "dependencies": {
     "@koa/router": "^13.1.0",
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "koa": "^2.15.3",
     "laikacms": "workspace:*"
   },

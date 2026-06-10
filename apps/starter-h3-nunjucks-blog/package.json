@@ -2,7 +2,7 @@
   "name": "@laikacms/starter-h3-nunjucks-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog using H3 + Nunjucks + remark Markdown rendering + LaikaCMS. H3 is the HTTP primitive beneath Nitro/Nuxt — WHATWG-native toWebRequest/sendWebResponse make the laika proxy a two-liner.",
+  "description": "Starter blog using H3 + Nunjucks + remark Markdown rendering + LaikaCMS. H3 is the HTTP primitive beneath Nitro/Nuxt \u2014 WHATWG-native toWebRequest/sendWebResponse make the laika proxy a two-liner.",
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "h3": "^1.15.0",
     "laikacms": "workspace:*",
     "nunjucks": "^3.2.4",

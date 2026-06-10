@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/starter-express-backend",
-  "description": "Starter: classic Express backend with an explicit req/res ↔ Web Request/Response adapter so it can host the LaikaCMS web-standard fetch handler.",
+  "description": "Starter: classic Express backend with an explicit req/res \u2194 Web Request/Response adapter so it can host the LaikaCMS web-standard fetch handler.",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "express": "^4.21.0",
     "laikacms": "workspace:*"
   },

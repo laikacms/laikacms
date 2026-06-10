@@ -2,7 +2,7 @@
   "name": "@laikacms/starter-hono-jsx-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog using Hono's built-in JSX renderer + LaikaCMS. Zero extra dependencies: hono/jsx provides the JSX runtime — no React, no Preact, no Vite.",
+  "description": "Starter blog using Hono's built-in JSX renderer + LaikaCMS. Zero extra dependencies: hono/jsx provides the JSX runtime \u2014 no React, no Preact, no Vite.",
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
@@ -13,6 +13,7 @@
   "dependencies": {
     "@hono/node-server": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
+    "decap-cms-app": "catalog:decap",
     "hono": "catalog:server",
     "laikacms": "workspace:*"
   },
