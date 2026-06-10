@@ -83,9 +83,9 @@ export default {
 
 ### Testing utilities
 
-| Export                     | Purpose                               |
-| -------------------------- | ------------------------------------- |
-| `laikacms/storage/testing` | In-memory storage stub for unit tests |
+| Export                     | Purpose                                                    |
+| -------------------------- | ---------------------------------------------------------- |
+| `laikacms/storage/testing` | Contract test harness for `StorageRepository` implementations |
 
 ### Serializers
 
