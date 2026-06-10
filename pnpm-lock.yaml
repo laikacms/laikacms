@@ -1646,6 +1646,34 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-express-turso:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      '@laikacms/libsql':
+        specifier: workspace:*
+        version: link:../../packages/integrations/libsql
+      express:
+        specifier: ^4.21.0
+        version: 4.22.2
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/express':
+        specifier: ^4.17.0
+        version: 4.17.25
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-fastify-backend:
     dependencies:
       '@laikacms/decap-integrations':
@@ -35547,7 +35575,7 @@ snapshots:
   '@babel/template@7.28.6':
     dependencies:
       '@babel/code-frame': 7.29.7
-      '@babel/parser': 7.29.3
+      '@babel/parser': 7.29.7
       '@babel/types': 7.29.7
 
   '@babel/template@7.29.7':
