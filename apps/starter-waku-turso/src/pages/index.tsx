@@ -1,25 +1,32 @@
 import { collectStream } from 'laikacms/compat';
+import { LaikaError } from 'laikacms/core';
 
 import { laika } from '../laika.js';
 
-export default async function HomePage() {
-  const { items: records } = await collectStream(
-    laika.documents.listRecordSummaries({
-      pagination: { page: 1, perPage: 100 },
-      folder: 'posts',
-      depth: 1,
-      type: 'published',
-    }),
-  );
+export const getConfig = () => ({ render: 'dynamic' as const });
 
+export default async function HomePage() {
   type Summary = { type: string, key: string, updatedAt?: string };
 
-  const posts = (records as Summary[])
-    .filter(r => r.type === 'published-summary')
-    .sort((a, b) => {
-      if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
-      return b.key.localeCompare(a.key);
-    });
+  let posts: Summary[] = [];
+  try {
+    const { items: records } = await collectStream(
+      laika.documents.listRecordSummaries({
+        pagination: { page: 1, perPage: 100 },
+        folder: 'posts',
+        depth: 1,
+        type: 'published',
+      }),
+    );
+    posts = (records as Summary[])
+      .filter(r => r.type === 'published-summary')
+      .sort((a, b) => {
+        if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
+        return b.key.localeCompare(a.key);
+      });
+  } catch (err) {
+    if (!(err instanceof LaikaError)) throw err;
+  }
 
   return (
     <main>
