@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-astro-turso",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Astro + LaikaCMS backed by Turso (libSQL). Uses createCustomLaika with server output mode — content lives in Turso, not on disk.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.0.0",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/libsql": "workspace:*",
+    "astro": "^5.0.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
