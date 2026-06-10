@@ -23,14 +23,14 @@ bearer tokens (`oauthToken`) over PATs.
 
 ```ts
 import { GitlabStorageRepository } from '@laikacms/gitlab/storage-gl';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new GitlabStorageRepository({
   projectId: 'esstudio/content', // numeric id OR `group/subgroup/project`
   branch: 'main',
   auth: { token: process.env.GITLAB_PAT! },
   // apiUrl: 'https://gitlab.example.com/api/v4', // self-hosted; defaults to gitlab.com
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
   commitAuthor: { name: 'Laika Bot', email: 'bot@example.com' },
 });

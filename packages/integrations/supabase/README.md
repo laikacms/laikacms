@@ -11,13 +11,13 @@ The same data source talks to **self-hosted PostgREST** too; the only Supabase-s
 
 ```ts
 import { PostgrestStorageRepository } from '@laikacms/supabase/storage-postgrest';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new PostgrestStorageRepository({
   url: process.env.SUPABASE_URL! + '/rest/v1', // <project>.supabase.co/rest/v1
   tableName: 'laika_storage',
   auth: { anonKey: process.env.SUPABASE_ANON_KEY! },
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```

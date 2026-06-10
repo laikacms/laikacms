@@ -11,7 +11,7 @@ Runtime-agnostic — only depends on `fetch`.
 
 ```ts
 import { PocketBaseStorageRepository } from '@laikacms/pocketbase/storage-pb';
-import { storageSerializerMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const repo = new PocketBaseStorageRepository({
   url: 'https://pb.example.com',
@@ -20,7 +20,7 @@ const repo = new PocketBaseStorageRepository({
     // or: tokenProvider: () => refreshAuthToken(),
   },
   collectionName: 'laika_storage', // optional — defaults to "laika_storage"
-  serializerRegistry: { md: storageSerializerMarkdown },
+  serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
 });
 ```
