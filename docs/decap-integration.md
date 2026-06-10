@@ -673,3 +673,64 @@ SvelteKit does not generate an HTML shell automatically. Unlike Astro or Next.js
   </body>
 </html>
 ```
+
+### SvelteKit-specific patterns
+
+#### Env access
+
+SvelteKit enforces its own env model. Vite won't populate `process.env` from `.env` in dev. Use
+`$env/dynamic/private` instead:
+
+```ts
+import { env } from '$env/dynamic/private';
+const token = env.LAIKA_ADMIN_TOKEN;
+```
+
+#### Module-level singleton datasource init
+
+SvelteKit server modules are singletons (persistent Node process). Initialize datasources at module
+level, not per-request:
+
+```ts
+// src/lib/laika.ts
+import { resolve } from 'node:path';
+import { createEmbeddedLaika } from '@laikacms/decap-integrations/embedded';
+import { blogCollections } from './decap-config.js';
+
+// Module-level singleton — initialized once, reused across all requests
+export const laika = createEmbeddedLaika({
+  contentDir: resolve(process.cwd(), 'content'),
+  basePath: '/api/decap',
+  auth: { mode: 'dev' },
+  decapConfig: {
+    backend: { name: 'laika', api_root: '/api/decap' },
+    collections: blogCollections,
+  },
+});
+```
+
+#### Decap admin via `+page.svelte` + `onMount`
+
+`decapAdminHtml()` returns a raw HTML string. SvelteKit has no `c.html()` equivalent. The correct
+pattern uses a `+page.svelte` that bootstraps Decap via `onMount`:
+
+```svelte
+<!-- src/routes/admin/+page.svelte -->
+<script lang="ts">
+  import { onMount } from 'svelte';
+
+  onMount(() => {
+    window.CMS_MANUAL_INIT = true;
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js';
+    script.onload = async () => {
+      const { default: createLaikaBackend } = await import(
+        '@laikacms/decap-integrations/decap-cms-backend-laika'
+      );
+      window.CMS.registerBackend('laika', createLaikaBackend());
+      window.CMS.init({ config: { /* your decap config */ } });
+    };
+    document.head.appendChild(script);
+  });
+</script>
+```
