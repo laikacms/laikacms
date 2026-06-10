@@ -16,7 +16,7 @@ it without standing up a new backend.
 ## Usage
 
 ```ts
-import { storageSerializersMarkdown } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { WebDavStorageRepository } from 'laikacms/storage-webdav';
 
 const repo = new WebDavStorageRepository(
@@ -25,7 +25,7 @@ const repo = new WebDavStorageRepository(
     basePath: 'laika-content', // optional subfolder under the user's root
     auth: { username: 'alice', password: process.env.NEXTCLOUD_PASS },
   },
-  { md: storageSerializersMarkdown },
+  { md: markdownSerializer },
   'md',
 );
 
