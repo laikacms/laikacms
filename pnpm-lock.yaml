@@ -1748,6 +1748,34 @@ importers:
         specifier: catalog:tools
         version: 6.0.3
 
+  apps/starter-fastify-turso:
+    dependencies:
+      '@fastify/static':
+        specifier: ^8.0.0
+        version: 8.3.0
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      '@laikacms/libsql':
+        specifier: workspace:*
+        version: link:../../packages/integrations/libsql
+      fastify:
+        specifier: ^5.0.0
+        version: 5.8.5
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+      tsx:
+        specifier: catalog:tools
+        version: 4.22.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+
   apps/starter-feathers-blog:
     dependencies:
       '@feathersjs/express':
