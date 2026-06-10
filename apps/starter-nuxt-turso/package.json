@@ -18,7 +18,8 @@
   },
   "devDependencies": {
     "@types/node": "catalog:types",
-    "typescript": "catalog:tools"
+    "typescript": "catalog:tools",
+    "vue-tsc": "^2.1.0"
   },
   "engines": {
     "node": "22.x"
