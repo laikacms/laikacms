@@ -48,8 +48,16 @@ export const collectStream = async <A, D extends LaikaDone>(
 ): Promise<{ items: ReadonlyArray<A>, done: D }> => {
   const { onProgress } = options ?? {};
   if (!onProgress) {
-    const { data, done } = await LaikaStream.runPromiseCollect(stream);
-    return { items: data, done };
+    const items: A[] = [];
+    const done = await Effect.runPromise(
+      LaikaStream.drainWithDone(stream, chunk => {
+        for (const el of chunk) {
+          if (isData(el)) items.push(el.value);
+        }
+        return Effect.void;
+      }),
+    );
+    return { items, done };
   }
   const items: A[] = [];
   const done = await Effect.runPromise(
