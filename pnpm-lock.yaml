@@ -3377,6 +3377,19 @@ importers:
         specifier: ^2.1.0
         version: 2.2.12(typescript@6.0.3)
 
+  apps/starter-oak-blog:
+    dependencies:
+      '@laikacms/decap-integrations':
+        specifier: workspace:*
+        version: link:../../packages/decap
+      laikacms:
+        specifier: workspace:*
+        version: link:../../packages/laikacms
+    devDependencies:
+      '@types/node':
+        specifier: catalog:types
+        version: 22.19.18
+
   apps/starter-openapi:
     dependencies:
       '@hono/node-server':
