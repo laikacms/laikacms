@@ -1,0 +1,25 @@
+{
+  "name": "@laikacms/starter-elysia-turso",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog using Elysia (Bun) + LaikaCMS + Turso/libSQL. Elysia's context.request is a Web API Request; @laikacms/libsql uses HTTP transport so it works on Bun without Node.js shims.",
+  "scripts": {
+    "dev": "bun run --hot src/server.ts",
+    "start": "bun run src/server.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/libsql": "workspace:*",
+    "elysia": "^1.3.0",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "catalog:types",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}
