@@ -41,7 +41,7 @@ import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 const repo = new S3StorageRepository({
   client: new S3Client({ region: 'eu-west-1' }),
   bucket: 'esstudio-content',
-  basePath: 'site-a',       // optional — scope under a prefix
+  basePath: 'site-a', // optional — scope under a prefix
   serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
   // ignoreList: ['**/.keep', '**/.DS_Store', '**/Thumbs.db', '**/desktop.ini', '**/.contentbase', '**/.laikacms'],
@@ -139,11 +139,11 @@ const repo = new DdbStorageRepository({
   docClient,
   tableName: 'laika-storage',
   partitionPrefix: 'TENANT_42#STORAGE#', // optional — namespace per tenant
-  pkAttribute: 'PK',                     // optional — partition key attribute name (default: 'PK')
-  skAttribute: 'SK',                     // optional — sort key attribute name (default: 'SK')
+  pkAttribute: 'PK', // optional — partition key attribute name (default: 'PK')
+  skAttribute: 'SK', // optional — sort key attribute name (default: 'SK')
   serializerRegistry: { json: jsonSerializer },
   defaultFileExtension: 'json',
-  determineExtension: undefined,          // optional — custom function to determine file extension from content
+  determineExtension: undefined, // optional — custom function to determine file extension from content
 });
 ```
 

@@ -83,6 +83,10 @@ export interface CustomLaika {
   storage: StorageRepository;
   documents: ContentBaseDocumentsRepository;
   assets: ContentBaseAssetsRepository;
+  /** The resolved Decap config passed to {@link createCustomLaika}. Pass this to
+   * `decapAdminHtml({ decapConfig: laika.decapConfig })` to keep the admin in
+   * sync with the server-side collection definitions. */
+  decapConfig: Record<string, unknown>;
 }
 
 const defaultDevUser: User = {
@@ -174,5 +178,6 @@ export function createCustomLaika(opts: CreateCustomLaikaOptions): CustomLaika {
     storage: opts.storage,
     documents,
     assets,
+    decapConfig: opts.decapConfig,
   };
 }

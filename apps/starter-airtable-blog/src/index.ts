@@ -11,7 +11,7 @@ const app = new Hono();
 app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 
 app.get('/admin', c => c.redirect('/admin/'));
-app.get('/admin/', c => c.html(decapAdminHtml({ title: 'Admin · Airtable Blog' })));
+app.get('/admin/', c => c.html(decapAdminHtml({ title: 'Admin · Airtable Blog', decapConfig: laika.decapConfig })));
 
 app.get('/', async c => {
   const { items: records } = await collectStream(

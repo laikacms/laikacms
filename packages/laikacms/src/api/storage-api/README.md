@@ -12,8 +12,9 @@ JSON:API server for storage operations.
 and delete storage objects for any caller that can reach its `fetch`. Do **not** expose it to
 untrusted networks directly.
 
-Wrap it with an authentication layer — e.g. [`@laikacms/decap-integrations/decap-api`](../../decap/decap-api), which
-validates a Bearer access token before forwarding to this handler — or provide your own middleware:
+Wrap it with an authentication layer — e.g.
+[`@laikacms/decap-integrations/decap-api`](../../decap/decap-api), which validates a Bearer access
+token before forwarding to this handler — or provide your own middleware:
 
 ```typescript
 const api = buildJsonApi({ repo: myStorageRepo });
@@ -46,17 +47,17 @@ export default { fetch: api.fetch };
 
 ## Endpoints
 
-| Method | Path                       | Description                         |
-| ------ | -------------------------- | ----------------------------------- |
-| GET    | `/`                        | API info + endpoint discovery       |
-| GET    | `/capabilities`            | Repository capabilities             |
-| GET    | `/atoms/{folder}`          | List atoms                          |
-| GET    | `/atom-summaries/{folder}` | List atom summaries                 |
-| GET    | `/objects/{key}`           | Read a storage object               |
-| POST   | `/objects`                 | Create object                       |
-| PATCH  | `/objects/{key}`           | Update object                       |
-| GET    | `/folders/{key}`           | Read a folder                       |
-| POST   | `/operations`              | Atomic batch operations             |
+| Method | Path                       | Description                   |
+| ------ | -------------------------- | ----------------------------- |
+| GET    | `/`                        | API info + endpoint discovery |
+| GET    | `/capabilities`            | Repository capabilities       |
+| GET    | `/atoms/{folder}`          | List atoms                    |
+| GET    | `/atom-summaries/{folder}` | List atom summaries           |
+| GET    | `/objects/{key}`           | Read a storage object         |
+| POST   | `/objects`                 | Create object                 |
+| PATCH  | `/objects/{key}`           | Update object                 |
+| GET    | `/folders/{key}`           | Read a folder                 |
+| POST   | `/operations`              | Atomic batch operations       |
 
 ## Options
 

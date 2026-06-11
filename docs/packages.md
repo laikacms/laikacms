@@ -28,30 +28,30 @@ utilities. Imported via subpath exports.
 
 ### Implementations (`packages/laikacms/src/impl/`)
 
-| Subpath                                   | Description                             |
-| ----------------------------------------- | --------------------------------------- |
-| `laikacms/storage-r2`                     | Cloudflare R2 storage                   |
-| `laikacms/storage-fs`                     | Filesystem storage                      |
-| `laikacms/storage-s3`                     | AWS S3 storage                          |
-| `laikacms/storage-webdav`                 | WebDAV server                           |
-| `laikacms/storage-drizzle`                | Drizzle ORM storage                     |
-| `laikacms/storage-jsonapi-proxy`          | Storage JSON:API proxy                  |
-| `laikacms/assets-r2`                      | R2 asset storage                        |
-| `laikacms/assets-contentbase`             | Assets on top of storage                |
-| `laikacms/assets-obsidian`                | Obsidian-vault-backed assets            |
-| `laikacms/assets-jsonapi-proxy`           | Assets JSON:API proxy                   |
-| `laikacms/documents-contentbase`          | Documents on top of storage             |
-| `laikacms/documents-drizzle`              | Drizzle document storage                |
-| `laikacms/documents-obsidian`             | Obsidian-vault-backed documents         |
-| `laikacms/documents-jsonapi-proxy`        | Documents JSON:API proxy                |
-| `laikacms/contentbase-settings-default`   | Default settings impl                   |
-| `laikacms/contentbase-settings-decap`     | Decap-CMS-compatible settings           |
+| Subpath                                 | Description                     |
+| --------------------------------------- | ------------------------------- |
+| `laikacms/storage-r2`                   | Cloudflare R2 storage           |
+| `laikacms/storage-fs`                   | Filesystem storage              |
+| `laikacms/storage-s3`                   | AWS S3 storage                  |
+| `laikacms/storage-webdav`               | WebDAV server                   |
+| `laikacms/storage-drizzle`              | Drizzle ORM storage             |
+| `laikacms/storage-jsonapi-proxy`        | Storage JSON:API proxy          |
+| `laikacms/assets-r2`                    | R2 asset storage                |
+| `laikacms/assets-contentbase`           | Assets on top of storage        |
+| `laikacms/assets-obsidian`              | Obsidian-vault-backed assets    |
+| `laikacms/assets-jsonapi-proxy`         | Assets JSON:API proxy           |
+| `laikacms/documents-contentbase`        | Documents on top of storage     |
+| `laikacms/documents-drizzle`            | Drizzle document storage        |
+| `laikacms/documents-obsidian`           | Obsidian-vault-backed documents |
+| `laikacms/documents-jsonapi-proxy`      | Documents JSON:API proxy        |
+| `laikacms/contentbase-settings-default` | Default settings impl           |
+| `laikacms/contentbase-settings-decap`   | Decap-CMS-compatible settings   |
 
 ### Testing utilities (`packages/laikacms/src/`)
 
-| Subpath                    | Description                                                       |
-| -------------------------- | ----------------------------------------------------------------- |
-| `laikacms/storage/testing` | Contract test harness for `StorageRepository` implementations     |
+| Subpath                    | Description                                                   |
+| -------------------------- | ------------------------------------------------------------- |
+| `laikacms/storage/testing` | Contract test harness for `StorageRepository` implementations |
 
 ### Serializers (`packages/laikacms/src/serializers/`)
 
@@ -142,13 +142,13 @@ Cloudflare Workers, Node, Bun, Deno, or anywhere Hono is supported.
 
 ### `gitGateway(options)` options
 
-| Option          | Type                                                                              | Description                                                                               |
-| --------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `verifyToken`   | `(token: string) => Promise<User \| null>`                                        | Validates the incoming Bearer token. Return `null` (or throw) to reject.                  |
-| `github`        | `{ appId, privateKey, installationId, owner, repo, apiBase? }`                    | GitHub App credentials. `apiBase` defaults to `https://api.github.com` (useful for GHE). |
-| `allowedRoles`  | `string[]` (optional)                                                             | When set, the user returned by `verifyToken` must have at least one matching role.        |
-| `logger`        | `Pick<Console, 'error' \| 'warn' \| 'info' \| 'debug'>` (optional)               | Pluggable structured logger (pino, bunyan, etc.). Defaults to a no-op.                    |
-| `userAgent`     | `string` (optional)                                                               | Custom User-Agent for outgoing GitHub API requests. Defaults to `@laikacms/git-gateway`.  |
+| Option         | Type                                                               | Description                                                                              |
+| -------------- | ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------- |
+| `verifyToken`  | `(token: string) => Promise<User \| null>`                         | Validates the incoming Bearer token. Return `null` (or throw) to reject.                 |
+| `github`       | `{ appId, privateKey, installationId, owner, repo, apiBase? }`     | GitHub App credentials. `apiBase` defaults to `https://api.github.com` (useful for GHE). |
+| `allowedRoles` | `string[]` (optional)                                              | When set, the user returned by `verifyToken` must have at least one matching role.       |
+| `logger`       | `Pick<Console, 'error' \| 'warn' \| 'info' \| 'debug'>` (optional) | Pluggable structured logger (pino, bunyan, etc.). Defaults to a no-op.                   |
+| `userAgent`    | `string` (optional)                                                | Custom User-Agent for outgoing GitHub API requests. Defaults to `@laikacms/git-gateway`. |
 
 ### Endpoints
 

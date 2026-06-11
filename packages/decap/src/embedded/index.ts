@@ -347,6 +347,12 @@ const DEFAULT_EMBEDDED_BUNDLE = 'https://esm.sh/@laikacms/decap-integrations/emb
  * SvelteKit's `+server.ts` returning a `Response`. Replaces the ~50-line
  * boilerplate that every starter previously shipped.
  *
+ * @remarks
+ * A bare `decapAdminHtml()` call ignores any collections passed to
+ * `createCustomLaika`. To keep the admin in sync with your server-side
+ * config, pass `decapConfig` explicitly:
+ * `decapAdminHtml({ decapConfig: laika.decapConfig })`
+ *
  * @example
  *   import { decapAdminHtml, minimalBlogConfig } from
  *     '@laikacms/decap-integrations/embedded';

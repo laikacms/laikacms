@@ -53,4 +53,4 @@ export const laika = createCustomLaika({
   auth: { mode: 'dev' },
 });
 
-export const adminHtml = decapAdminHtml();
+export const adminHtml = decapAdminHtml({ decapConfig: laika.decapConfig });
