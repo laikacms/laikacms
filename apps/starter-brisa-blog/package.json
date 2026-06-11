@@ -6,8 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "brisa dev",
-    "build": "brisa build",
-    "start": "brisa start",
+"start": "brisa start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
