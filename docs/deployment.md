@@ -7,9 +7,9 @@
 
 ```typescript
 // src/index.ts
+import { markdownSerializer } from 'laikacms/serializer-markdown';
 import { buildJsonApi } from 'laikacms/storage-api';
 import { R2StorageRepository } from 'laikacms/storage-r2';
-import { markdownSerializer } from 'laikacms/serializer-markdown';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -37,9 +37,9 @@ Deploy: `wrangler deploy`
 
 ```typescript
 import { serve } from '@hono/node-server';
+import { markdownSerializer } from 'laikacms/serializer-markdown';
 import { buildJsonApi } from 'laikacms/storage-api';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
-import { markdownSerializer } from 'laikacms/serializer-markdown';
 
 const repo = new FileSystemStorageRepository('./content', { md: markdownSerializer }, 'md');
 const api = buildJsonApi({ repo });

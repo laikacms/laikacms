@@ -693,8 +693,8 @@ level, not per-request:
 
 ```ts
 // src/lib/laika.ts
-import { resolve } from 'node:path';
 import { createEmbeddedLaika } from '@laikacms/decap-integrations/embedded';
+import { resolve } from 'node:path';
 import { blogCollections } from './decap-config.js';
 
 // Module-level singleton — initialized once, reused across all requests
