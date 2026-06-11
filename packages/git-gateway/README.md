@@ -58,6 +58,16 @@ backend:
   gateway_url: https://your-worker.dev/.netlify/git
 ```
 
+## Options
+
+| Option          | Type                                                                              | Description                                                                               |
+| --------------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `verifyToken`   | `(token: string) => Promise<User \| null>`                                        | Validates the incoming Bearer token. Return `null` (or throw) to reject.                  |
+| `github`        | `{ appId, privateKey, installationId, owner, repo, apiBase? }`                    | GitHub App credentials. `apiBase` defaults to `https://api.github.com` (useful for GHE). |
+| `allowedRoles`  | `string[]` (optional)                                                             | When set, the user returned by `verifyToken` must have at least one matching role.        |
+| `logger`        | `Pick<Console, 'error' \| 'warn' \| 'info' \| 'debug'>` (optional)               | Pluggable structured logger (pino, bunyan, etc.). Defaults to a no-op.                    |
+| `userAgent`     | `string` (optional)                                                               | Custom User-Agent for outgoing GitHub API requests. Defaults to `@laikacms/git-gateway`.  |
+
 ## Endpoints
 
 | Method | Path        | Auth | Notes                                                                                   |
