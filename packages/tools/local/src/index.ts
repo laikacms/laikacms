@@ -16,3 +16,14 @@ export { buildStorageRepository, getStorageDriver, storageDrivers } from './driv
 export type { BackendSpec, MigrateConfig, StorageDriver } from './drivers/types.js';
 
 export { watchFile } from './watch.js';
+
+export {
+  generateCommand,
+  listBackendsCommand,
+  makeGenerateCommand,
+  makeListBackendsCommand,
+  makeMigrateCommand,
+  makeServeCommand,
+  migrateCommand,
+  serveCommand,
+} from './commands.js';
