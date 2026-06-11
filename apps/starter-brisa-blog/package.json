@@ -1,0 +1,24 @@
+{
+  "name": "@laikacms/starter-brisa-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Brisa (Bun web-components framework) + LaikaCMS. Brisa's RequestContext extends the WHATWG Request — laika.fetch(req) works with zero adaptation.",
+  "type": "module",
+  "scripts": {
+    "dev": "brisa dev",
+"start": "brisa start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-integrations": "workspace:*",
+    "brisa": "^0.2.15",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "bun": ">=1.3.0"
+  }
+}
