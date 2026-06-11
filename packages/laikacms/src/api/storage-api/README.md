@@ -46,13 +46,17 @@ export default { fetch: api.fetch };
 
 ## Endpoints
 
-| Method | Path                       | Description    |
-| ------ | -------------------------- | -------------- |
-| GET    | `/atoms/{folder}`          | List atoms     |
-| GET    | `/atom-summaries/{folder}` | List summaries |
-| POST   | `/objects`                 | Create object  |
-| PATCH  | `/objects/{key}`           | Update object  |
-| POST   | `/operations`              | Atomic batch   |
+| Method | Path                       | Description                         |
+| ------ | -------------------------- | ----------------------------------- |
+| GET    | `/`                        | API info + endpoint discovery       |
+| GET    | `/capabilities`            | Repository capabilities             |
+| GET    | `/atoms/{folder}`          | List atoms                          |
+| GET    | `/atom-summaries/{folder}` | List atom summaries                 |
+| GET    | `/objects/{key}`           | Read a storage object               |
+| POST   | `/objects`                 | Create object                       |
+| PATCH  | `/objects/{key}`           | Update object                       |
+| GET    | `/folders/{key}`           | Read a folder                       |
+| POST   | `/operations`              | Atomic batch operations             |
 
 ## Options
 
