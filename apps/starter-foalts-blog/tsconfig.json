@@ -10,10 +10,10 @@
     "target": "ES2022",
     "sourceMap": true,
     "outDir": "./dist",
+    "rootDir": "./src",
     "baseUrl": "./",
     "ignoreDeprecations": "6.0",
     "strict": true,
-    "noEmit": true,
     "skipLibCheck": true,
     "lib": ["ES2022"],
     "esModuleInterop": true
