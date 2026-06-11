@@ -17,7 +17,7 @@
     "laikacms": "workspace:*"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260512.0",
+    "@cloudflare/workers-types": "catalog:types",
     "esbuild": "catalog:tools",
     "typescript": "catalog:tools",
     "wrangler": "catalog:tools"

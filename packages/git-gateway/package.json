@@ -34,7 +34,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "peerDependencies": {
-    "hono": "^4.12.9"
+    "hono": "catalog:server"
   },
   "dependencies": {
     "@octokit/auth-app": "catalog:octokit"

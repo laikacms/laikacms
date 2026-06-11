@@ -15,12 +15,12 @@
     "decap-cms-app": "catalog:decap",
     "eta": "^3.5.0",
     "laikacms": "workspace:*",
-    "polka": "^1.0.0-next.28",
-    "rehype-stringify": "^10.0.0",
-    "remark": "^15.0.0",
-    "remark-rehype": "^11.0.0",
-    "sirv": "^3.0.1",
-    "unified": "^11.0.5"
+    "polka": "catalog:server",
+    "rehype-stringify": "catalog:markdown",
+    "remark": "catalog:markdown",
+    "remark-rehype": "catalog:markdown",
+    "sirv": "catalog:server",
+    "unified": "catalog:markdown"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

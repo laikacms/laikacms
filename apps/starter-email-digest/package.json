@@ -12,12 +12,12 @@
   },
   "dependencies": {
     "@hono/node-server": "catalog:server",
-    "@hono/zod-validator": "^0.4.0",
+    "@hono/zod-validator": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
     "hono": "catalog:server",
     "laikacms": "workspace:*",
     "resend": "^4.0.0",
-    "zod": "^3.23.0"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

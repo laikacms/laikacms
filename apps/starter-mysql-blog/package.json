@@ -12,7 +12,7 @@
   "dependencies": {
     "@hono/node-server": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
-    "drizzle-orm": "^0.36.0",
+    "drizzle-orm": "catalog:drizzle",
     "hono": "catalog:server",
     "laikacms": "workspace:*",
     "mysql2": "^3.11.0"

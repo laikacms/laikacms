@@ -10,8 +10,8 @@
     "preview": "vitepress preview"
   },
   "devDependencies": {
-    "vitepress": "^1.6.4",
-    "vue": "^3.5.18"
+    "vitepress": "catalog:vue",
+    "vue": "catalog:vue"
   },
   "engines": {
     "node": ">=22"

@@ -15,10 +15,10 @@
   "dependencies": {
     "@hono/node-server": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
-    "concurrently": "^9.0.0",
+    "concurrently": "catalog:tools",
     "hono": "catalog:server",
     "laikacms": "workspace:*",
-    "vue": "^3.5.0",
+    "vue": "catalog:vue",
     "vue-router": "^4.4.0"
   },
   "devDependencies": {
@@ -27,6 +27,6 @@
     "tsx": "catalog:tools",
     "typescript": "catalog:tools",
     "vite": "catalog:tools",
-    "vue-tsc": "^2.1.0"
+    "vue-tsc": "catalog:vue"
   }
 }

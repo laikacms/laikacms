@@ -30,7 +30,7 @@
     "@types/react": "catalog:types",
     "@types/react-dom": "catalog:types",
     "@vitejs/plugin-react": "catalog:react",
-    "happy-dom": "^20.0.0",
+    "happy-dom": "catalog:testing",
     "path-browserify": "^1.0.1",
     "rimraf": "catalog:tools",
     "typescript": "catalog:tools",

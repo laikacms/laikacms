@@ -11,8 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hapi/hapi": "^21.0.0",
-    "@hapi/inert": "^7.0.0",
+    "@hapi/hapi": "catalog:server",
+    "@hapi/inert": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
     "laikacms": "workspace:*"
   },

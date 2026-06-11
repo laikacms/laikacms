@@ -14,12 +14,12 @@
     "@laikacms/decap-integrations": "workspace:*",
     "decap-cms-app": "catalog:decap",
     "ejs": "^3.1.10",
-    "express": "^5.1.0",
+    "express": "catalog:server",
     "laikacms": "workspace:*"
   },
   "devDependencies": {
     "@types/ejs": "^3.1.5",
-    "@types/express": "^5.0.0",
+    "@types/express": "catalog:types",
     "@types/node": "catalog:types",
     "esbuild": "catalog:tools",
     "tsx": "catalog:tools",

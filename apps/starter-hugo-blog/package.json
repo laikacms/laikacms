@@ -19,7 +19,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:types",
-    "concurrently": "^9.0.0",
+    "concurrently": "catalog:tools",
     "tsx": "catalog:tools",
     "typescript": "catalog:tools"
   },

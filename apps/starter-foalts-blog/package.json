@@ -15,7 +15,7 @@
     "@laikacms/decap-integrations": "workspace:*",
     "express": "^4.21.0",
     "laikacms": "workspace:*",
-    "reflect-metadata": "^0.2.2"
+    "reflect-metadata": "catalog:"
   },
   "devDependencies": {
     "@types/express": "^4.17.21",

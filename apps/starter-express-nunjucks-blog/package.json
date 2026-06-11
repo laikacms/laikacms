@@ -13,18 +13,18 @@
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
     "decap-cms-app": "catalog:decap",
-    "express": "^5.1.0",
+    "express": "catalog:server",
     "laikacms": "workspace:*",
-    "nunjucks": "^3.2.4",
-    "rehype-stringify": "^10.0.0",
-    "remark": "^15.0.0",
-    "remark-rehype": "^11.0.0",
-    "unified": "^11.0.5"
+    "nunjucks": "catalog:templating",
+    "rehype-stringify": "catalog:markdown",
+    "remark": "catalog:markdown",
+    "remark-rehype": "catalog:markdown",
+    "unified": "catalog:markdown"
   },
   "devDependencies": {
-    "@types/express": "^5.0.3",
+    "@types/express": "catalog:types",
     "@types/node": "catalog:types",
-    "@types/nunjucks": "^3.2.6",
+    "@types/nunjucks": "catalog:types",
     "esbuild": "catalog:tools",
     "tsx": "catalog:tools",
     "typescript": "catalog:tools"

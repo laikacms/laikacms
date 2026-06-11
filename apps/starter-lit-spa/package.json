@@ -15,7 +15,7 @@
   "dependencies": {
     "@hono/node-server": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
-    "concurrently": "^9.0.0",
+    "concurrently": "catalog:tools",
     "hono": "catalog:server",
     "laikacms": "workspace:*",
     "lit": "^3.2.0"

@@ -63,7 +63,7 @@
     "laikacms": "workspace:*",
     "effect": "catalog:default",
     "json-schema": "catalog:schema",
-    "minimatch": "^10.0.3",
+    "minimatch": "catalog:",
     "superjson": "^2.2.6"
   },
   "peerDependencies": {

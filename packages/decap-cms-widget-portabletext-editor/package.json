@@ -52,7 +52,7 @@
   "devDependencies": {
     "@types/react": "catalog:types",
     "@types/react-dom": "catalog:types",
-    "happy-dom": "^20.0.0",
+    "happy-dom": "catalog:testing",
     "rimraf": "catalog:tools",
     "typescript": "catalog:tools",
     "vitest": "catalog:testing"

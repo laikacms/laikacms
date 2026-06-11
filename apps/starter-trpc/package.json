@@ -13,10 +13,10 @@
     "@hono/node-server": "catalog:server",
     "@hono/trpc-server": "^0.4.0",
     "@laikacms/decap-integrations": "workspace:*",
-    "@trpc/server": "^11.0.0",
+    "@trpc/server": "catalog:server",
     "hono": "catalog:server",
     "laikacms": "workspace:*",
-    "zod": "^3.23.0"
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

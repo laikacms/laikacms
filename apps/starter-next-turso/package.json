@@ -14,7 +14,7 @@
     "@laikacms/decap-integrations": "workspace:*",
     "@laikacms/libsql": "workspace:*",
     "laikacms": "workspace:*",
-    "next": "^15.0.0",
+    "next": "catalog:next",
     "react": "catalog:react",
     "react-dom": "catalog:react"
   },

@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "brisa dev",
-"start": "brisa start",
+    "start": "brisa start",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -15,7 +15,7 @@
     "laikacms": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "catalog:types",
     "typescript": "catalog:tools"
   },
   "engines": {

@@ -11,21 +11,21 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@hapi/hapi": "^21.0.0",
-    "@hapi/inert": "^7.0.0",
+    "@hapi/hapi": "catalog:server",
+    "@hapi/inert": "catalog:server",
     "@hapi/vision": "^7.0.0",
     "@laikacms/decap-integrations": "workspace:*",
     "decap-cms-app": "catalog:decap",
     "laikacms": "workspace:*",
-    "nunjucks": "^3.2.4",
-    "rehype-stringify": "^10.0.0",
-    "remark": "^15.0.0",
-    "remark-rehype": "^11.0.0",
-    "unified": "^11.0.5"
+    "nunjucks": "catalog:templating",
+    "rehype-stringify": "catalog:markdown",
+    "remark": "catalog:markdown",
+    "remark-rehype": "catalog:markdown",
+    "unified": "catalog:markdown"
   },
   "devDependencies": {
     "@types/node": "catalog:types",
-    "@types/nunjucks": "^3.2.6",
+    "@types/nunjucks": "catalog:types",
     "esbuild": "catalog:tools",
     "tsx": "catalog:tools",
     "typescript": "catalog:tools"

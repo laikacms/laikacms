@@ -11,23 +11,23 @@
     "typecheck": "tsc --noEmit -p tsconfig.app.json"
   },
   "dependencies": {
-    "@angular/common": "^21.0.0",
-    "@angular/compiler": "^21.0.0",
-    "@angular/core": "^21.0.0",
-    "@angular/platform-browser": "^21.0.0",
-    "@angular/platform-server": "^21.0.0",
-    "@angular/router": "^21.0.0",
+    "@angular/common": "catalog:angular",
+    "@angular/compiler": "catalog:angular",
+    "@angular/core": "catalog:angular",
+    "@angular/platform-browser": "catalog:angular",
+    "@angular/platform-server": "catalog:angular",
+    "@angular/router": "catalog:angular",
     "@angular/ssr": "^21.0.0",
     "@laikacms/decap-integrations": "workspace:*",
-    "express": "^5.1.0",
+    "express": "catalog:server",
     "laikacms": "workspace:*",
-    "rxjs": "^7.8.0",
-    "zone.js": "^0.15.0"
+    "rxjs": "catalog:",
+    "zone.js": "catalog:angular"
   },
   "devDependencies": {
     "@angular/build": "^21.0.0",
     "@angular/cli": "^21.0.0",
-    "@types/express": "^5.0.3",
+    "@types/express": "catalog:types",
     "@types/node": "catalog:types",
     "typescript": "catalog:tools"
   },

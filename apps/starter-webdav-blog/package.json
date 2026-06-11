@@ -15,7 +15,7 @@
     "@hono/node-server": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
     "decap-cms-app": "catalog:decap",
-    "gray-matter": "^4.0.3",
+    "gray-matter": "catalog:",
     "hono": "catalog:server",
     "laikacms": "workspace:*"
   },

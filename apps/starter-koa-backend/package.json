@@ -12,15 +12,15 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@koa/router": "^13.1.0",
+    "@koa/router": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
     "decap-cms-app": "catalog:decap",
-    "koa": "^2.15.3",
+    "koa": "catalog:server",
     "laikacms": "workspace:*"
   },
   "devDependencies": {
-    "@types/koa": "^2.15.0",
-    "@types/koa__router": "^12.0.4",
+    "@types/koa": "catalog:types",
+    "@types/koa__router": "catalog:types",
     "@types/node": "catalog:types",
     "esbuild": "catalog:tools",
     "tsx": "catalog:tools",

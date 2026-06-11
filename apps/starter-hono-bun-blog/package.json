@@ -18,7 +18,7 @@
     "laikacms": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "catalog:types",
     "esbuild": "catalog:tools",
     "typescript": "catalog:tools"
   },

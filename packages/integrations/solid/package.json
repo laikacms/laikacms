@@ -52,7 +52,7 @@
   "dependencies": {
     "laikacms": "workspace:*",
     "effect": "catalog:default",
-    "minimatch": "^10.0.3"
+    "minimatch": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

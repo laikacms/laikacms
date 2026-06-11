@@ -17,7 +17,7 @@
     "decap-cms-app": "catalog:decap",
     "hono": "catalog:server",
     "laikacms": "workspace:*",
-    "vue": "^3.5.0"
+    "vue": "catalog:vue"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

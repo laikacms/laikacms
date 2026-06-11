@@ -14,7 +14,7 @@
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
     "decap-cms-app": "catalog:decap",
-    "fastify": "^5.1.0",
+    "fastify": "catalog:server",
     "laikacms": "workspace:*"
   },
   "devDependencies": {

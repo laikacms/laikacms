@@ -13,7 +13,7 @@
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
     "@laikacms/libsql": "workspace:*",
-    "express": "^5.1.0",
+    "express": "catalog:server",
     "laikacms": "workspace:*",
     "react": "catalog:react",
     "react-dom": "catalog:react",
@@ -21,7 +21,7 @@
     "vike-react": "^0.6.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.1",
+    "@types/express": "catalog:types",
     "@types/node": "catalog:types",
     "@types/react": "catalog:types",
     "@types/react-dom": "catalog:types",

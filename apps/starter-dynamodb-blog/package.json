@@ -10,8 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@aws-sdk/client-dynamodb": "^3.1019.0",
-    "@aws-sdk/lib-dynamodb": "^3.1019.0",
+    "@aws-sdk/client-dynamodb": "catalog:aws",
+    "@aws-sdk/lib-dynamodb": "catalog:aws",
     "@hono/node-server": "catalog:server",
     "@laikacms/aws": "workspace:*",
     "@laikacms/decap-integrations": "workspace:*",

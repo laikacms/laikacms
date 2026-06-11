@@ -235,13 +235,13 @@
   "dependencies": {
     "@standard-schema/spec": "catalog:schema",
     "ajv": "catalog:schema",
-    "bcryptjs": "^3.0.2",
+    "bcryptjs": "catalog:",
     "effect": "catalog:default",
-    "gray-matter": "^4.0.3",
-    "js-yaml": "^4.1.0",
+    "gray-matter": "catalog:",
+    "js-yaml": "catalog:",
     "json-schema": "catalog:schema",
-    "minimatch": "^10.0.3",
-    "trash": "^9.0.0"
+    "minimatch": "catalog:",
+    "trash": "catalog:"
   },
   "peerDependencies": {
     "@cloudflare/workers-types": "*",
@@ -260,9 +260,9 @@
     }
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250109.0",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/js-yaml": "^4.0.9",
+    "@cloudflare/workers-types": "catalog:types",
+    "@types/bcryptjs": "catalog:types",
+    "@types/js-yaml": "catalog:types",
     "@types/json-schema": "catalog:types",
     "@types/node": "catalog:types",
     "rimraf": "catalog:tools",

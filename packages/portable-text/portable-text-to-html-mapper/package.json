@@ -41,7 +41,7 @@
     "@portabletext/types": "catalog:portabletext"
   },
   "devDependencies": {
-    "happy-dom": "^20.0.0",
+    "happy-dom": "catalog:testing",
     "rimraf": "catalog:tools",
     "typescript": "catalog:tools",
     "vitest": "catalog:testing"

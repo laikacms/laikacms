@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
-    "@netlify/functions": "^2.0.0",
+    "@netlify/functions": "catalog:netlify",
     "laikacms": "workspace:*"
   },
   "devDependencies": {

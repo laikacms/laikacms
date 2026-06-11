@@ -13,10 +13,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@11ty/eleventy": "^3.0.0",
+    "@11ty/eleventy": "catalog:eleventy",
     "@hono/node-server": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
-    "concurrently": "^9.0.0",
+    "concurrently": "catalog:tools",
     "hono": "catalog:server",
     "laikacms": "workspace:*"
   },

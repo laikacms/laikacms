@@ -16,7 +16,7 @@
   "dependencies": {
     "@hono/node-server": "catalog:server",
     "@laikacms/decap-integrations": "workspace:*",
-    "concurrently": "^9.0.0",
+    "concurrently": "catalog:tools",
     "hexo": "^7.3.0",
     "hexo-renderer-ejs": "^2.0.0",
     "hexo-renderer-marked": "^6.3.0",

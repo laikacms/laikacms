@@ -14,16 +14,16 @@
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
     "decap-cms-app": "catalog:decap",
-    "express": "^5.1.0",
+    "express": "catalog:server",
     "laikacms": "workspace:*",
-    "svelte": "^5.0.0"
+    "svelte": "catalog:svelte"
   },
   "devDependencies": {
-    "@sveltejs/vite-plugin-svelte": "^5.0.0",
-    "@types/express": "^5.0.0",
+    "@sveltejs/vite-plugin-svelte": "catalog:svelte",
+    "@types/express": "catalog:types",
     "@types/node": "catalog:types",
     "esbuild": "catalog:tools",
-    "svelte-check": "^4.0.0",
+    "svelte-check": "catalog:svelte",
     "tsx": "catalog:tools",
     "typescript": "catalog:tools",
     "vite": "catalog:tools"

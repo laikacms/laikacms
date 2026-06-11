@@ -11,17 +11,17 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@fastify/static": "^8.0.0",
+    "@fastify/static": "catalog:server",
     "@fastify/view": "^10.0.0",
     "@laikacms/decap-integrations": "workspace:*",
     "decap-cms-app": "catalog:decap",
-    "fastify": "^5.0.0",
+    "fastify": "catalog:server",
     "laikacms": "workspace:*",
     "pug": "^3.0.3",
-    "rehype-stringify": "^10.0.0",
-    "remark": "^15.0.0",
-    "remark-rehype": "^11.0.0",
-    "unified": "^11.0.5"
+    "rehype-stringify": "catalog:markdown",
+    "remark": "catalog:markdown",
+    "remark-rehype": "catalog:markdown",
+    "unified": "catalog:markdown"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

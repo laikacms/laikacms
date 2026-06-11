@@ -14,7 +14,7 @@
     "@laikacms/decap-integrations": "workspace:*",
     "@react-router/node": "^7.0.0",
     "@react-router/serve": "^7.0.0",
-    "isbot": "^4",
+    "isbot": "catalog:",
     "laikacms": "workspace:*",
     "react": "catalog:react",
     "react-dom": "catalog:react",

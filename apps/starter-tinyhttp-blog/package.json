@@ -16,7 +16,7 @@
     "@tinyhttp/app": "^3.0.7",
     "decap-cms-app": "catalog:decap",
     "laikacms": "workspace:*",
-    "sirv": "^3.0.0"
+    "sirv": "catalog:server"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

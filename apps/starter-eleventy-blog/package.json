@@ -11,7 +11,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@11ty/eleventy": "^3.0.0",
+    "@11ty/eleventy": "catalog:eleventy",
     "@laikacms/decap-integrations": "workspace:*",
     "decap-cms-app": "catalog:decap",
     "laikacms": "workspace:*"

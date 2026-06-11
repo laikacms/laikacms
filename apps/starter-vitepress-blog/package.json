@@ -15,8 +15,8 @@
     "@laikacms/decap-integrations": "workspace:*",
     "decap-cms-app": "catalog:decap",
     "laikacms": "workspace:*",
-    "vitepress": "^1.6.3",
-    "vue": "^3.5.17"
+    "vitepress": "catalog:vue",
+    "vue": "catalog:vue"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

@@ -11,13 +11,13 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@astrojs/node": "^9.0.0",
+    "@astrojs/node": "catalog:astro",
     "@laikacms/decap-integrations": "workspace:*",
-    "astro": "^5.0.0",
+    "astro": "catalog:astro",
     "laikacms": "workspace:*"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.9",
+    "@astrojs/check": "catalog:astro",
     "@types/node": "catalog:types",
     "typescript": "catalog:tools"
   },

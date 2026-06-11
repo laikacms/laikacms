@@ -55,7 +55,7 @@
     "@octokit/auth-app": "catalog:octokit",
     "@octokit/rest": "catalog:octokit",
     "effect": "catalog:default",
-    "minimatch": "^10.0.3"
+    "minimatch": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:types",

@@ -11,12 +11,12 @@
   },
   "dependencies": {
     "@laikacms/decap-integrations": "workspace:*",
-    "drizzle-orm": "^0.36.0",
+    "drizzle-orm": "catalog:drizzle",
     "hono": "catalog:server",
     "laikacms": "workspace:*"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "catalog:types",
     "typescript": "catalog:tools"
   },
   "engines": {
