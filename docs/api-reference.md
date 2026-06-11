@@ -48,12 +48,15 @@ Returns meta-information about the Storage API and its available endpoints.
       "name": "Storage API",
       "version": "1.0.0",
       "endpoints": [
+        { "path": "/capabilities", "methods": ["GET"], "description": "Underlying storage repository capabilities" },
         { "path": "/atoms/{key}", "methods": ["GET"], "description": "List atoms in a folder" },
+        { "path": "/atom-summaries/{key}", "methods": ["GET"], "description": "List atom summaries (lightweight listing) in a folder" },
         {
           "path": "/objects/{key}",
-          "methods": ["POST", "PATCH"],
-          "description": "Create or update storage objects"
+          "methods": ["GET", "POST", "PATCH"],
+          "description": "Read, create, or update storage objects"
         },
+        { "path": "/folders/{key}", "methods": ["GET"], "description": "Read a folder" },
         {
           "path": "/operations",
           "methods": ["POST"],
