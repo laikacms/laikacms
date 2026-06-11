@@ -14,12 +14,15 @@ DynamoDB-backed `SettingsProvider` for contentbase settings.
 
 ```ts
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
-import { DynamoDbSettingsProvider } from '@laikacms/aws/contentbase-settings-ddb';
+import { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
+import { DynamoDBContentBaseSettingsProvider } from '@laikacms/aws/contentbase-settings-ddb';
 
-const settings = new DynamoDbSettingsProvider({
-  client: new DynamoDBClient({ region: 'eu-west-1' }),
-  tableName: 'laikacms-settings',
-});
+const docClient = DynamoDBDocumentClient.from(new DynamoDBClient({ region: 'eu-west-1' }));
+const settings = new DynamoDBContentBaseSettingsProvider(
+  docClient,
+  'laikacms-settings',
+  'my-project-id',
+);
 ```
 
 Pair with `laikacms/contentbase-api` to serve settings over JSON:API.
@@ -38,9 +41,13 @@ import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 const repo = new S3StorageRepository({
   client: new S3Client({ region: 'eu-west-1' }),
   bucket: 'esstudio-content',
-  basePath: 'site-a', // optional — scope under a prefix
+  basePath: 'site-a',       // optional — scope under a prefix
   serializerRegistry: { md: markdownSerializer },
   defaultFileExtension: 'md',
+  // ignoreList: ['**/.keep', '**/.DS_Store', '**/Thumbs.db', '**/desktop.ini', '**/.contentbase', '**/.laikacms'],
+  //   ^ optional — glob patterns to exclude from listings (shown: the default)
+  // determineExtension: undefined,
+  //   ^ optional — custom function to determine file extension from content
 });
 ```
 
@@ -112,9 +119,9 @@ when the upload attached `customMetadata: {width, height}` hints. Otherwise it r
 DynamoDB-backed `StorageRepository`. Single-table design — each row is one file or folder marker:
 
 ```
-PK = "STORAGE#<parentKey>"      (partition per folder)
-SK = "<basename>"               (file name with extension, or folder name)
-Type = "file" | "folder"
+PK (default) = "STORAGE#<parentKey>"      (partition per folder; attribute name overridable)
+SK (default) = "<basename>"               (file name with extension, or folder name; attribute name overridable)
+Type      = "file" | "folder"
 Content, Extension              (files only)
 CreatedAt, UpdatedAt
 ETag                            (per-write tag → metadata.revisionId)
@@ -132,8 +139,11 @@ const repo = new DdbStorageRepository({
   docClient,
   tableName: 'laika-storage',
   partitionPrefix: 'TENANT_42#STORAGE#', // optional — namespace per tenant
+  pkAttribute: 'PK',                     // optional — partition key attribute name (default: 'PK')
+  skAttribute: 'SK',                     // optional — sort key attribute name (default: 'SK')
   serializerRegistry: { json: jsonSerializer },
   defaultFileExtension: 'json',
+  determineExtension: undefined,          // optional — custom function to determine file extension from content
 });
 ```
 
