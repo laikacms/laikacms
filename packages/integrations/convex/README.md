@@ -279,6 +279,63 @@ export default defineSchema({
 
 Deploy with `npx convex deploy`.
 
+## Constructor options
+
+| Option                 | Type                        | Required | Default                                                                                             | Description                                                                                                                                                                               |
+| ---------------------- | --------------------------- | -------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dataSource`           | `ConvexDataSource`          | yes      | —                                                                                                   | Configured HTTP client pointing at your Convex deployment.                                                                                                                                |
+| `serializerRegistry`   | `StorageSerializerRegistry` | yes      | —                                                                                                   | Map of file-extension → serializer (e.g. `{ md: markdownSerializer }`).                                                                                                                   |
+| `defaultFileExtension` | `string`                    | yes      | —                                                                                                   | Extension used when no serializer-specific extension can be inferred (e.g. `'md'`).                                                                                                       |
+| `functions`            | `ConvexFunctionPaths`       | no       | See [Custom function paths](#custom-function-paths)                                                 | Override the Convex function names the repository invokes.                                                                                                                                |
+| `ignoreList`           | `readonly string[]`         | no       | `['**/.keep', '**/.DS_Store', '**/Thumbs.db', '**/desktop.ini', '**/.contentbase', '**/.laikacms']` | Glob patterns (minimatch) for paths to skip during `listAtomSummaries` / `listAtoms`. Paths matching any pattern are excluded from results.                                               |
+| `determineExtension`   | `DetermineExtension`        | no       | `defaultDetermineExtension`                                                                         | Callback invoked when creating or upserting objects to pick the on-disk extension. Receives the key and `{ metadata, defaultExtension }`, must return an extension string or `undefined`. |
+
+### `ignoreList` default
+
+The built-in ignore list excludes common noise files:
+
+```ts
+[
+  '**/.keep',
+  '**/.DS_Store',
+  '**/Thumbs.db',
+  '**/desktop.ini',
+  '**/.contentbase',
+  '**/.laikacms',
+];
+```
+
+Pass a custom array to replace it entirely:
+
+```ts
+new ConvexStorageRepository({
+  dataSource,
+  serializerRegistry: { md: markdownSerializer },
+  defaultFileExtension: 'md',
+  ignoreList: ['**/.DS_Store'], // only exclude macOS noise
+});
+```
+
+### `determineExtension`
+
+Controls which serializer extension is chosen when an object is first stored. The default
+implementation reads `metadata.extension` and falls back to `defaultFileExtension`. Override to
+derive the extension from the key or any metadata field:
+
+```ts
+import { defaultDetermineExtension } from 'laikacms/storage';
+
+new ConvexStorageRepository({
+  dataSource,
+  serializerRegistry: { md: markdownSerializer, json: jsonSerializer },
+  defaultFileExtension: 'md',
+  determineExtension: (key, { metadata, defaultExtension }) => {
+    if (key.startsWith('data/')) return 'json';
+    return defaultDetermineExtension(key, { metadata, defaultExtension });
+  },
+});
+```
+
 ## Custom function paths
 
 If the reference module doesn't fit your project layout, override the function paths:
@@ -301,12 +358,15 @@ new ConvexStorageRepository({
 | Laika operation             | Convex function                                                                                                                                                                         |
 | --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `getObject(key)`            | `query` → `laika:getFile`                                                                                                                                                               |
+| `getFolder(key)`            | `query` → `laika:getFolder` + `query` → `laika:hasDescendants` (implicit-folder probe)                                                                                                  |
+| `getAtom(key)`              | `query` → `laika:getFile`; if not found → `getFolder(key)` (see above)                                                                                                                  |
 | `createObject(key, …)`      | `query` → `laika:getFile` (probe) + `mutation` → `laika:createFile`                                                                                                                     |
 | `updateObject(key, …)`      | `query` → `laika:getFile` + `mutation` → `laika:updateFile`                                                                                                                             |
 | `createOrUpdateObject`      | `query` → `laika:getFile` + `mutation` → `laika:upsertFile`                                                                                                                             |
 | `createFolder(key)`         | `mutation` → `laika:upsertFolder`                                                                                                                                                       |
 | `removeAtoms([k₁…kₙ])`      | n × `query` → `laika:getFile` (+ `laika:getFolder` for non-file keys) + **1 × `mutation` → `laika:removeFiles`** for file paths + 1 × `mutation` → `laika:removeFolder` per folder path |
 | `listAtomSummaries(folder)` | `query` → `laika:listChildren`                                                                                                                                                          |
+| `listAtoms(folder)`         | `query` → `laika:listChildren` + `query` → `laika:getFile` / `laika:getFolder` per item                                                                                                 |
 | `getCapabilities()`         | (no I/O — static)                                                                                                                                                                       |
 
 ## What this iteration does NOT add
