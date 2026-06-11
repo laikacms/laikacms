@@ -45,11 +45,11 @@ const authToken = Flag.string('auth-token').pipe(
 );
 
 /**
- * The local-file JSON:API storage server command. The name is parameterised so
- * downstream CLIs can mount it under a different spelling (`@laikacms/cli`
- * exposes it as `laika dev` in addition to `laika serve`).
+ * The local-file JSON:API storage server command. The name and the bin label
+ * used in log/error messages are parameterised so embedders can mount the
+ * command under their own spelling (the `laika` CLI uses `laika local serve`).
  */
-export const makeServeCommand = (name = 'serve', binName = 'laika-local') =>
+export const makeServeCommand = (name = 'serve', binName = 'laika local') =>
   Command.make(
     name,
     { root, port, host, defaultExtension, authToken },
@@ -138,7 +138,7 @@ const resolvePaths = (
     return { input, output };
   });
 
-export const makeGenerateCommand = (name = 'generate', binName = 'laika-local') =>
+export const makeGenerateCommand = (name = 'generate', binName = 'laika local') =>
   Command.make(
     name,
     { input: generateInput, output: generateOutput, watch: generateWatch },
@@ -405,7 +405,7 @@ const logEvent = (event: MigrateEvent): void => {
   }
 };
 
-export const makeMigrateCommand = (name = 'migrate', binName = 'laika-local') =>
+export const makeMigrateCommand = (name = 'migrate', binName = 'laika local') =>
   Command.make(
     name,
     {

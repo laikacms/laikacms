@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 import { NodeRuntime, NodeServices } from '@effect/platform-node';
-import { makeGenerateCommand, makeListBackendsCommand, makeMigrateCommand, makeServeCommand } from '@laikacms/local';
 import * as Effect from 'effect/Effect';
 import { Command } from 'effect/unstable/cli';
 
 import packageJson from '../package.json' with { type: 'json' };
+import { makeGenerateCommand, makeListBackendsCommand, makeMigrateCommand, makeServeCommand } from './commands.js';
 
-// Everything local-dev lives under the `local` namespace: `laikacli local serve`,
-// `laikacli local generate`, … — leaving the top level free for future
+// Everything local-dev lives under the `local` namespace: `laika local serve`,
+// `laika local generate`, … — leaving the top level free for future
 // non-local commands (deploy, login, …). The package ships two bins for the
 // same entry: `laikacli` (canonical, matches the npm name so `npx laikacli`
 // resolves) and `laika` (short alias for installed use).
@@ -16,9 +16,9 @@ const localCommand = Command.make('local').pipe(
     'Local-file dev tooling: storage server (`serve`), config codegen (`generate`), and repository migrations (`migrate`).',
   ),
   Command.withSubcommands([
-    makeServeCommand('serve', 'laikacli local'),
-    makeGenerateCommand('generate', 'laikacli local'),
-    makeMigrateCommand('migrate', 'laikacli local'),
+    makeServeCommand('serve', 'laika local'),
+    makeGenerateCommand('generate', 'laika local'),
+    makeMigrateCommand('migrate', 'laika local'),
     makeListBackendsCommand(),
   ]),
 );

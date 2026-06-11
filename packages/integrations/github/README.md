@@ -16,7 +16,7 @@ This is the right choice for:
 
 - The OSS `laika-gateway` running on someone's own infra, where users sign in with GitHub and the
   gateway acts as them.
-- `@laikacms/local` talking directly to a contributor's GitHub repo.
+- `laikacli` (`laika local serve`) talking directly to a contributor's GitHub repo.
 - Any setup where you do **not** have a separate identity provider in front of GitHub.
 
 You provide a user OAuth token (e.g. from the standard `github.com/login/oauth` flow); the

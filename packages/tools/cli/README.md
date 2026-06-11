@@ -45,9 +45,14 @@ non-local commands.
 
 Run `laika local <command> --help` for the full flag reference.
 
-## Relationship to `@laikacms/local`
+## Programmatic API
 
-The commands are implemented in [`@laikacms/local`](../local) and composed here. `@laikacms/local`
-remains the programmatic API (`layerStorageServer`, `generateConfig`, `runMigrate`, …) and still
-ships its own `laika-local` bin for backwards compatibility; this package is just the friendlier
-front door.
+Everything the CLI does is also exported from the package root (`layerStorageServer`,
+`generateConfig`, `runMigrate`, the storage driver registry, and the `make*Command` factories for
+embedding the subcommands in another Effect CLI):
+
+```ts
+import { layerStorageServer } from 'laikacli';
+```
+
+> This package supersedes `@laikacms/local`, which is deprecated.

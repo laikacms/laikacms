@@ -55,7 +55,7 @@ const enrichResolveError = (pkg: string, err: unknown): Error => {
   const code = (err as { code?: string }).code;
   if (code === 'ERR_UNSUPPORTED_DIR_IMPORT') {
     return new Error(
-      `laika-local: failed to import ${pkg}: ${err.message}\n`
+      `laikacli: failed to import ${pkg}: ${err.message}\n`
         + `(this usually means the package's published dist contains a `
         + `bare directory import; rebuild it with moduleResolution "nodenext")`,
     );
@@ -109,11 +109,11 @@ const promptAndInstall = async (
 ): Promise<void> => {
   const dir = cacheDirFor(pkg, version);
   const accepted = await prompter(
-    `laika-local: backend "${pkg}@${version}" is not installed. Install it now into ${dir}? [y/N] `,
+    `laikacli: backend "${pkg}@${version}" is not installed. Install it now into ${dir}? [y/N] `,
   );
   if (!accepted) {
     throw new Error(
-      `laika-local: backend "${pkg}@${version}" is required but not installed. `
+      `laikacli: backend "${pkg}@${version}" is required but not installed. `
         + `Re-run and accept the install prompt, or install it manually with: `
         + `npm install ${pkg}@${version}`,
     );
@@ -135,14 +135,14 @@ const promptAndInstall = async (
     );
   }
 
-  process.stderr.write(`laika-local: installing ${pkg}@${version} into ${dir}...\n`);
+  process.stderr.write(`laikacli: installing ${pkg}@${version} into ${dir}...\n`);
   const result = spawnSync('npm', ['install', `${pkg}@${version}`, '--no-save', '--silent'], {
     cwd: dir,
     stdio: 'inherit',
   });
   if (result.status !== 0) {
     throw new Error(
-      `laika-local: failed to install ${pkg}@${version} (npm exit ${result.status}).`,
+      `laikacli: failed to install ${pkg}@${version} (npm exit ${result.status}).`,
     );
   }
 };
@@ -196,7 +196,7 @@ export const resolveBackendPackage = async (
 
   if (options.noInstall) {
     throw new Error(
-      `laika-local: backend "${pkg}@${version}" is not installed and --no-install was passed.`,
+      `laikacli: backend "${pkg}@${version}" is not installed and --no-install was passed.`,
     );
   }
 
@@ -206,6 +206,6 @@ export const resolveBackendPackage = async (
   if (installed) return installed;
 
   throw new Error(
-    `laika-local: ${pkg}@${version} installed but ${subpath} could not be imported.`,
+    `laikacli: ${pkg}@${version} installed but ${subpath} could not be imported.`,
   );
 };

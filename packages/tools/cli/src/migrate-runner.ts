@@ -15,21 +15,21 @@ import { type MigrateEvent, migrateStorage, type MigrateStorageResult } from './
  */
 const parseConfig = (raw: unknown, source: string): MigrateConfig => {
   if (!raw || typeof raw !== 'object') {
-    throw new Error(`laika-local: ${source}: top-level config must be an object`);
+    throw new Error(`laikacli: ${source}: top-level config must be an object`);
   }
   const obj = raw as Record<string, unknown>;
   const readSpec = (key: 'source' | 'destination'): BackendSpec => {
     const v = obj[key];
     if (!v || typeof v !== 'object') {
-      throw new Error(`laika-local: ${source}: "${key}" must be an object`);
+      throw new Error(`laikacli: ${source}: "${key}" must be an object`);
     }
     const spec = v as Record<string, unknown>;
     if (typeof spec.backend !== 'string' || spec.backend.length === 0) {
-      throw new Error(`laika-local: ${source}: "${key}.backend" must be a string`);
+      throw new Error(`laikacli: ${source}: "${key}.backend" must be a string`);
     }
     const options = spec.options;
     if (options !== undefined && (typeof options !== 'object' || options === null)) {
-      throw new Error(`laika-local: ${source}: "${key}.options" must be an object`);
+      throw new Error(`laikacli: ${source}: "${key}.options" must be an object`);
     }
     return {
       backend: spec.backend,
@@ -60,7 +60,7 @@ export const loadMigrateConfig = async (filePath: string): Promise<MigrateConfig
     raw = jsYaml.load(text);
   } else {
     throw new Error(
-      `laika-local: config file extension "${ext}" not supported. Use .json, .yaml, or .yml.`,
+      `laikacli: config file extension "${ext}" not supported. Use .json, .yaml, or .yml.`,
     );
   }
   return parseConfig(raw, abs);

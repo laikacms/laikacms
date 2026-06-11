@@ -36,7 +36,7 @@ export interface StorageDriver {
    */
   readonly subpath: string;
   /**
-   * One-line description shown by `laika-local migrate list-backends`.
+   * One-line description shown by `laika local list-backends`.
    */
   readonly description: string;
   /**

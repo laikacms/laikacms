@@ -1,7 +1,7 @@
 /**
  * Type utilities for extracting TypeScript types from a Decap CMS config
  * loaded as a const-asserted value (e.g. the `config.gen.ts` produced by
- * `laika-local generate`).
+ * `laika local generate`).
  *
  * Given a field definition with `widget: 'string'`, `widget: 'list'`,
  * `widget: 'object'`, etc., these types recursively walk the field tree and

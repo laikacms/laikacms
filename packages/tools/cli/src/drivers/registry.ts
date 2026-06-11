@@ -33,7 +33,7 @@ export const getStorageDriver = (name: string): StorageDriver => {
   const driver = driversByName.get(name);
   if (!driver) {
     const available = storageDrivers.map(d => d.name).sort().join(', ');
-    throw new Error(`laika-local: unknown storage backend "${name}". Available: ${available}`);
+    throw new Error(`laikacli: unknown storage backend "${name}". Available: ${available}`);
   }
   return driver;
 };
