@@ -9,10 +9,11 @@
 // src/index.ts
 import { buildJsonApi } from 'laikacms/storage-api';
 import { R2StorageRepository } from 'laikacms/storage-r2';
+import { markdownSerializer } from 'laikacms/serializer-markdown';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
-    const repo = new R2StorageRepository({ bucket: env.CONTENT_BUCKET });
+    const repo = new R2StorageRepository(env.CONTENT_BUCKET, { md: markdownSerializer }, 'md');
     const api = buildJsonApi({ repo });
     return api.fetch(request);
   },
@@ -38,8 +39,9 @@ Deploy: `wrangler deploy`
 import { serve } from '@hono/node-server';
 import { buildJsonApi } from 'laikacms/storage-api';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { markdownSerializer } from 'laikacms/serializer-markdown';
 
-const repo = new FileSystemStorageRepository({ basePath: './content' });
+const repo = new FileSystemStorageRepository('./content', { md: markdownSerializer }, 'md');
 const api = buildJsonApi({ repo });
 
 serve({ fetch: api.fetch, port: 3000 });
