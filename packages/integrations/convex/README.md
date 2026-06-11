@@ -226,6 +226,23 @@ export const removeFiles = mutation({
     return { removed, missing };
   },
 });
+
+export const removeFolder = mutation({
+  args: { path: v.string() },
+  handler: async (ctx, { path }) => {
+    const removed: string[] = [];
+    const missing: string[] = [];
+    const existing = await ctx.db.query('laika_folders')
+      .withIndex('by_path', q => q.eq('path', path)).first();
+    if (existing) {
+      await ctx.db.delete(existing._id);
+      removed.push(path);
+    } else {
+      missing.push(path);
+    }
+    return { removed, missing };
+  },
+});
 ```
 
 Schema (`convex/schema.ts`):
@@ -281,16 +298,16 @@ new ConvexStorageRepository({
 
 ## Operation mapping
 
-| Laika operation             | Convex function                                                                               |
-| --------------------------- | --------------------------------------------------------------------------------------------- |
-| `getObject(key)`            | `query` → `laika:getFile`                                                                     |
-| `createObject(key, …)`      | `query` → `laika:getFile` (probe) + `mutation` → `laika:createFile`                           |
-| `updateObject(key, …)`      | `query` → `laika:getFile` + `mutation` → `laika:updateFile`                                   |
-| `createOrUpdateObject`      | `query` → `laika:getFile` + `mutation` → `laika:upsertFile`                                   |
-| `createFolder(key)`         | `mutation` → `laika:upsertFolder`                                                             |
-| `removeAtoms([k₁…kₙ])`      | n × `query` → `laika:getFile` + **1 × `mutation` → `laika:removeFiles`** with full path array |
-| `listAtomSummaries(folder)` | `query` → `laika:listChildren`                                                                |
-| `getCapabilities()`         | (no I/O — static)                                                                             |
+| Laika operation             | Convex function                                                                                                                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getObject(key)`            | `query` → `laika:getFile`                                                                                                                                                               |
+| `createObject(key, …)`      | `query` → `laika:getFile` (probe) + `mutation` → `laika:createFile`                                                                                                                     |
+| `updateObject(key, …)`      | `query` → `laika:getFile` + `mutation` → `laika:updateFile`                                                                                                                             |
+| `createOrUpdateObject`      | `query` → `laika:getFile` + `mutation` → `laika:upsertFile`                                                                                                                             |
+| `createFolder(key)`         | `mutation` → `laika:upsertFolder`                                                                                                                                                       |
+| `removeAtoms([k₁…kₙ])`      | n × `query` → `laika:getFile` (+ `laika:getFolder` for non-file keys) + **1 × `mutation` → `laika:removeFiles`** for file paths + 1 × `mutation` → `laika:removeFolder` per folder path |
+| `listAtomSummaries(folder)` | `query` → `laika:listChildren`                                                                                                                                                          |
+| `getCapabilities()`         | (no I/O — static)                                                                                                                                                                       |
 
 ## What this iteration does NOT add
 
@@ -311,3 +328,9 @@ mechanism** in the spirit of SurrealDB's `BEGIN/COMMIT`, Neo4j's `{statements: [
   AT Protocol.
 - **String-content limit.** Convex limits document size to 1 MiB (default). For CMS use cases this
   is usually fine; for larger payloads use Convex File Storage and store a reference here.
+- **`removeAtoms` folder behaviour.** When a key in the `removeAtoms` array resolves to a folder
+  (i.e. it exists in `laika_folders` but not `laika_files`), the repository calls
+  `laika:removeFolder` once per folder path. The reference implementation does **not** check for
+  descendants before deleting — add that guard to your own `removeFolder` mutation if you need it.
+  File removals are still batched into a single `laika:removeFiles` call regardless of how many file
+  keys are in the array.

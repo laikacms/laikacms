@@ -213,6 +213,19 @@ const createMockConvex = () => {
         return row;
       }
 
+      case 'laika:removeFolder': {
+        const folderPath = String(args['path'] ?? '');
+        const removed: string[] = [];
+        const missing: string[] = [];
+        if (folders.has(folderPath)) {
+          folders.delete(folderPath);
+          removed.push(folderPath);
+        } else {
+          missing.push(folderPath);
+        }
+        return { removed, missing };
+      }
+
       default:
         throw new Error(`mock: unknown Convex function: ${path}`);
     }
