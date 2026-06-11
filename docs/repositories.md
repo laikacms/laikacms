@@ -114,8 +114,8 @@ flowchart TB
     StorageHTTPProxy --> StorageAPIServer
     
     %% Backend Flow
-    AssetsAPIServer --> BackendDocRepo
-    DocumentAPIServer --> BackendAssetRepo
+    AssetsAPIServer --> BackendAssetRepo
+    DocumentAPIServer --> BackendDocRepo
     StorageAPIServer --> BackendStorageRepo
     
     BackendDocRepo --> DocRoutingBackend
