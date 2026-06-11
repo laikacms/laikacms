@@ -257,7 +257,7 @@ See `apps/starter-webdav-blog` for a complete example including an embedded loca
 
 | Widget       | Subpath                                                     |
 | ------------ | ----------------------------------------------------------- |
-| AI Chat      | `@laikacms/decap-integrations/decap-cms-widget-ai-chat`     |
+| AI Chat      | `@laikacms/decap-ai/widget`                                 |
 | Lucide Icons | `@laikacms/decap-integrations/decap-cms-widget-lucide-icon` |
 | Radix Icons  | `@laikacms/decap-integrations/decap-cms-widget-radix-icon`  |
 
