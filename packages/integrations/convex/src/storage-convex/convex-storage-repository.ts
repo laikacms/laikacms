@@ -61,6 +61,8 @@ export interface ConvexFunctionPaths {
   readonly removeFiles?: string;
   /** `mutation` — returns the (newly-created or existing) folder row. */
   readonly upsertFolder?: string;
+  /** `mutation` — removes a folder by path. Returns `{removed: string[], missing: string[]}`. */
+  readonly removeFolder?: string;
 }
 
 const DEFAULT_FUNCTION_PATHS: Required<ConvexFunctionPaths> = {
@@ -73,6 +75,7 @@ const DEFAULT_FUNCTION_PATHS: Required<ConvexFunctionPaths> = {
   upsertFile: 'laika:upsertFile',
   removeFiles: 'laika:removeFiles',
   upsertFolder: 'laika:upsertFolder',
+  removeFolder: 'laika:removeFolder',
 };
 
 export interface ConvexStorageRepositoryOptions {
@@ -460,34 +463,66 @@ export class ConvexStorageRepository extends StorageRepository {
           return { removed: 0, skipped: skipped0 };
         }
 
-        // ── Round-trip 1: resolve every key to its full path.
+        // ── Round-trip 1: resolve every key — first as a file, then as a
+        // folder for any key that isn't a file.
         const resolved = yield* Effect.promise(async () => {
-          const out: Array<{ key: string, resolved: ConvexFileRow | null }> = [];
+          const out: Array<{
+            key: string,
+            fileRow: ConvexFileRow | null,
+            folderRow: ConvexFolderRow | null,
+          }> = [];
           for (const k of cleanKeys) {
-            out.push({ key: k, resolved: await this.findFileRow(k) });
+            const fileRow = await this.findFileRow(k);
+            let folderRow: ConvexFolderRow | null = null;
+            if (!fileRow) {
+              const r = await this.dataSource.query<ConvexFolderRow | null>(
+                this.functions.getFolder,
+                { path: k },
+              );
+              // Treat query failures the same as not-found — the error will
+              // surface as a NotFoundError below so the caller can see it.
+              folderRow = Result.isSuccess(r) ? (r.success as ConvexFolderRow | null) : null;
+            }
+            out.push({ key: k, fileRow, folderRow });
           }
           return out;
         });
 
-        const found = resolved.filter(r => r.resolved !== null) as Array<{ key: string, resolved: ConvexFileRow }>;
-        const missing = resolved.filter(r => r.resolved === null);
+        const fileItems = resolved.filter(r => r.fileRow !== null) as Array<
+          { key: string, fileRow: ConvexFileRow, folderRow: null }
+        >;
+        const folderItems = resolved.filter(r => r.fileRow === null && r.folderRow !== null) as Array<
+          { key: string, fileRow: null, folderRow: ConvexFolderRow }
+        >;
+        const notFound = resolved.filter(r => r.fileRow === null && r.folderRow === null);
 
-        // ── Round-trip 2: ONE mutation call with the path array. The
-        // user's `laika:removeFiles` function iterates and deletes
-        // inside one Convex transaction.
-        if (found.length > 0) {
-          const paths = found.map(f => f.resolved.path);
+        // ── Round-trip 2a: ONE mutation call for all file paths.
+        if (fileItems.length > 0) {
+          const paths = fileItems.map(f => f.fileRow.path);
           yield* liftResult(this.dataSource.mutation<{ removed: string[], missing: string[] }>(
             this.functions.removeFiles,
             { paths },
           ));
         }
 
-        for (const f of found) yield* emit.data(f.key);
-        for (const m of missing) {
-          yield* emit.recoverableError(new NotFoundError(`Convex file not found: ${m.key}`));
+        // ── Round-trip 2b: ONE mutation call per folder key (folders are
+        // removed individually because the reference mutation takes a
+        // single path, not a batch — consistent with Convex's per-document
+        // delete semantics and the fact that folder removals should check
+        // for descendants).
+        for (const fi of folderItems) {
+          yield* liftResult(this.dataSource.mutation<{ removed: string[], missing: string[] }>(
+            this.functions.removeFolder,
+            { path: fi.folderRow.path },
+          ));
         }
-        return { removed: found.length, skipped: skipped0 + missing.length };
+
+        for (const f of fileItems) yield* emit.data(f.key);
+        for (const fi of folderItems) yield* emit.data(fi.key);
+        for (const m of notFound) {
+          yield* emit.recoverableError(new NotFoundError(`Convex atom not found: ${m.key}`));
+        }
+        return { removed: fileItems.length + folderItems.length, skipped: skipped0 + notFound.length };
       })
     );
   }

@@ -184,6 +184,19 @@ const handlers: Record<string, (args: Record<string, unknown>, kind: 'query' | '
     }
     return { value: { removed, missing } };
   },
+
+  'laika:removeFolder': args => {
+    const path = String(args['path'] ?? '');
+    const removed: string[] = [];
+    const missing: string[] = [];
+    if (folders.has(path)) {
+      folders.delete(path);
+      removed.push(path);
+    } else {
+      missing.push(path);
+    }
+    return { value: { removed, missing } };
+  },
 };
 
 // ---- Mock fetch ----------------------------------------------------------
@@ -452,6 +465,37 @@ describe('ConvexStorageRepository', () => {
     );
     expect(removed.done).toEqual({ removed: 1, skipped: 1 });
     expect(removed.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('removeAtoms removes a folder key via laika:removeFolder', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'notes/sub' }));
+    expect(folders.has('notes/sub')).toBe(true);
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['notes/sub']));
+    expect(result.done).toEqual({ removed: 1, skipped: 0 });
+    expect(result.data).toEqual(['notes/sub']);
+    expect(folders.has('notes/sub')).toBe(false);
+  });
+
+  it('removeAtoms handles a mix of file and folder keys', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } }));
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'notes/sub' }));
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['notes/hello', 'notes/sub']));
+    expect(result.done.removed).toBe(2);
+    expect(result.done.skipped).toBe(0);
+    expect(result.data.sort()).toEqual(['notes/hello', 'notes/sub']);
+    expect(files.size).toBe(0);
+    expect(folders.size).toBe(0);
+  });
+
+  it('removeAtoms folder key that does not exist is reported as skipped', async () => {
+    const repo = makeRepo();
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['nonexistent/folder']));
+    expect(result.done.skipped).toBeGreaterThan(0);
+    expect(result.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
   });
 
   it('listAtomSummaries calls laika:listChildren and reconstructs file/folder discrimination', async () => {
