@@ -1,5 +1,6 @@
 {
   "name": "@laikacms/starter-hexo-blog",
+  "hexo": { "version": "7.3.0" },
   "version": "0.0.1",
   "private": true,
   "description": "Starter blog built with Hexo (Node.js SSG) + LaikaCMS. Hexo reads from source/_posts/; the LaikaCMS admin sidecar writes to the same directory.",
