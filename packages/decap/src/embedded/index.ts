@@ -430,11 +430,10 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
     <script src="${escapeHtml(decapBundleUrl)}"></script>
     <script>
       /* Inline Laika backend — no bundler or CDN import required.
-         Uses window.React exposed by the Decap CMS UMD bundle above. */
+         Uses window.createClass and window.h exposed by the Decap CMS UMD bundle above.
+         NOTE: decap-cms@3.x does NOT expose window.React — use window.createClass + window.h. */
       (function () {
         'use strict';
-
-        var React = window.React;
 
         function normalizeKey(key) {
           return key.replace(/\\.(json|yaml|yml|md|markdown|toml)$/i, '');
@@ -486,40 +485,48 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
           LaikaBackend.prototype.authComponent = function () {
             if (this.devToken) {
               var devToken = this.devToken;
-              return function DevAutoLogin(props) {
-                var mounted = React.useRef(false);
-                React.useEffect(function () {
-                  if (mounted.current) return;
-                  mounted.current = true;
-                  if (props.onLogin) props.onLogin({ token: devToken });
-                }, []);
-                return null;
-              };
+              // decap-cms@3.x exposes window.createClass (Preact-compat), NOT window.React.
+              // Use class component lifecycle (componentDidMount) instead of hooks.
+              return window.createClass({
+                displayName: 'DevAutoLogin',
+                componentDidMount: function () {
+                  if (this.props.onLogin) this.props.onLogin({ token: devToken });
+                },
+                render: function () { return null; },
+              });
             }
-            // Minimal PKCE-less login form for non-dev usage
+            // Minimal PKCE-less login form for non-dev usage.
+            // Uses window.createClass + window.h (Preact-compat) — window.React is not
+            // exposed by decap-cms@3.x and must not be referenced here.
             var apiUrl = this.apiUrl;
-            return function TokenLoginForm(props) {
-              var state = React.useState('');
-              var token = state[0], setToken = state[1];
-              function handleSubmit(e) {
+            return window.createClass({
+              displayName: 'TokenLoginForm',
+              getInitialState: function () { return { token: '' }; },
+              handleSubmit: function (e) {
                 e.preventDefault();
-                if (token && props.onLogin) props.onLogin({ token: token });
-              }
-              return React.createElement('div', { style: { padding: '2rem', maxWidth: '400px', margin: '4rem auto', fontFamily: 'sans-serif' } },
-                React.createElement('h2', null, 'LaikaCMS Login'),
-                React.createElement('p', { style: { color: '#666', fontSize: '0.9rem' } }, 'API: ' + apiUrl),
-                React.createElement('form', { onSubmit: handleSubmit },
-                  React.createElement('input', {
-                    type: 'password',
-                    placeholder: 'Access token',
-                    value: token,
-                    onChange: function (e) { setToken(e.target.value); },
-                    style: { display: 'block', width: '100%', padding: '0.5rem', marginBottom: '1rem', boxSizing: 'border-box' },
-                  }),
-                  React.createElement('button', { type: 'submit', style: { padding: '0.5rem 1.5rem' } }, 'Login')
-                )
-              );
-            };
+                if (this.state.token && this.props.onLogin) this.props.onLogin({ token: this.state.token });
+              },
+              handleChange: function (e) {
+                this.setState({ token: e.target.value });
+              },
+              render: function () {
+                var h = window.h;
+                return h('div', { style: { padding: '2rem', maxWidth: '400px', margin: '4rem auto', fontFamily: 'sans-serif' } },
+                  h('h2', null, 'LaikaCMS Login'),
+                  h('p', { style: { color: '#666', fontSize: '0.9rem' } }, 'API: ' + apiUrl),
+                  h('form', { onSubmit: this.handleSubmit },
+                    h('input', {
+                      type: 'password',
+                      placeholder: 'Access token',
+                      value: this.state.token,
+                      onChange: this.handleChange,
+                      style: { display: 'block', width: '100%', padding: '0.5rem', marginBottom: '1rem', boxSizing: 'border-box' },
+                    }),
+                    h('button', { type: 'submit', style: { padding: '0.5rem 1.5rem' } }, 'Login')
+                  )
+                );
+              },
+            });
           };
 
           var SESSION_KEY = 'laika_access_token';
