@@ -84,6 +84,35 @@ new WebDavStorageRepository(
 );
 ```
 
+### Custom extension policy
+
+The optional 4th argument overrides how the on-server file extension is chosen when
+writing a new object. The default behaviour is `metadata.extension ?? defaultFileExtension`.
+
+```ts
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
+import { WebDavStorageRepository } from 'laikacms/storage-webdav';
+
+// Always store as .yaml regardless of metadata.extension or defaultFileExtension.
+new WebDavStorageRepository(
+  {
+    baseUrl: 'https://cloud.example.com/remote.php/dav/files/alice',
+    basePath: 'laika-content',
+    auth: { username: 'alice', password: process.env.NEXTCLOUD_PASS },
+  },
+  { md: markdownSerializer, yaml: yamlSerializer },
+  'md',
+  (_key, { metadata, defaultExtension }) => metadata?.extension ?? 'yaml',
+);
+```
+
+The callback receives the object `key` and a context object with:
+- `metadata` — optional metadata from the create/update call (may contain an `extension` hint)
+- `defaultExtension` — the storage's configured `defaultFileExtension`
+
+Returning `undefined` falls back to `defaultFileExtension`.
+
 ## Behaviour notes
 
 - **Extension hiding.** Keys are extension-free at the boundary, exactly like `storage-fs`. The
