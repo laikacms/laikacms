@@ -450,9 +450,14 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                   description: 'List record summaries (lightweight listing)',
                 },
                 {
+                  path: '/published',
+                  methods: ['POST'],
+                  description: 'Create a published document',
+                },
+                {
                   path: '/published/{key}',
-                  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-                  description: 'Read, create, update, or remove a published document',
+                  methods: ['GET', 'PATCH', 'DELETE'],
+                  description: 'Read, update, or remove a published document',
                 },
                 {
                   path: '/published/{key}/unpublish',
@@ -460,9 +465,14 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                   description: 'State transition: move a published document to unpublished',
                 },
                 {
+                  path: '/unpublished',
+                  methods: ['POST'],
+                  description: 'Create an unpublished draft',
+                },
+                {
                   path: '/unpublished/{key}',
-                  methods: ['GET', 'POST', 'PATCH', 'DELETE'],
-                  description: 'Read, create, update, or remove an unpublished draft',
+                  methods: ['GET', 'PATCH', 'DELETE'],
+                  description: 'Read, update, or remove an unpublished draft',
                 },
                 {
                   path: '/unpublished/{key}/publish',
