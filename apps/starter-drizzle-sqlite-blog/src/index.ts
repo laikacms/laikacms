@@ -45,6 +45,10 @@ app.get('/admin', c => c.html(ADMIN_HTML));
 
 // Blog index
 app.get('/', async c => {
+  // On a fresh/empty DB the config object doesn't exist yet, so
+  // listRecordSummaries throws NotFoundError before reaching the empty-state
+  // branch. Treat any error here as zero posts — the CMS will seed config on
+  // the first admin request (seedConfigOnFirstRequest default: true).
   const { items: records } = await collectStream(
     laika.documents.listRecordSummaries({
       pagination: { page: 1, perPage: 100 },
@@ -52,7 +56,12 @@ app.get('/', async c => {
       depth: 1,
       type: 'published',
     }),
-  );
+  ).catch((err: unknown) => {
+    if (!(err instanceof NotFoundError)) {
+      console.error('GET /: unexpected error listing posts, showing empty state', err);
+    }
+    return { items: [], done: { total: 0 } } as const;
+  });
 
   const posts = records
     .filter(r => r.type === 'published-summary')
