@@ -5,6 +5,8 @@
   "description": "Starter blog: Hono + DrizzleStorageRepository over libsql/SQLite + LaikaCMS. Shows createCustomLaika (BYO storage) and decapAdminHtml (no esbuild admin bundle needed).",
   "type": "module",
   "scripts": {
+    "predev": "turbo run build --filter='laikacms' --filter='@laikacms/decap-integrations'",
+    "prestart": "turbo run build --filter='laikacms' --filter='@laikacms/decap-integrations'",
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "typecheck": "tsc --noEmit"
