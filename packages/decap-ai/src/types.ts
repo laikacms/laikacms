@@ -207,15 +207,27 @@ export interface DecapAi {
 }
 
 /**
- * Chat request body
+ * Chat request body — matches the actual POST /chat wire format (Vercel AI SDK).
+ *
+ * `messages` is the full conversation history as Vercel AI SDK UIMessage objects
+ * (v3 format: `{ id, role, parts[] }`). The server reads the last user message
+ * from this array; do NOT use the legacy `message: string` field.
+ *
+ * @example
+ * ```typescript
+ * const body: ChatRequest = {
+ *   messages: [{ id: '1', role: 'user', parts: [{ type: 'text', text: 'Hello' }] }],
+ *   document: { slug: 'posts/my-post' },
+ * };
+ * ```
  */
 export interface ChatRequest {
   /** Session ID (optional - creates new session if not provided) */
   sessionId?: string;
-  /** User message */
-  message: string;
-  /** Document context */
-  document: DocumentContext;
+  /** Full conversation history as Vercel AI SDK UIMessage objects */
+  messages: unknown[];
+  /** Document context — only the slug is required on the wire */
+  document: { slug: string };
 }
 
 /**

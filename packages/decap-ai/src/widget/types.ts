@@ -103,12 +103,15 @@ export interface AiChatWidgetOptions {
 }
 
 /**
- * Chat API request body
+ * Chat API request body — matches the actual POST /chat wire format (Vercel AI SDK).
+ * @deprecated Import `ChatRequest` from `@laikacms/decap-ai` instead of this widget-local copy.
  */
 export interface ChatRequest {
   sessionId?: string;
-  message: string;
-  document: DocumentContext;
+  /** Full conversation history as Vercel AI SDK UIMessage objects */
+  messages: unknown[];
+  /** Document context — only the slug is required on the wire */
+  document: { slug: string };
 }
 
 /**

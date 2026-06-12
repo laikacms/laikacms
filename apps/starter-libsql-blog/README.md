@@ -1,8 +1,8 @@
 # `@laikacms/starter-libsql-blog`
 
-A minimal blog built with [Hono](https://hono.dev) + [LaikaCMS](https://github.com/laikacms/laikacms)
-backed by [libSQL / Turso](https://turso.tech). Content is stored in a distributed SQLite table via
-the hrana HTTP pipeline protocol. Demonstrates:
+A minimal blog built with [Hono](https://hono.dev) +
+[LaikaCMS](https://github.com/laikacms/laikacms) backed by [libSQL / Turso](https://turso.tech).
+Content is stored in a distributed SQLite table via the hrana HTTP pipeline protocol. Demonstrates:
 
 - **`createCustomLaika`** — the "BYO storage" pattern: bring any `StorageRepository` implementation
   and wire it into LaikaCMS without being locked to the built-in filesystem preset.
@@ -20,9 +20,9 @@ the hrana HTTP pipeline protocol. Demonstrates:
 
 ### 1. Build workspace deps first
 
-This starter lives inside the LaikaCMS monorepo. Workspace packages (`laikacms`,
-`@laikacms/libsql`, `@laikacms/decap-integrations`) must be compiled before the dev server starts.
-Run this once (and again after pulling changes):
+This starter lives inside the LaikaCMS monorepo. Workspace packages (`laikacms`, `@laikacms/libsql`,
+`@laikacms/decap-integrations`) must be compiled before the dev server starts. Run this once (and
+again after pulling changes):
 
 ```bash
 pnpm --filter @laikacms/starter-libsql-blog... build
@@ -51,12 +51,12 @@ curl -s -X POST http://localhost:8080/v2/pipeline \
 
 ### 3. Configure environment variables
 
-| Variable            | Required | Default          | Description                                                          |
-| ------------------- | -------- | ---------------- | -------------------------------------------------------------------- |
-| `LIBSQL_URL`        | yes      | —                | Turso URL (`https://<db>-<org>.turso.io`) or `http://localhost:8080` |
-| `LIBSQL_AUTH_TOKEN` | no       | _(empty)_        | JWT from the Turso dashboard. Omit when using local `sqld`.          |
-| `LIBSQL_TABLE`      | no       | `laika_storage`  | Override the table name.                                             |
-| `PORT`              | no       | `3000`           | Port the HTTP server listens on.                                     |
+| Variable            | Required | Default         | Description                                                          |
+| ------------------- | -------- | --------------- | -------------------------------------------------------------------- |
+| `LIBSQL_URL`        | yes      | —               | Turso URL (`https://<db>-<org>.turso.io`) or `http://localhost:8080` |
+| `LIBSQL_AUTH_TOKEN` | no       | _(empty)_       | JWT from the Turso dashboard. Omit when using local `sqld`.          |
+| `LIBSQL_TABLE`      | no       | `laika_storage` | Override the table name.                                             |
+| `PORT`              | no       | `3000`          | Port the HTTP server listens on.                                     |
 
 ### 4. Run
 
@@ -94,22 +94,22 @@ LIBSQL_URL=http://localhost:8080 pnpm dev
 
 ## URLs
 
-| URL                           | Description                                     |
-| ----------------------------- | ----------------------------------------------- |
-| `http://localhost:PORT/`      | Blog index                                      |
-| `http://localhost:PORT/admin/`| Decap CMS admin (no login required in dev mode) |
+| URL                            | Description                                     |
+| ------------------------------ | ----------------------------------------------- |
+| `http://localhost:PORT/`       | Blog index                                      |
+| `http://localhost:PORT/admin/` | Decap CMS admin (no login required in dev mode) |
 
 ## Scripts
 
-| Script           | What it does                              |
-| ---------------- | ----------------------------------------- |
-| `pnpm dev`       | Start server with `tsx` (no watch)        |
-| `pnpm start`     | Same as `dev`                             |
-| `pnpm typecheck` | TypeScript type-check only (no emit)      |
+| Script           | What it does                         |
+| ---------------- | ------------------------------------ |
+| `pnpm dev`       | Start server with `tsx` (no watch)   |
+| `pnpm start`     | Same as `dev`                        |
+| `pnpm typecheck` | TypeScript type-check only (no emit) |
 
-> **Note:** Unlike `starter-drizzle-sqlite-blog`, this starter does **not** include `predev`/`prestart`
-> scripts that auto-build workspace deps. Run the `pnpm --filter ... build` step manually before
-> first use (see step 1 above).
+> **Note:** Unlike `starter-drizzle-sqlite-blog`, this starter does **not** include
+> `predev`/`prestart` scripts that auto-build workspace deps. Run the `pnpm --filter ... build` step
+> manually before first use (see step 1 above).
 
 ## Why this starter exists
 
