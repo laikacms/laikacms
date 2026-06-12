@@ -86,8 +86,8 @@ new WebDavStorageRepository(
 
 ### Custom extension policy
 
-The optional 4th argument overrides how the on-server file extension is chosen when
-writing a new object. The default behaviour is `metadata.extension ?? defaultFileExtension`.
+The optional 4th argument overrides how the on-server file extension is chosen when writing a new
+object. The default behaviour is `metadata.extension ?? defaultFileExtension`.
 
 ```ts
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
@@ -108,6 +108,7 @@ new WebDavStorageRepository(
 ```
 
 The callback receives the object `key` and a context object with:
+
 - `metadata` — optional metadata from the create/update call (may contain an `extension` hint)
 - `defaultExtension` — the storage's configured `defaultFileExtension`
 

@@ -53,8 +53,8 @@ result. Use one of the runners below.
 
 ```ts
 import { LibSqlDataSource, LibSqlStorageRepository } from '@laikacms/libsql/storage-libsql';
+import { collectStream, runTask } from 'laikacms/compat';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
-import { runTask, collectStream } from 'laikacms/compat';
 
 const dataSource = new LibSqlDataSource({
   url: 'https://example-org.turso.io',
