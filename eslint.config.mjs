@@ -49,6 +49,11 @@ export default tseslint.config(
       // Built static assets (esbuild bundles, etc.)
       '**/public/admin/bundle.js',
       '**/static/admin/bundle.js',
+      // Qwik framework server build output
+      'apps/starter-qwik-blog/server/**',
+      // Other framework-generated artifact directories
+      '**/.marko-run/**',
+      '**/.nitro/**',
     ],
   },
 );

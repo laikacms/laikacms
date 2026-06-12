@@ -636,7 +636,7 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
           LaikaBackend.prototype.getMedia = async function (mediaFolder) {
             var folder = mediaFolder || this.mediaFolder;
             var token = this._token;
-            var url = this.apiUrl + '/assets?filter[folder]=' + encodeURIComponent(folder) + '&page[limit]=100';
+            var url = this.apiUrl + '/assets/resources?filter[folder]=' + encodeURIComponent(folder) + '&page[limit]=100';
             var res = await apiFetch(url, token);
             var body = await res.json();
             var items = body.data || [];
@@ -652,7 +652,7 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
 
           LaikaBackend.prototype.getMediaFile = async function (path) {
             var token = this._token;
-            var res = await apiFetch(this.apiUrl + '/assets/' + encodeURIComponent(path), token);
+            var res = await apiFetch(this.apiUrl + '/assets/resources/' + encodeURIComponent(path), token);
             var body = await res.json();
             var attrs = (body.data && body.data.attributes) || {};
             var url = attrs.url || '';
@@ -666,7 +666,7 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
             if (!fileObj) throw new Error('No file provided');
             var key = (mediaFile.path || '').split('/').pop() || mediaFile.path;
             var buf = await fileObj.arrayBuffer();
-            var res = await fetch(this.apiUrl + '/assets', {
+            var res = await fetch(this.apiUrl + '/assets/resources', {
               method: 'POST',
               headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/vnd.api+json', 'Accept': 'application/vnd.api+json' },
               body: JSON.stringify({ data: { type: 'assets', attributes: { key: key, mimeType: fileObj.type || 'application/octet-stream', content: Array.from(new Uint8Array(buf)) } } }),
@@ -680,7 +680,7 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
 
           LaikaBackend.prototype.deleteMedia = async function (path) {
             var token = this._token;
-            try { await apiFetch(this.apiUrl + '/assets/' + encodeURIComponent(path), token, { method: 'DELETE' }); } catch (e) { /* ignore */ }
+            try { await apiFetch(this.apiUrl + '/assets/resources/' + encodeURIComponent(path), token, { method: 'DELETE' }); } catch (e) { /* ignore */ }
           };
 
           LaikaBackend.prototype.unpublishedEntries = async function () { return []; };
