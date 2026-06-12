@@ -294,9 +294,14 @@ export function buildJsonApi(options: StorageApiOptions) {
                   description: 'List atom summaries (lightweight listing) in a folder',
                 },
                 {
+                  path: '/objects',
+                  methods: ['POST'],
+                  description: 'Create a storage object',
+                },
+                {
                   path: '/objects/{key}',
-                  methods: ['GET', 'POST', 'PATCH'],
-                  description: 'Read, create, or update storage objects',
+                  methods: ['GET', 'PATCH'],
+                  description: 'Read or update a storage object',
                 },
                 { path: '/folders/{key}', methods: ['GET'], description: 'Read a folder' },
                 {
