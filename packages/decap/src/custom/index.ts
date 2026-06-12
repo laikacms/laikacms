@@ -34,7 +34,6 @@ import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-
 import { AuthenticationError, NotFoundError } from 'laikacms/core';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
 import type { StorageRepository } from 'laikacms/storage';
-import { stringify as yamlStringify } from 'yaml';
 
 import type { DecapApi, DecapOptions, User } from '../decap-api/index.js';
 import { decapApi } from '../decap-api/index.js';
@@ -153,8 +152,10 @@ export function createCustomLaika(opts: CreateCustomLaikaOptions): CustomLaika {
             await runTask(
               opts.storage.createObject({
                 key: configObjectKey,
-                content: yamlStringify(opts.decapConfig) as never,
-              } as never),
+                type: 'object',
+                content: opts.decapConfig,
+                metadata: { extension: 'yml' },
+              }),
             );
           } catch (writeErr) {
             logger.warn?.('createCustomLaika: failed to seed config:', writeErr);
