@@ -8,6 +8,10 @@
  * Geared towards *retrieving* attachments that already live next to your
  * notes. Writing assets into a vault bloats whatever syncs it, so for
  * write-heavy workloads prefer an object-storage backend such as `assets-r2`.
+ *
+ * @remarks **Runtime: Node.js / Bun only.** This implementation imports
+ * `node:fs`, `node:path`, and `node:stream`; it cannot run in Cloudflare
+ * Workers or other edge runtimes.
  */
 
 export { ObsidianAssetsRepository, type ObsidianAssetsRepositoryOptions } from './assets-repository.js';
