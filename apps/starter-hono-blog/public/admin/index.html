@@ -5,9 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Content Manager</title>
     <!--
-      Must be set before the CDN script loads Decap.
+      Must be set before the bundle script loads Decap.
       Prevents Decap from auto-initialising before the laika backend is registered.
     -->
+    <script>window.CMS_MANUAL_INIT = true;</script>
   </head>
   <body>
     <!-- Decap CMS UI from CDN — synchronously sets window.CMS -->
