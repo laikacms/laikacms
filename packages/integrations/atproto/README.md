@@ -44,8 +44,12 @@ distinct atomic-multi-write mechanism in the suite.**
 
 ## Usage
 
+Repository methods return a `LaikaTask`, not a `Promise` — directly `await`-ing them is a silent
+no-op. Use `runTask` (or `collectStream` for listing) from `laikacms/compat`.
+
 ```ts
 import { AtprotoDataSource, AtprotoStorageRepository } from '@laikacms/atproto/storage-atproto';
+import { runTask } from 'laikacms/compat';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 // Auth: pre-acquire a session JWT via /xrpc/com.atproto.server.createSession.
@@ -69,8 +73,8 @@ const repo = new AtprotoStorageRepository({
   defaultFileExtension: 'md',
 });
 
-await repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } });
-await repo.removeAtoms(['notes/hello']);
+await runTask(repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } }));
+await runTask(repo.removeAtoms(['notes/hello']));
 ```
 
 ## Record shape

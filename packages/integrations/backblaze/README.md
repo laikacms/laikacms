@@ -52,8 +52,12 @@ endpoint. **First backend with this convention** — every other backend uses GE
 
 ## Usage
 
+Repository methods return a `LaikaTask`, not a `Promise` — directly `await`-ing them is a silent
+no-op. Use `runTask` (or `collectStream` for listing) from `laikacms/compat`.
+
 ```ts
 import { B2DataSource, B2StorageRepository } from '@laikacms/backblaze/storage-b2';
+import { runTask } from 'laikacms/compat';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const dataSource = new B2DataSource({
@@ -72,8 +76,8 @@ const repo = new B2StorageRepository({
   defaultFileExtension: 'md',
 });
 
-await repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } });
-await repo.removeAtoms(['notes/hello']);
+await runTask(repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } }));
+await runTask(repo.removeAtoms(['notes/hello']));
 ```
 
 ## Operation mapping

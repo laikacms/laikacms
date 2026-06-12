@@ -48,8 +48,12 @@ grammar.
 
 ## Usage
 
+Repository methods return a `LaikaTask`, not a `Promise` — directly `await`-ing them is a silent
+no-op. Use `runTask` (or `collectStream` for listing) from `laikacms/compat`.
+
 ```ts
 import { Neo4jDataSource, Neo4jStorageRepository } from '@laikacms/neo4j/storage-neo4j';
+import { runTask } from 'laikacms/compat';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const dataSource = new Neo4jDataSource({
@@ -64,8 +68,8 @@ const repo = new Neo4jStorageRepository({
   defaultFileExtension: 'md',
 });
 
-await repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } });
-await repo.removeAtoms(['notes/hello']);
+await runTask(repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } }));
+await runTask(repo.removeAtoms(['notes/hello']));
 ```
 
 ## Schema setup

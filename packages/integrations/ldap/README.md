@@ -77,8 +77,12 @@ per-op results. **The 13th structurally distinct atomic-multi-write mechanism in
 
 ## Usage
 
+Repository methods return a `LaikaTask`, not a `Promise` — directly `await`-ing them is a silent
+no-op. Use `runTask` (or `collectStream` for listing) from `laikacms/compat`.
+
 ```ts
 import { LdapDataSource, type LdapOps, LdapStorageRepository } from '@laikacms/ldap/storage-ldap';
+import { runTask } from 'laikacms/compat';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { Client as LdapClient } from 'ldapjs';
 
@@ -93,8 +97,8 @@ const repo = new LdapStorageRepository({
   defaultFileExtension: 'md',
 });
 
-await repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } });
-await repo.removeAtoms(['notes/hello']);
+await runTask(repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } }));
+await runTask(repo.removeAtoms(['notes/hello']));
 ```
 
 ### Schema setup

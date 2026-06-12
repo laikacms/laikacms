@@ -30,8 +30,12 @@ implementation:
 
 ## Usage
 
+Repository methods return a `LaikaTask`, not a `Promise` — directly `await`-ing them is a silent
+no-op. Use `runTask` (or `collectStream` for listing) from `laikacms/compat`.
+
 ```ts
 import { VercelBlobDataSource, VercelBlobStorageRepository } from '@laikacms/vercel/storage-blob';
+import { runTask } from 'laikacms/compat';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
 const dataSource = new VercelBlobDataSource({
@@ -45,8 +49,8 @@ const repo = new VercelBlobStorageRepository({
   defaultFileExtension: 'json',
 });
 
-await repo.createObject({ key: 'notes/hello', content: { title: 'hi' } });
-await repo.removeAtoms(['notes/hello']);
+await runTask(repo.createObject({ key: 'notes/hello', content: { title: 'hi' } }));
+await runTask(repo.removeAtoms(['notes/hello']));
 ```
 
 ## Operation mapping
