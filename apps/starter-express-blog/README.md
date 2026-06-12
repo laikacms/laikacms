@@ -8,8 +8,8 @@ Minimal blog built with [Express](https://expressjs.com) v5 and LaikaCMS. Demons
   `IncomingMessage`. We reconstruct a `Request` from the buffered raw body.
 - **`laika.documents.*` via `laikacms/compat`** — `runTask` / `collectStream` give Promise-friendly
   access to content without importing Effect.
-- **Decap admin from CDN** — `decap-cms.js` loaded from unpkg; the laika backend plugin is bundled
-  by esbuild from `@laikacms/decap-integrations`.
+- **Decap admin bundled locally** — `decap-cms-app` and the laika backend plugin are bundled by
+  esbuild into `public/admin/bundle.js`; no CDN or unpkg involved.
 
 ## Prerequisites
 
@@ -46,7 +46,7 @@ src/
   admin-client.ts     # Bundled for browser: registers laika backend
 public/
   admin/
-    index.html        # Decap admin UI (Decap from CDN)
+    index.html        # Decap admin UI shell (loads local bundle.js)
     bundle.js         # Built from admin-client.ts by esbuild
 content/              # Filesystem content root (git-tracked)
 ```
