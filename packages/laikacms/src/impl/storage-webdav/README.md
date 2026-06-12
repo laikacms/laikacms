@@ -45,6 +45,33 @@ new WebDavStorageRepository(
 );
 ```
 
+### Extra request headers (`auth.headers`)
+
+`auth.headers` is a plain object of header name → value pairs merged into every request alongside
+the standard auth credentials. Use it for server-specific requirements such as Nextcloud's
+`OCS-APIRequest` header:
+
+```ts
+// Nextcloud: add OCS-APIRequest header alongside basic auth
+new WebDavStorageRepository(
+  {
+    baseUrl: 'https://cloud.example.com',
+    basePath: '/remote.php/dav/files/alice/',
+    auth: {
+      username: 'alice',
+      password: 'secret',
+      headers: { 'OCS-APIRequest': 'true' },
+    },
+  },
+  { md: markdownSerializer },
+  'md',
+);
+```
+
+`auth.headers` can be combined with any auth style (basic, bearer, or anonymous). The extra headers
+are applied first; the `Authorization` header is always appended after them, so you cannot
+accidentally override credentials via `auth.headers`.
+
 ### Custom `fetch`
 
 Pass `fetch` for non-standard runtimes or to inject a test double:
