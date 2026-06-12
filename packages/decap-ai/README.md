@@ -38,13 +38,13 @@ pnpm add react react-dom decap-cms-core decap-cms-lib-util decap-cms-ui-default 
 `decapAi()` returns a `{ fetch(request: Request): Promise<Response> }` handler that you mount at an
 API route. It exposes three endpoints:
 
-| Method | Path                      | Description                  |
-| ------ | ------------------------- | ---------------------------- |
-| GET    | `{basePath}/health`       | Health check (no auth)       |
-| POST   | `{basePath}/chat`         | Stream an AI response        |
-| GET    | `{basePath}/sessions`     | List sessions for a document |
-| GET    | `{basePath}/sessions/:id` | Get a single session         |
-| DELETE | `{basePath}/sessions/:id` | Delete a session             |
+| Method | Path                                      | Description                                                                            |
+| ------ | ----------------------------------------- | -------------------------------------------------------------------------------------- |
+| GET    | `{basePath}/health`                       | Health check (no auth)                                                                 |
+| POST   | `{basePath}/chat`                         | Stream an AI response                                                                  |
+| GET    | `{basePath}/sessions?documentSlug=<slug>` | List sessions for a document — `documentSlug` is **required**; omitting it returns 400 |
+| GET    | `{basePath}/sessions/:id`                 | Get a single session                                                                   |
+| DELETE | `{basePath}/sessions/:id`                 | Delete a session                                                                       |
 
 ```typescript
 import { decapAi } from '@laikacms/decap-ai';
@@ -85,6 +85,19 @@ const ai = decapAi({
 export async function POST(request: Request) {
   return ai.fetch(request);
 }
+```
+
+#### Listing sessions
+
+`GET {basePath}/sessions` requires the `documentSlug` query parameter. Omitting it returns a `400`
+error.
+
+```typescript
+// Correct — documentSlug is required
+const res = await fetch('/api/ai/sessions?documentSlug=posts/hello-world', {
+  headers: { Authorization: `Bearer ${token}` },
+});
+const { sessions } = await res.json();
 ```
 
 ### Widget (React / Decap CMS)
