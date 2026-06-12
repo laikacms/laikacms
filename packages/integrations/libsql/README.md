@@ -45,9 +45,16 @@ meaning "only run if the prior step succeeded" — so the whole batch rolls back
 
 ## Usage
 
+Repository methods (`createObject`, `removeAtoms`, etc.) return a `LaikaTask`, not a `Promise`.
+Directly `await`-ing a `LaikaTask` is a silent no-op — it resolves to the task object, not its
+result. Use one of the runners below.
+
+### With the compat helpers (no Effect runtime at the call site)
+
 ```ts
 import { LibSqlDataSource, LibSqlStorageRepository } from '@laikacms/libsql/storage-libsql';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { runTask, collectStream } from 'laikacms/compat';
 
 const dataSource = new LibSqlDataSource({
   url: 'https://example-org.turso.io',
@@ -61,8 +68,31 @@ const repo = new LibSqlStorageRepository({
   defaultFileExtension: 'md',
 });
 
-await repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } });
-await repo.removeAtoms(['notes/hello']);
+// Single-result operations — use runTask
+await runTask(repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } }));
+await runTask(repo.removeAtoms(['notes/hello']));
+```
+
+### With LaikaTask.runPromise (Effect-style, direct import)
+
+```ts
+import * as LaikaTask from 'laikacms/core/laika-task';
+
+await LaikaTask.runPromise(
+  repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } }),
+);
+await LaikaTask.runPromise(repo.removeAtoms(['notes/hello']));
+```
+
+### Listing records (LaikaStream → collectStream)
+
+```ts
+import { collectStream } from 'laikacms/compat';
+
+const { items } = await collectStream(
+  repo.listAtomSummaries('notes'),
+);
+console.log(items); // AtomSummary[]
 ```
 
 ## Schema
