@@ -1,6 +1,7 @@
 import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { collectStream, runTask } from 'laikacms/compat';
+import { NotFoundError } from 'laikacms/core';
 
 import { adminHtml, laika } from './laika.js';
 
@@ -12,6 +13,9 @@ app.get('/admin/', c => c.html(adminHtml));
 app.get('/admin', c => c.redirect('/admin/'));
 
 app.get('/', async c => {
+  // On a fresh/empty DB the config object doesn't exist yet, so
+  // listRecordSummaries throws NotFoundError before reaching the empty-state
+  // branch. Treat any not_found error here as zero posts.
   const { items: records } = await collectStream(
     laika.documents.listRecordSummaries({
       pagination: { page: 1, perPage: 100 },
@@ -19,7 +23,12 @@ app.get('/', async c => {
       depth: 1,
       type: 'published',
     }),
-  );
+  ).catch((err: unknown) => {
+    if (!(err instanceof NotFoundError)) {
+      console.error('GET /: unexpected error listing posts, showing empty state', err);
+    }
+    return { items: [], done: { total: 0 } } as const;
+  });
 
   const posts = records
     .filter(r => r.type === 'published-summary')
