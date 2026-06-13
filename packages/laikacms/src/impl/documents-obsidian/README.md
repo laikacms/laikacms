@@ -115,4 +115,7 @@ therefore unsupported:
 | `createRevision` | Always throws `BadRequestError`             |
 | `listRevisions`  | Always returns an empty stream (`total: 0`) |
 
-If you need revision history, use a backend that supports it (e.g. `laikacms/documents-github`).
+No built-in `DocumentsRepository` with revision history exists yet. If you need file-level history,
+pair a `DocumentsRepository` that delegates to a storage backend with change tracking — for example
+`GithubStorageRepository` from `@laikacms/github` (a `StorageRepository`) preserves each write as a
+GitHub commit, giving you a per-file audit trail at the storage layer.
