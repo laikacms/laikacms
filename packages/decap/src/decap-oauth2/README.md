@@ -9,7 +9,7 @@ OAuth2 authentication server for Decap CMS with PKCE support.
 ## Features
 
 - OAuth2 with PKCE (Proof Key for Code Exchange)
-- GitHub, GitLab, and Bitbucket provider support
+- Self-contained authorization server (email + password login, passkey/WebAuthn, TOTP 2FA)
 - Quantum-safe cryptographic considerations
 - Cloudflare Workers compatible
 
@@ -22,18 +22,26 @@ pnpm add @laikacms/decap-oauth2
 ## Usage
 
 ```typescript
-import { createOAuth2Server } from '@laikacms/decap-oauth2';
+import { decapOauth2 } from '@laikacms/decap-oauth2';
 
-const server = createOAuth2Server({
-  providers: {
-    github: {
-      clientId: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
-    },
+const oauth2 = decapOauth2({
+  basePath: '/oauth2',
+  clientId: process.env.DECAP_CLIENT_ID!,
+  callbacks: {
+    getUserByEmail: async email => {/* return User | null */},
+    getUserById: async id => {/* return User | null */},
+    storeAuthorizationCode: async code => {/* persist */},
+    getAuthorizationCode: async code => {/* return AuthorizationCode | null */},
+    deleteAuthorizationCode: async code => {/* delete */},
+    createSession: async session => {/* persist */},
+    getSessionByAccessToken: async token => {/* return OAuthSession | null */},
+    getSessionByRefreshToken: async token => {/* return OAuthSession | null */},
+    logoutSession: async sessionId => {/* delete session */},
+    logoutAll: async userId => {/* delete all sessions for user */},
   },
 });
 
-export default server;
+export default { fetch: oauth2.fetch.bind(oauth2) };
 ```
 
 ## Security Considerations
