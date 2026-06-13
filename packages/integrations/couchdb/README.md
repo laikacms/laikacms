@@ -35,8 +35,12 @@ CouchDB has architectural choices that none of the other backends in the Laika s
 
 ## Usage
 
+Repository methods return a `LaikaTask`, not a `Promise` — directly `await`-ing them is a silent
+no-op. Use `runTask` (or `collectStream` for listing) from `laikacms/compat`.
+
 ```ts
 import { CouchDbDataSource, CouchDbStorageRepository } from '@laikacms/couchdb/storage-couchdb';
+import { runTask } from 'laikacms/compat';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 const dataSource = new CouchDbDataSource({
@@ -53,8 +57,8 @@ const repo = new CouchDbStorageRepository({
   defaultFileExtension: 'md',
 });
 
-await repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } });
-await repo.removeAtoms(['notes/hello']);
+await runTask(repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } }));
+await runTask(repo.removeAtoms(['notes/hello']));
 ```
 
 ## Document shape
