@@ -1,15 +1,6 @@
 /**
  * Browser-side admin bundle entry point.
- *
- * Bundled by esbuild (pnpm build:admin):
- *   src/admin-client.ts → public/admin/bundle.js
- *
- * Pattern: "Decap admin from CDN"
- *   1. public/admin/index.html sets window.CMS_MANUAL_INIT = true inline
- *      before the CDN script loads, preventing auto-init.
- *   2. The CDN script (loaded synchronously) sets CMS.
- *   3. This module script (type="module", always deferred) runs after the
- *      CDN script, registers the laika backend, then calls CMS.init().
+ * Bundled by esbuild: src/admin-client.ts → public/admin/bundle.js
  */
 import createLaikaBackend from '@laikacms/decap-integrations/decap-cms-backend-laika';
 import _CMS from 'decap-cms-app';
