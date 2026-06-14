@@ -636,7 +636,7 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
           LaikaBackend.prototype.getMedia = async function (mediaFolder) {
             var folder = mediaFolder || this.mediaFolder;
             var token = this._token;
-            var url = this.apiUrl + '/assets/resources?filter[folder]=' + encodeURIComponent(folder) + '&page[limit]=100';
+            var url = this.apiUrl + '/assets/resources?folder=' + encodeURIComponent(folder) + '&page[limit]=100';
             var res = await apiFetch(url, token);
             var body = await res.json();
             var items = body.data || [];

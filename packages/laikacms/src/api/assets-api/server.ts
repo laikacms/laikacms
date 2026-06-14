@@ -320,7 +320,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       // Route: GET /resources
       // List all resources in a folder
       if (path === `${basePath}/resources` && method === 'GET') {
-        const folderKey = query['folder'] || query['filter[prefix]'] || '';
+        const folderKey = query['folder'] || query['filter[folder]'] || query['filter[prefix]'] || '';
         const pagination = parsePaginationQuery(query);
 
         // Parse depth parameter (minimum 1)
