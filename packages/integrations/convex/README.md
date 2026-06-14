@@ -78,6 +78,7 @@ const repo = new ConvexStorageRepository({
   defaultFileExtension: 'md',
 });
 
+await runTask(repo.createFolder({ type: 'folder', key: 'notes' }));
 await runTask(repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } }));
 await runTask(repo.removeAtoms(['notes/hello']));
 ```
@@ -359,19 +360,19 @@ new ConvexStorageRepository({
 
 ## Operation mapping
 
-| Laika operation             | Convex function                                                                                                                                                                         |
-| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `getObject(key)`            | `query` → `laika:getFile`                                                                                                                                                               |
-| `getFolder(key)`            | `query` → `laika:getFolder` + `query` → `laika:hasDescendants` (implicit-folder probe)                                                                                                  |
-| `getAtom(key)`              | `query` → `laika:getFile`; if not found → `getFolder(key)` (see above)                                                                                                                  |
-| `createObject(key, …)`      | `query` → `laika:getFile` (probe) + `mutation` → `laika:createFile`                                                                                                                     |
-| `updateObject(key, …)`      | `query` → `laika:getFile` + `mutation` → `laika:updateFile`                                                                                                                             |
-| `createOrUpdateObject`      | `query` → `laika:getFile` + `mutation` → `laika:upsertFile`                                                                                                                             |
-| `createFolder(key)`         | `mutation` → `laika:upsertFolder`                                                                                                                                                       |
-| `removeAtoms([k₁…kₙ])`      | n × `query` → `laika:getFile` (+ `laika:getFolder` for non-file keys) + **1 × `mutation` → `laika:removeFiles`** for file paths + 1 × `mutation` → `laika:removeFolder` per folder path |
-| `listAtomSummaries(folder)` | `query` → `laika:listChildren`                                                                                                                                                          |
-| `listAtoms(folder)`         | `query` → `laika:listChildren` + `query` → `laika:getFile` / `laika:getFolder` per item                                                                                                 |
-| `getCapabilities()`         | (no I/O — static)                                                                                                                                                                       |
+| Laika operation             | Convex function                                                                                                                                                                                                                                 |
+| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getObject(key)`            | `query` → `laika:getFile`                                                                                                                                                                                                                       |
+| `getFolder(key)`            | root `''`: `query` → `laika:hasDescendants` only (1 round-trip); explicit folder hit: `query` → `laika:getFolder` only (1 round-trip); implicit folder fallback: `query` → `laika:getFolder` + `query` → `laika:hasDescendants` (2 round-trips) |
+| `getAtom(key)`              | `query` → `laika:getFile`; if not found → `getFolder(key)` (see above)                                                                                                                                                                          |
+| `createObject(key, …)`      | `query` → `laika:getFile` (probe) + `mutation` → `laika:createFile`                                                                                                                                                                             |
+| `updateObject(key, …)`      | `query` → `laika:getFile` + `mutation` → `laika:updateFile`                                                                                                                                                                                     |
+| `createOrUpdateObject`      | `query` → `laika:getFile` + `mutation` → `laika:upsertFile`                                                                                                                                                                                     |
+| `createFolder(key)`         | `mutation` → `laika:upsertFolder` (root `''`: `query` → `laika:hasDescendants` only; no mutation)                                                                                                                                               |
+| `removeAtoms([k₁…kₙ])`      | n × `query` → `laika:getFile` (+ `laika:getFolder` for non-file keys) + **1 × `mutation` → `laika:removeFiles`** for file paths + 1 × `mutation` → `laika:removeFolder` per folder path                                                         |
+| `listAtomSummaries(folder)` | `query` → `laika:listChildren`                                                                                                                                                                                                                  |
+| `listAtoms(folder)`         | `query` → `laika:listChildren` + `query` → `laika:getFile` / `laika:getFolder` per item                                                                                                                                                         |
+| `getCapabilities()`         | (no I/O — static)                                                                                                                                                                                                                               |
 
 ## What this iteration does NOT add
 
@@ -398,3 +399,13 @@ mechanism** in the spirit of SurrealDB's `BEGIN/COMMIT`, Neo4j's `{statements: [
   descendants before deleting — add that guard to your own `removeFolder` mutation if you need it.
   File removals are still batched into a single `laika:removeFiles` call regardless of how many file
   keys are in the array.
+- **Implicit folders are not auto-created.** Unlike GitHub, Supabase, or libSQL backends, Convex
+  indexes stored values rather than deriving hierarchy from paths. If you call `createObject` with a
+  nested key like `notes/hello` without first calling `createFolder('notes')`, the `notes` folder
+  row is never inserted, so `listAtomSummaries('')` and `listAtoms('')` will not return `notes`.
+  Always call `createFolder` for each parent directory before creating objects inside it.
+- **`createFolder('')` (root) is a probe, not a mutation.** Calling `createFolder` with an empty key
+  does not fire `laika:upsertFolder`; instead it only runs `query → laika:hasDescendants` to check
+  whether the deployment has any content. On an empty deployment this returns `NotFoundError`. To
+  establish the repository on a fresh Convex deployment, call `createFolder` with a non-root path
+  first (e.g. `createFolder({ type: 'folder', key: 'content' })`).
