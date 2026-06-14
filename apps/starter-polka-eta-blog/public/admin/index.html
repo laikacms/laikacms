@@ -17,6 +17,8 @@
       This <script> is deferred (placed after the blocking CDN script) so
       window.CMS is guaranteed to exist when it runs.
     -->
+    <!-- Must be set before the bundle script loads Decap -->
+    <script>window.CMS_MANUAL_INIT = true;</script>
     <script src="./bundle.js" type="module"></script>
   </body>
 </html>
