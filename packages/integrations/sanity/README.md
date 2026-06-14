@@ -91,7 +91,8 @@ await LaikaTask.runPromise(repo.updateObject({
 | `listAtomSummaries(folder)`          | one GROQ query: `*[(_type in [...]) && parent == $folder]`                                 |
 | `createObject` / `createFolder`      | one `/mutate` with ancestor folders + the file/folder                                      |
 | `updateObject`                       | one `/mutate` with `patch.ifRevisionID` for OCC                                            |
-| `removeAtoms` (file or empty folder) | one `/mutate` with `{delete: {id}}`                                                        |
+| `removeAtoms` (file key)             | 1 GROQ (`findExistingFile`) + 1 `/mutate` = **2 calls per key**                            |
+| `removeAtoms` (folder key)           | 1 GROQ (folder existence) + 1 GROQ (children check) + 1 `/mutate` = **3 calls per key**   |
 
 ### Trade-offs
 
