@@ -19,6 +19,29 @@ pnpm add @laikacms/decap-integrations
 | `@laikacms/decap-integrations/custom`             | `createCustomLaika(options)` — Storage-agnostic preset; accepts any `StorageRepository`                                                      |
 | `@laikacms/decap-integrations/decap-config-types` | `ExtractFieldsType<T>`, `ExtractCollectionType<T>` — TypeScript utilities to derive typed frontmatter from a const-asserted Decap CMS config |
 
+#### `decap-config-types` usage
+
+```ts
+import {
+  ExtractCollectionType,
+  ExtractFieldsType,
+} from '@laikacms/decap-integrations/decap-config-types';
+import config from './config.gen';
+
+// Pick a collection by name from the const-asserted config
+type PagesCollection = Extract<
+  typeof config['collections'][number],
+  { name: 'pages' }
+>;
+
+// Derive the entry type — fields only
+type PageEntry = ExtractCollectionType<PagesCollection>;
+// Equivalent to: ExtractFieldsType<PagesCollection['fields']>
+
+// You can also go field-level directly
+type PageProps = ExtractFieldsType<PagesCollection['fields']>;
+```
+
 ### Backend & API
 
 | Export                                                 | Purpose                                             |
