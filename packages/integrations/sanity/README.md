@@ -89,7 +89,8 @@ await LaikaTask.runPromise(repo.updateObject({
 | `getObject`                          | one GROQ query: `*[_type == 'laikaObject' && parent == $p && name in [k.json, k.md, ...]]` |
 | `getFolder`                          | one GROQ query: `*[_type == 'laikaFolder' && parent == $p && name == $n]`                  |
 | `listAtomSummaries(folder)`          | one GROQ query: `*[(_type in [...]) && parent == $folder]`                                 |
-| `createObject` / `createFolder`      | one `/mutate` with ancestor folders + the file/folder                                      |
+| `createObject`                       | 1 GROQ dup-probe (`findExistingFile`) + 1 batch `/mutate` (ancestors + file) + 1 GROQ re-fetch (`getObject`) = **3 calls** |
+| `createFolder`                       | 1 batch `/mutate` (ancestors) + 1 GROQ re-fetch (`getFolder`) = **2 calls**               |
 | `updateObject`                       | one `/mutate` with `patch.ifRevisionID` for OCC                                            |
 | `removeAtoms` (file or empty folder) | one `/mutate` with `{delete: {id}}`                                                        |
 
