@@ -50,7 +50,8 @@ repository at it.
 | `listAtomSummaries('notes')` | **non-root:** one `findOne` (existence check, `filter=type="folder" && path="notes"`) + one list (`filter=parent="notes"`); **root (`''`):** one list only |
 | `createObject`               | one `POST /records` per file + one per ancestor folder                                                                                                     |
 | `updateObject`               | one `PATCH /records/<id>`                                                                                                                                  |
-| `removeAtoms`                | one `DELETE /records/<id>` per atom                                                                                                                        |
+| `removeAtoms` (file atom)    | one `findOne` (path lookup) + one `findOne` (extension resolve) + one `DELETE /records/<id>`                                                                |
+| `removeAtoms` (folder atom)  | one `findOne` (path lookup) + one `list` (child check, `perPage=1`) + one `DELETE /records/<id>`                                                            |
 
 ### The filter syntax
 
