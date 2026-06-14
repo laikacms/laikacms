@@ -561,10 +561,10 @@ export function decapAdminHtml(options: DecapAdminHtmlOptions = {}): string {
 
           LaikaBackend.prototype.entriesByFolder = async function (folder, _ext, _depth) {
             var token = this._token;
-            var url = this.apiUrl + '/documents?filter[folder]=' + encodeURIComponent(folder) + '&filter[type]=published&page[limit]=100';
+            var url = this.apiUrl + '/documents/records?filter[folder]=' + encodeURIComponent(folder) + '&filter[type]=published&page[limit]=100';
             var res = await apiFetch(url, token);
             var body = await res.json();
-            var items = body.data || [];
+            var items = Array.isArray(body.data) ? body.data : [];
             return items.map(function (d) {
               var attrs = d.attributes || {};
               var content = attrs.content;
