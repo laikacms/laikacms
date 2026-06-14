@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -470,9 +471,51 @@ export class GelStorageRepository extends StorageRepository {
         });
 
         const found = resolved.filter(r => r.resolved !== null) as Array<{ key: string, resolved: StoredRow }>;
-        const missing = resolved.filter(r => r.resolved === null);
+        const fileMissing = resolved.filter(r => r.resolved === null);
 
-        // ── Round-trip 2: ONE EdgeQL `FOR ... UNION (...)` query.
+        // ── Round-trip 1b: for keys with no matching LaikaFile, probe LaikaFolder.
+        interface FolderProbeResult {
+          key: string;
+          folderRow: StoredRow | null;
+          hasChildren: boolean;
+        }
+        const folderProbes = yield* Effect.promise(async (): Promise<FolderProbeResult[]> => {
+          const results: FolderProbeResult[] = [];
+          for (const m of fileMissing) {
+            const folderResult = await this.dataSource.one<StoredRow>(
+              `SELECT ${this.qualifyType(this.folderType)} { id, path, parent, name, createdAt, updatedAt }
+               FILTER .path = <str>$path LIMIT 1`,
+              { path: m.key },
+            );
+            const folderRow = Result.isSuccess(folderResult) ? (folderResult.success as StoredRow | null) : null;
+            let hasChildren = false;
+            if (folderRow) {
+              const childResult = await this.dataSource.one<{ id: string }>(
+                `SELECT ${this.qualifyType(this.fileType)} { id } FILTER .parent = <str>$parent LIMIT 1`,
+                { parent: m.key },
+              );
+              if (Result.isSuccess(childResult) && childResult.success) {
+                hasChildren = true;
+              } else {
+                const folderChildResult = await this.dataSource.one<{ id: string }>(
+                  `SELECT ${this.qualifyType(this.folderType)} { id } FILTER .parent = <str>$parent LIMIT 1`,
+                  { parent: m.key },
+                );
+                hasChildren = Result.isSuccess(folderChildResult) && folderChildResult.success !== null;
+              }
+            }
+            results.push({ key: m.key, folderRow, hasChildren });
+          }
+          return results;
+        });
+
+        const emptyFolders = folderProbes.filter(p => p.folderRow !== null && !p.hasChildren) as Array<
+          FolderProbeResult & { folderRow: StoredRow }
+        >;
+        const nonEmptyFolders = folderProbes.filter(p => p.folderRow !== null && p.hasChildren);
+        const trulyMissing = folderProbes.filter(p => p.folderRow === null);
+
+        // ── Round-trip 2: ONE EdgeQL `FOR ... UNION (...)` query for files.
         // Single statement; one transaction. Iterates the unpacked
         // <array<str>> parameter, running DELETE once per element.
         // **The 15th structurally distinct atomic-multi-write
@@ -487,11 +530,24 @@ export class GelStorageRepository extends StorageRepository {
           ));
         }
 
+        // ── Round-trip 3: delete empty folder records one by one.
+        for (const ef of emptyFolders) {
+          yield* liftResult(this.dataSource.query(
+            `DELETE ${this.qualifyType(this.folderType)} FILTER .path = <str>$path`,
+            { path: ef.folderRow.path },
+          ));
+        }
+
         for (const f of found) yield* emit.data(f.key);
-        for (const m of missing) {
+        for (const ef of emptyFolders) yield* emit.data(ef.key);
+        for (const nef of nonEmptyFolders) {
+          yield* emit.recoverableError(new ForbiddenError(`Cannot remove non-empty folder: ${nef.key}`));
+        }
+        for (const m of trulyMissing) {
           yield* emit.recoverableError(new NotFoundError(`Gel row not found: ${m.key}`));
         }
-        return { removed: found.length, skipped: skipped0 + missing.length };
+        const skipped = skipped0 + nonEmptyFolders.length + trulyMissing.length;
+        return { removed: found.length + emptyFolders.length, skipped };
       })
     );
   }

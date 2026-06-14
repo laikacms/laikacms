@@ -1,4 +1,4 @@
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -226,6 +226,20 @@ const dispatchQuery = (query: string, vars: Record<string, unknown>): MockResult
     return { data: deleted };
   }
 
+  // ---- DELETE (LaikaFile|LaikaFolder) FILTER .path = <str>$path ----------
+  m = q.match(/^DELETE (LaikaFile|LaikaFolder) FILTER \.path = <str>\$path$/);
+  if (m) {
+    const type = m[1]! as RowType;
+    const path = String(vars['path']);
+    const k = rowKey(type, path);
+    const existing = rows.get(k);
+    if (existing) {
+      rows.delete(k);
+      return { data: [{ id: existing.id }] };
+    }
+    return { data: [] };
+  }
+
   return { data: [], error: { type: 'EdgeQLSyntaxError', message: `mock: unrecognised EdgeQL: ${q.slice(0, 150)}` } };
 };
 
@@ -428,6 +442,59 @@ describe('GelStorageRepository', () => {
     );
     expect(removed.done).toEqual({ removed: 1, skipped: 1 });
     expect(removed.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('removeAtoms deletes an empty LaikaFolder and emits its key', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'empty-folder' }));
+    expect(rows.has('LaikaFolder:empty-folder')).toBe(true);
+
+    const result = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['empty-folder']),
+    );
+    expect(result.done).toEqual({ removed: 1, skipped: 0 });
+    expect(result.data).toEqual(['empty-folder']);
+    expect(result.recoverableErrors).toHaveLength(0);
+    expect(rows.has('LaikaFolder:empty-folder')).toBe(false);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty folder (has file children)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'notes' }));
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'notes/doc', content: { body: 'x' } }),
+    );
+
+    const result = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['notes']),
+    );
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.data).toHaveLength(0);
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+    // Folder record must still be present
+    expect(rows.has('LaikaFolder:notes')).toBe(true);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty folder (has sub-folder children)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'parent' }));
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'parent/child' }));
+
+    const result = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['parent']),
+    );
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+    expect(rows.has('LaikaFolder:parent')).toBe(true);
+  });
+
+  it('removeAtoms emits NotFoundError when key is neither file nor folder', async () => {
+    const repo = makeRepo();
+    const result = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['nonexistent-key']),
+    );
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
   });
 
   it('listAtomSummaries dispatches two SELECTs (file type + folder type)', async () => {
