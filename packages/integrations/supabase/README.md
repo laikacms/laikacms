@@ -60,11 +60,17 @@ The repository builds these for the exact shapes Laika storage needs. Notable:
 
 - **Find by extension-free key** uses an `or=(…)` group of `Name.eq.<key>.<ext>` clauses — one
   request resolves every registered extension.
-- **`removeAtoms(N keys)`** packs every resolved path into one `Path=in.(…)` DELETE — single
-  round-trip regardless of N.
+- **`removeAtoms(N keys)`** has two phases:
+  1. **Resolution phase** — up to 2 GETs per key: one `findFolder` GET to check whether the key is a
+     folder, and if it is a folder a second GET to verify it is empty before allowing deletion; for
+     non-folder keys the second GET is a `findExistingFile` call that resolves the file's on-disk
+     `Path` (including extension).
+  2. **Delete phase** — one `Path=in.(…)` DELETE that removes all resolved paths in a single
+     request.
 
 The "removeAtoms uses one IN-list DELETE" test wraps `fetch` in a counter and asserts exactly one
-DELETE call fires for `removeAtoms(['a', 'b', 'c'])`.
+DELETE call fires for `removeAtoms(['a', 'b', 'c'])`. It validates the delete phase only — it does
+not count the resolution-phase GETs.
 
 ### Auth model
 
@@ -87,7 +93,7 @@ The data source supports both: `auth.anonKey` populates `apikey` and the default
 | `listAtomSummaries('notes')` | **two GETs**: `?Type=eq.folder&Path=eq.notes` (existence check) + `?Parent=eq.notes` (listing) |
 | `createObject`               | one POST per file + one per missing ancestor folder                                            |
 | `updateObject`               | one PATCH with `?Path=eq.<key>`                                                                |
-| `removeAtoms(N keys)`        | resolution + **one** DELETE with `?Path=in.(…)`                                                |
+| `removeAtoms(N keys)`        | up to 2 GETs per key (resolution), then **one** DELETE with `?Path=in.(…)`                     |
 
 ### Trade-offs
 
