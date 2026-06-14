@@ -114,3 +114,23 @@ export type ExtractFieldsType<Fields> = Fields extends readonly unknown[] ? Part
     }
   >
   : Record<string, unknown>;
+
+/**
+ * Extract the TypeScript entry type for a Decap collection definition.
+ *
+ * Applies `ExtractFieldsType` over the collection's `fields` array, so you
+ * can derive a fully-typed frontmatter shape directly from the collection
+ * without repeating the `Extract` + `['fields']` boilerplate.
+ *
+ * Example:
+ *
+ *   import config from './config.gen';
+ *   import { ExtractCollectionType } from '@laikacms/decap-integrations/decap-config-types';
+ *
+ *   type PagesCollection = Extract<
+ *     typeof config['collections'][number],
+ *     { name: 'pages' }
+ *   >;
+ *   type PageEntry = ExtractCollectionType<PagesCollection>;
+ */
+export type ExtractCollectionType<C extends { fields: readonly unknown[] }> = ExtractFieldsType<C['fields']>;
