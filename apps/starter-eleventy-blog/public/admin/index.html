@@ -16,6 +16,8 @@
       The CDN <script> above is parser-blocking so window.CMS is defined by
       the time this module script (always deferred) executes.
     -->
+    <!-- Must be set before the bundle script loads Decap -->
+    <script>window.CMS_MANUAL_INIT = true;</script>
     <script src="/admin/bundle.js" type="module"></script>
   </body>
 </html>
