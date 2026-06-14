@@ -120,16 +120,16 @@ duplicate-key creates — the data source maps that to `EntryAlreadyExistsError`
 
 ## Operation mapping
 
-| Laika operation             | EdgeQL                                                                                                             |
-| --------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `getObject(key)`            | `SELECT LaikaFile { … } FILTER .parent = <str>$parent AND .name = <str>$name LIMIT 1`                              |
-| `createObject(key, …)`      | 1 × probe SELECT + 1 × `INSERT LaikaFile { path := <str>$path, … }`                                                |
-| `updateObject(key, …)`      | 1 × probe + 1 × `UPDATE LaikaFile FILTER .path = <str>$path SET { content := <str>$content }`                      |
-| `createOrUpdateObject`      | 1 × probe + 1 × `INSERT … UNLESS CONFLICT ON .path ELSE ( UPDATE … )`                                              |
-| `createFolder(key)`         | 1 × `INSERT LaikaFolder { … } UNLESS CONFLICT ON .path`                                                            |
-| `removeAtoms([k₁…kₙ])`      | n × probe SELECT + **1 × `FOR p IN array_unpack(<array<str>>$paths) UNION ( DELETE LaikaFile FILTER .path = p )`** |
-| `listAtomSummaries(folder)` | 2 × `SELECT … FILTER .parent = <str>$parent` (one per type)                                                        |
-| `getCapabilities()`         | (no I/O — static)                                                                                                  |
+| Laika operation             | EdgeQL                                                                                                                                                                                                                                                                                                                                              |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getObject(key)`            | `SELECT LaikaFile { … } FILTER .parent = <str>$parent AND .name = <str>$name LIMIT 1`                                                                                                                                                                                                                                                               |
+| `createObject(key, …)`      | 1 × probe SELECT + 1 × `INSERT LaikaFile { path := <str>$path, … }`                                                                                                                                                                                                                                                                                 |
+| `updateObject(key, …)`      | 1 × probe + 1 × `UPDATE LaikaFile FILTER .path = <str>$path SET { content := <str>$content }`                                                                                                                                                                                                                                                       |
+| `createOrUpdateObject`      | 1 × probe + 1 × `INSERT … UNLESS CONFLICT ON .path ELSE ( UPDATE … )`                                                                                                                                                                                                                                                                               |
+| `createFolder(key)`         | 1 × `INSERT LaikaFolder { … } UNLESS CONFLICT ON .path`                                                                                                                                                                                                                                                                                             |
+| `removeAtoms([k₁…kₙ])`      | n × `SELECT LaikaFile` probe; on miss → 1 × `SELECT LaikaFolder FILTER .path` + 1 × child-probe per folder key; file hits: **1 × `FOR p IN array_unpack(<array<str>>$paths) UNION ( DELETE LaikaFile … )`**; empty folder hits: 1 × `DELETE LaikaFolder FILTER .path` each; non-empty folder → `ForbiddenError`; truly absent key → `NotFoundError` |
+| `listAtomSummaries(folder)` | 2 × `SELECT … FILTER .parent = <str>$parent` (one per type)                                                                                                                                                                                                                                                                                         |
+| `getCapabilities()`         | (no I/O — static)                                                                                                                                                                                                                                                                                                                                   |
 
 ## Module qualification
 
@@ -173,3 +173,7 @@ new GelDataSource({
 - **Gel ↔ EdgeDB naming.** The product rebranded from EdgeDB to Gel in October 2024. The wire
   protocol and EdgeQL syntax are identical; only the CLI (`gel` instead of `edgedb`) and the company
   name changed. This package targets the protocol, so works with either product version.
+- **`removeAtoms` probes `LaikaFolder` on file miss.** When a key is not found in `LaikaFile`,
+  `removeAtoms` issues a secondary `SELECT LaikaFolder` query plus a child-probe to determine
+  whether the path is an empty folder (deleted, key emitted), a non-empty folder (`ForbiddenError`),
+  or truly absent (`NotFoundError`). This adds up to 2 extra round-trips per folder-key miss.
