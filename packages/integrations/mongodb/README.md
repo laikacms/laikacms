@@ -5,10 +5,11 @@ current) export: **`@laikacms/mongodb/storage-mongodb`** — a `StorageRepositor
 MongoDB collection. Works against self-hosted MongoDB, MongoDB Atlas, AWS DocumentDB, Azure Cosmos
 DB's Mongo API, and FerretDB.
 
-**Driver-agnostic.** The package depends on a structural `MongoCollectionLike` interface — five
-methods (`findOne`, `insertOne`, `replaceOne`, `deleteMany`, `aggregate`). The official `mongodb`
-driver satisfies it out of the box; so does the (deprecated) Atlas Data API when wrapped in a thin
-shim, an HTTP gateway, or a hand-rolled mock. No runtime dependency on `mongodb` is pulled in.
+**Driver-agnostic.** The package depends on a structural `MongoCollectionLike` interface — six
+methods (`findOne`, `insertOne`, `replaceOne`, `deleteMany`, `countDocuments`, `aggregate`). The
+official `mongodb` driver satisfies it out of the box; so does the (deprecated) Atlas Data API when
+wrapped in a thin shim, an HTTP gateway, or a hand-rolled mock. No runtime dependency on `mongodb`
+is pulled in.
 
 ```bash
 pnpm add @laikacms/mongodb
@@ -105,16 +106,17 @@ The `(type, parent, name)` compound index makes extension-free key resolution
 
 ## Operation mapping
 
-| Laika operation             | MongoDB call(s)                                                 |
-| --------------------------- | --------------------------------------------------------------- |
-| `getObject(key)`            | `findOne({type:'file', parent, name})`                          |
-| `createObject(key, …)`      | `findOne` (probe) + `insertOne` (11000 → already-exists)        |
-| `updateObject(key, …)`      | `findOne` + `replaceOne({_id}, …, {upsert: true})`              |
-| `createOrUpdateObject`      | (same shape, branching on the probe)                            |
-| `createFolder(key)`         | `findOne({_id: key})` + `insertOne(folderDoc)` if missing       |
-| `removeAtoms([k₁…kₙ])`      | n × `findOne` (in parallel) + **1 × `deleteMany({_id:{$in}})`** |
-| `listAtomSummaries(folder)` | **`aggregate([$match, $sort, $project:{content:0}])`**          |
-| `getCapabilities()`         | (no I/O — static)                                               |
+| Laika operation                   | MongoDB call(s)                                                                       |
+| --------------------------------- | ------------------------------------------------------------------------------------- |
+| `getObject(key)`                  | `findOne({type:'file', parent, name})`                                                |
+| `createObject(key, …)`            | `findOne` (probe) + `insertOne` (11000 → already-exists)                              |
+| `updateObject(key, …)`            | `findOne` + `replaceOne({_id}, …, {upsert: true})`                                    |
+| `createOrUpdateObject`            | (same shape, branching on the probe)                                                  |
+| `createFolder(key)`               | `findOne({_id: key})` + `insertOne(folderDoc)` if missing                             |
+| `removeAtoms([k₁…kₙ])`            | n × `findOne` (in parallel) + **1 × `deleteMany({_id:{$in}})`**                       |
+| `listAtomSummaries(folder)`       | **`aggregate([$match, $sort, $project:{content:0}])`**                                |
+| `getFolder(key)` / `getAtom(key)` | `countDocuments({parent})` via `hasDescendants` — determines if a folder has children |
+| `getCapabilities()`               | (no I/O — static)                                                                     |
 
 ## Caveats
 

@@ -138,12 +138,14 @@ export interface MongoDataSourceOptions {
 /**
  * Talks to a single MongoDB collection storing Laika's flat document model.
  *
- * Five methods carry the work:
+ * Six methods carry the work:
  *
  *  - `findFileDoc(parent, name)` — single `findOne` on `(type, parent, name)`.
  *  - `findById(id)` — direct primary-key lookup.
  *  - `insertOne(doc)` — create-only; surfaces 11000 as `EntryAlreadyExistsError`.
  *  - `upsert(doc)` — `replaceOne` with `{upsert: true}`.
+ *  - `hasDescendants(parent)` — `countDocuments({parent})` to check whether a
+ *    folder has children; used by `getFolder`/`getAtom`.
  *  - `aggregateChildren(parent)` — **aggregation pipeline** for listings;
  *    `[{$match: {parent}}, {$sort: {name: 1}}, {$project: {content: 0}}]`.
  *    The repository never materialises the content field for list views.
