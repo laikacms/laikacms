@@ -1,5 +1,21 @@
 # Roadmap
 
+## Positioning caveats
+
+Deliberate cautions to avoid over-positioning Laika before adoption earns it.
+
+- **A spec with one implementation is not a standard — it's API docs.** The "open spec + reference
+  implementation + cloud" three-tier split is the open-core playbook (MongoDB, Elastic, Supabase),
+  but it only earns its name once _someone other than us_ implements the spec. Until a second,
+  independent implementer exists, do not brand a separate "Laika Spec" / "Laika Standard" — it
+  claims authority we haven't earned. Ship the open interface as part of `laikacms`; reserve a name
+  like "Laika Protocol" for the day a third party builds against it.
+- **The "open standard / not-another-proprietary-CMS" story is architect-bait.** Architects
+  evaluate; they don't adopt. The people who actually pick Laika up — solo devs and small teams —
+  want a fast win on their own stack, not a repository-contract abstraction. Lead positioning with
+  the concrete "use your own backend, one CMS" benefit; keep the spec/interop story as supporting
+  proof, never the headline.
+
 ## Current Focus
 
 - [ ] Stable v1.0 release
@@ -17,6 +33,11 @@
       _Note: Not currently necessary since Decap doesn't support paging, so everything is downloaded
       locally and capabilities like search can be done client-side. However, this is vital for
       supporting bigger datasets in the future._
+- [ ] White paper for the open Laika interface — defer the "Spec" / "Standard" / "Protocol" name
+      until a second, independent implementer exists (see Positioning caveats)
+- [ ] Laika creates a homogeneous, backend-agnostic RAG architecture
+- [ ] Bundle skills using vercel's skills package. Skills identify how one could use laika cli to
+- [ ] SBOM
 
 ### Recoverable-warning pipeline — follow-ups
 
