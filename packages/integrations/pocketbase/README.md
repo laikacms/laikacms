@@ -43,13 +43,13 @@ repository at it.
 
 ### How operations map to PocketBase calls
 
-| Operation                    | PocketBase call                                                                                                                                            |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `getObject('hello')`         | one `findOne` — `filter=type="file" && parent="" && (name="hello.md" \|\| name="hello.json" \|\| ...)`                                                     |
-| `getFolder('notes')`         | one `findOne` — `filter=type="folder" && path="notes"`                                                                                                     |
-| `listAtomSummaries('notes')` | **non-root:** one `findOne` (existence check, `filter=type="folder" && path="notes"`) + one list (`filter=parent="notes"`); **root (`''`):** one list only |
-| `createObject`               | one `POST /records` per file + one per ancestor folder                                                                                                     |
-| `updateObject`               | one `PATCH /records/<id>`                                                                                                                                  |
+| Operation                    | PocketBase call                                                                                                                                             |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getObject('hello')`         | one `findOne` — `filter=type="file" && parent="" && (name="hello.md" \|\| name="hello.json" \|\| ...)`                                                      |
+| `getFolder('notes')`         | one `findOne` — `filter=type="folder" && path="notes"`                                                                                                      |
+| `listAtomSummaries('notes')` | **non-root:** one `findOne` (existence check, `filter=type="folder" && path="notes"`) + one list (`filter=parent="notes"`); **root (`''`):** one list only  |
+| `createObject`               | 1 `findOne` (duplicate check) + up to 2 calls per ancestor (1 `findOne` + 1 `POST` each) + 1 `POST` for the file — POST response used directly, no re-fetch |
+| `updateObject`               | one `PATCH /records/<id>`                                                                                                                                   |
 | `removeAtoms` (file atom)    | one `findOne` (path lookup) + one `findOne` (extension resolve) + one `DELETE /records/<id>`                                                                |
 | `removeAtoms` (folder atom)  | one `findOne` (path lookup) + one `list` (child check, `perPage=1`) + one `DELETE /records/<id>`                                                            |
 
