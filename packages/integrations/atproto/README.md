@@ -124,16 +124,16 @@ with the underlying records directly.
 
 ## Operation mapping
 
-| Laika operation             | AT Protocol call(s)                                                               |
-| --------------------------- | --------------------------------------------------------------------------------- |
-| `getObject(key)`            | N × parallel `getRecord` (one per registered extension)                           |
-| `createObject(key, …)`      | N × parallel `getRecord` (probe) + 1 × `createRecord`                             |
-| `updateObject(key, …)`      | N × parallel `getRecord` + 1 × `putRecord` with `swapRecord` CAS                  |
-| `createOrUpdateObject`      | N × parallel `getRecord` + 1 × `putRecord`                                        |
-| `createFolder(key)`         | 1 × `getRecord` (probe) + 1 × `putRecord` if missing                              |
-| `removeAtoms([k₁…kₙ])`      | n × parallel `getRecord` (resolve) + **1 × `applyWrites` with N #delete actions** |
-| `listAtomSummaries(folder)` | 2 × `listRecords` with `[rkeyStart, rkeyEnd)` range bound                         |
-| `getCapabilities()`         | (no I/O — static)                                                                 |
+| Laika operation             | AT Protocol call(s)                                                                                                                                                                                                                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getObject(key)`            | N × parallel `getRecord` (one per registered extension)                                                                                                                                                                                                                                  |
+| `createObject(key, …)`      | N × parallel `getRecord` (probe) + 1 × `createRecord`                                                                                                                                                                                                                                    |
+| `updateObject(key, …)`      | N × parallel `getRecord` + 1 × `putRecord` with `swapRecord` CAS                                                                                                                                                                                                                         |
+| `createOrUpdateObject`      | N × parallel `getRecord` + 1 × `putRecord`                                                                                                                                                                                                                                               |
+| `createFolder(key)`         | 1 × `getRecord` (probe) + 1 × `putRecord` if missing                                                                                                                                                                                                                                     |
+| `removeAtoms([k₁…kₙ])`      | n × parallel `getRecord` on file collection (resolve); on file miss: 1 × `getRecord` on folder collection + 1 × `listRecords` child probe; **1 × `applyWrites` with N #delete actions** (files + empty folders combined); non-empty folder → `ForbiddenError`; neither → `NotFoundError` |
+| `listAtomSummaries(folder)` | 2 × `listRecords` with `[rkeyStart, rkeyEnd)` range bound                                                                                                                                                                                                                                |
+| `getCapabilities()`         | (no I/O — static)                                                                                                                                                                                                                                                                        |
 
 ## rkey range scans
 

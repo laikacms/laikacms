@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -404,6 +404,67 @@ describe('AtprotoStorageRepository', () => {
     );
     expect(removed.done).toEqual({ removed: 1, skipped: 1 });
     expect(removed.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('removeAtoms deletes an empty folder key via folderCollection', async () => {
+    const repo = makeRepo();
+    // Create an explicit empty folder (no children).
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'empty-folder' }));
+    // Verify the folder record exists in the store.
+    expect(store.has('com.laikacms.folder:empty-folder')).toBe(true);
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['empty-folder']));
+    expect(result.done).toEqual({ removed: 1, skipped: 0 });
+    expect(result.data).toEqual(['empty-folder']);
+    expect(result.recoverableErrors).toHaveLength(0);
+    // Folder record should be gone.
+    expect(store.has('com.laikacms.folder:empty-folder')).toBe(false);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty folder key', async () => {
+    const repo = makeRepo();
+    // Create folder + a child file inside it.
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'non-empty' }));
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'non-empty/child', content: { body: 'data' } }),
+    );
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['non-empty']));
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.data).toHaveLength(0);
+    expect(result.recoverableErrors).toHaveLength(1);
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+    // The folder record should still exist.
+    expect(store.has('com.laikacms.folder:non-empty')).toBe(true);
+  });
+
+  it('removeAtoms emits NotFoundError for a key that is neither file nor folder', async () => {
+    const repo = makeRepo();
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['does-not-exist']));
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('removeAtoms handles mixed file/empty-folder/non-empty-folder/missing in one call', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'file-to-delete', content: { body: 'x' } }),
+    );
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'empty-dir' }));
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'busy-dir' }));
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'busy-dir/child', content: { body: 'y' } }),
+    );
+
+    const result = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['file-to-delete', 'empty-dir', 'busy-dir', 'ghost']),
+    );
+    // file-to-delete + empty-dir removed; busy-dir (ForbiddenError) + ghost (NotFoundError) skipped.
+    expect(result.done).toEqual({ removed: 2, skipped: 2 });
+    expect(result.data.sort()).toEqual(['empty-dir', 'file-to-delete']);
+    expect(result.recoverableErrors).toHaveLength(2);
+    expect(result.recoverableErrors.some(e => e instanceof ForbiddenError)).toBe(true);
+    expect(result.recoverableErrors.some(e => e instanceof NotFoundError)).toBe(true);
   });
 
   it('listAtomSummaries uses rkey range scan and reconstructs hierarchy', async () => {

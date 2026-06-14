@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   InternalError,
   type LaikaError,
   type LaikaResult,
@@ -439,30 +440,64 @@ export class AtprotoStorageRepository extends StorageRepository {
         }
 
         // ── Round-trip 1: resolve every key to its (collection, rkey) pair.
-        const resolved = yield* Effect.promise(async () => {
-          const out: Array<{ key: string, resolved: { rkey: string } | null }> = [];
+        // For keys that don't resolve as files, probe the folder collection.
+        type ResolvedFile = { kind: 'file', key: string, rkey: string };
+        type ResolvedFolder = { kind: 'folder', key: string, rkey: string };
+        type MissingKey = { kind: 'missing', key: string };
+        type ForbiddenFolder = { kind: 'forbidden', key: string };
+        type Resolution = ResolvedFile | ResolvedFolder | MissingKey | ForbiddenFolder;
+
+        const resolved = yield* Effect.promise(async (): Promise<Resolution[]> => {
+          const out: Resolution[] = [];
           for (const k of cleanKeys) {
-            const r = await this.resolveFile(k);
-            if (r) {
-              const rkey = `${pathToRkey(stripSlashes(this.stripExtension(k)))}.${r.extension}`;
-              out.push({ key: k, resolved: { rkey } });
-            } else {
-              out.push({ key: k, resolved: null });
+            const fileResult = await this.resolveFile(k);
+            if (fileResult) {
+              const rkey = `${pathToRkey(stripSlashes(this.stripExtension(k)))}.${fileResult.extension}`;
+              out.push({ kind: 'file', key: k, rkey });
+              continue;
             }
+            // File miss — probe folder collection.
+            const folderRkey = pathToRkey(stripSlashes(k));
+            const folderResult = await this.dataSource.getRecord<StoredAtomValue>(
+              this.folderCollection,
+              folderRkey,
+            );
+            if (!Result.isSuccess(folderResult) || folderResult.success === null) {
+              // Neither collection has this key.
+              out.push({ kind: 'missing', key: k });
+              continue;
+            }
+            // Folder exists — check whether it has children before deleting.
+            const childProbeResult = await this.dataSource.listRecords<StoredAtomValue>(this.fileCollection, {
+              rkeyStart: `${folderRkey}:`,
+              rkeyEnd: `${folderRkey};`,
+              limit: 1,
+            });
+            const childPage = Result.isSuccess(childProbeResult)
+              ? (childProbeResult.success as { records: AtprotoRecord<StoredAtomValue>[] })
+              : null;
+            if (childPage && childPage.records.length > 0) {
+              out.push({ kind: 'forbidden', key: k });
+              continue;
+            }
+            out.push({ kind: 'folder', key: k, rkey: folderRkey });
           }
           return out;
         });
 
-        const found = resolved.filter(r => r.resolved !== null) as Array<{ key: string, resolved: { rkey: string } }>;
-        const missing = resolved.filter(r => r.resolved === null);
+        const foundFiles = resolved.filter((r): r is ResolvedFile => r.kind === 'file');
+        const foundFolders = resolved.filter((r): r is ResolvedFolder => r.kind === 'folder');
+        const missing = resolved.filter((r): r is MissingKey => r.kind === 'missing');
+        const forbidden = resolved.filter((r): r is ForbiddenFolder => r.kind === 'forbidden');
 
-        // ── Round-trip 2: ONE applyWrites call with N #delete actions.
-        // Atomic across the repo — partial failures roll back.
-        if (found.length > 0) {
-          const writes: ApplyWritesAction[] = found.map(f => ({
+        // ── Round-trip 2: ONE applyWrites call with all #delete actions.
+        // Combine file and empty-folder deletes into a single atomic write.
+        const allDeletes: Array<ResolvedFile | ResolvedFolder> = [...foundFiles, ...foundFolders];
+        if (allDeletes.length > 0) {
+          const writes: ApplyWritesAction[] = allDeletes.map(f => ({
             $type: 'com.atproto.repo.applyWrites#delete',
-            collection: this.fileCollection,
-            rkey: f.resolved.rkey,
+            collection: f.kind === 'file' ? this.fileCollection : this.folderCollection,
+            rkey: f.rkey,
           }));
           const results = yield* liftResult(this.dataSource.applyWrites(writes));
           // applyWrites returns one result per write — surface per-write
@@ -472,18 +507,23 @@ export class AtprotoStorageRepository extends StorageRepository {
             if (r && r.validationStatus && r.validationStatus !== 'valid') {
               yield* emit.recoverableError(
                 new InternalError(
-                  `AT Protocol applyWrites validation failed for ${found[i]!.key}: ${r.validationStatus}`,
+                  `AT Protocol applyWrites validation failed for ${allDeletes[i]!.key}: ${r.validationStatus}`,
                 ),
               );
             }
           }
         }
 
-        for (const f of found) yield* emit.data(f.key);
+        for (const f of allDeletes) yield* emit.data(f.key);
+        for (const fb of forbidden) {
+          yield* emit.recoverableError(
+            new ForbiddenError(`Cannot remove non-empty folder: ${fb.key}`),
+          );
+        }
         for (const m of missing) {
           yield* emit.recoverableError(new NotFoundError(`AT Protocol record not found: ${m.key}`));
         }
-        return { removed: found.length, skipped: skipped0 + missing.length };
+        return { removed: allDeletes.length, skipped: skipped0 + missing.length + forbidden.length };
       })
     );
   }
