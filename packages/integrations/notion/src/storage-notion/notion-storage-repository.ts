@@ -33,12 +33,7 @@ import {
   StorageRepository,
 } from 'laikacms/storage';
 
-import {
-  type NotionBlock,
-  NotionDataSource,
-  type NotionDataSourceOptions,
-  type NotionPageSummary,
-} from './notion-datasource.js';
+import { type NotionBlock, NotionDataSource, type NotionDataSourceOptions } from './notion-datasource.js';
 
 export interface NotionStorageRepositoryOptions extends NotionDataSourceOptions {
   /**
@@ -419,17 +414,21 @@ export class NotionStorageRepository extends StorageRepository {
       }
       const pages = yield* liftResult(this.dataSource.listChildPages(resolved.success));
 
-      // For each direct child page, we need to know if it itself has children
-      // so we can classify it as folder-or-object. The child_page block
-      // exposes `has_children`, but only via blockChildren of the parent —
-      // we already have that data via `listChildPages` which carries it.
-      const summaries: AtomSummary[] = pages.map((page: NotionPageSummary): AtomSummary => {
+      // For each direct child page we must determine whether it is a folder
+      // (has at least one child_page block) or a leaf object. We cannot rely
+      // on `has_children` from the parent's block listing — that field is true
+      // whenever a page has ANY block children (paragraphs, headings, …), not
+      // specifically child_page blocks. Fetch each child's block list and
+      // check explicitly, matching the logic used by `getAtom`.
+      const summaries: AtomSummary[] = [];
+      for (const page of pages) {
         const summaryKey = folderKey === '' ? page.title : `${trimSlashes(folderKey)}/${page.title}`;
-        return {
-          type: page.hasChildren ? 'folder-summary' : 'object-summary',
+        const childBlocks = yield* liftResult(this.dataSource.listBlockChildren(page.id));
+        summaries.push({
+          type: hasChildPages(childBlocks) ? 'folder-summary' : 'object-summary',
           key: summaryKey,
-        };
-      });
+        });
+      }
       const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
       return { summaries: applyPagination(sorted, options.pagination) };
     });
