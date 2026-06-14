@@ -77,8 +77,8 @@ backend:
 | ALL    | `/github/*` | ✓    | Proxies to `https://api.github.com/repos/{owner}/{repo}/*` using an installation token. |
 
 `/github/*` only lets through endpoints that match the same allow-list as Netlify's gateway:
-`git/*`, `contents/*`, `statuses/*`, `compare/*`, and `issues/:n/labels`. Anything else returns
-`403 FORBIDDEN`.
+`git/*`, `contents/*`, `statuses/*`, `compare/*`, `issues/:n/labels`, and `issues/:n/labels/:name`
+(for specific label removal via DELETE). Anything else returns `403 FORBIDDEN`.
 
 For `pulls`, `branches`, `merges`, and `commits` the allow-list uses a `(\/|$|\?)` pattern, so bare
 collection endpoints and query-string variants are also proxied:

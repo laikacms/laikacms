@@ -64,7 +64,7 @@ export const isAllowedGithubPath = (path: string): boolean => {
     /^statuses\//,
     /^compare\//,
     /^commits(\/|$|\?)/,
-    /^issues\/\d+\/labels$/,
+    /^issues\/\d+\/labels(\/[^/]+)?$/,
   ];
   return ALLOWED.some(re => re.test(clean));
 };
