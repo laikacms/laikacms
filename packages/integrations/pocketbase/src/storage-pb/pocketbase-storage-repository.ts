@@ -280,15 +280,25 @@ export class PocketBaseStorageRepository extends StorageRepository {
         const extension = this.resolveExtension(create.key, create.metadata);
         const serialized = yield* Effect.promise(() => this.serialize(extension, create.content));
         if (parent !== '') yield* liftResult(this.ensureFolderChain(parent));
-        yield* liftResult(this.dataSource.create({
+        const record = (yield* liftResult(this.dataSource.create({
           parent,
           name: `${name}.${extension}`,
           path: trimSlashes(create.key),
           type: TYPE_FILE,
           extension,
           content: serialized,
-        }));
-        return yield* LaikaTask.runValue(this.getObject(create.key));
+        }))) as PocketBaseRecord;
+        return {
+          type: 'object',
+          key: trimSlashes(create.key),
+          createdAt: typeof record.created === 'string' ? record.created : undefined,
+          updatedAt: typeof record.updated === 'string' ? record.updated : undefined,
+          content: create.content,
+          metadata: {
+            extension,
+            revisionId: typeof record.updated === 'string' ? record.updated : undefined,
+          },
+        } satisfies StorageObject;
       })
     );
   }
