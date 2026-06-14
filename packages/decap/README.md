@@ -12,12 +12,12 @@ pnpm add @laikacms/decap-integrations
 
 ### Presets
 
-| Export                                            | Purpose                                                                                                                                      |
-| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@laikacms/decap-integrations/embedded`           | `createEmbeddedLaika(options)` — One-call Laika+Decap setup for Node/Astro/Next/Hono using `FileSystemStorageRepository`                     |
-| `@laikacms/decap-integrations/workers`            | `createWorkersLaika(options)` — Cloudflare Workers preset using `R2StorageRepository` + `R2AssetsRepository`                                 |
-| `@laikacms/decap-integrations/custom`             | `createCustomLaika(options)` — Storage-agnostic preset; accepts any `StorageRepository`                                                      |
-| `@laikacms/decap-integrations/decap-config-types` | `ExtractFieldsType<T>`, `ExtractCollectionType<T>` — TypeScript utilities to derive typed frontmatter from a const-asserted Decap CMS config |
+| Export                                            | Purpose                                                                                                                                                                                                  |
+| ------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@laikacms/decap-integrations/embedded`           | `createEmbeddedLaika(options)` — One-call Laika+Decap setup for Node/Astro/Next/Hono using `FileSystemStorageRepository`                                                                                 |
+| `@laikacms/decap-integrations/workers`            | `createWorkersLaika(options)` — Cloudflare Workers preset using `R2StorageRepository` + `ContentBaseAssetsRepository` (native R2 asset storage via `R2AssetsRepository` is planned for a future release) |
+| `@laikacms/decap-integrations/custom`             | `createCustomLaika(options)` — Storage-agnostic preset; accepts any `StorageRepository`                                                                                                                  |
+| `@laikacms/decap-integrations/decap-config-types` | `ExtractFieldsType<T>`, `ExtractCollectionType<T>` — TypeScript utilities to derive typed frontmatter from a const-asserted Decap CMS config                                                             |
 
 #### `decap-config-types` usage
 
