@@ -91,11 +91,11 @@ const splitPath = (key: string): { parent: string, name: string } => {
  *    Atlas Data API shims, in-memory mocks, and the native driver all
  *    satisfy it.
  *
- *  - **Single-call `deleteMany` for multi-key removal.** `removeAtoms(N)`
- *    is **one** round-trip: a `findOne` per key is not needed because
- *    `deleteMany({_id: {$in: [...]}})` already short-circuits on missing
- *    documents. The repository resolves keys → ids once via a batch
- *    aggregate so we can report which keys were skipped versus removed.
+ *  - **Two round-trips for multi-key removal.** `removeAtoms(N)` issues N
+ *    parallel `findOne` calls (one per key, fanned out via `Promise.all`) to
+ *    resolve each path to its `_id` and detect missing keys, then issues a
+ *    single `deleteMany({_id: {$in: [...]}})` to remove the found documents.
+ *    Two observable round-trips total; no aggregate is involved.
  */
 export class MongoStorageRepository extends StorageRepository {
   private readonly dataSource: MongoDataSource;
