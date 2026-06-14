@@ -79,14 +79,15 @@ The data source supports both: `auth.anonKey` populates `apikey` and the default
 
 ### How operations map
 
-| Operation                    | PostgREST call                                                  |
-| ---------------------------- | --------------------------------------------------------------- |
-| `getObject('hello')`         | one GET with `or=(Name.eq.hello.md, …)` for the extension probe |
-| `getFolder('notes')`         | one GET with `?Type=eq.folder&Path=eq.notes`                    |
-| `listAtomSummaries('notes')` | one GET with `?Parent=eq.notes`                                 |
-| `createObject`               | one POST per file + one per missing ancestor folder             |
-| `updateObject`               | one PATCH with `?Path=eq.<key>`                                 |
-| `removeAtoms(N keys)`        | resolution + **one** DELETE with `?Path=in.(…)`                 |
+| Operation                    | PostgREST call                                                                                 |
+| ---------------------------- | ---------------------------------------------------------------------------------------------- |
+| `getObject('hello')`         | one GET with `or=(Name.eq.hello.md, …)` for the extension probe                                |
+| `getFolder('notes')`         | one GET with `?Type=eq.folder&Path=eq.notes`                                                   |
+| `listAtomSummaries('')`      | one GET with `?Parent=eq.` (root folder — no existence check needed)                           |
+| `listAtomSummaries('notes')` | **two GETs**: `?Type=eq.folder&Path=eq.notes` (existence check) + `?Parent=eq.notes` (listing) |
+| `createObject`               | one POST per file + one per missing ancestor folder                                            |
+| `updateObject`               | one PATCH with `?Path=eq.<key>`                                                                |
+| `removeAtoms(N keys)`        | resolution + **one** DELETE with `?Path=in.(…)`                                                |
 
 ### Trade-offs
 
