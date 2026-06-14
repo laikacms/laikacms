@@ -425,4 +425,54 @@ describe('PocketBaseStorageRepository folder semantics', () => {
   });
 });
 
+describe('PocketBaseStorageRepository removeAtoms round-trip count (LCMS-121)', () => {
+  it('makes 2 findOne + 1 DELETE per file atom and 1 findOne + 1 list + 1 DELETE per folder atom', async () => {
+    const repo = makeRepo();
+
+    // Seed: one empty folder and one file at the root.
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'docs' }));
+    await LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'readme', content: { body: 'hi' } }));
+
+    // Count HTTP calls made by removeAtoms.
+    let getListCalls = 0;
+    let deleteCalls = 0;
+
+    const instrumentedFetch: typeof fetch = async (input, init) => {
+      const url = new URL(typeof input === 'string' ? input : input.toString());
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (method === 'GET') getListCalls += 1;
+      if (method === 'DELETE') deleteCalls += 1;
+      return mock.fetch(input, init);
+    };
+
+    const instrumentedRepo = new PocketBaseStorageRepository({
+      url: URL_BASE,
+      auth: { token: 'pb-test-jwt' },
+      fetch: instrumentedFetch,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+    });
+
+    // Remove one file atom ('readme') + one folder atom ('docs').
+    const result = await LaikaStream.runPromiseCollect(
+      instrumentedRepo.removeAtoms(['readme', 'docs']),
+    );
+    expect(result.done).toEqual({ removed: 2, skipped: 0 });
+
+    // file 'readme': findOne(path=readme) → not a folder → findExistingFile (findOne with extension candidates) → DELETE
+    //   = 2 GET + 1 DELETE
+    // folder 'docs': findOne(path=docs) → folder → list(parent=docs, perPage=1) → DELETE
+    //   = 2 GET + 1 DELETE
+    // total: 4 GET, 2 DELETE
+    expect(getListCalls).toBe(4);
+    expect(deleteCalls).toBe(2);
+  });
+});
+
 runStorageRepositoryContract(pocketbaseContractCase);
