@@ -43,14 +43,14 @@ repository at it.
 
 ### How operations map to PocketBase calls
 
-| Operation                    | PocketBase call                                                                                        |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `getObject('hello')`         | one `findOne` — `filter=type="file" && parent="" && (name="hello.md" \|\| name="hello.json" \|\| ...)` |
-| `getFolder('notes')`         | one `findOne` — `filter=type="folder" && path="notes"`                                                 |
-| `listAtomSummaries('notes')` | one filtered list — `filter=parent="notes"`                                                            |
-| `createObject`               | one `POST /records` per file + one per ancestor folder                                                 |
-| `updateObject`               | one `PATCH /records/<id>`                                                                              |
-| `removeAtoms`                | one `DELETE /records/<id>` per atom                                                                    |
+| Operation                    | PocketBase call                                                                                                                                            |
+| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getObject('hello')`         | one `findOne` — `filter=type="file" && parent="" && (name="hello.md" \|\| name="hello.json" \|\| ...)`                                                     |
+| `getFolder('notes')`         | one `findOne` — `filter=type="folder" && path="notes"`                                                                                                     |
+| `listAtomSummaries('notes')` | **non-root:** one `findOne` (existence check, `filter=type="folder" && path="notes"`) + one list (`filter=parent="notes"`); **root (`''`):** one list only |
+| `createObject`               | one `POST /records` per file + one per ancestor folder                                                                                                     |
+| `updateObject`               | one `PATCH /records/<id>`                                                                                                                                  |
+| `removeAtoms`                | one `DELETE /records/<id>` per atom                                                                                                                        |
 
 ### The filter syntax
 

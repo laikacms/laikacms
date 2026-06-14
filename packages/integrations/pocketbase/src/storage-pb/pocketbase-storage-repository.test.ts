@@ -318,6 +318,65 @@ describe('PocketBaseStorageRepository CRUD', () => {
   });
 });
 
+describe('listAtomSummaries HTTP round-trip count (LCMS-120)', () => {
+  it('root folder issues exactly 1 HTTP call (list only)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'a', content: { body: 'x' } }));
+
+    let callCount = 0;
+    const countingFetch: typeof fetch = (input, init) => {
+      callCount += 1;
+      return mock.fetch(input, init);
+    };
+    const countingRepo = new PocketBaseStorageRepository({
+      url: URL_BASE,
+      auth: { token: 'pb-test-jwt' },
+      fetch: countingFetch,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+    });
+
+    await LaikaStream.runPromiseCollect(countingRepo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }));
+    expect(callCount).toBe(1);
+  });
+
+  it('non-root folder issues exactly 2 HTTP calls (findOne existence check + list)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'notes' }));
+    await LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'notes/a', content: { body: 'x' } }));
+
+    let callCount = 0;
+    const countingFetch: typeof fetch = (input, init) => {
+      callCount += 1;
+      return mock.fetch(input, init);
+    };
+    const countingRepo = new PocketBaseStorageRepository({
+      url: URL_BASE,
+      auth: { token: 'pb-test-jwt' },
+      fetch: countingFetch,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+    });
+
+    await LaikaStream.runPromiseCollect(
+      countingRepo.listAtomSummaries('notes', { pagination: { offset: 0, limit: 100 } }),
+    );
+    expect(callCount).toBe(2);
+  });
+});
+
 describe('PocketBaseStorageRepository listing', () => {
   it('classifies records correctly and sorts numerically', async () => {
     const repo = makeRepo();

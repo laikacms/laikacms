@@ -80,7 +80,10 @@ const TYPE_FOLDER = 'folder';
  *     extension   on-server file extension                    (files only)
  *     content     serialized object content                   (files only)
  *
- * Listing a folder is one filtered list: `filter=parent="folder/path"`.
+ * Listing a folder is two calls for non-root keys: one `findOne` to verify
+ * the folder exists (`filter=type="folder" && path="folder/path"`), then one
+ * list (`filter=parent="folder/path"`). Root listing (`folderKey === ""`) skips
+ * the existence check and does a single list call.
  * Finding an extension-free key uses PocketBase's `||` to disjunct N
  * candidate names — `filter=parent="..." && (name="k.json" || name="k.md")`
  * — so the registered serializer extensions get checked in one round-trip.
