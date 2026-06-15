@@ -83,6 +83,11 @@
       "import": "./dist/domain/storage/testing/index.js",
       "default": "./dist/domain/storage/testing/index.js"
     },
+    "./assets/testing": {
+      "types": "./dist/domain/assets/testing/index.d.ts",
+      "import": "./dist/domain/assets/testing/index.js",
+      "default": "./dist/domain/assets/testing/index.js"
+    },
     "./assets-contentbase": {
       "types": "./dist/impl/assets-contentbase/index.d.ts",
       "import": "./dist/impl/assets-contentbase/index.js",
