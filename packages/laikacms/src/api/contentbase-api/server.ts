@@ -12,13 +12,20 @@ import {
   decodeCollectionJsonApi,
 } from './jsonapi.js';
 
+export interface ContentBaseApiOptions {
+  repo: ContentBaseSettingsProvider;
+  onError?(error: unknown): void;
+}
+
 // JSON:API error response
 function respondError(
   c: Context,
   result: LaikaResult<unknown>,
   status: 400 | 404 | 500 = 400,
+  onError?: ((error: unknown) => void) | undefined,
 ) {
   if (Result.isFailure(result)) {
+    onError?.(result.failure);
     return c.json(
       {
         errors: [
@@ -51,9 +58,10 @@ function respondResource<T extends CollectionSettings>(
   c: Context,
   result: LaikaResult<T>,
   transformer: (item: T) => CollectionJsonApi,
+  onError?: ((error: unknown) => void) | undefined,
 ) {
   if (Result.isFailure(result)) {
-    return respondError(c, result);
+    return respondError(c, result, 400, onError);
   }
   return c.json({ data: transformer(result.success) });
 }
@@ -80,8 +88,15 @@ function respondCollection<T extends CollectionSettings>(
  * before exposing it to an untrusted network — otherwise anyone who can reach
  * `fetch` can read, mutate, and delete collection settings.
  */
-export function buildJsonApi(repo: ContentBaseSettingsProvider) {
+export function buildJsonApi(options: ContentBaseApiOptions) {
+  const { repo, onError } = options;
   const app = new Hono();
+
+  // Ensure all responses carry Cache-Control: no-store
+  app.use('*', async (c, next) => {
+    await next();
+    c.res.headers.set('Cache-Control', 'no-store');
+  });
 
   // Global error handler
   app.onError((err, c) => {
@@ -90,6 +105,8 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
     console.error('Error message:', err.message);
     console.error('Error stack:', err.stack);
     console.error('============================');
+
+    onError?.(err);
 
     // Handle AWS SDK errors
     if (err.name === 'NetworkingError' || err.name === 'TimeoutError') {
@@ -114,7 +131,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
   app.get('/collections', async c => {
     const settings = await repo.getSettings();
     if (Result.isFailure(settings)) {
-      return respondError(c, settings);
+      return respondError(c, settings, 400, onError);
     }
     const collections = settings.success.collections ?? {};
     const settingsList = Object.values(collections);
@@ -125,7 +142,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
     const key = c.req.param('key');
     const allSettings = await repo.getSettings();
     if (Result.isFailure(allSettings)) {
-      return respondError(c, allSettings);
+      return respondError(c, allSettings, 400, onError);
     }
     const collections = allSettings.success.collections ?? {};
     const collectionSettings = collections[key];
@@ -134,22 +151,23 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
         c,
         Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
         404,
+        onError,
       );
     }
     if (collectionSettings.type === 'document') {
       const docSettingsResult = await repo.getDocumentCollectionSettings(key);
       if (Result.isFailure(docSettingsResult)) {
-        return respondError(c, docSettingsResult);
+        return respondError(c, docSettingsResult, 400, onError);
       }
-      return respondResource(c, docSettingsResult, collectionToJsonApi);
+      return respondResource(c, docSettingsResult, collectionToJsonApi, onError);
     } else if (collectionSettings.type === 'media') {
       const mediaSettingsResult = await repo.getMediaCollectionSettings(key);
       if (Result.isFailure(mediaSettingsResult)) {
-        return respondError(c, mediaSettingsResult);
+        return respondError(c, mediaSettingsResult, 400, onError);
       }
-      return respondResource(c, mediaSettingsResult, collectionToJsonApi);
+      return respondResource(c, mediaSettingsResult, collectionToJsonApi, onError);
     }
-    return respondError(c, Result.fail(new NotFoundError(`Unknown collection type`)), 400);
+    return respondError(c, Result.fail(new NotFoundError(`Unknown collection type`)), 400, onError);
   });
 
   app.post('/collections', async c => {
@@ -161,18 +179,19 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
       if (body.type === 'document') {
         const result = await repo.putDocumentCollectionSettings(body.key, body);
         if (Result.isFailure(result)) {
-          return respondError(c, result);
+          return respondError(c, result, 400, onError);
         }
-        return c.json({ data: collectionToJsonApi(body) });
+        return c.json({ data: collectionToJsonApi(body) }, 201);
       } else if (body.type === 'media') {
         const result = await repo.putMediaCollectionSettings(body.key, body);
         if (Result.isFailure(result)) {
-          return respondError(c, result);
+          return respondError(c, result, 400, onError);
         }
-        return c.json({ data: collectionToJsonApi(body) });
+        return c.json({ data: collectionToJsonApi(body) }, 201);
       }
-      return respondError(c, Result.fail(new NotFoundError(`Unknown collection type`)), 400);
+      return respondError(c, Result.fail(new NotFoundError(`Unknown collection type`)), 400, onError);
     } catch (error) {
+      onError?.(error);
       return c.json({
         errors: [{
           status: '400',
@@ -196,18 +215,19 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
       if (bodyWithKey.type === 'document') {
         const result = await repo.putDocumentCollectionSettings(key, bodyWithKey);
         if (Result.isFailure(result)) {
-          return respondError(c, result);
+          return respondError(c, result, 400, onError);
         }
         return c.json({ data: collectionToJsonApi(bodyWithKey) });
       } else if (bodyWithKey.type === 'media') {
         const result = await repo.putMediaCollectionSettings(key, bodyWithKey);
         if (Result.isFailure(result)) {
-          return respondError(c, result);
+          return respondError(c, result, 400, onError);
         }
         return c.json({ data: collectionToJsonApi(bodyWithKey) });
       }
-      return respondError(c, Result.fail(new NotFoundError(`Unknown collection type`)), 400);
+      return respondError(c, Result.fail(new NotFoundError(`Unknown collection type`)), 400, onError);
     } catch (error) {
+      onError?.(error);
       return c.json({
         errors: [{
           status: '400',
@@ -222,7 +242,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
     const key = c.req.param('key');
     const allSettings = await repo.getSettings();
     if (Result.isFailure(allSettings)) {
-      return respondError(c, allSettings);
+      return respondError(c, allSettings, 400, onError);
     }
     const collections = allSettings.success.collections ?? {};
     const collectionSettings = collections[key];
@@ -231,6 +251,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
         c,
         Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
         404,
+        onError,
       );
     }
     // Remove collection settings - create a new object without the key
@@ -241,7 +262,7 @@ export function buildJsonApi(repo: ContentBaseSettingsProvider) {
     };
     const result = await repo.putSettings(updatedSettings);
     if (Result.isFailure(result)) {
-      return respondError(c, result);
+      return respondError(c, result, 400, onError);
     }
     return c.body(null, 204);
   });
