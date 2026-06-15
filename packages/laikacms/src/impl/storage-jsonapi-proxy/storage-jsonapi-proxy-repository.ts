@@ -288,7 +288,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
             emitted += 1;
           }
         }
-        return { total: emitted };
+        return { total: collection.meta?.page?.total ?? emitted };
       })
     );
   }
@@ -321,7 +321,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
             emitted += 1;
           }
         }
-        return { total: emitted };
+        return { total: collection.meta?.page?.total ?? emitted };
       })
     );
   }

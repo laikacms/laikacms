@@ -260,7 +260,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
           yield* emit.data(decoded.success);
           emitted += 1;
         }
-        return { total: emitted };
+        return { total: collection.meta?.page?.total ?? emitted };
       })
     );
   }
@@ -311,7 +311,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
           yield* emit.data(decoded.success);
           emitted += 1;
         }
-        return { total: emitted };
+        return { total: collection.meta?.page?.total ?? emitted };
       })
     );
   }
@@ -531,7 +531,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
           yield* emit.data(decoded.success);
           emitted += 1;
         }
-        return { total: emitted };
+        return { total: collection.meta?.page?.total ?? emitted };
       })
     );
   }

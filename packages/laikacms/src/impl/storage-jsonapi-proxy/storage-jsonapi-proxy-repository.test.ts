@@ -76,6 +76,69 @@ describe('StorageJsonApiProxyRepository.listAtoms', () => {
     expect(collected.data).toEqual([]);
     expect(collected.recoverableErrors).toEqual([]);
   });
+
+  it('uses meta.page.total for Done.total instead of emitted count', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: 'object',
+              id: 'notes/a',
+              attributes: {
+                type: 'object',
+                createdAt: '2026-01-01T00:00:00Z',
+                updatedAt: '2026-01-01T00:00:00Z',
+                content: {},
+              },
+            },
+          ],
+          meta: { page: { total: 150 } },
+        })
+      ),
+    );
+
+    const proxy = new StorageJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(
+      proxy.listAtoms('root', { depth: 1, pagination: { offset: 0, limit: 10 } }),
+    );
+
+    expect(collected.data).toHaveLength(1);
+    expect(collected.done.total).toBe(150);
+  });
+});
+
+describe('StorageJsonApiProxyRepository.listAtomSummaries', () => {
+  it('uses meta.page.total for Done.total instead of emitted count', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: 'object-summary',
+              id: 'notes/a',
+              attributes: {
+                type: 'object-summary',
+                createdAt: '2026-01-01T00:00:00Z',
+                updatedAt: '2026-01-01T00:00:00Z',
+              },
+            },
+          ],
+          meta: { page: { total: 150 } },
+        })
+      ),
+    );
+
+    const proxy = new StorageJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(
+      proxy.listAtomSummaries('root', { depth: 1, pagination: { offset: 0, limit: 10 } }),
+    );
+
+    expect(collected.data).toHaveLength(1);
+    expect(collected.done.total).toBe(150);
+  });
 });
 
 describe('StorageJsonApiProxyRepository.createObject', () => {

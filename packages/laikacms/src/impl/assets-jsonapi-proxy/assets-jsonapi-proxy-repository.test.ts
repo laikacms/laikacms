@@ -80,3 +80,34 @@ describe('AssetsJsonApiProxyRepository.deleteAssets', () => {
     expect(collected.recoverableErrors[0]!.message).toContain('thumbnail missed');
   });
 });
+
+describe('AssetsJsonApiProxyRepository.listResources', () => {
+  it('uses meta.page.total for Done.total instead of emitted count', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            {
+              type: 'asset',
+              id: 'images/a.png',
+              attributes: {
+                type: 'asset',
+                content: {},
+              },
+            },
+          ],
+          meta: { page: { total: 150 } },
+        })
+      ),
+    );
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(
+      proxy.listResources('images/', { depth: 1 }),
+    );
+
+    expect(collected.data).toHaveLength(1);
+    expect(collected.done.total).toBe(150);
+  });
+});
