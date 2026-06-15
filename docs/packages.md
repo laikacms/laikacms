@@ -51,7 +51,8 @@ utilities. Imported via subpath exports.
 
 | Subpath                    | Description                                                   |
 | -------------------------- | ------------------------------------------------------------- |
-| `laikacms/storage/testing` | Contract test harness for `StorageRepository` implementations |
+| `laikacms/documents/testing` | Contract test harness for `DocumentsRepository` implementations |
+| `laikacms/storage/testing`   | Contract test harness for `StorageRepository` implementations   |
 
 ### Serializers (`packages/laikacms/src/serializers/`)
 
