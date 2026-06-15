@@ -118,15 +118,17 @@ The `(Type, Parent, Name)` UNIQUE makes extension-free key resolution
 | Laika operation             | libSQL call(s)                                                                                          |
 | --------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `getObject(key)`            | 1 × `execute` SELECT                                                                                    |
-| `createObject(key, …)`      | 1 × `execute` SELECT (probe) + 1 × `execute` INSERT + 1 × `execute` SELECT (refetch via `getObject`)   |
-| `updateObject(key, …)`      | 1 × `execute` SELECT (read row) + 1 × `execute` UPDATE + 1 × `execute` SELECT (refetch via `getObject`)|
-| `createOrUpdateObject`      | 1 × `execute` SELECT + 1 × `execute` `INSERT … ON CONFLICT DO UPDATE` + 1 × `execute` SELECT (refetch) |
-| `createFolder(key)`         | 1 × `execute` `INSERT … ON CONFLICT DO NOTHING` + 1 × `execute` SELECT (refetch via `getFolder`)       |
-| `removeAtoms([k₁…kₙ])`      | n × `execute` SELECT (resolve) + **1 × `batch` with N conditional DELETE steps**                       |
+| `createObject(key, …)`      | 1 × `execute` SELECT (probe) + 1 × `execute` INSERT + 1 × `execute` SELECT (refetch via `getObject`)    |
+| `updateObject(key, …)`      | 1 × `execute` SELECT (read row) + 1 × `execute` UPDATE + 1 × `execute` SELECT (refetch via `getObject`) |
+| `createOrUpdateObject`      | 1 × `execute` SELECT + 1 × `execute` `INSERT … ON CONFLICT DO UPDATE` + 1 × `execute` SELECT (refetch)  |
+| `createFolder(key)`         | 1 × `execute` `INSERT … ON CONFLICT DO NOTHING` + 1 × `execute` SELECT (refetch via `getFolder`)        |
+| `removeAtoms([k₁…kₙ])`      | n × `execute` SELECT (resolve) + **1 × `batch` with N conditional DELETE steps**                        |
 | `listAtomSummaries(folder)` | 1 × `execute` SELECT WHERE Parent = ?                                                                   |
 | `getCapabilities()`         | (no I/O — static)                                                                                       |
 
-> The trailing refetch SELECT on write operations (`createObject`, `updateObject`, `createOrUpdateObject`, `createFolder`) returns the canonical stored form — the same shape `getObject`/`getFolder` would return — rather than constructing a response from local variables.
+> The trailing refetch SELECT on write operations (`createObject`, `updateObject`,
+> `createOrUpdateObject`, `createFolder`) returns the canonical stored form — the same shape
+> `getObject`/`getFolder` would return — rather than constructing a response from local variables.
 
 ## Auth
 
@@ -148,9 +150,9 @@ For self-hosted `sqld` without auth, omit the `auth` block. Otherwise the token 
 
 - **No embedded replica support.** This package drives `LibSqlDataSource`, which speaks only the
   Turso HTTP pipeline protocol (`POST /v2/pipeline` with typed `execute`/`batch` requests over
-  `fetch`). libSQL's embedded-replica feature — where `@libsql/client` keeps a local SQLite file
-  and asynchronously syncs against the upstream — requires the native `@libsql/client` call shape,
-  not the HTTP wire format. To add embedded-replica support you would need to replace
+  `fetch`). libSQL's embedded-replica feature — where `@libsql/client` keeps a local SQLite file and
+  asynchronously syncs against the upstream — requires the native `@libsql/client` call shape, not
+  the HTTP wire format. To add embedded-replica support you would need to replace
   `LibSqlDataSource.execute` / `LibSqlDataSource.batch` with a wrapper around an embedded
   `@libsql/client` instance; that is not provided in v1.
 - **`bigint`s are returned as strings.** libSQL serialises integers as string values to preserve
