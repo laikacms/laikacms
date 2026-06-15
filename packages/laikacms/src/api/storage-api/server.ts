@@ -72,13 +72,14 @@ function respondResourceWithConverter<T, R extends JsonApiResource>(
   converter: (data: T) => R,
   basePath: string,
   recoverableErrors?: ReadonlyArray<LaikaError>,
+  status: number = 200,
 ) {
   if (Result.isFailure(result)) return respondError(result);
   const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
   return json({
     data: withSelfLink(converter(result.success), basePath),
     ...(warnings ? { meta: { warnings } } : {}),
-  });
+  }, status);
 }
 
 function respondCollectionWithConverter<T, R extends JsonApiResource>(
@@ -427,6 +428,7 @@ export function buildJsonApi(options: StorageApiOptions) {
           storageObjectToJsonApi,
           basePath,
           result.success.recoverableErrors,
+          201,
         );
       }
 

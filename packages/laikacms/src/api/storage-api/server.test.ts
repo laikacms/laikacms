@@ -101,7 +101,7 @@ describe('storage-api meta.warnings', () => {
         }),
       }),
     );
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(201);
 
     const body = await res.json() as {
       data: { id: string },
