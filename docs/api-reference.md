@@ -111,7 +111,6 @@ List all atoms (objects and folders) under the given key prefix. Returns full co
       "attributes": {
         "type": "object",
         "content": {
-          "title": "Hello World",
           "body": "This is my first post."
         },
         "createdAt": "2024-01-15T10:30:00Z",
@@ -222,13 +221,16 @@ Content-Type: application/vnd.api+json
     "id": "posts/hello-world",
     "attributes": {
       "content": {
-        "title": "Hello World",
         "body": "This is my first post."
       }
     }
   }
 }
 ```
+
+> **Note:** When using `rawSerializer` (the default in the Getting Started guide), only the `body`
+> field is persisted. Passing any other fields (e.g. `title`) will throw an error at write time. Use
+> `jsonSerializer` if you need to store multi-field content.
 
 | Field                     | Type       | Required | Description                               |
 | ------------------------- | ---------- | -------- | ----------------------------------------- |
@@ -246,7 +248,6 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "object",
       "content": {
-        "title": "Hello World",
         "body": "This is my first post."
       },
       "createdAt": "2024-01-15T10:30:00Z",
@@ -284,7 +285,6 @@ Content-Type: application/vnd.api+json
     "id": "posts/hello-world",
     "attributes": {
       "content": {
-        "title": "Hello World (Updated)",
         "body": "Updated content."
       }
     }
@@ -302,7 +302,6 @@ Content-Type: application/vnd.api+json
     "attributes": {
       "type": "object",
       "content": {
-        "title": "Hello World (Updated)",
         "body": "Updated content."
       },
       "createdAt": "2024-01-15T10:30:00Z",

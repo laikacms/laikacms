@@ -34,11 +34,26 @@ describe('rawSerializer', () => {
     expect(parsed).toEqual(original);
   });
 
-  it('drops non-body fields on serialization', async () => {
-    const out = await rawSerializer.serializeDocumentFileContents(
-      { body: 'kept', title: 'dropped' },
-      schema,
+  it('throws when content has fields beyond body', async () => {
+    await expect(
+      rawSerializer.serializeDocumentFileContents({ body: 'kept', title: 'dropped' }, schema),
+    ).rejects.toThrow(
+      "rawSerializer only persists the 'body' field; fields [title] would be silently dropped",
     );
-    expect(out).toBe('kept');
+  });
+
+  it('throws listing all extra fields in the error message', async () => {
+    await expect(
+      rawSerializer.serializeDocumentFileContents(
+        { body: 'text', title: 'Hello', tags: ['a'] },
+        schema,
+      ),
+    ).rejects.toThrow('fields [title, tags]');
+  });
+
+  it('throws even when body is absent and other fields are present', async () => {
+    await expect(
+      rawSerializer.serializeDocumentFileContents({ title: 'Only title' }, schema),
+    ).rejects.toThrow("rawSerializer only persists the 'body' field");
   });
 });

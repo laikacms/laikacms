@@ -19,6 +19,10 @@ const api = buildJsonApi({ repo });
 export default { fetch: api.fetch };
 ```
 
+> **Note:** `rawSerializer` stores only the `body` field of each content object as plain text.
+> Passing any other fields (e.g. `title`, `tags`) will throw an error at write time to prevent
+> silent data loss. If you need to persist multi-field content, use `jsonSerializer` instead.
+
 ## Cloudflare Workers
 
 ```typescript
