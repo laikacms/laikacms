@@ -124,22 +124,26 @@ You should receive a JSON:API response describing the available endpoints.
 
 ### 4a. Install the backend
 
+> **Note:** `@laikacms/decap-integrations` is not yet published to npm. It is a rename of the
+> currently published `@laikacms/decap` package. Use `@laikacms/decap` until the renamed package
+> appears on the registry.
+
 ```bash
 # npm
-npm install @laikacms/decap-integrations decap-cms-app
+npm install @laikacms/decap decap-cms-app
 
 # pnpm
-pnpm add @laikacms/decap-integrations decap-cms-app
+pnpm add @laikacms/decap decap-cms-app
 ```
 
-> The `laika` backend lives at the `@laikacms/decap-integrations/decap-cms-backend-laika` subpath
-> export. There is no separate `@laikacms/decap-cms-backend-laika` package on npm.
+> The `laika` backend lives at the `@laikacms/decap/decap-cms-backend-laika` subpath export. There
+> is no separate `@laikacms/decap-cms-backend-laika` package on npm.
 
 ### 4b. Register the backend
 
 ```typescript
 // admin/index.ts (or admin/index.js)
-import { createLaikaBackend } from '@laikacms/decap-integrations/decap-cms-backend-laika';
+import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 import CMS from 'decap-cms-app';
 
 const LaikaBackend = createLaikaBackend({
