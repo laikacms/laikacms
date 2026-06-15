@@ -59,6 +59,7 @@ export class FileSystemStorageRepository extends StorageRepository {
     private readonly defaultFileExtension: string,
     private readonly ignoreList: string[] = [
       '**/.keep',
+      '**/.gitkeep',
       '**/.DS_Store',
       '**/Thumbs.db',
       '**/desktop.ini',

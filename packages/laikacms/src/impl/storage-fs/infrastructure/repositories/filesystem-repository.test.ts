@@ -53,6 +53,51 @@ describe('FileSystemStorageRepository natural ordering', () => {
   });
 });
 
+describe('FileSystemStorageRepository ignoreList', () => {
+  it('does not surface .keep files in listAtomSummaries', async () => {
+    await fs.writeFile(path.join(tmpDir, '.keep'), '');
+    await fs.writeFile(path.join(tmpDir, 'real.md'), '');
+
+    const repo = makeRepo();
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+    );
+
+    expect(collected.data.map(s => s.key)).toEqual(['real']);
+  });
+
+  it('does not surface .gitkeep files in listAtomSummaries', async () => {
+    await fs.writeFile(path.join(tmpDir, '.gitkeep'), '');
+    await fs.writeFile(path.join(tmpDir, 'real.md'), '');
+
+    const repo = makeRepo();
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+    );
+
+    expect(collected.data.map(s => s.key)).toEqual(['real']);
+  });
+
+  it('does not surface nested .gitkeep files in listAtomSummaries', async () => {
+    await fs.mkdir(path.join(tmpDir, 'subfolder'));
+    await fs.writeFile(path.join(tmpDir, 'subfolder', '.gitkeep'), '');
+    await fs.writeFile(path.join(tmpDir, 'real.md'), '');
+
+    const repo = makeRepo();
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+    );
+
+    expect(collected.data.map(s => s.key)).toEqual(['real', 'subfolder']);
+
+    const nestedCollected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('subfolder', { pagination: { offset: 0, limit: 100 } }),
+    );
+
+    expect(nestedCollected.data).toEqual([]);
+  });
+});
+
 describe('FileSystemStorageRepository listing a missing folder', () => {
   it('listAtomSummaries yields no data and a NotFoundError as a recoverable error', async () => {
     const repo = makeRepo();
