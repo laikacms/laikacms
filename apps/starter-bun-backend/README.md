@@ -17,7 +17,7 @@ Use this starter when you want:
 - Bun ≥ 1.1 (you provide it)
 - `laikacms` — FileSystem storage + ContentBase document model
 - `@laikacms/decap-integrations/embedded` — `createEmbeddedLaika` + `minimalBlogConfig`
-- Decap CMS shell served from `src/admin/index.html`
+- Decap CMS shell served from `public/admin/index.html`
 
 ## Run
 
@@ -55,8 +55,9 @@ apps/starter-bun-backend/
 │       └── hello-world.md
 ├── src/
 │   ├── server.ts                  # Bun.serve() entry
-│   ├── lib/
-│   │   └── laika.ts               # createEmbeddedLaika instance
+│   └── lib/
+│       └── laika.ts               # createEmbeddedLaika instance
+├── public/
 │   └── admin/
 │       └── index.html             # Decap CMS shell
 └── tsconfig.json

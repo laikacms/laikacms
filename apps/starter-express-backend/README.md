@@ -55,9 +55,10 @@ apps/starter-express-backend/
 │       └── hello-world.md
 ├── src/
 │   ├── server.ts                       # Express app + routes
-│   ├── lib/
-│   │   ├── laika.ts                    # createEmbeddedLaika
-│   │   └── express-fetch-adapter.ts    # the bridge
+│   └── lib/
+│       ├── laika.ts                    # createEmbeddedLaika
+│       └── express-fetch-adapter.ts    # the bridge
+├── public/
 │   └── admin/
 │       └── index.html                  # Decap CMS shell
 └── tsconfig.json

@@ -45,9 +45,10 @@ apps/starter-fastify-backend/
 ├── content/posts/hello-world.md
 ├── src/
 │   ├── server.ts                       # Fastify app + routes
-│   ├── lib/
-│   │   ├── laika.ts                    # createEmbeddedLaika
-│   │   └── fastify-fetch-adapter.ts    # req/reply ↔ Request/Response
+│   └── lib/
+│       ├── laika.ts                    # createEmbeddedLaika
+│       └── fastify-fetch-adapter.ts    # req/reply ↔ Request/Response
+├── public/
 │   └── admin/index.html                # Decap CMS shell
 └── tsconfig.json
 ```
