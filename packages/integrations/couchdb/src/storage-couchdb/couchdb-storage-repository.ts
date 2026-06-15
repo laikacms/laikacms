@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   InternalError,
   InvalidData,
   type LaikaError,
@@ -89,12 +90,13 @@ const splitPath = (key: string): { parent: string, name: string } => {
  *    The repository surfaces 409 as `EntryAlreadyExistsError` on create and
  *    as a recoverable conflict in `removeAtoms`.
  *
- *  - **`POST /_bulk_docs` for multi-key writes.** `removeAtoms(N)` is two
- *    round-trips regardless of N: one `POST /_find` to resolve every key's
- *    `(_id, _rev)` pair, then one `POST /_bulk_docs` with all `_deleted: true`
- *    markers. The bulk endpoint reports per-doc success / conflict — so
- *    `removed` and `skipped` come from inspecting the response array, not
- *    just the HTTP status.
+ *  - **`POST /_bulk_docs` for multi-key writes.** `removeAtoms(N)` probes
+ *    keys first as file docs (one `POST /_find`), then probes any remaining
+ *    keys as folder docs (one `POST /_find` per missing key, plus a children
+ *    check to guard against removing non-empty folders). A single
+ *    `POST /_bulk_docs` then deletes all resolved docs. The bulk endpoint
+ *    reports per-doc success / conflict — `removed` and `skipped` come from
+ *    inspecting the response array, not the probe maps.
  */
 export class CouchDbStorageRepository extends StorageRepository {
   private readonly dataSource: CouchDbDataSource;
@@ -376,25 +378,52 @@ export class CouchDbStorageRepository extends StorageRepository {
         const k = keys.map(s => stripSlashes(s)).filter(s => s !== '');
         if (k.length === 0) return { removed: 0, skipped: keys.length };
 
-        // ── Round-trip 1: resolve every key's (_id, _rev) via one Mango find ──
+        // ── Round-trip 1: resolve file keys via one Mango find ──
         const selectors = k.map(key => this.fileSelector(key));
         const finds = yield* liftResult(this.dataSource.find<StorageDoc>({
           selector: selectors.length === 1 ? selectors[0]! : { $or: selectors },
           limit: k.length + 16,
         }));
 
-        // Build (originalKey → doc) map. Missing keys are skipped.
-        const docsByKey = new Map<string, StorageDoc>();
+        const fileDocsByKey = new Map<string, StorageDoc>();
         for (const doc of finds) {
           const callerKey = doc.parent === '' ? doc.name : `${doc.parent}/${doc.name}`;
-          docsByKey.set(callerKey, doc);
+          fileDocsByKey.set(callerKey, doc);
         }
 
-        // ── Round-trip 2: one _bulk_docs DELETE for every resolved doc ──
-        const toDelete = k.flatMap(key => {
-          const d = docsByKey.get(stripSlashes(this.stripExtension(key)));
-          return d ? [{ _id: d._id, _rev: d._rev, _deleted: true }] : [];
-        });
+        // ── Round-trips 1b: for keys not found as files, probe as folder docs ──
+        const missingFromFile = k.filter(key => !fileDocsByKey.has(stripSlashes(this.stripExtension(key))));
+        const folderDocsByKey = new Map<string, StorageDoc>();
+        const hasChildrenSet = new Set<string>();
+        for (const key of missingFromFile) {
+          const stripped = stripSlashes(key);
+          const folderFind = yield* liftResult(this.dataSource.find<StorageDoc>({
+            selector: { _id: stripped, type: TYPE_FOLDER },
+            limit: 1,
+          }));
+          const folderDoc = folderFind[0] ?? null;
+          const childFind = yield* liftResult(this.dataSource.find<StorageDoc>({
+            selector: { parent: stripped },
+            limit: 1,
+          }));
+          if (childFind.length > 0) {
+            hasChildrenSet.add(stripped);
+          } else if (folderDoc) {
+            folderDocsByKey.set(stripped, folderDoc);
+          }
+        }
+
+        // ── Round-trip 2: one _bulk_docs DELETE for all resolved docs ──
+        const toDelete = [
+          ...k.flatMap(key => {
+            const d = fileDocsByKey.get(stripSlashes(this.stripExtension(key)));
+            return d ? [{ _id: d._id, _rev: d._rev, _deleted: true }] : [];
+          }),
+          ...[...folderDocsByKey.values()].map(d => ({ _id: d._id, _rev: d._rev, _deleted: true })),
+        ];
+
+        // Track which IDs were successfully deleted (no error in bulk response).
+        const successfullyDeletedIds = new Set<string>();
         if (toDelete.length > 0) {
           const bulkResult = yield* liftResult(this.dataSource.bulkDocs(toDelete));
           // CouchDB returns per-doc results — conflicts are reported here, not via HTTP status.
@@ -403,22 +432,35 @@ export class CouchDbStorageRepository extends StorageRepository {
               yield* emit.recoverableError(
                 new InternalError(`CouchDB bulk-delete conflict for ${entry.id}: ${entry.reason ?? entry.error}`),
               );
+            } else {
+              successfullyDeletedIds.add(entry.id);
             }
           }
         }
 
+        // Emit results based on bulk outcome, not on the probe maps.
         let removed = 0;
         let skipped = 0;
         for (const key of k) {
           const stripped = stripSlashes(this.stripExtension(key));
-          const doc = docsByKey.get(stripped);
-          if (!doc) {
+          const fileDoc = fileDocsByKey.get(stripped);
+          const folderDoc = folderDocsByKey.get(stripped);
+          if (hasChildrenSet.has(stripped)) {
+            yield* emit.recoverableError(new ForbiddenError(`Cannot remove non-empty folder: ${key}`));
+            skipped += 1;
+          } else if (fileDoc ?? folderDoc) {
+            const docId = (fileDoc ?? folderDoc)!._id;
+            if (successfullyDeletedIds.has(docId)) {
+              yield* emit.data(stripped);
+              removed += 1;
+            } else {
+              // Conflict was already reported as a recoverable error above.
+              skipped += 1;
+            }
+          } else {
             yield* emit.recoverableError(new NotFoundError(`CouchDB document not found: ${key}`));
             skipped += 1;
-            continue;
           }
-          yield* emit.data(stripped);
-          removed += 1;
         }
         return { removed, skipped: skipped + (keys.length - k.length) };
       })
