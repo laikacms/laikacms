@@ -324,12 +324,40 @@ export class R2StorageRepository extends StorageRepository {
     );
   }
 
+  /**
+   * Recursively collect R2 entries under `folderKey` up to `maxRelativeDepth`
+   * levels below the starting folder. Depth=1 lists direct children only.
+   * Each recursive level calls `listDirectory` with an additional prefix to
+   * navigate into sub-directories.
+   */
+  private async collectR2EntriesRecursively(
+    folderKey: string,
+    maxRelativeDepth: number,
+    currentRelativeDepth: number = 1,
+  ): Promise<Array<{ key: string, type: string }>> {
+    const result = await this.r2DataSource.listDirectory(folderKey);
+    if (Result.isFailure(result)) return [];
+    const entries: Array<{ key: string, type: string }> = [];
+    for (const entry of result.success) {
+      entries.push(entry);
+      if (entry.type === 'dir' && currentRelativeDepth < maxRelativeDepth) {
+        const child = await this.collectR2EntriesRecursively(
+          entry.key,
+          maxRelativeDepth,
+          currentRelativeDepth + 1,
+        );
+        entries.push(...child);
+      }
+    }
+    return entries;
+  }
+
   private collectFilteredSummaries(
     folderKey: string,
     options: ListAtomsOptions,
   ): Effect.Effect<ReadonlyArray<AtomSummary>, LaikaError> {
     return Effect.gen({ self: this }, function*() {
-      const entries = yield* liftResult(this.r2DataSource.listDirectory(folderKey));
+      const entries = yield* Effect.promise(() => this.collectR2EntriesRecursively(folderKey, options.depth));
       const availableExtensions = Object.keys(this.serializerRegistry);
       const filtered = entries
         .filter((entry: { key: string, type: string }) => this.excludeFilter.every(pattern => !pattern.test(entry.key)))

@@ -334,10 +334,42 @@ export class WebDavStorageRepository extends StorageRepository {
   }
 
   /**
-   * Shared listing core: `PROPFIND Depth: 1`, strip file extensions, sort
-   * naturally, paginate in memory. A missing collection is reported via
-   * `missingFolder` (a recoverable {@link NotFoundError}) rather than failing
-   * the stream.
+   * Recursively collect WebDAV children under `folderKey` up to
+   * `maxRelativeDepth` levels below the starting collection. Depth=1 lists
+   * direct children only, matching `PROPFIND Depth: 1` semantics.
+   */
+  private async collectWebDavEntriesRecursively(
+    folderKey: string,
+    maxRelativeDepth: number,
+    currentRelativeDepth: number = 1,
+  ): Promise<{ children: Array<{ key: string, isCollection: boolean }>, missingFolder?: LaikaError }> {
+    const listing = await this.dataSource.listChildren(folderKey);
+    if (Result.isFailure(listing)) {
+      if (currentRelativeDepth === 1 && listing.failure instanceof NotFoundError) {
+        return { children: [], missingFolder: listing.failure };
+      }
+      return { children: [] };
+    }
+    const children: Array<{ key: string, isCollection: boolean }> = [];
+    for (const child of listing.success) {
+      children.push({ key: child.key, isCollection: child.isCollection });
+      if (child.isCollection && currentRelativeDepth < maxRelativeDepth) {
+        const nested = await this.collectWebDavEntriesRecursively(
+          child.key,
+          maxRelativeDepth,
+          currentRelativeDepth + 1,
+        );
+        children.push(...nested.children);
+      }
+    }
+    return { children };
+  }
+
+  /**
+   * Shared listing core: recursively collects children via `PROPFIND Depth: 1`
+   * calls up to `options.depth` levels. Sorts naturally and paginates in
+   * memory. A missing collection is reported via `missingFolder` (a recoverable
+   * {@link NotFoundError}) rather than failing the stream.
    */
   private collectSummaries(
     folderKey: string,
@@ -347,15 +379,14 @@ export class WebDavStorageRepository extends StorageRepository {
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
-      const listing = yield* Effect.result(liftResult(this.dataSource.listChildren(folderKey)));
-      if (Result.isFailure(listing)) {
-        if (listing.failure instanceof NotFoundError) {
-          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: listing.failure };
-        }
-        return yield* Effect.fail(listing.failure);
+      const { children, missingFolder } = yield* Effect.promise(() =>
+        this.collectWebDavEntriesRecursively(folderKey, options.depth)
+      );
+      if (missingFolder) {
+        return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder };
       }
 
-      const summaries = listing.success.map((child): AtomSummary => {
+      const summaries = children.map((child): AtomSummary => {
         if (child.isCollection) {
           return { type: 'folder-summary', key: child.key };
         }
