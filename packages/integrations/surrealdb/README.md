@@ -124,16 +124,16 @@ SCHEMAFULL works too; the repository tolerates either.
 
 ## Operation mapping
 
-| Laika operation             | SurQL call(s)                                                                    |
-| --------------------------- | -------------------------------------------------------------------------------- |
-| `getObject(key)`            | 1 × `SELECT … WHERE type = "file" AND parent = ? AND name = ? LIMIT 1`           |
-| `createObject(key, …)`      | 1 × probe SELECT + 1 × `CREATE type::thing(...) CONTENT $value`                  |
-| `updateObject(key, …)`      | 1 × probe + 1 × `UPDATE type::thing(...) MERGE $merge`                           |
-| `createOrUpdateObject`      | 1 × probe + 1 × `UPSERT type::thing(...) CONTENT $value`                         |
-| `createFolder(key)`         | 1 × `UPSERT type::thing("laika_folder", $path) CONTENT $value`                   |
-| `removeAtoms([k₁…kₙ])`      | n × probe SELECT + **1 × `BEGIN TRANSACTION; DELETE …; …; COMMIT TRANSACTION;`** |
-| `listAtomSummaries(folder)` | 2 × `SELECT … WHERE parent = ?` (one per table)                                  |
-| `getCapabilities()`         | (no I/O — static)                                                                |
+| Laika operation             | SurQL call(s)                                                                                                                                                                           |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `getObject(key)`            | 1 × `SELECT … WHERE type = "file" AND parent = ? AND name = ? LIMIT 1`                                                                                                                  |
+| `createObject(key, …)`      | 1 × probe SELECT + 1 × `CREATE type::thing(...) CONTENT $value`                                                                                                                         |
+| `updateObject(key, …)`      | 1 × probe + 1 × `UPDATE type::thing(...) MERGE $merge`                                                                                                                                  |
+| `createOrUpdateObject`      | 1 × probe + 1 × `UPSERT type::thing(...) CONTENT $value`                                                                                                                                |
+| `createFolder(key)`         | 1 × `UPSERT type::thing("laika_folder", $path) CONTENT $value`                                                                                                                          |
+| `removeAtoms([k₁…kₙ])`      | n × file probe SELECT + (for file-miss keys) n × folder probe + n × child probe + **1 × `BEGIN TRANSACTION; DELETE …; …; COMMIT TRANSACTION;`** (files) + 1 × `DELETE` per empty folder |
+| `listAtomSummaries(folder)` | 2 × `SELECT … WHERE parent = ?` (one per table)                                                                                                                                         |
+| `getCapabilities()`         | (no I/O — static)                                                                                                                                                                       |
 
 ## Var renaming across transactions
 
