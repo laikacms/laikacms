@@ -184,6 +184,7 @@ function respondResource(
   included?: JsonApiResource[],
   basePath: string = '',
   recoverableErrors?: ReadonlyArray<LaikaError>,
+  status: number = 200,
 ): Response {
   const response: JsonApiResponse = { data: withAssetsSelfLink(resource, basePath) };
   if (included && included.length > 0) {
@@ -193,7 +194,7 @@ function respondResource(
   if (warnings) {
     response.meta = { warnings };
   }
-  return json(response);
+  return json(response, status);
 }
 
 function respondCollection(
@@ -525,6 +526,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             undefined,
             basePath,
             result.success.recoverableErrors,
+            201,
           );
         }
 
@@ -557,6 +559,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
               undefined,
               basePath,
               result.success.recoverableErrors,
+              201,
             );
           }
 
@@ -606,6 +609,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
               undefined,
               basePath,
               result.success.recoverableErrors,
+              201,
             );
           }
 

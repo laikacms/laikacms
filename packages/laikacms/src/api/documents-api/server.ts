@@ -98,6 +98,7 @@ function respondResource<T, R extends JsonApiResource>(
   basePath: string,
   recoverableErrors?: ReadonlyArray<LaikaError>,
   onErrorFn?: ((error: unknown) => void) | undefined,
+  status: number = 200,
 ) {
   if (Result.isFailure(result)) {
     // Check if this is a "not found" error and return 404
@@ -110,7 +111,7 @@ function respondResource<T, R extends JsonApiResource>(
   return json({
     data: withDocsSelfLink(transformer(result.success), basePath),
     ...(warnings ? { meta: { warnings } } : {}),
-  });
+  }, status);
 }
 
 /**
@@ -124,6 +125,7 @@ async function respondResourceWithWarnings<T, R extends JsonApiResource>(
   transformer: (data: T) => R,
   basePath: string,
   onErrorFn?: ((error: unknown) => void) | undefined,
+  status: number = 200,
 ) {
   const r = await firstResultWithMetadata(task);
   if (Result.isFailure(r)) {
@@ -135,6 +137,7 @@ async function respondResourceWithWarnings<T, R extends JsonApiResource>(
     basePath,
     r.success.recoverableErrors,
     onErrorFn,
+    status,
   );
 }
 
@@ -700,6 +703,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         documentToJsonApi,
         basePath,
         onError,
+        201,
       );
     }
 
@@ -758,6 +762,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         unpublishedToJsonApi,
         basePath,
         onError,
+        201,
       );
     }
 
@@ -795,6 +800,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         revisionToJsonApi,
         basePath,
         onError,
+        201,
       );
     }
 
