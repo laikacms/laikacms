@@ -76,7 +76,7 @@ await runTask(repo.removeAtoms(['notes/hello']));
 ### With LaikaTask.runPromise (Effect-style, direct import)
 
 ```ts
-import * as LaikaTask from 'laikacms/core/laika-task';
+import { LaikaTask } from 'laikacms/core';
 
 await LaikaTask.runPromise(
   repo.createObject({ type: 'object', key: 'notes/hello', content: { body: 'hi' } }),
