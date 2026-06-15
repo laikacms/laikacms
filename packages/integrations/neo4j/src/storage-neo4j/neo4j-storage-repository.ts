@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -472,7 +473,33 @@ export class Neo4jStorageRepository extends StorageRepository {
         });
 
         const found = resolved.filter(r => r.resolved !== null) as Array<{ key: string, resolved: StoredNode }>;
-        const missing = resolved.filter(r => r.resolved === null);
+        const fileMissing = resolved.filter(r => r.resolved === null);
+
+        // ── Round-trip 1b: for keys with no matching LaikaFile, probe LaikaFolder.
+        interface FolderProbe {
+          key: string;
+          explicit: boolean;
+          hasChildren: boolean;
+        }
+        const folderProbes: FolderProbe[] = [];
+        for (const m of fileMissing) {
+          const k = m.key;
+          const explicitResult = yield* liftResult(this.dataSource.run(
+            `MATCH (f:${this.folderLabel} {path: $path}) RETURN f LIMIT 1`,
+            { path: k },
+          ));
+          const explicit = explicitResult.data.length > 0;
+          const childResult = yield* liftResult(this.dataSource.run(
+            `MATCH (c) WHERE c.parent = $parent RETURN c LIMIT 1`,
+            { parent: k },
+          ));
+          const hasChildren = childResult.data.length > 0;
+          folderProbes.push({ key: k, explicit, hasChildren });
+        }
+
+        const emptyFolders = folderProbes.filter(p => p.explicit && !p.hasChildren);
+        const nonEmptyFolders = folderProbes.filter(p => p.hasChildren);
+        const trulyMissing = folderProbes.filter(p => !p.explicit && !p.hasChildren);
 
         // ── Round-trip 2: ONE `tx/commit` body with N `DETACH DELETE`
         // statements. Atomic — partial failures roll back. DETACH means
@@ -487,11 +514,24 @@ export class Neo4jStorageRepository extends StorageRepository {
           ));
         }
 
-        for (const f of found) yield* emit.data(f.key);
-        for (const m of missing) {
-          yield* emit.recoverableError(new NotFoundError(`Neo4j file node not found: ${m.key}`));
+        // ── Round-trip 3: delete empty folder nodes one by one.
+        for (const ef of emptyFolders) {
+          yield* liftResult(this.dataSource.run(
+            `MATCH (f:${this.folderLabel} {path: $path}) DETACH DELETE f`,
+            { path: ef.key },
+          ));
         }
-        return { removed: found.length, skipped: skipped0 + missing.length };
+
+        for (const f of found) yield* emit.data(f.key);
+        for (const ef of emptyFolders) yield* emit.data(ef.key);
+        for (const nef of nonEmptyFolders) {
+          yield* emit.recoverableError(new ForbiddenError(`Cannot remove non-empty folder: ${nef.key}`));
+        }
+        for (const m of trulyMissing) {
+          yield* emit.recoverableError(new NotFoundError(`Neo4j node not found: ${m.key}`));
+        }
+        const skipped = skipped0 + nonEmptyFolders.length + trulyMissing.length;
+        return { removed: found.length + emptyFolders.length, skipped };
       })
     );
   }
