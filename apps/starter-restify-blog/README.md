@@ -52,6 +52,7 @@ async function decapProxy(req: restify.Request, res: restify.Response) {
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev
 ```
 

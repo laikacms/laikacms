@@ -19,6 +19,7 @@ Pick the one your frontend already uses.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-trpc dev
 ```
 

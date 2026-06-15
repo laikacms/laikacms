@@ -13,6 +13,14 @@ cloud-persistent storage.
 
 ## Quick start
 
+First build workspace dependencies:
+
+```bash
+pnpm build
+```
+
+Then:
+
 ```bash
 # Option A: local sqld (no Turso account needed)
 sqld --http-listen-addr 0.0.0.0:8080 &

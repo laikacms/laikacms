@@ -16,6 +16,7 @@ data loading to any Vite project without locking you into a specific frontend fr
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev
 ```
 

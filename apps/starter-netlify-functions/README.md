@@ -15,6 +15,7 @@ single catch-all function; `laika.fetch` handles the JSON:API and admin.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-netlify-functions dev   # netlify dev
 ```
 

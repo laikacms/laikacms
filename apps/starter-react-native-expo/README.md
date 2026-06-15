@@ -32,6 +32,7 @@ for `GET /posts` and `{ "post": { "content": { "title": "…", "body": "…" } }
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-react-native-expo start
 # then press 'i' for iOS sim, 'a' for Android, 'w' for web
 ```

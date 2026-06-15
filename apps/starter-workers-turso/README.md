@@ -16,6 +16,12 @@ modules, no persistent sockets. It runs natively in V8 isolates without `nodejs_
 
 ## Local development
 
+First build workspace dependencies:
+
+```bash
+pnpm build
+```
+
 ### Option A: sqld (no Turso account needed)
 
 ```bash

@@ -31,6 +31,7 @@ Verify: `hugo version` — requires Hugo v0.120+.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-hugo-blog dev
 ```
 

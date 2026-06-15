@@ -29,6 +29,7 @@ with a small adapter that wraps `@vercel/blob` to look like a Cloudflare R2 buck
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-vercel-edge dev   # → vercel dev
 ```
 

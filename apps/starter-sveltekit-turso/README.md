@@ -29,7 +29,13 @@ cp .env.example .env
 # Edit .env with your LIBSQL_URL and LIBSQL_AUTH_TOKEN
 ```
 
-### 3. Start the dev server
+### 3. Build workspace dependencies
+
+```bash
+pnpm build
+```
+
+### 4. Start the dev server
 
 ```bash
 pnpm dev

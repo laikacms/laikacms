@@ -15,6 +15,7 @@ LaikaCMS without rewriting your server.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-express-backend dev
 ```
 

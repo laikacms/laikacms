@@ -14,6 +14,7 @@ handler is genuinely runtime-portable.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-hattip dev
 ```
 

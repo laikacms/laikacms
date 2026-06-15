@@ -1,7 +1,14 @@
 # Starter templates
 
 Each starter lives under `apps/starter-<framework>-<flavor>/` and is a **reference app you can copy
-or run directly**. Goals:
+or run directly**. Before running any starter, build the workspace packages once from the repo root:
+
+```bash
+pnpm install
+pnpm build
+```
+
+Goals:
 
 1. Show how LaikaCMS is wired into a given frontend framework with the **minimum** scaffolding.
 2. Use the **embedded preset** (`@laikacms/decap-integrations/embedded`) where possible — it
@@ -222,7 +229,9 @@ when figuring out which docs and API ergonomics need improvement.
 5. Mount the Decap admin at `/admin`. The starter README must call out anything you had to do that
    the embedded preset didn't already handle.
 6. Write a README that explains the layout, how to run, and the known **production hardening steps**
-   (real auth, persistent storage, self-hosted Decap bundle).
+   (real auth, persistent storage, self-hosted Decap bundle). The README must include a `pnpm build`
+   step before any `pnpm dev`/`pnpm start` command — workspace packages (`laikacms`,
+   `@laikacms/decap-integrations`) have no `dist/` until built.
 7. If you had to dig into the laika packages to figure something out — fix the docs or add the
    missing helper while it's fresh.
 

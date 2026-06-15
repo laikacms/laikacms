@@ -21,6 +21,7 @@ content is fetched via the sidecar Hono backend. Demonstrates two things:
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-lit-spa dev
 ```
 

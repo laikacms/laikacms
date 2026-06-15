@@ -14,6 +14,7 @@ same Solid idioms, but full-stack with file-based routing.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-solid-start dev
 ```
 

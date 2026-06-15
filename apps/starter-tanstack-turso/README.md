@@ -26,6 +26,7 @@ protocol directly (`globalThis.fetch`), so no Node.js-specific APIs are needed.
 ```bash
 cp .env.example .env   # add LIBSQL_URL and LIBSQL_AUTH_TOKEN
 pnpm install
+pnpm build
 pnpm dev
 ```
 

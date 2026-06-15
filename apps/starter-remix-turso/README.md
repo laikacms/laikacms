@@ -13,6 +13,14 @@ storage accessible from any deployment (Fly.io, Render, Railway, etc.).
 
 ## Quick start
 
+First build workspace dependencies:
+
+```bash
+pnpm build
+```
+
+Then:
+
 ```bash
 # Point at a local sqld instance (no auth token needed):
 sqld --http-listen-addr 0.0.0.0:8080 &

@@ -19,6 +19,7 @@ needs to push state to the server (chat, kanban, multiplayer demos).
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-websocket dev
 ```
 

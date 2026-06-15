@@ -13,6 +13,14 @@ same route structure, cloud-persistent storage deployable to Vercel, Fly.io, Rai
 
 ## Quick start
 
+First build workspace dependencies:
+
+```bash
+pnpm build
+```
+
+Then:
+
 ```bash
 # Option A: local sqld (no Turso account)
 sqld --http-listen-addr 0.0.0.0:8080 &

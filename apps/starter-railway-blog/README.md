@@ -9,6 +9,7 @@ needed by most other starters.
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev
 ```
 

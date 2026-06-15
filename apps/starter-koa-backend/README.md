@@ -21,6 +21,7 @@ quartet — pick the one that matches your existing app:
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-koa-backend dev
 ```
 

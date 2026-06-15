@@ -22,6 +22,7 @@ Starter blog exposing LaikaCMS content through a GraphQL API using
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev   # http://localhost:3000
 ```
 

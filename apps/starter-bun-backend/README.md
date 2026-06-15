@@ -25,6 +25,7 @@ You'll need [Bun installed](https://bun.sh/docs/installation). Then:
 
 ```bash
 pnpm install                                            # workspace-level deps
+pnpm build
 pnpm --filter @laikacms/starter-bun-backend dev         # bun --watch src/server.ts
 ```
 

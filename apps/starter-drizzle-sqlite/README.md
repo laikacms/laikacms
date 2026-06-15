@@ -26,6 +26,7 @@ Use this starter when you want:
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-drizzle-sqlite dev
 ```
 

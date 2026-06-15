@@ -17,6 +17,7 @@ Includes one-click unsubscribe.
 cp .env.example .env
 # Fill in RESEND_API_KEY (https://resend.com/api-keys) and FROM_EMAIL (must be verified).
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-email-digest dev
 ```
 

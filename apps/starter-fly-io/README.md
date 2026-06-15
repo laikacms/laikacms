@@ -29,6 +29,7 @@ Then:
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-fly-io dev
 ```
 

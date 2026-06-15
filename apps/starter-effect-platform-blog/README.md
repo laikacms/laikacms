@@ -31,6 +31,7 @@ model for your blog logic _and_ the CMS layer.
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev
 ```
 

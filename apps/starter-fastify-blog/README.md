@@ -15,6 +15,7 @@ Minimal blog built with [Fastify](https://fastify.dev) v5 and LaikaCMS. Demonstr
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev
 ```
 

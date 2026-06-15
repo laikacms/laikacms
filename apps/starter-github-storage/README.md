@@ -31,10 +31,11 @@ Use this when you want:
 3. **Copy `.env.example` → `.env`** and fill in the values. The private key goes in as a single line
    with `\n` for newlines.
 
-4. **Run:**
+4. **Build workspace dependencies and run:**
 
    ```bash
    pnpm install
+   pnpm build
    pnpm --filter @laikacms/starter-github-storage dev
    ```
 

@@ -15,6 +15,7 @@ automatically without a page reload.
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev
 ```
 

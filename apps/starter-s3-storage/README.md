@@ -40,6 +40,7 @@ cp .env.example .env
 
 # 4. Run.
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-s3-storage dev
 ```
 

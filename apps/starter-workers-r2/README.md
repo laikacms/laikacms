@@ -22,6 +22,7 @@ Use this starter when you want:
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-workers-r2 dev
 ```
 
