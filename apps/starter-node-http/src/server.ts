@@ -67,7 +67,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
   const url = req.url ?? '/';
 
   // Built-in routes.
-  if (url === '/' && req.method === 'GET') {
+  if ((url === '/' || url === '') && req.method === 'GET') {
     res.setHeader('Content-Type', 'application/json');
     return void res.end(
       JSON.stringify({
@@ -85,7 +85,7 @@ async function handle(req: IncomingMessage, res: ServerResponse): Promise<void> 
     );
   }
 
-  if (url === '/admin' && req.method === 'GET') {
+  if ((url === '/admin' || url === '/admin/') && req.method === 'GET') {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
     return void res.end(ADMIN_HTML);
   }
