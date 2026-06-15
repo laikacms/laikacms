@@ -115,16 +115,18 @@ The `(Type, Parent, Name)` UNIQUE makes extension-free key resolution
 
 ## Operation mapping
 
-| Laika operation             | libSQL call(s)                                                                   |
-| --------------------------- | -------------------------------------------------------------------------------- |
-| `getObject(key)`            | 1 × `execute` SELECT                                                             |
-| `createObject(key, …)`      | 1 × `execute` SELECT (probe) + 1 × `execute` INSERT                              |
-| `updateObject(key, …)`      | 1 × `execute` SELECT (read row) + 1 × `execute` UPDATE                           |
-| `createOrUpdateObject`      | 1 × `execute` SELECT + 1 × `execute` `INSERT … ON CONFLICT DO UPDATE`            |
-| `createFolder(key)`         | 1 × `execute` `INSERT … ON CONFLICT DO NOTHING`                                  |
-| `removeAtoms([k₁…kₙ])`      | n × `execute` SELECT (resolve) + **1 × `batch` with N conditional DELETE steps** |
-| `listAtomSummaries(folder)` | 1 × `execute` SELECT WHERE Parent = ?                                            |
-| `getCapabilities()`         | (no I/O — static)                                                                |
+| Laika operation             | libSQL call(s)                                                                                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `getObject(key)`            | 1 × `execute` SELECT                                                                                    |
+| `createObject(key, …)`      | 1 × `execute` SELECT (probe) + 1 × `execute` INSERT + 1 × `execute` SELECT (refetch via `getObject`)   |
+| `updateObject(key, …)`      | 1 × `execute` SELECT (read row) + 1 × `execute` UPDATE + 1 × `execute` SELECT (refetch via `getObject`)|
+| `createOrUpdateObject`      | 1 × `execute` SELECT + 1 × `execute` `INSERT … ON CONFLICT DO UPDATE` + 1 × `execute` SELECT (refetch) |
+| `createFolder(key)`         | 1 × `execute` `INSERT … ON CONFLICT DO NOTHING` + 1 × `execute` SELECT (refetch via `getFolder`)       |
+| `removeAtoms([k₁…kₙ])`      | n × `execute` SELECT (resolve) + **1 × `batch` with N conditional DELETE steps**                       |
+| `listAtomSummaries(folder)` | 1 × `execute` SELECT WHERE Parent = ?                                                                   |
+| `getCapabilities()`         | (no I/O — static)                                                                                       |
+
+> The trailing refetch SELECT on write operations (`createObject`, `updateObject`, `createOrUpdateObject`, `createFolder`) returns the canonical stored form — the same shape `getObject`/`getFolder` would return — rather than constructing a response from local variables.
 
 ## Auth
 
