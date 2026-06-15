@@ -11,8 +11,12 @@ Obsidian-vault-backed implementation of `AssetsRepository`.
 ```ts
 import { ObsidianAssetsRepository } from 'laikacms/assets-obsidian';
 
-const assets = new ObsidianAssetsRepository({
-  vaultPath: '/path/to/your/obsidian-vault',
+// minimal — vault path only
+const assets = new ObsidianAssetsRepository('/path/to/your/obsidian-vault');
+
+// with options
+const assets = new ObsidianAssetsRepository('/path/to/your/obsidian-vault', {
+  attachmentsDirectory: 'attachments',
 });
 ```
 
