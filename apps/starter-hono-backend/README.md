@@ -63,9 +63,10 @@ apps/starter-hono-backend/
 │       └── hello-world.md
 ├── src/
 │   ├── server.ts                  # Hono app + serve()
-│   ├── lib/
-│   │   ├── laika.ts               # createEmbeddedLaika instance
-│   │   └── decap-config.ts        # collection schema
+│   └── lib/
+│       ├── laika.ts               # createEmbeddedLaika instance
+│       └── decap-config.ts        # collection schema
+├── public/
 │   └── admin/
 │       └── index.html             # Decap CMS admin shell
 └── tsconfig.json

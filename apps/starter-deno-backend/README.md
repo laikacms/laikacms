@@ -56,10 +56,11 @@ apps/starter-deno-backend/
 ├── content/
 │   └── posts/
 │       └── hello-world.md
-└── src/
-    ├── main.ts                # Deno.serve() entry
-    ├── lib/
-    │   └── laika.ts           # createEmbeddedLaika instance
+├── src/
+│   ├── main.ts                # Deno.serve() entry
+│   └── lib/
+│       └── laika.ts           # createEmbeddedLaika instance
+└── public/
     └── admin/
         └── index.html         # Decap CMS shell
 ```
