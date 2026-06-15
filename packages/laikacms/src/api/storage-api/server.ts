@@ -261,343 +261,358 @@ export interface StorageApiOptions {
  * untrusted network.
  */
 export function buildJsonApi(options: StorageApiOptions) {
-  const { repo, basePath = '' } = options;
+  const { repo, basePath = '', onError } = options;
 
   const decodeStorageObjectCreateBody = S.decodeUnknownSync(StorageObjectCreateBodySchema);
   const decodeStorageObjectUpdateBody = S.decodeUnknownSync(StorageObjectUpdateBodySchema);
   const decodeAtomicOperationsRequest = S.decodeUnknownSync(AtomicOperationsRequestSchema);
 
+  /** Notify onError and delegate to respondError. */
+  const failResponse = (result: LaikaResult<unknown>, status?: ErrorStatus): Response => {
+    if (Result.isFailure(result)) onError?.(result.failure);
+    return respondError(result, status);
+  };
+
   return {
     async fetch(request: Request): Promise<Response> {
-      const url = new URL(request.url);
-      let path = url.pathname.substring(basePath.length);
-      if (path.startsWith('/')) path = path.substring(1);
-      if (path.endsWith('/')) path = path.slice(0, -1);
-
-      if (path === '' && request.method === 'GET') {
-        return json({
-          data: {
-            type: 'api-info',
-            id: 'storage',
-            attributes: {
-              name: 'Storage API',
-              version: '1.0.0',
-              endpoints: [
-                {
-                  path: '/capabilities',
-                  methods: ['GET'],
-                  description: 'Underlying storage repository capabilities',
-                },
-                { path: '/atoms/{key}', methods: ['GET'], description: 'List atoms in a folder' },
-                {
-                  path: '/atom-summaries/{key}',
-                  methods: ['GET'],
-                  description: 'List atom summaries (lightweight listing) in a folder',
-                },
-                {
-                  path: '/objects',
-                  methods: ['POST'],
-                  description: 'Create a storage object',
-                },
-                {
-                  path: '/objects/{key}',
-                  methods: ['GET', 'PATCH'],
-                  description: 'Read or update a storage object',
-                },
-                { path: '/folders/{key}', methods: ['GET'], description: 'Read a folder' },
-                {
-                  path: '/operations',
-                  methods: ['POST'],
-                  description: 'Atomic operations (add, update, remove)',
-                },
-              ],
-            },
-          },
-        });
-      }
-
-      // The JSON-API proxy URL-encodes the key (so keys with slashes survive the
-      // /atoms/{key} route as a single path segment); decode it back here.
-      const [resource, rawKey] = path.split('/');
-      const key = rawKey === undefined ? undefined : safeDecode(rawKey);
-
-      const listFullAtoms = async () => {
-        const listOptions = { depth: 1, pagination: { perPage: 10 } };
-        const result = await runStream(repo.listAtoms(key!, listOptions));
-        if (Result.isFailure(result)) {
-          const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
-          return respondError(result, ErrorCodeToStatusMap[errorCode] || 400);
-        }
-        return respondCollectionWithConverter(
-          request,
-          result.success.data,
-          atomToJsonApi,
-          request.url,
-          basePath,
-          result.success.done,
-          result.success.recoverableErrors,
-        );
-      };
-
-      const listAtomSummaries = async () => {
-        const listOptions = { depth: 1, pagination: { perPage: 10 } };
-        const result = await runStream(repo.listAtomSummaries(key!, listOptions));
-        if (Result.isFailure(result)) {
-          const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
-          return respondError(result, ErrorCodeToStatusMap[errorCode] || 400);
-        }
-        return respondCollectionWithConverter(
-          request,
-          result.success.data,
-          atomSummaryToJsonApi,
-          request.url,
-          basePath,
-          result.success.done,
-          result.success.recoverableErrors,
-        );
-      };
-
-      if (resource === 'capabilities' && request.method === 'GET') {
-        // Surface the underlying repository's `Capabilities` so proxy clients
-        // (and humans) can introspect what's actually supported instead of
-        // assuming. Cheap call; we run it on every request so a swapped-out
-        // repo is reflected immediately.
-        const result = await runTask(repo.getCapabilities());
-        if (Result.isFailure(result)) {
-          const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
-            ?? 500;
-          return respondError(result, status);
-        }
-        return json({
-          data: {
-            type: 'storage-capabilities',
-            id: 'self',
-            attributes: result.success,
-            links: { self: `${basePath}/capabilities` },
-          },
-        });
-      }
-      if (resource === 'atoms' && request.method === 'GET') return listFullAtoms();
-      else if (resource === 'atom-summaries' && request.method === 'GET') return listAtomSummaries();
-      else if (resource === 'objects' && request.method === 'GET') {
-        if (!key) return respondError(Result.fail(new InvalidData('Missing object key')), 400);
-        const result = await runTaskWithMetadata(repo.getObject(key));
-        if (Result.isFailure(result)) {
-          const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
-            ?? 400;
-          return respondError(result, status);
-        }
-        return respondResourceWithConverter(
-          Result.succeed(result.success.value),
-          storageObjectToJsonApi,
-          basePath,
-          result.success.recoverableErrors,
-        );
-      } else if (resource === 'folders' && request.method === 'GET') {
-        if (!key) return respondError(Result.fail(new InvalidData('Missing folder key')), 400);
-        const result = await runTaskWithMetadata(repo.getFolder(key));
-        if (Result.isFailure(result)) {
-          const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
-            ?? 400;
-          return respondError(result, status);
-        }
-        return respondResourceWithConverter(
-          Result.succeed(result.success.value),
-          folderToJsonApi,
-          basePath,
-          result.success.recoverableErrors,
-        );
-      } else if (resource === 'objects' && request.method === 'POST') {
-        let body: StorageObjectCreateBody;
-        try {
-          const rawBody = await request.json();
-          body = decodeStorageObjectCreateBody(rawBody);
-        } catch {
-          return respondError(Result.fail(new InvalidData('Invalid request body')), 400);
-        }
-        const data: StorageObjectCreate = {
-          key: body.data.id,
-          type: 'object',
-          content: body.data.attributes.content || {},
-          ...(body.data.meta ? { metadata: body.data.meta } : {}),
-        };
-        const result = await runTaskWithMetadata(repo.createObject(data));
-        if (Result.isFailure(result)) return respondError(result);
-        return respondResourceWithConverter(
-          Result.succeed(result.success.value),
-          storageObjectToJsonApi,
-          basePath,
-          result.success.recoverableErrors,
-          201,
-        );
-      }
-
-      if (path.startsWith('objects') && request.method === 'PATCH') {
-        const [, rawPathKey] = path.split('/');
-        const pathKey = rawPathKey === undefined ? undefined : safeDecode(rawPathKey);
-        let body: StorageObjectUpdateBody;
-        try {
-          const rawBody = await request.json();
-          body = decodeStorageObjectUpdateBody(rawBody);
-        } catch {
-          return respondError(Result.fail(new InvalidData('Invalid request body')), 400);
-        }
-        if (body.data.id !== pathKey) {
-          return respondError(
-            Result.fail(new InvalidData('Key in URL does not match key in body')),
-            ErrorCodeToStatusMap[InvalidData.CODE],
-          );
-        }
-        const data: StorageObjectUpdate = {
-          key: body.data.id,
-          type: 'object',
-          content: body.data.attributes.content,
-          ...(body.data.meta ? { metadata: body.data.meta } : {}),
-        };
-        const result = await runTaskWithMetadata(repo.updateObject(data));
-        if (Result.isFailure(result)) return respondError(result);
-        return respondResourceWithConverter(
-          Result.succeed(result.success.value),
-          storageObjectToJsonApi,
-          basePath,
-          result.success.recoverableErrors,
-        );
-      } else if (path === 'operations' && request.method === 'POST') {
-        let body: AtomicOperationsRequest;
-        try {
-          const rawBody = await request.json();
-          body = decodeAtomicOperationsRequest(rawBody);
-        } catch {
-          return respondError(
-            Result.fail(new InvalidData('Invalid atomic operations request')),
-            400,
-          );
-        }
-
-        type Ref = { key: string, type: string };
-        const removeOperations: [
-          string,
-          (ref: LaikaResult<Ref>) => void,
-          (err: unknown) => void,
-        ][] = [];
-
-        const remove = (key: string): Promise<LaikaResult<Ref>> =>
-          new Promise((resolve, reject) => removeOperations.push([key, resolve, reject]));
-
-        const atomicOperations = body['atomic:operations']
-          .map((operation: AtomicOperation) => {
-            switch (operation.op) {
-              case 'add':
-                if (operation.data.type === 'object') {
-                  const createData: StorageObjectCreate = {
-                    key: operation.data.id,
-                    type: 'object',
-                    content: operation.data.attributes.content || {},
-                  };
-                  return runTaskWithMetadata(repo.createObject(createData))
-                    .then(r => ({ op: r, operation }));
-                } else if (operation.data.type === 'folder') {
-                  const createData: FolderCreate = {
-                    key: operation.data.id,
-                    type: 'folder',
-                  };
-                  return runTaskWithMetadata(repo.createFolder(createData))
-                    .then(r => ({ op: r, operation }));
-                }
-                return Promise.resolve({
-                  op: Result.fail(new InvalidData(`Unsupported add type`)),
-                  operation,
-                });
-              case 'update':
-                if (operation.data.type === 'object') {
-                  const updateData: StorageObjectUpdate = {
-                    key: operation.data.id,
-                    type: 'object',
-                    content: operation.data.attributes.content,
-                  };
-                  return runTaskWithMetadata(repo.updateObject(updateData))
-                    .then(r => ({ op: r, operation }));
-                }
-                return Promise.resolve({
-                  op: Result.fail(new InvalidData(`Unsupported update type`)),
-                  operation,
-                });
-              case 'remove':
-                return remove(operation.ref.id).then(op => ({ op, operation }));
-            }
-          });
-
-        const removalResult = await runStream(
-          repo.removeAtoms(removeOperations.map(([key]) => key)),
-        );
-        if (Result.isFailure(removalResult)) return respondError(removalResult);
-        for (const key of removalResult.success.data) {
-          const found = removeOperations.find(([k]) => k === key);
-          if (found) {
-            const [, resolve] = found;
-            resolve(Result.succeed({ type: 'atom', key }));
-          }
-        }
-        // Resolve any not-removed keys as warnings (they failed individually)
-        for (const [k, resolve] of removeOperations) {
-          if (!removalResult.success.data.includes(k)) {
-            resolve(
-              Result.fail(
-                removalResult.success.recoverableErrors[0] ?? new NotFoundError(`Failed to remove ${k}`),
-              ),
-            );
-          }
-        }
-
-        const atomicsSettled = await Promise.allSettled(atomicOperations);
-
-        type AtomicResultEntry =
-          | { data: JsonApiResource, meta?: { warnings: JsonApiError['errors'] } }
-          | { meta: { deleted: true, ref: { type: string, id: string } } };
-        const atomicResults: AtomicResultEntry[] = [];
-        for (const promiseResult of atomicsSettled) {
-          if (promiseResult.status === 'rejected') continue;
-          const value = promiseResult.value;
-          const op = value.op as LaikaResult<unknown>;
-          if (Result.isSuccess(op)) {
-            if (value.operation.op === 'add' || value.operation.op === 'update') {
-              // add/update results came from runTaskWithMetadata so the
-              // success carries {value, recoverableErrors}; remove results
-              // came from the batched removalResult and don't reach this
-              // branch.
-              const carrier = op.success as {
-                value: unknown,
-                recoverableErrors: ReadonlyArray<LaikaError>,
-              };
-              const data = carrier.value;
-              const warnings = recoverableErrorsToWarnings(carrier.recoverableErrors);
-              if (typeof data === 'object' && data !== null && 'type' in data) {
-                const typedData = data as { type: string };
-                const jsonApiData = typedData.type === 'object'
-                  ? storageObjectToJsonApi(data as StorageObject)
-                  : folderToJsonApi(data as Folder);
-                atomicResults.push(warnings ? { data: jsonApiData, meta: { warnings } } : { data: jsonApiData });
-              }
-            } else if (value.operation.op === 'remove') {
-              // Per JSON:API atomic ops spec, a successful remove has no
-              // `data` (the resource is gone); the result body documents
-              // what was deleted via `meta`.
-              const ref = op.success as { type: string, key: string };
-              atomicResults.push({
-                meta: { deleted: true, ref: { type: ref.type, id: ref.key } },
-              });
-            }
-          }
-        }
-
-        return json({ 'atomic:results': atomicResults } as unknown as JsonApiResponse);
-      } else {
-        options.logger?.debug('storage endpoint not found:', path);
-        return respondError(
-          Result.fail(new NotFoundError('Storage endpoint not found')),
-          404,
-        );
+      try {
+        return await fetchInner(request);
+      } catch (err) {
+        onError?.(err);
+        return respondError(Result.fail(toLaikaError(err)), 500);
       }
     },
   };
+
+  async function fetchInner(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    let path = url.pathname.substring(basePath.length);
+    if (path.startsWith('/')) path = path.substring(1);
+    if (path.endsWith('/')) path = path.slice(0, -1);
+
+    if (path === '' && request.method === 'GET') {
+      return json({
+        data: {
+          type: 'api-info',
+          id: 'storage',
+          attributes: {
+            name: 'Storage API',
+            version: '1.0.0',
+            endpoints: [
+              {
+                path: '/capabilities',
+                methods: ['GET'],
+                description: 'Underlying storage repository capabilities',
+              },
+              { path: '/atoms/{key}', methods: ['GET'], description: 'List atoms in a folder' },
+              {
+                path: '/atom-summaries/{key}',
+                methods: ['GET'],
+                description: 'List atom summaries (lightweight listing) in a folder',
+              },
+              {
+                path: '/objects',
+                methods: ['POST'],
+                description: 'Create a storage object',
+              },
+              {
+                path: '/objects/{key}',
+                methods: ['GET', 'PATCH'],
+                description: 'Read or update a storage object',
+              },
+              { path: '/folders/{key}', methods: ['GET'], description: 'Read a folder' },
+              {
+                path: '/operations',
+                methods: ['POST'],
+                description: 'Atomic operations (add, update, remove)',
+              },
+            ],
+          },
+        },
+      });
+    }
+
+    // The JSON-API proxy URL-encodes the key (so keys with slashes survive the
+    // /atoms/{key} route as a single path segment); decode it back here.
+    const [resource, rawKey] = path.split('/');
+    const key = rawKey === undefined ? undefined : safeDecode(rawKey);
+
+    const listFullAtoms = async () => {
+      const listOptions = { depth: 1, pagination: { perPage: 10 } };
+      const result = await runStream(repo.listAtoms(key!, listOptions));
+      if (Result.isFailure(result)) {
+        const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
+        return failResponse(result, ErrorCodeToStatusMap[errorCode] || 400);
+      }
+      return respondCollectionWithConverter(
+        request,
+        result.success.data,
+        atomToJsonApi,
+        request.url,
+        basePath,
+        result.success.done,
+        result.success.recoverableErrors,
+      );
+    };
+
+    const listAtomSummaries = async () => {
+      const listOptions = { depth: 1, pagination: { perPage: 10 } };
+      const result = await runStream(repo.listAtomSummaries(key!, listOptions));
+      if (Result.isFailure(result)) {
+        const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
+        return failResponse(result, ErrorCodeToStatusMap[errorCode] || 400);
+      }
+      return respondCollectionWithConverter(
+        request,
+        result.success.data,
+        atomSummaryToJsonApi,
+        request.url,
+        basePath,
+        result.success.done,
+        result.success.recoverableErrors,
+      );
+    };
+
+    if (resource === 'capabilities' && request.method === 'GET') {
+      // Surface the underlying repository's `Capabilities` so proxy clients
+      // (and humans) can introspect what's actually supported instead of
+      // assuming. Cheap call; we run it on every request so a swapped-out
+      // repo is reflected immediately.
+      const result = await runTask(repo.getCapabilities());
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
+          ?? 500;
+        return failResponse(result, status);
+      }
+      return json({
+        data: {
+          type: 'storage-capabilities',
+          id: 'self',
+          attributes: result.success,
+          links: { self: `${basePath}/capabilities` },
+        },
+      });
+    }
+    if (resource === 'atoms' && request.method === 'GET') return listFullAtoms();
+    else if (resource === 'atom-summaries' && request.method === 'GET') return listAtomSummaries();
+    else if (resource === 'objects' && request.method === 'GET') {
+      if (!key) return failResponse(Result.fail(new InvalidData('Missing object key')), 400);
+      const result = await runTaskWithMetadata(repo.getObject(key));
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
+          ?? 400;
+        return failResponse(result, status);
+      }
+      return respondResourceWithConverter(
+        Result.succeed(result.success.value),
+        storageObjectToJsonApi,
+        basePath,
+        result.success.recoverableErrors,
+      );
+    } else if (resource === 'folders' && request.method === 'GET') {
+      if (!key) return failResponse(Result.fail(new InvalidData('Missing folder key')), 400);
+      const result = await runTaskWithMetadata(repo.getFolder(key));
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
+          ?? 400;
+        return failResponse(result, status);
+      }
+      return respondResourceWithConverter(
+        Result.succeed(result.success.value),
+        folderToJsonApi,
+        basePath,
+        result.success.recoverableErrors,
+      );
+    } else if (resource === 'objects' && request.method === 'POST') {
+      let body: StorageObjectCreateBody;
+      try {
+        const rawBody = await request.json();
+        body = decodeStorageObjectCreateBody(rawBody);
+      } catch {
+        return failResponse(Result.fail(new InvalidData('Invalid request body')), 400);
+      }
+      const data: StorageObjectCreate = {
+        key: body.data.id,
+        type: 'object',
+        content: body.data.attributes.content || {},
+        ...(body.data.meta ? { metadata: body.data.meta } : {}),
+      };
+      const result = await runTaskWithMetadata(repo.createObject(data));
+      if (Result.isFailure(result)) return failResponse(result);
+      return respondResourceWithConverter(
+        Result.succeed(result.success.value),
+        storageObjectToJsonApi,
+        basePath,
+        result.success.recoverableErrors,
+        201,
+      );
+    }
+
+    if (path.startsWith('objects') && request.method === 'PATCH') {
+      const [, rawPathKey] = path.split('/');
+      const pathKey = rawPathKey === undefined ? undefined : safeDecode(rawPathKey);
+      let body: StorageObjectUpdateBody;
+      try {
+        const rawBody = await request.json();
+        body = decodeStorageObjectUpdateBody(rawBody);
+      } catch {
+        return failResponse(Result.fail(new InvalidData('Invalid request body')), 400);
+      }
+      if (body.data.id !== pathKey) {
+        return failResponse(
+          Result.fail(new InvalidData('Key in URL does not match key in body')),
+          ErrorCodeToStatusMap[InvalidData.CODE],
+        );
+      }
+      const data: StorageObjectUpdate = {
+        key: body.data.id,
+        type: 'object',
+        content: body.data.attributes.content,
+        ...(body.data.meta ? { metadata: body.data.meta } : {}),
+      };
+      const result = await runTaskWithMetadata(repo.updateObject(data));
+      if (Result.isFailure(result)) return failResponse(result);
+      return respondResourceWithConverter(
+        Result.succeed(result.success.value),
+        storageObjectToJsonApi,
+        basePath,
+        result.success.recoverableErrors,
+      );
+    } else if (path === 'operations' && request.method === 'POST') {
+      let body: AtomicOperationsRequest;
+      try {
+        const rawBody = await request.json();
+        body = decodeAtomicOperationsRequest(rawBody);
+      } catch {
+        return failResponse(
+          Result.fail(new InvalidData('Invalid atomic operations request')),
+          400,
+        );
+      }
+
+      type Ref = { key: string, type: string };
+      const removeOperations: [
+        string,
+        (ref: LaikaResult<Ref>) => void,
+        (err: unknown) => void,
+      ][] = [];
+
+      const remove = (key: string): Promise<LaikaResult<Ref>> =>
+        new Promise((resolve, reject) => removeOperations.push([key, resolve, reject]));
+
+      const atomicOperations = body['atomic:operations']
+        .map((operation: AtomicOperation) => {
+          switch (operation.op) {
+            case 'add':
+              if (operation.data.type === 'object') {
+                const createData: StorageObjectCreate = {
+                  key: operation.data.id,
+                  type: 'object',
+                  content: operation.data.attributes.content || {},
+                };
+                return runTaskWithMetadata(repo.createObject(createData))
+                  .then(r => ({ op: r, operation }));
+              } else if (operation.data.type === 'folder') {
+                const createData: FolderCreate = {
+                  key: operation.data.id,
+                  type: 'folder',
+                };
+                return runTaskWithMetadata(repo.createFolder(createData))
+                  .then(r => ({ op: r, operation }));
+              }
+              return Promise.resolve({
+                op: Result.fail(new InvalidData(`Unsupported add type`)),
+                operation,
+              });
+            case 'update':
+              if (operation.data.type === 'object') {
+                const updateData: StorageObjectUpdate = {
+                  key: operation.data.id,
+                  type: 'object',
+                  content: operation.data.attributes.content,
+                };
+                return runTaskWithMetadata(repo.updateObject(updateData))
+                  .then(r => ({ op: r, operation }));
+              }
+              return Promise.resolve({
+                op: Result.fail(new InvalidData(`Unsupported update type`)),
+                operation,
+              });
+            case 'remove':
+              return remove(operation.ref.id).then(op => ({ op, operation }));
+          }
+        });
+
+      const removalResult = await runStream(
+        repo.removeAtoms(removeOperations.map(([key]) => key)),
+      );
+      if (Result.isFailure(removalResult)) return failResponse(removalResult);
+      for (const key of removalResult.success.data) {
+        const found = removeOperations.find(([k]) => k === key);
+        if (found) {
+          const [, resolve] = found;
+          resolve(Result.succeed({ type: 'atom', key }));
+        }
+      }
+      // Resolve any not-removed keys as warnings (they failed individually)
+      for (const [k, resolve] of removeOperations) {
+        if (!removalResult.success.data.includes(k)) {
+          resolve(
+            Result.fail(
+              removalResult.success.recoverableErrors[0] ?? new NotFoundError(`Failed to remove ${k}`),
+            ),
+          );
+        }
+      }
+
+      const atomicsSettled = await Promise.allSettled(atomicOperations);
+
+      type AtomicResultEntry =
+        | { data: JsonApiResource, meta?: { warnings: JsonApiError['errors'] } }
+        | { meta: { deleted: true, ref: { type: string, id: string } } };
+      const atomicResults: AtomicResultEntry[] = [];
+      for (const promiseResult of atomicsSettled) {
+        if (promiseResult.status === 'rejected') continue;
+        const value = promiseResult.value;
+        const op = value.op as LaikaResult<unknown>;
+        if (Result.isSuccess(op)) {
+          if (value.operation.op === 'add' || value.operation.op === 'update') {
+            // add/update results came from runTaskWithMetadata so the
+            // success carries {value, recoverableErrors}; remove results
+            // came from the batched removalResult and don't reach this
+            // branch.
+            const carrier = op.success as {
+              value: unknown,
+              recoverableErrors: ReadonlyArray<LaikaError>,
+            };
+            const data = carrier.value;
+            const warnings = recoverableErrorsToWarnings(carrier.recoverableErrors);
+            if (typeof data === 'object' && data !== null && 'type' in data) {
+              const typedData = data as { type: string };
+              const jsonApiData = typedData.type === 'object'
+                ? storageObjectToJsonApi(data as StorageObject)
+                : folderToJsonApi(data as Folder);
+              atomicResults.push(warnings ? { data: jsonApiData, meta: { warnings } } : { data: jsonApiData });
+            }
+          } else if (value.operation.op === 'remove') {
+            // Per JSON:API atomic ops spec, a successful remove has no
+            // `data` (the resource is gone); the result body documents
+            // what was deleted via `meta`.
+            const ref = op.success as { type: string, key: string };
+            atomicResults.push({
+              meta: { deleted: true, ref: { type: ref.type, id: ref.key } },
+            });
+          }
+        }
+      }
+
+      return json({ 'atomic:results': atomicResults } as unknown as JsonApiResponse);
+    } else {
+      options.logger?.debug('storage endpoint not found:', path);
+      return failResponse(
+        Result.fail(new NotFoundError('Storage endpoint not found')),
+        404,
+      );
+    }
+  }
 }

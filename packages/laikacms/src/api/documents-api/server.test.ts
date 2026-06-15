@@ -1,8 +1,8 @@
 import * as Effect from 'effect/Effect';
 import type { DocumentsRepository, ListRecordsDone, ListRecordsOptions } from 'laikacms/documents';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
-import { InvalidData, LaikaStream, LaikaTask } from 'laikacms/core';
+import { InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 
 import { buildJsonApi } from './server.js';
 
@@ -89,6 +89,37 @@ describe('documents-api meta.warnings', () => {
     expect(body.meta.warnings).toHaveLength(1);
     expect(body.meta.warnings?.[0]?.code).toBe('invalid_data');
     expect(body.meta.warnings?.[0]?.detail).toContain('orphaned sidecar');
+  });
+
+  it('calls onError when a repo operation fails', async () => {
+    const onError = vi.fn();
+    const partialRepo = {
+      getDocument: (_key: string) => LaikaTask.make(() => Effect.fail(new NotFoundError('document not found'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo, onError });
+    const res = await api.fetch(new Request('http://localhost/published/missing%2Fdoc'));
+    expect(res.status).toBe(404);
+    expect(onError).toHaveBeenCalledOnce();
+    const [calledWith] = onError.mock.calls[0]!;
+    expect(calledWith).toBeInstanceOf(NotFoundError);
+  });
+
+  it('calls onError when the repo throws an unexpected synchronous error', async () => {
+    const onError = vi.fn();
+    const partialRepo = {
+      getDocument: (_key: string) => {
+        throw new Error('unexpected synchronous defect');
+      },
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo, onError });
+    const res = await api.fetch(new Request('http://localhost/published/boom'));
+    expect(res.status).toBe(400);
+    expect(onError).toHaveBeenCalledOnce();
+    const [calledWith] = onError.mock.calls[0]!;
+    expect(calledWith).toBeInstanceOf(Error);
+    expect((calledWith as Error).message).toBe('unexpected synchronous defect');
   });
 
   it('surfaces recoverableErrors on per-op meta.warnings for atomic remove results', async () => {
