@@ -206,7 +206,7 @@ export const errorFromResponse = async (response: Response) => {
   if (!isJson || !error) {
     switch (response.status) {
       case 400:
-        return new errors.NotFoundError(detail);
+        return new errors.BadRequestError(detail);
       case 401:
         return new errors.AuthorizationError(detail);
       case 403:
