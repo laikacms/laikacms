@@ -29,6 +29,21 @@ The Storage API manages a flat namespace of **atoms** (objects and folders). Key
 path-like strings (e.g. `posts/hello-world`). The API serves the root endpoint for meta-information
 and then routes on the first path segment.
 
+### Key Encoding
+
+Object and folder keys are arbitrary path-like strings (e.g. `posts/hello-world`). When a key
+contains slashes, those slashes **must be percent-encoded as `%2F`** in the URL path. The router
+takes only the first path segment after the resource prefix as the key, so a raw slash is
+interpreted as a new path segment rather than part of the key.
+
+| Key                 | Correct URL path               | Wrong URL path               |
+| ------------------- | ------------------------------ | ---------------------------- |
+| `posts`             | `/objects/posts`               | —                            |
+| `posts/hello-world` | `/objects/posts%2Fhello-world` | `/objects/posts/hello-world` |
+| `a/b/c`             | `/objects/a%2Fb%2Fc`           | `/objects/a/b/c`             |
+
+The same rule applies to `/folders/{key}`.
+
 ### Endpoints
 
 ---
@@ -264,6 +279,59 @@ Content-Type: application/vnd.api+json
 
 ---
 
+#### GET /objects/:key
+
+Get a single storage object by key.
+
+**Path Parameters**
+
+| Parameter | Type   | Description                                                                      |
+| --------- | ------ | -------------------------------------------------------------------------------- |
+| `key`     | string | Key of the object (slashes must be encoded as `%2F`, e.g. `posts%2Fhello-world`) |
+
+**Example**
+
+```
+GET /objects/posts%2Fhello-world
+```
+
+**Response** — the requested object
+
+```json
+{
+  "data": {
+    "type": "object",
+    "id": "posts/hello-world",
+    "attributes": {
+      "type": "object",
+      "content": {
+        "title": "Hello World",
+        "body": "This is my first post."
+      },
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-16T08:00:00Z"
+    }
+  }
+}
+```
+
+**Error Response** — `404 Not Found` (also returned if the key is not encoded and the router
+interprets it as a different path)
+
+```json
+{
+  "errors": [
+    {
+      "status": "404",
+      "code": "NOT_FOUND",
+      "detail": "The file at posts does not exist"
+    }
+  ]
+}
+```
+
+---
+
 #### PATCH /objects/:key
 
 Update an existing storage object. The `id` in the request body must match the `:key` path
@@ -271,9 +339,9 @@ parameter.
 
 **Path Parameters**
 
-| Parameter | Type   | Description                 |
-| --------- | ------ | --------------------------- |
-| `key`     | string | Key of the object to update |
+| Parameter | Type   | Description                                                                      |
+| --------- | ------ | -------------------------------------------------------------------------------- |
+| `key`     | string | Key of the object (slashes must be encoded as `%2F`, e.g. `posts%2Fhello-world`) |
 
 **Request Headers**
 
@@ -313,6 +381,40 @@ Content-Type: application/vnd.api+json
       },
       "createdAt": "2024-01-15T10:30:00Z",
       "updatedAt": "2024-01-16T08:00:00Z"
+    }
+  }
+}
+```
+
+---
+
+#### GET /folders/:key
+
+Get a single folder by key.
+
+**Path Parameters**
+
+| Parameter | Type   | Description                                                                 |
+| --------- | ------ | --------------------------------------------------------------------------- |
+| `key`     | string | Key of the folder (slashes must be encoded as `%2F`, e.g. `posts%2Fdrafts`) |
+
+**Example**
+
+```
+GET /folders/posts%2Fdrafts
+```
+
+**Response**
+
+```json
+{
+  "data": {
+    "type": "folder",
+    "id": "posts/drafts",
+    "attributes": {
+      "type": "folder",
+      "createdAt": "2024-01-10T09:00:00Z",
+      "updatedAt": "2024-01-10T09:00:00Z"
     }
   }
 }
