@@ -1,4 +1,4 @@
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -386,6 +386,81 @@ describe('CouchDbStorageRepository', () => {
       repo.listAtomSummaries('', { pagination: PAGE }),
     );
     expect(collected.data.map(s => s.key)).toEqual(['1', '2', '10']);
+  });
+
+  it('removeAtoms removes an empty folder by key (LCMS-138)', async () => {
+    const repo = makeRepo();
+    // Create an explicit folder doc with no children.
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'emptyfolder' }));
+    expect(docs.has('emptyfolder')).toBe(true);
+
+    const result = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['emptyfolder']),
+    );
+    expect(result.done).toEqual({ removed: 1, skipped: 0 });
+    expect(result.data).toEqual(['emptyfolder']);
+    expect(result.recoverableErrors).toHaveLength(0);
+    expect(docs.has('emptyfolder')).toBe(false);
+  });
+
+  it('removeAtoms rejects non-empty folder with ForbiddenError (LCMS-138)', async () => {
+    const repo = makeRepo();
+    // Create a folder with a child file — folder itself has no explicit doc.
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'populated/child', content: { body: 'x' } }),
+    );
+
+    const result = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['populated']),
+    );
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.recoverableErrors).toHaveLength(1);
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+    // Child file must still be present.
+    expect(docs.has('populated/child.md')).toBe(true);
+  });
+
+  it('removeAtoms does not count bulk-conflict doc as removed (LCMS-139)', async () => {
+    // First, create the document via the normal mock.
+    await LaikaTask.runPromise(
+      makeRepo().createObject({ type: 'object', key: 'notes/x', content: { body: 'a' } }),
+    );
+
+    // Now build a repo with a custom fetch that, after the _find probe
+    // inside removeAtoms, bumps the stored _rev to simulate a concurrent
+    // writer — so the _bulk_docs call receives a stale revision and conflicts.
+    let findCallCount = 0;
+    const conflictFetch: typeof fetch = async (input, init) => {
+      const urlStr = typeof input === 'string' ? input : (input as URL).toString();
+      const url = new URL(urlStr);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      const path = url.pathname.replace(/^\/cms\/?/, '');
+
+      if (method === 'POST' && path === '_find') {
+        const res = await mockFetch(input, init);
+        findCallCount += 1;
+        if (findCallCount === 1) {
+          // Concurrent writer bumps the doc's _rev between probe and bulk delete.
+          const current = docs.get('notes/x.md');
+          if (current) {
+            docs.set('notes/x.md', { ...current, _rev: '99-concurrent-writer' });
+          }
+        }
+        return res;
+      }
+      return mockFetch(input, init);
+    };
+
+    const result = await LaikaStream.runPromiseCollect(
+      makeRepo(conflictFetch).removeAtoms(['notes/x']),
+    );
+    // The doc was NOT deleted (stale rev), so it must be skipped, not removed.
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.data).toHaveLength(0);
+    // The conflict surfaces as a recoverable error (InternalError from bulkDocs).
+    expect(result.recoverableErrors).toHaveLength(1);
+    // Doc still exists in the store with the updated _rev.
+    expect(docs.has('notes/x.md')).toBe(true);
   });
 
   it('stale-rev PUT against an updated doc surfaces CouchDB 409 conflict', async () => {

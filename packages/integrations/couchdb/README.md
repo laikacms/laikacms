@@ -91,16 +91,16 @@ path; the `name` field stores the leaf segment (without extension).
 
 ## Operation mapping
 
-| Laika operation             | CouchDB call(s)                                            |
-| --------------------------- | ---------------------------------------------------------- |
-| `getObject(key)`            | `POST /_find  {selector: {type, parent, name}}`            |
-| `createObject(key, …)`      | `POST /_find` (probe) + `PUT /{id}`                        |
-| `updateObject(key, …)`      | `POST /_find` (read rev) + `PUT /{id}` with `_rev`         |
-| `createOrUpdateObject`      | (same as above, branching on the probe result)             |
-| `createFolder(key)`         | `HEAD /{id}` (idempotency) + `PUT /{id}`                   |
-| `removeAtoms([k₁…kₙ])`      | **1 × `POST /_find` + 1 × `POST /_bulk_docs`** — two total |
-| `listAtomSummaries(folder)` | `POST /_find  {selector: {parent: folder}}`                |
-| `getCapabilities()`         | (no I/O — static)                                          |
+| Laika operation             | CouchDB call(s)                                                                                                                   |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `getObject(key)`            | `POST /_find  {selector: {type, parent, name}}`                                                                                   |
+| `createObject(key, …)`      | `POST /_find` (probe) + `PUT /{id}`                                                                                               |
+| `updateObject(key, …)`      | `POST /_find` (read rev) + `PUT /{id}` with `_rev`                                                                                |
+| `createOrUpdateObject`      | (same as above, branching on the probe result)                                                                                    |
+| `createFolder(key)`         | `HEAD /{id}` (idempotency) + `PUT /{id}`                                                                                          |
+| `removeAtoms([k₁…kₙ])`      | **1 × `POST /_find`** (file probe) + per-missing-key **`POST /_find`** (folder doc + children check) + **1 × `POST /_bulk_docs`** |
+| `listAtomSummaries(folder)` | `POST /_find  {selector: {parent: folder}}`                                                                                       |
+| `getCapabilities()`         | (no I/O — static)                                                                                                                 |
 
 ## Auth
 
