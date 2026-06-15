@@ -338,7 +338,10 @@ export function buildJsonApi(options: StorageApiOptions) {
     const key = rawKey === undefined ? undefined : safeDecode(rawKey);
 
     const listFullAtoms = async () => {
-      const listOptions = { depth: 1, pagination: { perPage: 10 } };
+      const queryParams = Object.fromEntries(url.searchParams.entries());
+      const hasPaginationParam = Object.keys(queryParams).some(k => k.startsWith('page['));
+      const pagination = hasPaginationParam ? parsePaginationQuery(queryParams) : { perPage: 100 };
+      const listOptions = { depth: 1, pagination };
       const result = await runStream(repo.listAtoms(key ?? '', listOptions));
       if (Result.isFailure(result)) {
         const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
@@ -356,7 +359,10 @@ export function buildJsonApi(options: StorageApiOptions) {
     };
 
     const listAtomSummaries = async () => {
-      const listOptions = { depth: 1, pagination: { perPage: 10 } };
+      const queryParams = Object.fromEntries(url.searchParams.entries());
+      const hasPaginationParam = Object.keys(queryParams).some(k => k.startsWith('page['));
+      const pagination = hasPaginationParam ? parsePaginationQuery(queryParams) : { perPage: 100 };
+      const listOptions = { depth: 1, pagination };
       const result = await runStream(repo.listAtomSummaries(key ?? '', listOptions));
       if (Result.isFailure(result)) {
         const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
