@@ -438,7 +438,10 @@ export function buildJsonApi(options: StorageApiOptions) {
         ...(body.data.meta ? { metadata: body.data.meta } : {}),
       };
       const result = await runTaskWithMetadata(repo.createObject(data));
-      if (Result.isFailure(result)) return failResponse(result);
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 400;
+        return failResponse(result, status);
+      }
       return respondResourceWithConverter(
         Result.succeed(result.success.value),
         storageObjectToJsonApi,
@@ -471,7 +474,10 @@ export function buildJsonApi(options: StorageApiOptions) {
         ...(body.data.meta ? { metadata: body.data.meta } : {}),
       };
       const result = await runTaskWithMetadata(repo.updateObject(data));
-      if (Result.isFailure(result)) return failResponse(result);
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 400;
+        return failResponse(result, status);
+      }
       return respondResourceWithConverter(
         Result.succeed(result.success.value),
         storageObjectToJsonApi,
