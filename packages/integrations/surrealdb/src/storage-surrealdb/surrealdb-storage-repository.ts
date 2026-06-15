@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -456,7 +457,48 @@ export class SurrealDbStorageRepository extends StorageRepository {
         });
 
         const found = resolved.filter(r => r.resolved !== null) as Array<{ key: string, resolved: StoredRecord }>;
-        const missing = resolved.filter(r => r.resolved === null);
+        const fileMissing = resolved.filter(r => r.resolved === null);
+
+        // ── Round-trip 1b: for file-miss keys, probe laika_folder.
+        interface FolderProbeResult {
+          key: string;
+          folderPath: string | null; // non-null ↔ explicit folder record exists
+          hasChildren: boolean;
+        }
+        const folderProbes = yield* Effect.promise(async (): Promise<FolderProbeResult[]> => {
+          const results: FolderProbeResult[] = [];
+          for (const m of fileMissing) {
+            const folderResult = await this.dataSource.one<StoredRecord[]>(
+              `SELECT id FROM ${this.folderTable} WHERE path = $path LIMIT 1`,
+              { path: m.key },
+            );
+            const folderPath = Result.isSuccess(folderResult) && folderResult.success.length > 0 ? m.key : null;
+            let hasChildren = false;
+            if (folderPath !== null) {
+              const fileChild = await this.dataSource.one<StoredRecord[]>(
+                `SELECT id FROM ${this.fileTable} WHERE parent = $parent LIMIT 1`,
+                { parent: m.key },
+              );
+              if (Result.isSuccess(fileChild) && fileChild.success.length > 0) {
+                hasChildren = true;
+              } else {
+                const folderChild = await this.dataSource.one<StoredRecord[]>(
+                  `SELECT id FROM ${this.folderTable} WHERE parent = $parent LIMIT 1`,
+                  { parent: m.key },
+                );
+                hasChildren = Result.isSuccess(folderChild) && folderChild.success.length > 0;
+              }
+            }
+            results.push({ key: m.key, folderPath, hasChildren });
+          }
+          return results;
+        });
+
+        const emptyFolders = folderProbes.filter(p => p.folderPath !== null && !p.hasChildren) as Array<
+          FolderProbeResult & { folderPath: string }
+        >;
+        const nonEmptyFolders = folderProbes.filter(p => p.folderPath !== null && p.hasChildren);
+        const trulyMissing = folderProbes.filter(p => p.folderPath === null);
 
         // ── Round-trip 2: ONE BEGIN/COMMIT transaction with N DELETE
         // statements. Atomic — partial failures roll back. The whole SurQL
@@ -470,11 +512,24 @@ export class SurrealDbStorageRepository extends StorageRepository {
           ));
         }
 
+        // ── Round-trip 3: delete empty folder records one by one.
+        for (const ef of emptyFolders) {
+          yield* liftResult(this.dataSource.one(
+            `DELETE type::thing($table, $path)`,
+            { table: this.folderTable, path: ef.folderPath },
+          ));
+        }
+
         for (const f of found) yield* emit.data(f.key);
-        for (const m of missing) {
+        for (const ef of emptyFolders) yield* emit.data(ef.key);
+        for (const nef of nonEmptyFolders) {
+          yield* emit.recoverableError(new ForbiddenError(`Cannot remove non-empty folder: ${nef.key}`));
+        }
+        for (const m of trulyMissing) {
           yield* emit.recoverableError(new NotFoundError(`SurrealDB record not found: ${m.key}`));
         }
-        return { removed: found.length, skipped: skipped0 + missing.length };
+        const skipped = skipped0 + nonEmptyFolders.length + trulyMissing.length;
+        return { removed: found.length + emptyFolders.length, skipped };
       })
     );
   }
