@@ -1,13 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Button } from 'decap-cms-widget-lexicaleditor/editor/ui/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from 'decap-cms-widget-lexicaleditor/editor/ui/tooltip';
+import { Button } from '@laikacms/lexical-editor/editor/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@laikacms/lexical-editor/editor/ui/tooltip';
 
 const meta = {
   title: 'Lexical Editor/UI/Tooltip',

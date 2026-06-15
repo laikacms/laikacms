@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import { ScrollArea } from 'decap-cms-widget-lexicaleditor/editor/ui/scroll-area';
-import { Separator } from 'decap-cms-widget-lexicaleditor/editor/ui/separator';
+import { ScrollArea } from '@laikacms/lexical-editor/editor/ui/scroll-area';
+import { Separator } from '@laikacms/lexical-editor/editor/ui/separator';
 
 const tags = Array.from({ length: 30 }, (_, index) => `Tag ${index + 1}`);
 

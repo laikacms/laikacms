@@ -1,7 +1,10 @@
 // Re-export the editor-agnostic core so consumers can keep importing names
 // like `Mapper`, `PortableTextDocument`, `RichtextValue`, `createKeyGenerator`,
-// `stripKeys`, etc. directly from `decap-cms-lexical-core`.
+// `stripKeys`, etc. directly from `@laikacms/lexical-editor/core`.
 export * from '@laikacloud/portabletext-core';
+
+// Editor schema vocabulary (defineSchema, DEFAULT_EDITOR_SCHEMA, accessors).
+export * from './schema/schema';
 
 // Custom blocks subsystem (Lexical-specific).
 export * from './blocks/BlockNode';

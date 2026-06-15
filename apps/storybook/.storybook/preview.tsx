@@ -2,7 +2,7 @@ import type { Decorator, Preview } from '@storybook/react-vite';
 import * as React from 'react';
 
 // Imported through the package's public subpath; aliased to source in `main.ts`.
-import { EditorGlobalStyles } from 'decap-cms-widget-lexicaleditor/editor/themes/global-styles';
+import { EditorGlobalStyles } from '@laikacms/lexical-editor/editor/themes/global-styles';
 
 /**
  * Every story is wrapped in the editor's emotion global styles (the design

@@ -9,8 +9,8 @@ import {
   FieldLegend,
   FieldSeparator,
   FieldSet,
-} from 'decap-cms-widget-lexicaleditor/editor/ui/field';
-import { Input } from 'decap-cms-widget-lexicaleditor/editor/ui/input';
+} from '@laikacms/lexical-editor/editor/ui/field';
+import { Input } from '@laikacms/lexical-editor/editor/ui/input';
 
 const meta = {
   title: 'Lexical Editor/UI/Field',

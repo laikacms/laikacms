@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 
-import { Calendar } from 'decap-cms-widget-lexicaleditor/editor/ui/calendar';
+import { Calendar } from '@laikacms/lexical-editor/editor/ui/calendar';
 
 const meta = {
   title: 'Lexical Editor/UI/Calendar',

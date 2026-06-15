@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import { Input } from 'decap-cms-widget-lexicaleditor/editor/ui/input';
+import { Input } from '@laikacms/lexical-editor/editor/ui/input';
 
 const meta = {
   title: 'Lexical Editor/UI/Input',

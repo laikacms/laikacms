@@ -29,7 +29,7 @@ import { RichTextExtension } from '@lexical/rich-text';
 import { TableCellNode, TableNode, TableRowNode } from '@lexical/table';
 import { configExtension, defineExtension, type EditorState, type SerializedEditorState } from 'lexical';
 
-import { useBlockViewer } from './_block-viewer-stub';
+import { DEFAULT_EDITOR_SCHEMA, type EditorSchema } from '../core/schema/schema';
 import { ContentEditable } from './editor-ui/content-editable';
 import { DateTimeExtension } from './extensions/date-time-extension';
 import { DragDropPasteExtension } from './extensions/drag-drop-paste-extension';
@@ -112,6 +112,7 @@ import { LinkToolbarPlugin } from './plugins/toolbar/link-toolbar-plugin';
 import { SubSuperToolbarPlugin } from './plugins/toolbar/subsuper-toolbar-plugin';
 import { ToolbarPlugin } from './plugins/toolbar/toolbar-plugin';
 import { TypingPerfPlugin } from './plugins/typing-pref-plugin';
+import { schemaToEditorFeatures } from './schema/features';
 import { editorTheme } from './themes/editor-theme';
 import { EMOJI } from './transformers/emoji-transformer';
 import { HR } from './transformers/hr-transformer';
@@ -130,11 +131,14 @@ export function Editor({
   editorSerializedState,
   onChange,
   onSerializedChange,
+  schema = DEFAULT_EDITOR_SCHEMA,
 }: {
   editorState?: EditorState,
   editorSerializedState?: SerializedEditorState,
   onChange?: (editorState: EditorState) => void,
   onSerializedChange?: (editorSerializedState: SerializedEditorState) => void,
+  /** Restricts which authoring controls appear. Defaults to the full schema. */
+  schema?: EditorSchema,
 }) {
   const {
     toolbarItems,
@@ -143,7 +147,7 @@ export function Editor({
     blockFormatItems,
     blockInsertItems,
     componentPickerItems,
-  } = useBlockViewer();
+  } = useMemo(() => schemaToEditorFeatures(schema), [schema]);
 
   const [floatingAnchorElem, setFloatingAnchorElem] = useState<HTMLDivElement | null>(null);
   const [isLinkEditMode, setIsLinkEditMode] = useState<boolean>(false);

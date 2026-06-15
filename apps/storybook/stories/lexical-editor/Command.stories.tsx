@@ -11,7 +11,7 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from 'decap-cms-widget-lexicaleditor/editor/ui/command';
+} from '@laikacms/lexical-editor/editor/ui/command';
 
 const meta = {
   title: 'Lexical Editor/UI/Command',

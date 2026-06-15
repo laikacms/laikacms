@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Bold } from 'lucide-react';
 
-import { Toggle } from 'decap-cms-widget-lexicaleditor/editor/ui/toggle';
+import { Toggle } from '@laikacms/lexical-editor/editor/ui/toggle';
 
 const meta = {
   title: 'Lexical Editor/UI/Toggle',

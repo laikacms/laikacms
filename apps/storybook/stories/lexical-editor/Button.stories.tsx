@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import { Button, type ButtonSize, type ButtonVariant } from 'decap-cms-widget-lexicaleditor/editor/ui/button';
+import { Button, type ButtonSize, type ButtonVariant } from '@laikacms/lexical-editor/editor/ui/button';
 
 const variants: ButtonVariant[] = ['default', 'outline', 'secondary', 'ghost', 'destructive', 'link'];
 const sizes: ButtonSize[] = ['default', 'xs', 'sm', 'lg'];

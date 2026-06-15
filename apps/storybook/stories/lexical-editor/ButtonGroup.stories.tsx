@@ -1,12 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { Bold, Italic, Underline } from 'lucide-react';
 
-import { Button } from 'decap-cms-widget-lexicaleditor/editor/ui/button';
-import {
-  ButtonGroup,
-  ButtonGroupSeparator,
-  ButtonGroupText,
-} from 'decap-cms-widget-lexicaleditor/editor/ui/button-group';
+import { Button } from '@laikacms/lexical-editor/editor/ui/button';
+import { ButtonGroup, ButtonGroupSeparator, ButtonGroupText } from '@laikacms/lexical-editor/editor/ui/button-group';
 
 const meta = {
   title: 'Lexical Editor/UI/ButtonGroup',

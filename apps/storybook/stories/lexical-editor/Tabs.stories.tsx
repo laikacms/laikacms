@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from 'decap-cms-widget-lexicaleditor/editor/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@laikacms/lexical-editor/editor/ui/tabs';
 
 const meta = {
   title: 'Lexical Editor/UI/Tabs',

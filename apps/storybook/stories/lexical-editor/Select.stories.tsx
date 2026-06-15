@@ -10,7 +10,7 @@ import {
   SelectSeparator,
   SelectTrigger,
   SelectValue,
-} from 'decap-cms-widget-lexicaleditor/editor/ui/select';
+} from '@laikacms/lexical-editor/editor/ui/select';
 
 const meta = {
   title: 'Lexical Editor/UI/Select',

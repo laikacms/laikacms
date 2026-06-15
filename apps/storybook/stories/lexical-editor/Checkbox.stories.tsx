@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import { Checkbox } from 'decap-cms-widget-lexicaleditor/editor/ui/checkbox';
-import { Label } from 'decap-cms-widget-lexicaleditor/editor/ui/label';
+import { Checkbox } from '@laikacms/lexical-editor/editor/ui/checkbox';
+import { Label } from '@laikacms/lexical-editor/editor/ui/label';
 
 const meta = {
   title: 'Lexical Editor/UI/Checkbox',

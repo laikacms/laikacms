@@ -1,0 +1,95 @@
+{
+  "name": "@laikacms/lexical-editor",
+  "description": "Framework-agnostic Lexical rich-text editor with a Portable Text <-> Lexical bridge. Built as an emotion-styled fork of htmujahid/shadcn-editor.",
+  "version": "0.1.1",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": false,
+  "engines": {
+    "node": "22.x"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/index.d.ts",
+      "import": "./dist/core/index.js",
+      "default": "./dist/core/index.js"
+    },
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js",
+      "default": "./dist/*.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json -w",
+    "clean": "rimraf dist",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@laikacloud/portabletext-core": "workspace:*",
+    "lexical": "catalog:lexical",
+    "@lexical/code": "catalog:lexical",
+    "@lexical/code-prism": "catalog:lexical",
+    "@lexical/code-shiki": "catalog:lexical",
+    "@lexical/extension": "catalog:lexical",
+    "@lexical/file": "catalog:lexical",
+    "@lexical/hashtag": "catalog:lexical",
+    "@lexical/headless": "catalog:lexical",
+    "@lexical/history": "catalog:lexical",
+    "@lexical/link": "catalog:lexical",
+    "@lexical/list": "catalog:lexical",
+    "@lexical/markdown": "catalog:lexical",
+    "@lexical/overflow": "catalog:lexical",
+    "@lexical/react": "catalog:lexical",
+    "@lexical/rich-text": "catalog:lexical",
+    "@lexical/selection": "catalog:lexical",
+    "@lexical/table": "catalog:lexical",
+    "@lexical/text": "catalog:lexical",
+    "@lexical/utils": "catalog:lexical",
+    "@emotion/css": "catalog:emotion",
+    "@emotion/react": "catalog:emotion",
+    "@emotion/styled": "catalog:emotion",
+    "@portabletext/react": "catalog:portabletext",
+    "@portabletext/schema": "catalog:portabletext",
+    "@portabletext/types": "catalog:portabletext",
+    "@portabletext/toolkit": "catalog:portabletext",
+    "@radix-ui/react-icons": "catalog:editor-ui",
+    "radix-ui": "catalog:editor-ui",
+    "cmdk": "catalog:editor-ui",
+    "sonner": "catalog:editor-ui",
+    "shiki": "catalog:editor-ui",
+    "react-day-picker": "catalog:editor-ui",
+    "react-error-boundary": "catalog:editor-ui",
+    "date-fns": "catalog:editor-ui",
+    "lucide-react": "catalog:icons",
+    "lodash": "^4.17.21"
+  },
+  "peerDependencies": {
+    "react": "catalog:react",
+    "react-dom": "catalog:react"
+  },
+  "devDependencies": {
+    "@types/lodash": "catalog:types",
+    "@types/react": "catalog:types",
+    "@types/react-dom": "catalog:types",
+    "happy-dom": "catalog:testing",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:testing"
+  }
+}

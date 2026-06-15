@@ -2,7 +2,7 @@ packages:
   - "packages/laikacms"
   - "packages/decap"
   - "packages/decap-ai"
-  - "packages/decap-cms-lexical-core"
+  - "packages/lexical-editor"
   - "packages/decap-cms-widget-lexicaleditor"
   - "packages/decap-cms-widget-portabletext-editor"
   - "packages/git-gateway"
@@ -183,6 +183,7 @@ catalogs:
 
   portabletext:
     "@portabletext/types": "^4.0.2"
+    "@portabletext/schema": "^2.2.0"
     "@portabletext/toolkit": "^5.0.2"
     "@portabletext/react": "^6.2.0"
     "@portabletext/to-html": "^5.0.2"

@@ -1,13 +1,11 @@
 import type { SerializedEditorState } from 'lexical';
 import { type ReactNode, useMemo, useRef } from 'react';
 
+import { Editor, EditorGlobalStyles } from '@laikacms/lexical-editor';
 import {
   createLexicalRichtextValue as createRichtextValue,
   LexicalRichtextValue as RichtextValue,
-} from 'decap-cms-lexical-core';
-
-import { Editor } from '../editor/Editor';
-import { EditorGlobalStyles } from '../editor/themes/global-styles';
+} from '@laikacms/lexical-editor/core';
 
 interface DecapField {
   format?: string;

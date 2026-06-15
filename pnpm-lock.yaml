@@ -219,9 +219,6 @@ catalogs:
       specifier: ^7.2.0
       version: 7.2.9
   lexical:
-    '@lexical/clipboard':
-      specifier: ^0.42.0
-      version: 0.42.0
     '@lexical/code':
       specifier: ^0.42.0
       version: 0.42.0
@@ -250,9 +247,6 @@ catalogs:
       specifier: ^0.42.0
       version: 0.42.0
     '@lexical/list':
-      specifier: ^0.42.0
-      version: 0.42.0
-    '@lexical/mark':
       specifier: ^0.42.0
       version: 0.42.0
     '@lexical/markdown':
@@ -342,6 +336,9 @@ catalogs:
     '@portabletext/react':
       specifier: ^6.2.0
       version: 6.2.0
+    '@portabletext/schema':
+      specifier: ^2.2.0
+      version: 2.2.0
     '@portabletext/to-html':
       specifier: ^5.0.2
       version: 5.0.2
@@ -5718,6 +5715,9 @@ importers:
       '@laikacms/decap-integrations':
         specifier: workspace:*
         version: link:../../packages/decap
+      '@laikacms/lexical-editor':
+        specifier: workspace:*
+        version: link:../../packages/lexical-editor
       '@storybook/addon-a11y':
         specifier: ^10.4.2
         version: 10.4.2(storybook@10.4.2(@testing-library/dom@10.4.1)(@types/react@19.2.14)(prettier@3.8.3)(react-dom@19.2.6(react@19.2.6))(react@19.2.6))
@@ -5739,9 +5739,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: catalog:react
         version: 6.0.2(vite@8.0.11(@types/node@22.19.18)(esbuild@0.28.0)(jiti@2.7.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.8.4))
-      decap-cms-widget-lexicaleditor:
-        specifier: workspace:*
-        version: link:../../packages/decap-cms-widget-lexicaleditor
       decap-cms-widget-portabletext-editor:
         specifier: workspace:*
         version: link:../../packages/decap-cms-widget-portabletext-editor
@@ -6016,181 +6013,24 @@ importers:
         specifier: catalog:tools
         version: 4.1.5(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@22.19.18)(@vitest/coverage-v8@4.1.5)(happy-dom@20.9.0)(jsdom@20.0.3)(vite@8.0.11(@types/node@22.19.18)(esbuild@0.28.0)(jiti@2.7.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.8.4))
 
-  packages/decap-cms-lexical-core:
-    dependencies:
-      '@laikacloud/portabletext-core':
-        specifier: workspace:*
-        version: link:../portable-text/portabletext-core
-      '@lexical/code':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/headless':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/link':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/list':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/rich-text':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/table':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/utils':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@portabletext/toolkit':
-        specifier: catalog:portabletext
-        version: 5.0.2
-      '@portabletext/types':
-        specifier: catalog:portabletext
-        version: 4.0.2
-      lexical:
-        specifier: catalog:lexical
-        version: 0.42.0
-      react:
-        specifier: catalog:react
-        version: 19.2.6
-    devDependencies:
-      '@types/react':
-        specifier: catalog:types
-        version: 19.2.14
-      rimraf:
-        specifier: catalog:tools
-        version: 6.1.3
-      typescript:
-        specifier: catalog:tools
-        version: 6.0.3
-      vitest:
-        specifier: catalog:testing
-        version: 4.1.5(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.5)(happy-dom@20.9.0)(jsdom@20.0.3)(vite@8.0.11(@types/node@24.12.4)(esbuild@0.28.0)(jiti@2.7.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.8.4))
-
   packages/decap-cms-widget-lexicaleditor:
     dependencies:
-      '@emotion/css':
-        specifier: catalog:emotion
-        version: 11.13.5
-      '@emotion/react':
-        specifier: catalog:emotion
-        version: 11.14.0(@types/react@19.2.14)(react@19.2.6)
-      '@emotion/styled':
-        specifier: catalog:emotion
-        version: 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(react@19.2.6)
-      '@laikacloud/portabletext-core':
+      '@laikacms/lexical-editor':
         specifier: workspace:*
-        version: link:../portable-text/portabletext-core
-      '@lexical/clipboard':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/code':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/code-prism':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/code-shiki':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/extension':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/file':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/hashtag':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/history':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/link':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/list':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/mark':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/markdown':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/overflow':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/react':
-        specifier: catalog:lexical
-        version: 0.42.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(yjs@13.6.30)
-      '@lexical/rich-text':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/selection':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/table':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/text':
-        specifier: catalog:lexical
-        version: 0.42.0
-      '@lexical/utils':
-        specifier: catalog:lexical
-        version: 0.42.0
+        version: link:../lexical-editor
       '@portabletext/react':
         specifier: catalog:portabletext
         version: 6.2.0(react@19.2.6)
-      '@portabletext/types':
-        specifier: catalog:portabletext
-        version: 4.0.2
-      '@radix-ui/react-icons':
-        specifier: catalog:editor-ui
-        version: 1.3.2(react@19.2.6)
-      cmdk:
-        specifier: catalog:editor-ui
-        version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      date-fns:
-        specifier: catalog:editor-ui
-        version: 4.3.0
-      decap-cms-lexical-core:
-        specifier: workspace:*
-        version: link:../decap-cms-lexical-core
       lexical:
         specifier: catalog:lexical
         version: 0.42.0
-      lodash:
-        specifier: ^4.17.21
-        version: 4.18.1
-      lucide-react:
-        specifier: catalog:icons
-        version: 1.14.0(react@19.2.6)
-      radix-ui:
-        specifier: catalog:editor-ui
-        version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       react:
         specifier: catalog:react
         version: 19.2.6
-      react-day-picker:
-        specifier: catalog:editor-ui
-        version: 9.14.0(react@19.2.6)
       react-dom:
         specifier: catalog:react
         version: 19.2.6(react@19.2.6)
-      react-error-boundary:
-        specifier: catalog:editor-ui
-        version: 6.1.2(react@19.2.6)
-      shiki:
-        specifier: catalog:editor-ui
-        version: 4.1.0
-      sonner:
-        specifier: catalog:editor-ui
-        version: 2.0.7(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
     devDependencies:
-      '@types/lodash':
-        specifier: catalog:types
-        version: 4.17.24
       '@types/react':
         specifier: catalog:types
         version: 19.2.14
@@ -7332,6 +7172,148 @@ importers:
       vitest:
         specifier: catalog:tools
         version: 4.1.5(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@22.19.18)(@vitest/coverage-v8@4.1.5)(happy-dom@20.9.0)(jsdom@20.0.3)(vite@8.0.11(@types/node@22.19.18)(esbuild@0.28.0)(jiti@2.7.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.8.4))
+
+  packages/lexical-editor:
+    dependencies:
+      '@emotion/css':
+        specifier: catalog:emotion
+        version: 11.13.5
+      '@emotion/react':
+        specifier: catalog:emotion
+        version: 11.14.0(@types/react@19.2.14)(react@19.2.6)
+      '@emotion/styled':
+        specifier: catalog:emotion
+        version: 11.14.1(@emotion/react@11.14.0(@types/react@19.2.14)(react@19.2.6))(@types/react@19.2.14)(react@19.2.6)
+      '@laikacloud/portabletext-core':
+        specifier: workspace:*
+        version: link:../portable-text/portabletext-core
+      '@lexical/code':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/code-prism':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/code-shiki':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/extension':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/file':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/hashtag':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/headless':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/history':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/link':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/list':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/markdown':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/overflow':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/react':
+        specifier: catalog:lexical
+        version: 0.42.0(react-dom@19.2.6(react@19.2.6))(react@19.2.6)(yjs@13.6.30)
+      '@lexical/rich-text':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/selection':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/table':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/text':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@lexical/utils':
+        specifier: catalog:lexical
+        version: 0.42.0
+      '@portabletext/react':
+        specifier: catalog:portabletext
+        version: 6.2.0(react@19.2.6)
+      '@portabletext/schema':
+        specifier: catalog:portabletext
+        version: 2.2.0
+      '@portabletext/toolkit':
+        specifier: catalog:portabletext
+        version: 5.0.2
+      '@portabletext/types':
+        specifier: catalog:portabletext
+        version: 4.0.2
+      '@radix-ui/react-icons':
+        specifier: catalog:editor-ui
+        version: 1.3.2(react@19.2.6)
+      cmdk:
+        specifier: catalog:editor-ui
+        version: 1.1.1(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      date-fns:
+        specifier: catalog:editor-ui
+        version: 4.3.0
+      lexical:
+        specifier: catalog:lexical
+        version: 0.42.0
+      lodash:
+        specifier: ^4.17.21
+        version: 4.18.1
+      lucide-react:
+        specifier: catalog:icons
+        version: 1.14.0(react@19.2.6)
+      radix-ui:
+        specifier: catalog:editor-ui
+        version: 1.4.3(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react:
+        specifier: catalog:react
+        version: 19.2.6
+      react-day-picker:
+        specifier: catalog:editor-ui
+        version: 9.14.0(react@19.2.6)
+      react-dom:
+        specifier: catalog:react
+        version: 19.2.6(react@19.2.6)
+      react-error-boundary:
+        specifier: catalog:editor-ui
+        version: 6.1.2(react@19.2.6)
+      shiki:
+        specifier: catalog:editor-ui
+        version: 4.1.0
+      sonner:
+        specifier: catalog:editor-ui
+        version: 2.0.7(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+    devDependencies:
+      '@types/lodash':
+        specifier: catalog:types
+        version: 4.17.24
+      '@types/react':
+        specifier: catalog:types
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: catalog:types
+        version: 19.2.3(@types/react@19.2.14)
+      happy-dom:
+        specifier: catalog:testing
+        version: 20.9.0
+      rimraf:
+        specifier: catalog:tools
+        version: 6.1.3
+      typescript:
+        specifier: catalog:tools
+        version: 6.0.3
+      vitest:
+        specifier: catalog:testing
+        version: 4.1.5(@edge-runtime/vm@3.2.0)(@opentelemetry/api@1.9.0)(@types/node@24.12.4)(@vitest/coverage-v8@4.1.5)(happy-dom@20.9.0)(jsdom@20.0.3)(vite@8.0.11(@types/node@24.12.4)(esbuild@0.28.0)(jiti@2.7.0)(sass@1.97.3)(stylus@0.62.0)(terser@5.48.0)(tsx@4.22.3)(yaml@2.8.4))
 
   packages/portable-text/portable-text-to-adaptive-cards-mapper:
     dependencies:
@@ -9618,10 +9600,6 @@ packages:
 
   '@babel/helper-module-imports@7.18.6':
     resolution: {integrity: sha512-0NFvs3VkuSYbFi1x2Vd6tKrywq+z/cLeYC/RJNFrIX/30Bf5aiGYbtvGXolEktzJH8o5E5KJ3tT+nkxuuZFVlA==}
-    engines: {node: '>=6.9.0'}
-
-  '@babel/helper-module-imports@7.28.6':
-    resolution: {integrity: sha512-l5XkZK7r7wa9LucGw9LwZyyCUscb4x37JWTPz7swwFE/0FMQAGpiWUZn8u9DzkSBWEcK25jmvubfpw2dnAMdbw==}
     engines: {node: '>=6.9.0'}
 
   '@babel/helper-module-imports@7.29.7':
@@ -36278,13 +36256,6 @@ snapshots:
     dependencies:
       '@babel/types': 7.29.7
 
-  '@babel/helper-module-imports@7.28.6':
-    dependencies:
-      '@babel/traverse': 7.29.7
-      '@babel/types': 7.29.7
-    transitivePeerDependencies:
-      - supports-color
-
   '@babel/helper-module-imports@7.29.7':
     dependencies:
       '@babel/traverse': 7.29.7
@@ -37769,7 +37740,7 @@ snapshots:
 
   '@emotion/babel-plugin@11.13.5':
     dependencies:
-      '@babel/helper-module-imports': 7.28.6
+      '@babel/helper-module-imports': 7.29.7
       '@babel/runtime': 7.29.2
       '@emotion/hash': 0.9.2
       '@emotion/memoize': 0.9.0

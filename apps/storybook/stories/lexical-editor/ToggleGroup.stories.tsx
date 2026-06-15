@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { AlignCenter, AlignLeft, AlignRight, Bold, Italic, Underline } from 'lucide-react';
 
-import { ToggleGroup, ToggleGroupItem } from 'decap-cms-widget-lexicaleditor/editor/ui/toggle-group';
+import { ToggleGroup, ToggleGroupItem } from '@laikacms/lexical-editor/editor/ui/toggle-group';
 
 const meta = {
   title: 'Lexical Editor/UI/ToggleGroup',

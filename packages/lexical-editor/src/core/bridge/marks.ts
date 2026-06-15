@@ -43,21 +43,38 @@ export function isDecorator(mark: string): boolean {
   return Object.prototype.hasOwnProperty.call(DECORATOR_TO_BIT, mark);
 }
 
-/** Combine Portable Text decorator names into a Lexical format bitfield. */
-export function decoratorsToFormat(marks: readonly string[]): number {
+/**
+ * Combine Portable Text decorator names into a Lexical format bitfield.
+ *
+ * Unknown marks are ignored; when `allowed` is supplied, decorators outside the
+ * set are dropped too (used to enforce a schema on the way into the editor).
+ */
+export function decoratorsToFormat(
+  marks: readonly string[],
+  allowed?: ReadonlySet<string>,
+): number {
   let format = 0;
   for (const mark of marks) {
+    if (allowed && !allowed.has(mark)) continue;
     const bit = DECORATOR_TO_BIT[mark];
     if (bit) format |= bit;
   }
   return format;
 }
 
-/** Expand a Lexical format bitfield into ordered Portable Text decorator names. */
-export function formatToDecorators(format: number): string[] {
+/**
+ * Expand a Lexical format bitfield into ordered Portable Text decorator names.
+ *
+ * When `allowed` is supplied, decorators outside the set are omitted (used to
+ * enforce a schema on serialization).
+ */
+export function formatToDecorators(
+  format: number,
+  allowed?: ReadonlySet<string>,
+): string[] {
   const decorators: string[] = [];
   for (const [bit, name] of BIT_TO_DECORATOR) {
-    if (format & bit) decorators.push(name);
+    if (format & bit && (!allowed || allowed.has(name))) decorators.push(name);
   }
   return decorators;
 }

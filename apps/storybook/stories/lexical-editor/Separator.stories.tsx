@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 
-import { Separator } from 'decap-cms-widget-lexicaleditor/editor/ui/separator';
+import { Separator } from '@laikacms/lexical-editor/editor/ui/separator';
 
 const meta = {
   title: 'Lexical Editor/UI/Separator',

@@ -1,9 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Button } from 'decap-cms-widget-lexicaleditor/editor/ui/button';
-import { Input } from 'decap-cms-widget-lexicaleditor/editor/ui/input';
-import { Label } from 'decap-cms-widget-lexicaleditor/editor/ui/label';
+import { Button } from '@laikacms/lexical-editor/editor/ui/button';
+import { Input } from '@laikacms/lexical-editor/editor/ui/input';
+import { Label } from '@laikacms/lexical-editor/editor/ui/label';
 import {
   Popover,
   PopoverContent,
@@ -11,7 +11,7 @@ import {
   PopoverHeader,
   PopoverTitle,
   PopoverTrigger,
-} from 'decap-cms-widget-lexicaleditor/editor/ui/popover';
+} from '@laikacms/lexical-editor/editor/ui/popover';
 
 const meta = {
   title: 'Lexical Editor/UI/Popover',

@@ -18,13 +18,14 @@ The dev server needs no prior build of the other packages — see "How it resolv
 
 | Sidebar section      | Package                                | Notes                                        |
 | -------------------- | -------------------------------------- | -------------------------------------------- |
-| Lexical Editor / UI  | `decap-cms-widget-lexicaleditor`       | The `editor/ui/*` component library          |
+| Lexical Editor / UI  | `@laikacms/lexical-editor`             | The `editor/ui/*` component library          |
 | Decap Integrations   | `@laikacms/decap-integrations`         | Lucide + Radix icon widgets (mocked props)   |
 | Portable Text Editor | `decap-cms-widget-portabletext-editor` | Live `PortableTextEditorView` + toolbar      |
 | Decap AI             | `@laikacms/decap-ai`                   | Chat control shell (mock store + stub fetch) |
 
-`decap-cms-lexical-core` is documented on the Introduction page rather than mounted: it exposes a
-Lexical `DecoratorNode` subclass and a React context provider, not a standalone visual component.
+`@laikacms/lexical-editor/core` is documented on the Introduction page rather than mounted: it
+exposes a Lexical `DecoratorNode` subclass and a React context provider, not a standalone visual
+component.
 
 ## Theme
 
@@ -35,7 +36,7 @@ CSS custom properties); the preview decorator injects them and toggles a `.dark`
 ## How it resolves packages
 
 Stories import each package through its real public specifiers (for example
-`decap-cms-widget-lexicaleditor/editor/ui/button`). Two different resolutions are wired up:
+`@laikacms/lexical-editor/editor/ui/button`). Two different resolutions are wired up:
 
 - **Vite (dev + build-storybook)** aliases those specifiers to each package's `src` (see
   `.storybook/main.ts`), so stories render from source with HMR and without building the packages

@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { expect, userEvent, within } from 'storybook/test';
 
-import { Button } from 'decap-cms-widget-lexicaleditor/editor/ui/button';
+import { Button } from '@laikacms/lexical-editor/editor/ui/button';
 import {
   Dialog,
   DialogClose,
@@ -11,9 +11,9 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from 'decap-cms-widget-lexicaleditor/editor/ui/dialog';
-import { Input } from 'decap-cms-widget-lexicaleditor/editor/ui/input';
-import { Label } from 'decap-cms-widget-lexicaleditor/editor/ui/label';
+} from '@laikacms/lexical-editor/editor/ui/dialog';
+import { Input } from '@laikacms/lexical-editor/editor/ui/input';
+import { Label } from '@laikacms/lexical-editor/editor/ui/label';
 
 const meta = {
   title: 'Lexical Editor/UI/Dialog',

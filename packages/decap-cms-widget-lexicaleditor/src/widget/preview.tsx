@@ -1,7 +1,7 @@
 import { PortableText } from '@portabletext/react';
 import type { ReactNode } from 'react';
 
-import { createRichtextValue, type PortableTextDocument, RichtextValue } from 'decap-cms-lexical-core';
+import { createRichtextValue, type PortableTextDocument, RichtextValue } from '@laikacms/lexical-editor/core';
 
 interface LexicalPreviewProps {
   /** Stored field value — either a live `RichtextValue` proxy or a raw string. */
