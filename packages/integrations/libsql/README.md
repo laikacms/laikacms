@@ -146,10 +146,13 @@ For self-hosted `sqld` without auth, omit the `auth` block. Otherwise the token 
 
 ## Caveats
 
-- **No embedded replica support.** This package speaks the pure HTTP pipeline protocol. If you want
-  libSQL's local embedded-replica feature (where the client maintains a local SQLite that
-  asynchronously syncs against the upstream), use `@libsql/client` directly — the repository's
-  structural dependency on `MongoCollectionLike`-style would let you adapt it, but that's beyond v1.
+- **No embedded replica support.** This package drives `LibSqlDataSource`, which speaks only the
+  Turso HTTP pipeline protocol (`POST /v2/pipeline` with typed `execute`/`batch` requests over
+  `fetch`). libSQL's embedded-replica feature — where `@libsql/client` keeps a local SQLite file
+  and asynchronously syncs against the upstream — requires the native `@libsql/client` call shape,
+  not the HTTP wire format. To add embedded-replica support you would need to replace
+  `LibSqlDataSource.execute` / `LibSqlDataSource.batch` with a wrapper around an embedded
+  `@libsql/client` instance; that is not provided in v1.
 - **`bigint`s are returned as strings.** libSQL serialises integers as string values to preserve
   precision past 2^53. The repository doesn't try to coerce — anything in the `Content` column
   round-trips as text, but app code reading numeric columns directly needs to parse explicitly.
