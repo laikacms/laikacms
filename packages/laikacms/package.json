@@ -73,6 +73,11 @@
       "import": "./dist/domain/storage/index.js",
       "default": "./dist/domain/storage/index.js"
     },
+    "./documents/testing": {
+      "types": "./dist/domain/documents/testing/index.d.ts",
+      "import": "./dist/domain/documents/testing/index.js",
+      "default": "./dist/domain/documents/testing/index.js"
+    },
     "./storage/testing": {
       "types": "./dist/domain/storage/testing/index.d.ts",
       "import": "./dist/domain/storage/testing/index.js",
