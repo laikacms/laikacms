@@ -87,11 +87,14 @@ Returns meta-information about the Storage API and its available endpoints.
 
 List all atoms (objects and folders) under the given key prefix. Returns full content for each atom.
 
+Omitting `:key` (i.e. `GET /atoms`) lists root-level atoms — equivalent to `GET /atoms/` with an
+empty key.
+
 **Path Parameters**
 
-| Parameter | Type   | Description                                          |
-| --------- | ------ | ---------------------------------------------------- |
-| `key`     | string | Folder key prefix to list atoms under (e.g. `posts`) |
+| Parameter | Type   | Required | Description                                                                    |
+| --------- | ------ | -------- | ------------------------------------------------------------------------------ |
+| `key`     | string | No       | Folder key prefix to list atoms under (e.g. `posts`). Defaults to `''` (root). |
 
 **Query Parameters**
 
@@ -151,11 +154,14 @@ List all atoms (objects and folders) under the given key prefix. Returns full co
 List atom summaries (without full content) under the given key prefix. Useful for listing large
 collections efficiently.
 
+Omitting `:key` (i.e. `GET /atom-summaries`) lists root-level atom summaries — equivalent to
+`GET /atom-summaries/` with an empty key.
+
 **Path Parameters**
 
-| Parameter | Type   | Description       |
-| --------- | ------ | ----------------- |
-| `key`     | string | Folder key prefix |
+| Parameter | Type   | Required | Description                                                |
+| --------- | ------ | -------- | ---------------------------------------------------------- |
+| `key`     | string | No       | Folder key prefix (e.g. `posts`). Defaults to `''` (root). |
 
 **Query Parameters**
 
