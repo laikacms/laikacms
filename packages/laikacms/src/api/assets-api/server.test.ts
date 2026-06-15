@@ -87,6 +87,100 @@ describe('assets-api meta.warnings', () => {
     expect(body.meta.warnings?.[0]?.detail).toContain('orphan thumbnail');
   });
 
+  it('multi-page cursor walk: following links.next returns the next page, not the first page again', async () => {
+    // 5 resources in total; page size = 2 → 3 pages
+    const allResources: Resource[] = [
+      {
+        type: 'asset',
+        key: 'a.jpg',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+        content: { size: 1, etag: 'a' },
+      },
+      {
+        type: 'asset',
+        key: 'b.jpg',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+        content: { size: 1, etag: 'b' },
+      },
+      {
+        type: 'asset',
+        key: 'c.jpg',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+        content: { size: 1, etag: 'c' },
+      },
+      {
+        type: 'asset',
+        key: 'd.jpg',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+        content: { size: 1, etag: 'd' },
+      },
+      {
+        type: 'asset',
+        key: 'e.jpg',
+        createdAt: '2026-01-01T00:00:00Z',
+        updatedAt: '2026-01-01T00:00:00Z',
+        content: { size: 1, etag: 'e' },
+      },
+    ];
+
+    // Stub repo: honours `after` cursor by slicing from the item after the cursor
+    const partialRepo = {
+      listResources: (_folderKey: string, options: ListResourcesOptions) =>
+        LaikaStream.make<Resource, ListResourcesDone>(emit =>
+          Effect.gen(function*() {
+            const p = options.pagination as { after?: string, perPage: number } | { offset: number, limit: number };
+            let items: Resource[];
+            if ('after' in p && p.after) {
+              const idx = allResources.findIndex(r => r.key === p.after);
+              const perPage = p.perPage;
+              items = idx >= 0 ? allResources.slice(idx + 1, idx + 1 + perPage) : allResources.slice(0, perPage);
+            } else {
+              const limit = 'limit' in p ? p.limit : p.perPage;
+              items = allResources.slice(0, limit);
+            }
+            for (const r of items) yield* emit.data(r);
+            return { total: items.length };
+          })
+        ),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+
+    // Page 1
+    const res1 = await api.fetch(new Request('http://localhost/api/assets/resources?page[limit]=2'));
+    expect(res1.status).toBe(200);
+    const body1 = await res1.json() as {
+      data: Array<{ id: string }>,
+      links: { next?: string | null },
+    };
+    expect(body1.data.map(d => d.id)).toEqual(['a.jpg', 'b.jpg']);
+    expect(body1.links.next).toBeTruthy();
+
+    // Page 2: follow links.next — must NOT return the same first page
+    const res2 = await api.fetch(new Request(body1.links.next!));
+    expect(res2.status).toBe(200);
+    const body2 = await res2.json() as {
+      data: Array<{ id: string }>,
+      links: { next?: string | null },
+    };
+    expect(body2.data.map(d => d.id)).toEqual(['c.jpg', 'd.jpg']);
+    expect(body2.links.next).toBeTruthy();
+
+    // Page 3: follow links.next — last page, no next link
+    const res3 = await api.fetch(new Request(body2.links.next!));
+    expect(res3.status).toBe(200);
+    const body3 = await res3.json() as {
+      data: Array<{ id: string }>,
+      links: { next?: string | null },
+    };
+    expect(body3.data.map(d => d.id)).toEqual(['e.jpg']);
+    expect(body3.links.next).toBeNull();
+  });
+
   it('still returns 204 No Content on a clean delete with no warnings', async () => {
     const partialRepo = {
       getResource: (key: string) =>

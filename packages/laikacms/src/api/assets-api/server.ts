@@ -328,11 +328,13 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         const depthParam = query['filter[depth]'] || query['depth'];
         const depth = depthParam ? Math.max(1, parseInt(depthParam, 10) || 1) : 1;
 
-        // Use offset-based pagination which has limit
-        const paginationOptions = {
-          offset: 0,
-          limit: pagination.limit || 100,
-        };
+        // Build pagination options: forward cursor as `after` when provided so
+        // repository implementations that support cursor-based listing can page
+        // correctly. Fall back to offset 0 when no cursor is present.
+        const paginationOptions: { offset: number, limit: number } | { after: string | undefined, perPage: number } =
+          pagination.cursor
+            ? { after: pagination.cursor, perPage: pagination.limit || 100 }
+            : { offset: 0, limit: pagination.limit || 100 };
 
         const included: JsonApiResource[] = [];
         let hasMore = false;
@@ -379,7 +381,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           })
         );
 
-        if (batchData.length >= paginationOptions.limit) {
+        const pageSize = 'limit' in paginationOptions ? paginationOptions.limit : paginationOptions.perPage;
+        if (batchData.length >= pageSize) {
           hasMore = true;
           nextCursor = batchData[batchData.length - 1]?.key;
         }
