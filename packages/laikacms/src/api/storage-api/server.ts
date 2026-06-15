@@ -339,7 +339,7 @@ export function buildJsonApi(options: StorageApiOptions) {
 
     const listFullAtoms = async () => {
       const listOptions = { depth: 1, pagination: { perPage: 10 } };
-      const result = await runStream(repo.listAtoms(key!, listOptions));
+      const result = await runStream(repo.listAtoms(key ?? '', listOptions));
       if (Result.isFailure(result)) {
         const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
         return failResponse(result, ErrorCodeToStatusMap[errorCode] || 400);
@@ -357,7 +357,7 @@ export function buildJsonApi(options: StorageApiOptions) {
 
     const listAtomSummaries = async () => {
       const listOptions = { depth: 1, pagination: { perPage: 10 } };
-      const result = await runStream(repo.listAtomSummaries(key!, listOptions));
+      const result = await runStream(repo.listAtomSummaries(key ?? '', listOptions));
       if (Result.isFailure(result)) {
         const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
         return failResponse(result, ErrorCodeToStatusMap[errorCode] || 400);
