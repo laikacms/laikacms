@@ -1,5 +1,5 @@
 import * as Effect from 'effect/Effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type {
@@ -203,6 +203,38 @@ describe('storage-api meta.warnings', () => {
     expect(body['atomic:results'][0]?.data?.id).toBe('notes/a');
     expect(body['atomic:results'][0]?.meta?.warnings).toHaveLength(1);
     expect(body['atomic:results'][0]?.meta?.warnings?.[0]?.detail).toContain('readback');
+  });
+
+  it('calls onError when a repo operation fails', async () => {
+    const onError = vi.fn();
+    const partialRepo = {
+      getObject: (_key: string) =>
+        LaikaTask.make<StorageObject>(() => Effect.fail(new NotFoundError('object not found'))),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo, onError });
+    const res = await api.fetch(new Request('http://localhost/objects/missing-key'));
+    expect(res.status).toBe(404);
+    expect(onError).toHaveBeenCalledOnce();
+    const [calledWith] = onError.mock.calls[0]!;
+    expect(calledWith).toBeInstanceOf(NotFoundError);
+  });
+
+  it('calls onError when the repo throws an unexpected synchronous error', async () => {
+    const onError = vi.fn();
+    const partialRepo = {
+      getObject: (_key: string) => {
+        throw new Error('unexpected synchronous defect');
+      },
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo, onError });
+    const res = await api.fetch(new Request('http://localhost/objects/boom'));
+    expect(res.status).toBe(500);
+    expect(onError).toHaveBeenCalledOnce();
+    const [calledWith] = onError.mock.calls[0]!;
+    expect(calledWith).toBeInstanceOf(Error);
+    expect((calledWith as Error).message).toBe('unexpected synchronous defect');
   });
 
   it('emits a meta.deleted entry per successful remove in atomic:results', async () => {
