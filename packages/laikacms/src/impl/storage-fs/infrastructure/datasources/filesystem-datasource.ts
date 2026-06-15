@@ -36,7 +36,8 @@ export class FileSystemDataSource {
     //   }
     // }
     // return relativePath;
-    return relativePath.includes('.') ? relativePath.slice(0, relativePath.lastIndexOf('.')) : relativePath;
+    const lastDot = relativePath.lastIndexOf('.');
+    return lastDot > 0 ? relativePath.slice(0, lastDot) : relativePath;
   }
 
   /**

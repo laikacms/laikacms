@@ -272,9 +272,8 @@ export class FileSystemStorageRepository extends StorageRepository {
               resolvedEntries.push({ path: key, type: 'file' });
             } catch {
               // Not a raw path — try with each known extension
-              const keyWithoutExt = key.includes('.')
-                ? key.slice(0, key.lastIndexOf('.'))
-                : key;
+              const lastDot = key.lastIndexOf('.');
+              const keyWithoutExt = lastDot > 0 ? key.slice(0, lastDot) : key;
               let found = false;
               for (const ext of availableExtensions) {
                 const candidate = `${keyWithoutExt}.${ext}`;
