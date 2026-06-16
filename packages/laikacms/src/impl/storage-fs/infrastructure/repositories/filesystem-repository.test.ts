@@ -98,6 +98,22 @@ describe('FileSystemStorageRepository ignoreList', () => {
   });
 });
 
+describe('FileSystemStorageRepository pagination total', () => {
+  it('listAtomSummaries Done.total reflects aggregate count, not page count', async () => {
+    for (let i = 1; i <= 5; i++) {
+      await fs.writeFile(path.join(tmpDir, `item-${i}.md`), '');
+    }
+
+    const repo = makeRepo();
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('', { pagination: { page: 1, perPage: 2 } }),
+    );
+
+    expect(collected.data).toHaveLength(2);
+    expect(collected.done).toEqual({ total: 5 });
+  });
+});
+
 describe('FileSystemStorageRepository listing a missing folder', () => {
   it('listAtomSummaries yields no data and a NotFoundError as a recoverable error', async () => {
     const repo = makeRepo();

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { LaikaTask } from 'laikacms/core';
+import { LaikaStream, LaikaTask } from 'laikacms/core';
 
 import { jsonSerializer } from '../../../../serializers/storage-serializers-json/index.js';
 import { R2StorageRepository } from './r2-storage-repository.js';
@@ -41,6 +41,83 @@ const makeBucket = (simulateMissKey?: string) => {
     },
   };
 };
+
+/**
+ * Richer bucket mock that supports `list` with prefix/delimiter to exercise
+ * listAtomSummaries / listAtoms pagination-total behaviour.
+ */
+const makeListableBucket = (keys: string[]) => {
+  const store = new Map<string, { body: string, etag: string }>(
+    keys.map((k, i) => [k, { body: '', etag: `etag-${i}` }]),
+  );
+  return {
+    store,
+    async head(key: string) {
+      const o = store.get(key);
+      if (!o) return null;
+      return { size: o.body.length, uploaded: new Date('2026-01-01'), etag: o.etag };
+    },
+    async get(key: string) {
+      const o = store.get(key);
+      if (!o) return null;
+      return { size: o.body.length, uploaded: new Date('2026-01-01'), etag: o.etag, text: async () => o.body };
+    },
+    async put(key: string, body: string) {
+      store.set(key, { body, etag: 'etag-put' });
+    },
+    async delete(key: string) {
+      store.delete(key);
+    },
+    async list({ prefix = '', delimiter }: { prefix?: string, delimiter?: string, cursor?: string }) {
+      const allKeys = [...store.keys()];
+      const matching = allKeys.filter(k => k.startsWith(prefix));
+      if (!delimiter) {
+        return {
+          objects: matching.map(k => ({ key: k })),
+          delimitedPrefixes: [] as string[],
+          truncated: false,
+          cursor: undefined,
+        };
+      }
+      const objects: { key: string }[] = [];
+      const prefixSet = new Set<string>();
+      for (const k of matching) {
+        const rest = k.slice(prefix.length);
+        const idx = rest.indexOf(delimiter);
+        if (idx === -1) {
+          objects.push({ key: k });
+        } else {
+          prefixSet.add(prefix + rest.slice(0, idx + 1));
+        }
+      }
+      return {
+        objects,
+        delimitedPrefixes: [...prefixSet],
+        truncated: false,
+        cursor: undefined,
+      };
+    },
+  };
+};
+
+describe('R2StorageRepository pagination total', () => {
+  it('listAtomSummaries Done.total reflects aggregate count, not page count', async () => {
+    const keys = ['item-1.json', 'item-2.json', 'item-3.json', 'item-4.json', 'item-5.json'];
+    const bucket = makeListableBucket(keys);
+    const repo = new R2StorageRepository(
+      bucket as unknown as R2Bucket,
+      { json: jsonSerializer },
+      'json',
+    );
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('', { pagination: { page: 1, perPage: 2 }, depth: 1 }),
+    );
+
+    expect(collected.data).toHaveLength(2);
+    expect(collected.done).toEqual({ total: 5 });
+  });
+});
 
 describe('R2StorageRepository.createObject', () => {
   it('falls back to a synthesized StorageObject + recoverableError when the readback hits the eventual-consistency window', async () => {

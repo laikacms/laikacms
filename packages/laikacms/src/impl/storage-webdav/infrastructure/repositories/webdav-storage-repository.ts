@@ -304,10 +304,10 @@ export class WebDavStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, total, missingFolder } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
-        return { total: summaries.length };
+        return { total };
       })
     );
   }
@@ -315,7 +315,7 @@ export class WebDavStorageRepository extends StorageRepository {
   listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, total, missingFolder } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
@@ -328,7 +328,7 @@ export class WebDavStorageRepository extends StorageRepository {
             else yield* emit.data(result.success);
           }
         }
-        return { total: summaries.length };
+        return { total };
       })
     );
   }
@@ -375,7 +375,7 @@ export class WebDavStorageRepository extends StorageRepository {
     folderKey: string,
     options: ListAtomsOptions,
   ): Effect.Effect<
-    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError },
+    { summaries: ReadonlyArray<AtomSummary>, total: number, missingFolder?: LaikaError },
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
@@ -383,7 +383,7 @@ export class WebDavStorageRepository extends StorageRepository {
         this.collectWebDavEntriesRecursively(folderKey, options.depth)
       );
       if (missingFolder) {
-        return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder };
+        return { summaries: [] as ReadonlyArray<AtomSummary>, total: 0, missingFolder };
       }
 
       const summaries = children.map((child): AtomSummary => {
@@ -401,7 +401,8 @@ export class WebDavStorageRepository extends StorageRepository {
       });
 
       const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      return { summaries: applyPagination(sorted, options.pagination) };
+      const total = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), total };
     });
   }
 

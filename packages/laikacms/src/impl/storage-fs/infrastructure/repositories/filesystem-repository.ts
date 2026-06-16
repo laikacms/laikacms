@@ -325,10 +325,10 @@ export class FileSystemStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectFilteredSummaries(folderKey, options);
+        const { summaries, total, missingFolder } = yield* this.collectFilteredSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
-        return { total: summaries.length };
+        return { total };
       })
     );
   }
@@ -336,7 +336,7 @@ export class FileSystemStorageRepository extends StorageRepository {
   listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectFilteredSummaries(folderKey, options);
+        const { summaries, total, missingFolder } = yield* this.collectFilteredSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
@@ -349,7 +349,7 @@ export class FileSystemStorageRepository extends StorageRepository {
             else yield* emit.data(r.success);
           }
         }
-        return { total: summaries.length };
+        return { total };
       })
     );
   }
@@ -401,13 +401,13 @@ export class FileSystemStorageRepository extends StorageRepository {
   private collectFilteredSummaries(
     folderKey: string,
     options: ListAtomsOptions,
-  ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError }, LaikaError> {
+  ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, total: number, missingFolder?: LaikaError }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const { entries: dirSubs, missingFolder } = yield* Effect.promise(() =>
         this.collectEntriesRecursively(folderKey, options.depth)
       );
       if (missingFolder) {
-        return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder };
+        return { summaries: [] as ReadonlyArray<AtomSummary>, total: 0, missingFolder };
       }
       const availableExtensions = Object.keys(this.serializerRegistry);
       const filtered = dirSubs
@@ -430,7 +430,8 @@ export class FileSystemStorageRepository extends StorageRepository {
           };
         });
       const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
-      return { summaries: applyPagination(sorted, options.pagination) };
+      const total = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), total };
     });
   }
 
