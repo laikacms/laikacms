@@ -47,6 +47,12 @@
       "laikacms/storage": [
         "src/domain/storage/index.ts"
       ],
+      "laikacms/documents/testing": [
+        "src/domain/documents/testing/index.ts"
+      ],
+      "laikacms/storage/testing": [
+        "src/domain/storage/testing/index.ts"
+      ],
       "laikacms/assets-contentbase": [
         "src/impl/assets-contentbase/index.ts"
       ],
@@ -58,6 +64,9 @@
       ],
       "laikacms/assets-r2": [
         "src/impl/assets-r2/index.ts"
+      ],
+      "laikacms/contentbase-settings-decap": [
+        "src/impl/contentbase-settings-decap/index.ts"
       ],
       "laikacms/contentbase-settings-default": [
         "src/impl/contentbase-settings-default/index.ts"
@@ -86,6 +95,9 @@
       "laikacms/storage-r2": [
         "src/impl/storage-r2/index.ts"
       ],
+      "laikacms/storage-s3": [
+        "src/impl/storage-s3/index.ts"
+      ],
       "laikacms/storage-webdav": [
         "src/impl/storage-webdav/index.ts"
       ],
@@ -104,6 +116,9 @@
       "laikacms/core": [
         "src/shared/core/index.ts"
       ],
+      "laikacms/compat": [
+        "src/shared/core/compat.ts"
+      ],
       "laikacms/crypto": [
         "src/shared/crypto/index.ts"
       ],
@@ -112,6 +127,12 @@
       ],
       "laikacms/i18n": [
         "src/shared/i18n/index.ts"
+      ],
+      "laikacms/i18n/en": [
+        "src/shared/i18n/translations/en.ts"
+      ],
+      "laikacms/i18n/nl": [
+        "src/shared/i18n/translations/nl.ts"
       ],
       "laikacms/json-api": [
         "src/shared/json-api/index.ts"
