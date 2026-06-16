@@ -280,7 +280,7 @@ export interface OAuthConfig {
    * ```typescript
    * import { nl } from '@laikacms/decap-oauth2/i18n';
    * const config: OAuthConfig = {
-   *   messages: nl,
+   *   translations: nl,
    *   // ... other options
    * };
    * ```
