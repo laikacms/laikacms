@@ -301,7 +301,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
           emitted += 1;
         }
         this.storeIncludedResources(json.included as JsonApiResource[] | undefined);
-        return { total: emitted };
+        return { total: json.meta?.page?.total ?? emitted };
       })
     );
   }
