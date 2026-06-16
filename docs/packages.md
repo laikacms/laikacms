@@ -32,7 +32,7 @@ utilities. Imported via subpath exports.
 | --------------------------------------- | ------------------------------- |
 | `laikacms/storage-r2`                   | Cloudflare R2 storage           |
 | `laikacms/storage-fs`                   | Filesystem storage              |
-| `laikacms/storage-s3`                   | AWS S3 storage                  |
+| `laikacms/storage-s3`                   | S3→R2Bucket adapter (`createS3Bucket()`) — pairs with `R2StorageRepository`, not a `StorageRepository` itself. See `@laikacms/aws/storage-s3` for the full S3 `StorageRepository`. |
 | `laikacms/storage-webdav`               | WebDAV server                   |
 | `laikacms/storage-drizzle`              | Drizzle ORM storage             |
 | `laikacms/storage-jsonapi-proxy`        | Storage JSON:API proxy          |
