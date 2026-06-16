@@ -28,29 +28,29 @@ utilities. Imported via subpath exports.
 
 ### Implementations (`packages/laikacms/src/impl/`)
 
-| Subpath                                 | Description                     |
-| --------------------------------------- | ------------------------------- |
-| `laikacms/storage-r2`                   | Cloudflare R2 storage           |
-| `laikacms/storage-fs`                   | Filesystem storage              |
+| Subpath                                 | Description                                                                                                                                                                        |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laikacms/storage-r2`                   | Cloudflare R2 storage                                                                                                                                                              |
+| `laikacms/storage-fs`                   | Filesystem storage                                                                                                                                                                 |
 | `laikacms/storage-s3`                   | S3→R2Bucket adapter (`createS3Bucket()`) — pairs with `R2StorageRepository`, not a `StorageRepository` itself. See `@laikacms/aws/storage-s3` for the full S3 `StorageRepository`. |
-| `laikacms/storage-webdav`               | WebDAV server                   |
-| `laikacms/storage-drizzle`              | Drizzle ORM storage             |
-| `laikacms/storage-jsonapi-proxy`        | Storage JSON:API proxy          |
-| `laikacms/assets-r2`                    | R2 asset storage                |
-| `laikacms/assets-contentbase`           | Assets on top of storage        |
-| `laikacms/assets-obsidian`              | Obsidian-vault-backed assets    |
-| `laikacms/assets-jsonapi-proxy`         | Assets JSON:API proxy           |
-| `laikacms/documents-contentbase`        | Documents on top of storage     |
-| `laikacms/documents-drizzle`            | Drizzle document storage        |
-| `laikacms/documents-obsidian`           | Obsidian-vault-backed documents |
-| `laikacms/documents-jsonapi-proxy`      | Documents JSON:API proxy        |
-| `laikacms/contentbase-settings-default` | Default settings impl           |
-| `laikacms/contentbase-settings-decap`   | Decap-CMS-compatible settings   |
+| `laikacms/storage-webdav`               | WebDAV server                                                                                                                                                                      |
+| `laikacms/storage-drizzle`              | Drizzle ORM storage                                                                                                                                                                |
+| `laikacms/storage-jsonapi-proxy`        | Storage JSON:API proxy                                                                                                                                                             |
+| `laikacms/assets-r2`                    | R2 asset storage                                                                                                                                                                   |
+| `laikacms/assets-contentbase`           | Assets on top of storage                                                                                                                                                           |
+| `laikacms/assets-obsidian`              | Obsidian-vault-backed assets                                                                                                                                                       |
+| `laikacms/assets-jsonapi-proxy`         | Assets JSON:API proxy                                                                                                                                                              |
+| `laikacms/documents-contentbase`        | Documents on top of storage                                                                                                                                                        |
+| `laikacms/documents-drizzle`            | Drizzle document storage                                                                                                                                                           |
+| `laikacms/documents-obsidian`           | Obsidian-vault-backed documents                                                                                                                                                    |
+| `laikacms/documents-jsonapi-proxy`      | Documents JSON:API proxy                                                                                                                                                           |
+| `laikacms/contentbase-settings-default` | Default settings impl                                                                                                                                                              |
+| `laikacms/contentbase-settings-decap`   | Decap-CMS-compatible settings                                                                                                                                                      |
 
 ### Testing utilities (`packages/laikacms/src/`)
 
-| Subpath                    | Description                                                   |
-| -------------------------- | ------------------------------------------------------------- |
+| Subpath                      | Description                                                     |
+| ---------------------------- | --------------------------------------------------------------- |
 | `laikacms/documents/testing` | Contract test harness for `DocumentsRepository` implementations |
 | `laikacms/storage/testing`   | Contract test harness for `StorageRepository` implementations   |
 

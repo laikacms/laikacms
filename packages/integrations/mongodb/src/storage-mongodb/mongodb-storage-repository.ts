@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -377,7 +378,37 @@ export class MongoStorageRepository extends StorageRepository {
           return results;
         });
 
-        const foundIds = docs.filter(d => d.doc !== null).map(d => d.doc!._id);
+        const found = docs.filter(d => d.doc !== null) as Array<{ key: string, doc: StorageDoc }>;
+        const fileMissing = docs.filter(d => d.doc === null).map(d => d.key);
+
+        // ── Round-trip 1b: for keys with no matching file, probe for folders.
+        interface FolderProbeResult {
+          key: string;
+          explicit: StorageDoc | null;
+          hasChildren: boolean;
+        }
+        const folderProbes = yield* Effect.promise(async (): Promise<FolderProbeResult[]> => {
+          return Promise.all(fileMissing.map(async k => {
+            const explicitResult = await this.dataSource.findById(k);
+            const explicit = Result.isSuccess(explicitResult) && explicitResult.success?.type === TYPE_FOLDER
+              ? explicitResult.success
+              : null;
+            let hasChildren = false;
+            if (explicit) {
+              const childResult = await this.dataSource.hasDescendants(k);
+              hasChildren = Result.isSuccess(childResult) ? childResult.success : false;
+            }
+            return { key: k, explicit, hasChildren };
+          }));
+        });
+
+        const emptyFolders = folderProbes.filter(p => p.explicit !== null && !p.hasChildren) as Array<
+          FolderProbeResult & { explicit: StorageDoc }
+        >;
+        const nonEmptyFolders = folderProbes.filter(p => p.explicit !== null && p.hasChildren);
+        const trulyMissing = folderProbes.filter(p => p.explicit === null);
+
+        const foundIds = found.map(d => d.doc._id);
 
         // ── Round-trip 2: one `deleteMany({_id: {$in: [...]}})` — atomic,
         //    independent of N.
@@ -385,17 +416,31 @@ export class MongoStorageRepository extends StorageRepository {
           yield* liftResult(this.dataSource.deleteByIds(foundIds));
         }
 
+        // ── Round-trip 3: delete empty folder records one by one.
+        const folderIdsToDelete = emptyFolders.map(ef => ef.explicit._id);
+        if (folderIdsToDelete.length > 0) {
+          yield* liftResult(this.dataSource.deleteByIds(folderIdsToDelete));
+        }
+
         let removed = 0;
         let skipped = skipped0;
-        for (const { key, doc } of docs) {
-          if (!doc) {
-            yield* emit.recoverableError(new NotFoundError(`MongoDB document not found: ${key}`));
-            skipped += 1;
-          } else {
-            const callerKey = doc.parent === '' ? doc.name : `${doc.parent}/${doc.name}`;
-            yield* emit.data(callerKey);
-            removed += 1;
-          }
+        for (const { key, doc } of found) {
+          const callerKey = doc.parent === '' ? doc.name : `${doc.parent}/${doc.name}`;
+          yield* emit.data(callerKey);
+          removed += 1;
+          void key;
+        }
+        for (const ef of emptyFolders) {
+          yield* emit.data(ef.key);
+          removed += 1;
+        }
+        for (const nef of nonEmptyFolders) {
+          yield* emit.recoverableError(new ForbiddenError(`Cannot remove non-empty folder: ${nef.key}`));
+          skipped += 1;
+        }
+        for (const m of trulyMissing) {
+          yield* emit.recoverableError(new NotFoundError(`MongoDB document not found: ${m.key}`));
+          skipped += 1;
         }
         return { removed, skipped };
       })

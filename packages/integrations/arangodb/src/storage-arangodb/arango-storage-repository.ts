@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -452,6 +453,9 @@ export class ArangoStorageRepository extends StorageRepository {
    *
    * **The 17th structurally distinct atomic-multi-write mechanism in
    * the suite** — single AQL traversal-with-REMOVE.
+   *
+   * When a key resolves to no file, we probe the folder collection
+   * before emitting NotFoundError — so folder keys are removed too.
    */
   removeAtoms(keys: readonly string[]): LaikaStream.LaikaStream<string, RemoveAtomsDone> {
     return LaikaStream.make<string, RemoveAtomsDone>(emit =>
@@ -478,7 +482,54 @@ export class ArangoStorageRepository extends StorageRepository {
           key: string,
           resolved: StoredRecord & ArangoDocMeta,
         }>;
-        const missing = resolved.filter(r => r.resolved === null);
+        const fileMissing = resolved.filter(r => r.resolved === null).map(r => r.key);
+
+        // ── Round-trip 1b: for keys with no matching file, probe folder collection.
+        interface FolderProbeResult {
+          key: string;
+          explicit: (StoredRecord & ArangoDocMeta) | null;
+          hasChildren: boolean;
+        }
+        const folderProbes = yield* Effect.promise(async (): Promise<FolderProbeResult[]> => {
+          const results: FolderProbeResult[] = [];
+          for (const k of fileMissing) {
+            const explicitResult = await this.dataSource.getDocument<StoredRecord>(
+              this.folderCollection,
+              pathToKey(k),
+            );
+            const explicit = Result.isSuccess(explicitResult) ? explicitResult.success : null;
+            let hasChildren = false;
+            if (explicit) {
+              const childResult = await this.dataSource.aql<unknown>(
+                `FOR doc IN ${this.fileCollection}
+                   FILTER doc.parent == @parent
+                   LIMIT 1
+                   RETURN doc`,
+                { parent: k },
+              );
+              if (Result.isSuccess(childResult) && childResult.success.length > 0) {
+                hasChildren = true;
+              } else {
+                const folderChildResult = await this.dataSource.aql<unknown>(
+                  `FOR doc IN ${this.folderCollection}
+                     FILTER doc.parent == @parent
+                     LIMIT 1
+                     RETURN doc`,
+                  { parent: k },
+                );
+                hasChildren = Result.isSuccess(folderChildResult) && folderChildResult.success.length > 0;
+              }
+            }
+            results.push({ key: k, explicit, hasChildren });
+          }
+          return results;
+        });
+
+        const emptyFolders = folderProbes.filter(p => p.explicit !== null && !p.hasChildren) as Array<
+          FolderProbeResult & { explicit: StoredRecord & ArangoDocMeta }
+        >;
+        const nonEmptyFolders = folderProbes.filter(p => p.explicit !== null && p.hasChildren);
+        const trulyMissing = folderProbes.filter(p => p.explicit === null);
 
         // ── Round-trip 2: ONE AQL `FOR ... REMOVE` query, atomic at the
         // collection level.
@@ -493,11 +544,26 @@ export class ArangoStorageRepository extends StorageRepository {
           ));
         }
 
+        // ── Round-trip 3: delete empty folder records one by one.
+        for (const ef of emptyFolders) {
+          yield* liftResult(this.dataSource.aql<string>(
+            `REMOVE @key IN ${this.folderCollection} RETURN OLD._key`,
+            { key: ef.explicit._key },
+          ));
+        }
+
         for (const f of found) yield* emit.data(f.key);
-        for (const m of missing) {
+        for (const ef of emptyFolders) yield* emit.data(ef.key);
+        for (const nef of nonEmptyFolders) {
+          yield* emit.recoverableError(new ForbiddenError(`Cannot remove non-empty folder: ${nef.key}`));
+        }
+        for (const m of trulyMissing) {
           yield* emit.recoverableError(new NotFoundError(`ArangoDB document not found: ${m.key}`));
         }
-        return { removed: found.length, skipped: skipped0 + missing.length };
+        return {
+          removed: found.length + emptyFolders.length,
+          skipped: skipped0 + nonEmptyFolders.length + trulyMissing.length,
+        };
       })
     );
   }
