@@ -64,24 +64,24 @@ export default {
 
 ### Implementations
 
-| Export                                  | Backs                                                                                                                                     |
-| --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `laikacms/storage-fs`                   | Filesystem                                                                                                                                |
-| `laikacms/storage-r2`                   | Cloudflare R2                                                                                                                             |
+| Export                                  | Backs                                                                                                                                                                    |
+| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `laikacms/storage-fs`                   | Filesystem                                                                                                                                                               |
+| `laikacms/storage-r2`                   | Cloudflare R2                                                                                                                                                            |
 | `laikacms/storage-s3`                   | S3→R2Bucket adapter (`createS3Bucket()`) — use with `R2StorageRepository`; **not** a `StorageRepository` itself. Full S3 `StorageRepository`: `@laikacms/aws/storage-s3` |
-| `laikacms/storage-webdav`               | WebDAV server                                                                                                                             |
-| `laikacms/storage-drizzle`              | SQL via Drizzle                                                                                                                           |
-| `laikacms/storage-jsonapi-proxy`        | Remote JSON:API server                                                                                                                    |
-| `laikacms/documents-contentbase`        | Documents on top of `storage`                                                                                                             |
-| `laikacms/documents-drizzle`            | Documents in SQL                                                                                                                          |
-| `laikacms/documents-jsonapi-proxy`      | Documents via JSON:API proxy                                                                                                              |
-| `laikacms/documents-obsidian`           | Obsidian-vault-backed documents                                                                                                           |
-| `laikacms/assets-contentbase`           | Assets on top of `storage`                                                                                                                |
-| `laikacms/assets-r2`                    | Assets in R2                                                                                                                              |
-| `laikacms/assets-jsonapi-proxy`         | Assets via JSON:API proxy                                                                                                                 |
-| `laikacms/assets-obsidian`              | Obsidian-vault-backed assets — **Node.js / Bun only** (uses `node:fs` / `node:path` / `node:stream`; not available on Cloudflare Workers) |
-| `laikacms/contentbase-settings-default` | In-memory / file-backed settings                                                                                                          |
-| `laikacms/contentbase-settings-decap`   | Decap-CMS-compatible settings                                                                                                             |
+| `laikacms/storage-webdav`               | WebDAV server                                                                                                                                                            |
+| `laikacms/storage-drizzle`              | SQL via Drizzle                                                                                                                                                          |
+| `laikacms/storage-jsonapi-proxy`        | Remote JSON:API server                                                                                                                                                   |
+| `laikacms/documents-contentbase`        | Documents on top of `storage`                                                                                                                                            |
+| `laikacms/documents-drizzle`            | Documents in SQL                                                                                                                                                         |
+| `laikacms/documents-jsonapi-proxy`      | Documents via JSON:API proxy                                                                                                                                             |
+| `laikacms/documents-obsidian`           | Obsidian-vault-backed documents                                                                                                                                          |
+| `laikacms/assets-contentbase`           | Assets on top of `storage`                                                                                                                                               |
+| `laikacms/assets-r2`                    | Assets in R2                                                                                                                                                             |
+| `laikacms/assets-jsonapi-proxy`         | Assets via JSON:API proxy                                                                                                                                                |
+| `laikacms/assets-obsidian`              | Obsidian-vault-backed assets — **Node.js / Bun only** (uses `node:fs` / `node:path` / `node:stream`; not available on Cloudflare Workers)                                |
+| `laikacms/contentbase-settings-default` | In-memory / file-backed settings                                                                                                                                         |
+| `laikacms/contentbase-settings-decap`   | Decap-CMS-compatible settings                                                                                                                                            |
 
 ### Testing utilities
 
@@ -146,14 +146,14 @@ const { items, done } = await collectStream(myStream, {
 });
 ```
 
-Omitting `options` (or `onProgress`) uses a data-only fast path that avoids allocating metadata
-arrays. Note that when `onProgress` is omitted, **`RecoverableError` and `Progress` events are
-silently discarded** — callers that need to surface warnings or non-fatal errors must supply the
-callback.
+Omitting `options` (or `onProgress`) uses a data-only fast path. Note that when `onProgress` is
+omitted, **`RecoverableError` and `Progress` events are silently discarded** — callers that need to
+surface warnings or non-fatal errors must supply the callback.
 
-`runTask` without `onProgress` uses `LaikaTask.runPromise`, which genuinely has no metadata
-overhead. `collectStream` without `onProgress` uses a data-only drain, so it also avoids allocating
-the recoverable-error and progress arrays.
+`runTask` without `onProgress` drains metadata chunks through the Effect channel (queue allocations
+and Effect pulls still occur) but does not allocate metadata arrays or fire any callback.
+`collectStream` without `onProgress` performs a data-only drain: no metadata arrays are allocated
+and no callback is fired, though channel overhead still applies.
 
 ## License
 

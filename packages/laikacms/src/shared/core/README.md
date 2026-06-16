@@ -20,17 +20,55 @@ import { InvalidData, LaikaError, LaikaResult, NotFoundError } from 'laikacms/co
 
 ## Error Types
 
-- `NotFoundError` - Resource not found
-- `InvalidData` - Invalid input data
-- `InternalError` - Internal server error
-- `AuthenticationError` - Not logged in; HTTP 401
-- `AuthorizationError` - HTTP 401; used to deserialize or signal an unauthenticated challenge from a
+All error classes extend `LaikaError` and carry `.status`, `.code`, and `.title` fields.
+
+### General errors
+
+- `NotFoundError` — Resource not found; HTTP 404
+- `BadRequestError` — Duplicate key or invalid input that the caller can correct; HTTP 400
+- `InvalidData` — Invalid input data; HTTP 400
+- `ValidationError` — Schema / constraint validation failure; HTTP 400
+- `InternalError` — Internal server error; HTTP 500
+- `IllegalStateException` — Illegal internal state that should not occur; HTTP 500
+- `NotImplementedError` — Feature not yet implemented; HTTP 501
+- `UnknownError` — Error of unknown origin; HTTP 500
+
+### Auth errors
+
+- `AuthenticationError` — Not logged in; HTTP 401
+- `AuthorizationError` — HTTP 401; used to deserialize or signal an unauthenticated challenge from a
   remote server. Not for "logged in but no permission" — use `ForbiddenError` for that.
-- `ForbiddenError` - Logged in but lacks permissions; HTTP 403
+- `ForbiddenError` — Logged in but lacks permissions; HTTP 403
+- `AuthorizerFailureError` — API Gateway authorizer failed (infrastructure error); HTTP 500
 
 > **Usage guidance:** use `AuthenticationError` when the user is not logged in at all (HTTP 401);
 > use `ForbiddenError` when the user is logged in but lacks permissions (HTTP 403); use
 > `AuthorizationError` when deserializing a 401 from a remote server.
+
+### Conflict / state errors
+
+- `EntryAlreadyExistsError` — Duplicate entry; HTTP 409
+- `ConflictError` — Generic write conflict; HTTP 409
+- `VersionMismatchError` — Optimistic-concurrency version conflict; HTTP 409
+
+### Path / filesystem errors
+
+- `DirInsteadOfFile` — Expected a file but found a directory; HTTP 403
+- `FileInsteadOfDir` — Expected a directory but found a file; HTTP 403
+
+### Rate-limit / availability errors
+
+- `TooManyRequestsError` — Rate limit exceeded; HTTP 429
+- `ServiceUnavailableError` — Upstream service unavailable; HTTP 503
+- `GatewayTimeoutError` — Upstream gateway timed out; HTTP 504
+
+### File-sanitizer errors
+
+- `UnsupportedFileTypeError` — File type not allowed; HTTP 415
+- `DangerousFileTypeError` — File type flagged as dangerous; HTTP 415
+- `CorruptedFileError` — File data is corrupted; HTTP 422
+- `EmbeddedContentError` — File contains disallowed embedded content; HTTP 422
+- `FileTooLargeError` — File exceeds the size limit; HTTP 413
 
 ## Result Type
 
