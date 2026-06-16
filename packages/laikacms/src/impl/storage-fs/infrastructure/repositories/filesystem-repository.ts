@@ -355,6 +355,42 @@ export class FileSystemStorageRepository extends StorageRepository {
   }
 
   /**
+   * Recursively collect all file-system entries under `folderKey` up to
+   * `maxRelativeDepth` levels below the starting folder (depth=1 means direct
+   * children only, depth=2 means children and grandchildren, etc.).
+   *
+   * Returns a flat list of `{ path, type }` DirSub entries. The first call
+   * that encounters a `NotFoundError` for the root folder bubbles it up as the
+   * returned `missingFolder` rather than failing the whole stream.
+   */
+  private async collectEntriesRecursively(
+    folderKey: string,
+    maxRelativeDepth: number,
+    currentRelativeDepth: number = 1,
+  ): Promise<{ entries: Array<{ path: string, type: string }>, missingFolder?: LaikaError }> {
+    const dirResult = await this.fileSystemDataSource.listFileSystemDirectory(this.rootDirectory, folderKey);
+    if (Result.isFailure(dirResult)) {
+      if (currentRelativeDepth === 1 && dirResult.failure instanceof NotFoundError) {
+        return { entries: [], missingFolder: dirResult.failure };
+      }
+      return { entries: [] };
+    }
+    const entries: Array<{ path: string, type: string }> = [];
+    for (const entry of dirResult.success) {
+      entries.push(entry);
+      if (entry.type === 'dir' && currentRelativeDepth < maxRelativeDepth) {
+        const child = await this.collectEntriesRecursively(
+          entry.path,
+          maxRelativeDepth,
+          currentRelativeDepth + 1,
+        );
+        entries.push(...child.entries);
+      }
+    }
+    return { entries };
+  }
+
+  /**
    * Shared filtering + pagination for listAtoms / listAtomSummaries.
    *
    * A missing folder is not a fatal error for a listing: it surfaces as
@@ -367,16 +403,12 @@ export class FileSystemStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
-      const dirResult = yield* Effect.promise(() =>
-        this.fileSystemDataSource.listFileSystemDirectory(this.rootDirectory, folderKey)
+      const { entries: dirSubs, missingFolder } = yield* Effect.promise(() =>
+        this.collectEntriesRecursively(folderKey, options.depth)
       );
-      if (Result.isFailure(dirResult)) {
-        if (dirResult.failure instanceof NotFoundError) {
-          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: dirResult.failure };
-        }
-        return yield* Effect.fail(dirResult.failure);
+      if (missingFolder) {
+        return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder };
       }
-      const dirSubs = dirResult.success;
       const availableExtensions = Object.keys(this.serializerRegistry);
       const filtered = dirSubs
         .filter((dirSub: { path: string, type: string }) =>
