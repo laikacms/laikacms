@@ -52,7 +52,7 @@ export type DrizzleStorageCallbacks = {
   insert: (query: { values: StorageModel }) => Promise<StorageModel[]>,
   update: (query: { where: unknown, values: Partial<StorageModel> }) => Promise<StorageModel[]>,
   delete: (query: { where: unknown }) => Promise<StorageModel[]>,
-  select: (query: { where: unknown, limit?: number }) => Promise<StorageModel[]>,
+  select: (query: { where: unknown, limit?: number, offset?: number }) => Promise<StorageModel[]>,
 };
 
 export interface DrizzleStorageRepositoryOptions {
@@ -297,7 +297,16 @@ export class DrizzleStorageRepository extends StorageRepository {
         const pattern = folderKey ? `${folderKey}/` : '';
         const baseDepth = folderKey ? this.calculateDepth(folderKey) : 0;
         const maxDepth = baseDepth + options.depth;
-        const limit = 'limit' in options.pagination ? options.pagination.limit : 20;
+        let limit: number;
+        let offset: number;
+        if ('page' in options.pagination) {
+          const perPage = options.pagination.perPage ?? 20;
+          limit = perPage;
+          offset = (options.pagination.page - 1) * perPage;
+        } else {
+          limit = 'limit' in options.pagination ? (options.pagination.limit ?? 20) : 20;
+          offset = 'offset' in options.pagination ? options.pagination.offset : 0;
+        }
 
         const rows = yield* Effect.promise(() =>
           this.options.callbacks.select({
@@ -306,6 +315,7 @@ export class DrizzleStorageRepository extends StorageRepository {
               this.options.queryBuilders.depthLte(maxDepth),
             ),
             limit,
+            offset,
           })
         );
 

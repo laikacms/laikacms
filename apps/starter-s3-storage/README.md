@@ -6,13 +6,13 @@ store" path.
 
 ## Status: PoC — head + put only
 
-`server.ts` uses a local `s3-r2-adapter.ts` shim (`createS3BucketShim`) that implements only
-`head` and `put` over `@aws-sdk/client-s3`. `get`, `delete`, and `list` are not wired up, so
-full content reads/writes/lists do **not** work yet.
+`server.ts` uses a local `s3-r2-adapter.ts` shim (`createS3BucketShim`) that implements only `head`
+and `put` over `@aws-sdk/client-s3`. `get`, `delete`, and `list` are not wired up, so full content
+reads/writes/lists do **not** work yet.
 
-`laikacms/storage-s3` exports `createS3Bucket()` (a complete S3→R2Bucket adapter) but the
-starter has not been updated to use it. Once it is, the shim can be removed and the starter will
-be production-ready.
+`laikacms/storage-s3` exports `createS3Bucket()` (a complete S3→R2Bucket adapter) but the starter
+has not been updated to use it. Once it is, the shim can be removed and the starter will be
+production-ready.
 
 ## Stack
 
