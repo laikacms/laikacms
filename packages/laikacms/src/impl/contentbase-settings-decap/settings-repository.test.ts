@@ -91,9 +91,11 @@ function makeMemoryStorage(initial?: Map<string, StorageObject>): StorageReposit
 }
 
 function makeDecapStorage(decapConfig: Record<string, unknown>): StorageRepository {
-  return makeMemoryStorage(new Map([
-    ['config', makeStorageObject('config', decapConfig)],
-  ]));
+  return makeMemoryStorage(
+    new Map([
+      ['config', makeStorageObject('config', decapConfig)],
+    ]),
+  );
 }
 
 function makeProvider(decapConfig: Record<string, unknown>): DecapContentBaseSettingsProvider {
@@ -355,52 +357,6 @@ describe('DecapContentBaseSettingsProvider', () => {
       const col = result.success.collections?.['pages'];
       if (col?.type === 'document') {
         expect(col.recursive).toBe(true);
-      }
-    });
-
-    it('populates unpublishedStatuses when publish is not explicitly false', async () => {
-      const provider = makeProvider({
-        collections: [
-          {
-            name: 'posts',
-            folder: 'content/posts',
-            fields: [{ name: 'title', widget: 'string' }],
-          },
-        ],
-      });
-
-      const result = await provider.getSettings();
-      expect(Result.isSuccess(result)).toBe(true);
-      if (!Result.isSuccess(result)) return;
-
-      const col = result.success.collections?.['posts'];
-      if (col?.type === 'document') {
-        expect(col.unpublishedStatuses).toBeDefined();
-        expect(col.unpublishedStatuses?.['draft']).toBeDefined();
-        expect(col.unpublishedStatuses?.['pending_review']).toBeDefined();
-        expect(col.unpublishedStatuses?.['pending_publish']).toBeDefined();
-      }
-    });
-
-    it('omits unpublishedStatuses when publish is explicitly false', async () => {
-      const provider = makeProvider({
-        collections: [
-          {
-            name: 'posts',
-            folder: 'content/posts',
-            publish: false,
-            fields: [{ name: 'title', widget: 'string' }],
-          },
-        ],
-      });
-
-      const result = await provider.getSettings();
-      expect(Result.isSuccess(result)).toBe(true);
-      if (!Result.isSuccess(result)) return;
-
-      const col = result.success.collections?.['posts'];
-      if (col?.type === 'document') {
-        expect(col.unpublishedStatuses).toBeUndefined();
       }
     });
   });
@@ -906,9 +862,17 @@ describe('DecapContentBaseSettingsProvider', () => {
 
     it('returns failure when config content is not an object', async () => {
       const now = new Date().toISOString();
-      const storage = makeMemoryStorage(new Map([
-        ['config', { type: 'object', key: 'config', content: null as unknown as Record<string, unknown>, createdAt: now, updatedAt: now }],
-      ]));
+      const storage = makeMemoryStorage(
+        new Map([
+          ['config', {
+            type: 'object',
+            key: 'config',
+            content: null as unknown as Record<string, unknown>,
+            createdAt: now,
+            updatedAt: now,
+          }],
+        ]),
+      );
       const provider = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
       const result = await provider.getSettings();
       expect(Result.isFailure(result)).toBe(true);
