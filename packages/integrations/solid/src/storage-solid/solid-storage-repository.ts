@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -391,8 +392,24 @@ export class SolidStorageRepository extends StorageRepository {
           // Resolve + delete in parallel per key.
           return await Promise.all(cleanKeys.map(async k => {
             const r = await this.resolveFile(k);
-            if (!r) return { key: k, outcome: 'missing' as const };
-            const del = await this.dataSource.deleteResource(r.url);
+            if (r) {
+              const del = await this.dataSource.deleteResource(r.url);
+              return Result.isSuccess(del)
+                ? { key: k, outcome: 'removed' as const }
+                : { key: k, outcome: 'failed' as const, error: del.failure };
+            }
+            // Probe folder container.
+            const containerUrl = this.folderUrl(k);
+            const headResult = await this.dataSource.head(containerUrl);
+            if (!Result.isSuccess(headResult) || !headResult.success) {
+              return { key: k, outcome: 'missing' as const };
+            }
+            // Container exists — check for children before deleting.
+            const children = await this.dataSource.listContainer(containerUrl);
+            if (Result.isSuccess(children) && children.success.length > 0) {
+              return { key: k, outcome: 'non-empty-folder' as const };
+            }
+            const del = await this.dataSource.deleteResource(containerUrl);
             return Result.isSuccess(del)
               ? { key: k, outcome: 'removed' as const }
               : { key: k, outcome: 'failed' as const, error: del.failure };
@@ -407,6 +424,9 @@ export class SolidStorageRepository extends StorageRepository {
             removed += 1;
           } else if (r.outcome === 'missing') {
             yield* emit.recoverableError(new NotFoundError(`Solid resource not found: ${r.key}`));
+            skipped += 1;
+          } else if (r.outcome === 'non-empty-folder') {
+            yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${r.key}"`));
             skipped += 1;
           } else {
             yield* emit.recoverableError(r.error);
