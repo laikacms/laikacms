@@ -265,9 +265,10 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
         const params = paginationCodec.encode(options.pagination);
+        const depthParam = `filter[depth]=${options.depth}`;
         const path = folderKey
-          ? `/atoms/${encodeURIComponent(folderKey)}?${params}`
-          : `/atoms?${params}`;
+          ? `/atoms/${encodeURIComponent(folderKey)}?${params}&${depthParam}`
+          : `/atoms?${params}&${depthParam}`;
         const json = yield* this.fetchJson(path);
         const collection = json as unknown as JsonApiCollectionResponse;
         // Re-emit upstream `meta.warnings` first so they stay associated with
@@ -300,9 +301,10 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
         const params = paginationCodec.encode(options.pagination);
+        const depthParam = `filter[depth]=${options.depth}`;
         const path = folderKey
-          ? `/atom-summaries/${encodeURIComponent(folderKey)}?${params}`
-          : `/atom-summaries?${params}`;
+          ? `/atom-summaries/${encodeURIComponent(folderKey)}?${params}&${depthParam}`
+          : `/atom-summaries?${params}&${depthParam}`;
         const json = yield* this.fetchJson(path);
         const collection = json as unknown as JsonApiCollectionResponse;
         for (const w of warningsFromMeta(collection.meta)) yield* emit.recoverableError(w);

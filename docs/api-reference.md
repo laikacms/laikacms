@@ -113,10 +113,11 @@ empty key.
 
 **Query Parameters**
 
-| Parameter      | Type   | Default | Description              |
-| -------------- | ------ | ------- | ------------------------ |
-| `page[cursor]` | string | —       | Cursor for pagination    |
-| `page[limit]`  | number | 10      | Number of items per page |
+| Parameter       | Type   | Default | Description                 |
+| --------------- | ------ | ------- | --------------------------- |
+| `page[cursor]`  | string | —       | Cursor for pagination       |
+| `page[limit]`   | number | 10      | Number of items per page    |
+| `filter[depth]` | number | `1`     | Traversal depth (minimum 1) |
 
 **Response** — collection of `object` and/or `folder` resources
 

@@ -341,7 +341,9 @@ export function buildJsonApi(options: StorageApiOptions) {
       const queryParams = Object.fromEntries(url.searchParams.entries());
       const hasPaginationParam = Object.keys(queryParams).some(k => k.startsWith('page['));
       const pagination = hasPaginationParam ? parsePaginationQuery(queryParams) : { perPage: 100 };
-      const listOptions = { depth: 1, pagination };
+      const rawDepth = parseInt(queryParams['filter[depth]'] ?? '1', 10);
+      const depth = Number.isFinite(rawDepth) && rawDepth >= 1 ? rawDepth : 1;
+      const listOptions = { depth, pagination };
       const result = await runStream(repo.listAtoms(key ?? '', listOptions));
       if (Result.isFailure(result)) {
         const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
@@ -362,7 +364,9 @@ export function buildJsonApi(options: StorageApiOptions) {
       const queryParams = Object.fromEntries(url.searchParams.entries());
       const hasPaginationParam = Object.keys(queryParams).some(k => k.startsWith('page['));
       const pagination = hasPaginationParam ? parsePaginationQuery(queryParams) : { perPage: 100 };
-      const listOptions = { depth: 1, pagination };
+      const rawDepth = parseInt(queryParams['filter[depth]'] ?? '1', 10);
+      const depth = Number.isFinite(rawDepth) && rawDepth >= 1 ? rawDepth : 1;
+      const listOptions = { depth, pagination };
       const result = await runStream(repo.listAtomSummaries(key ?? '', listOptions));
       if (Result.isFailure(result)) {
         const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
