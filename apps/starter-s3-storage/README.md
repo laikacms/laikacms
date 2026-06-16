@@ -4,15 +4,15 @@ LaikaCMS over **any S3-compatible object store** — AWS S3, MinIO, Backblaze B2
 S3 endpoint), DigitalOcean Spaces. Demonstrates the long-documented "one adapter for every S3-shaped
 store" path.
 
-## Status: working
+## Status: PoC — head + put only
 
-Backed by **`laikacms/storage-s3`** — the first-party adapter shipped in this iteration. Implements
-the 5-method R2Bucket subset that `R2StorageRepository` uses (`head`/`get`/`put`/ `delete`/`list`)
-over `@aws-sdk/client-s3`. Full content reads/writes/lists work, not just the seeded config.
+`server.ts` uses a local `s3-r2-adapter.ts` shim (`createS3BucketShim`) that implements only
+`head` and `put` over `@aws-sdk/client-s3`. `get`, `delete`, and `list` are not wired up, so
+full content reads/writes/lists do **not** work yet.
 
-The starter is now a thin wrapper: it pulls the AWS SDK commands, hands them to
-`createS3Bucket({...})`, and feeds the resulting bucket to `R2StorageRepository` →
-`createWorkersLaika`. ~30 lines of glue total.
+`laikacms/storage-s3` exports `createS3Bucket()` (a complete S3→R2Bucket adapter) but the
+starter has not been updated to use it. Once it is, the shim can be removed and the starter will
+be production-ready.
 
 ## Stack
 

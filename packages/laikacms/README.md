@@ -68,7 +68,7 @@ export default {
 | --------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | `laikacms/storage-fs`                   | Filesystem                                                                                                                                |
 | `laikacms/storage-r2`                   | Cloudflare R2                                                                                                                             |
-| `laikacms/storage-s3`                   | AWS S3                                                                                                                                    |
+| `laikacms/storage-s3`                   | S3→R2Bucket adapter (`createS3Bucket()`) — use with `R2StorageRepository`; **not** a `StorageRepository` itself. Full S3 `StorageRepository`: `@laikacms/aws/storage-s3` |
 | `laikacms/storage-webdav`               | WebDAV server                                                                                                                             |
 | `laikacms/storage-drizzle`              | SQL via Drizzle                                                                                                                           |
 | `laikacms/storage-jsonapi-proxy`        | Remote JSON:API server                                                                                                                    |
