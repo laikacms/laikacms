@@ -345,10 +345,10 @@ export class DdbStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, missingFolder, aggregateTotal } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -356,7 +356,7 @@ export class DdbStorageRepository extends StorageRepository {
   listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, missingFolder, aggregateTotal } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
@@ -369,7 +369,7 @@ export class DdbStorageRepository extends StorageRepository {
             else yield* emit.data(result.success);
           }
         }
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -378,7 +378,7 @@ export class DdbStorageRepository extends StorageRepository {
     folderKey: string,
     options: ListAtomsOptions,
   ): Effect.Effect<
-    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError },
+    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError, aggregateTotal: number },
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
@@ -391,6 +391,7 @@ export class DdbStorageRepository extends StorageRepository {
       if (!exists && listing.success.length === 0) {
         return {
           summaries: [] as ReadonlyArray<AtomSummary>,
+          aggregateTotal: 0,
           missingFolder: new NotFoundError(`No folder found at key "${folderKey || '<root>'}"`),
         };
       }
@@ -400,7 +401,8 @@ export class DdbStorageRepository extends StorageRepository {
         return { type: item.type === 'file' ? 'object-summary' : 'folder-summary', key };
       });
       const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      return { summaries: applyPagination(sorted, options.pagination) };
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 

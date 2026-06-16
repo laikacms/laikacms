@@ -304,9 +304,9 @@ export class GithubStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const summaries = yield* this.collectFilteredSummaries(folderKey, options);
+        const { summaries, aggregateTotal } = yield* this.collectFilteredSummaries(folderKey, options);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -317,7 +317,7 @@ export class GithubStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const summaries = yield* this.collectFilteredSummaries(folderKey, options);
+        const { summaries, aggregateTotal } = yield* this.collectFilteredSummaries(folderKey, options);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
             const r = yield* Effect.result(LaikaTask.runValue(this.getObject(summary.key)));
@@ -329,7 +329,7 @@ export class GithubStorageRepository extends StorageRepository {
             else yield* emit.data(r.success);
           }
         }
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -337,7 +337,7 @@ export class GithubStorageRepository extends StorageRepository {
   private collectFilteredSummaries(
     folderKey: string,
     options: ListAtomsOptions,
-  ): Effect.Effect<ReadonlyArray<AtomSummary>, LaikaError> {
+  ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const listing = yield* liftResult(this.dataSource.listDirectory(folderKey));
       const filtered = listing.filter(
@@ -358,7 +358,8 @@ export class GithubStorageRepository extends StorageRepository {
           key,
         };
       });
-      return applyPagination(summaries, options.pagination);
+      const aggregateTotal = summaries.length;
+      return { summaries: applyPagination(summaries, options.pagination), aggregateTotal };
     });
   }
 

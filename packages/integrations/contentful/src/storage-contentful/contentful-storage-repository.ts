@@ -392,10 +392,10 @@ export class ContentfulStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, missingFolder, aggregateTotal } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -403,7 +403,7 @@ export class ContentfulStorageRepository extends StorageRepository {
   listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, missingFolder, aggregateTotal } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
@@ -416,7 +416,7 @@ export class ContentfulStorageRepository extends StorageRepository {
             else yield* emit.data(result.success);
           }
         }
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -425,7 +425,7 @@ export class ContentfulStorageRepository extends StorageRepository {
     folderKey: string,
     options: ListAtomsOptions,
   ): Effect.Effect<
-    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError },
+    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError, aggregateTotal: number },
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
@@ -436,7 +436,8 @@ export class ContentfulStorageRepository extends StorageRepository {
         const cts = yield* liftResult(this.dataSource.listContentTypes());
         const summaries: AtomSummary[] = cts.map(ct => ({ type: 'folder-summary', key: ct.sys.id }));
         const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-        return { summaries: applyPagination(sorted, options.pagination) };
+        const aggregateTotal = sorted.length;
+        return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
       }
 
       if (trimmed.includes('/')) {
@@ -445,6 +446,7 @@ export class ContentfulStorageRepository extends StorageRepository {
           missingFolder: new NotFoundError(
             `Contentful folder keys must be a single content-type id; got "${folderKey}"`,
           ),
+          aggregateTotal: 0,
         };
       }
 
@@ -454,6 +456,7 @@ export class ContentfulStorageRepository extends StorageRepository {
         return {
           summaries: [] as ReadonlyArray<AtomSummary>,
           missingFolder: new NotFoundError(`No content type found for "${folderKey}"`),
+          aggregateTotal: 0,
         };
       }
       const entries = yield* liftResult(this.dataSource.listEntries(trimmed));
@@ -462,7 +465,8 @@ export class ContentfulStorageRepository extends StorageRepository {
         key: `${trimmed}/${entry.sys.id}`,
       }));
       const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      return { summaries: applyPagination(sorted, options.pagination) };
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 

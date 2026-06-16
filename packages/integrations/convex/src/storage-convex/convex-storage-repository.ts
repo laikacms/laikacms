@@ -533,9 +533,9 @@ export class ConvexStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const summaries = yield* this.collectFilteredSummaries(folderKey, options);
+        const { summaries, aggregateTotal } = yield* this.collectFilteredSummaries(folderKey, options);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -543,7 +543,7 @@ export class ConvexStorageRepository extends StorageRepository {
   listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const summaries = yield* this.collectFilteredSummaries(folderKey, options);
+        const { summaries, aggregateTotal } = yield* this.collectFilteredSummaries(folderKey, options);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
             const result = yield* Effect.result(LaikaTask.runValue(this.getObject(summary.key)));
@@ -555,7 +555,7 @@ export class ConvexStorageRepository extends StorageRepository {
             else yield* emit.data(result.success);
           }
         }
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -564,7 +564,7 @@ export class ConvexStorageRepository extends StorageRepository {
   private collectFilteredSummaries(
     folderKey: string,
     options: ListAtomsOptions,
-  ): Effect.Effect<ReadonlyArray<AtomSummary>, LaikaError> {
+  ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const parent = stripSlashes(folderKey);
       const rows = yield* liftResult(this.dataSource.query<ConvexChildRow[]>(
@@ -579,7 +579,8 @@ export class ConvexStorageRepository extends StorageRepository {
       });
       const filtered = summaries.filter(s => this.excludeFilter.every(p => !p.test(s.key)));
       const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
-      return applyPagination(sorted, options.pagination);
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 

@@ -255,6 +255,36 @@ describe('UpstashRedisStorageRepository CRUD', () => {
   });
 });
 
+describe('UpstashRedisStorageRepository pagination total (LCMS-186)', () => {
+  it('Done.total reflects the aggregate count, not the page size', async () => {
+    // Seed 5 files
+    for (let i = 1; i <= 5; i++) {
+      seedFile(String(i), `body-${i}`);
+    }
+    const repo = makeRepo();
+
+    // Request page 1 with perPage=2 — should get 2 items but total=5
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('', { pagination: { page: 1, perPage: 2 } }),
+    );
+    expect(collected.data).toHaveLength(2);
+    expect(collected.done.total).toBe(5);
+  });
+
+  it('listAtoms Done.total also reflects aggregate count', async () => {
+    for (let i = 1; i <= 5; i++) {
+      seedFile(String(i), `body-${i}`);
+    }
+    const repo = makeRepo();
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtoms('', { pagination: { page: 1, perPage: 2 } }),
+    );
+    expect(collected.data).toHaveLength(2);
+    expect(collected.done.total).toBe(5);
+  });
+});
+
 describe('UpstashRedisStorageRepository multi-tenant', () => {
   it('honours `namespace` — tenants on the same Redis never see each other', async () => {
     const a = makeRepo('tenant-a:storage');
