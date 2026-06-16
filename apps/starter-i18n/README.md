@@ -13,6 +13,7 @@ Multilingual content via LaikaCMS's built-in `language` field on documents. Demo
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-i18n dev
 ```
 

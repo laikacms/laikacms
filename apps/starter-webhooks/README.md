@@ -20,6 +20,7 @@ Use this when you want to:
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-webhooks dev
 ```
 

@@ -25,6 +25,7 @@ static site, just the API.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-cloudflare-pages dev   # wrangler pages dev
 ```
 

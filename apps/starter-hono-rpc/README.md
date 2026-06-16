@@ -17,6 +17,7 @@ fits your team's existing ecosystem; all three wrap the same `laika.documents.*`
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-hono-rpc dev
 ```
 

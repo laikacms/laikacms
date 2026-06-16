@@ -25,6 +25,7 @@ Then:
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-render dev
 ```
 

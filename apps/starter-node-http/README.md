@@ -25,6 +25,7 @@ they're not much longer and give you routing, middleware, and error handling for
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-node-http dev
 ```
 

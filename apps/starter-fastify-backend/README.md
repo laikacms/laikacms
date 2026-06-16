@@ -14,6 +14,7 @@ A **Fastify 5** backend that hosts the LaikaCMS web-standard `fetch` handler. Th
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-fastify-backend dev
 ```
 

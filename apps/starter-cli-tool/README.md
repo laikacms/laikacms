@@ -20,6 +20,7 @@ Use this starter when you want:
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-cli-tool dev list                 # list posts/
 pnpm --filter @laikacms/starter-cli-tool dev get posts/hello-world
 echo "# A new post" | pnpm --filter @laikacms/starter-cli-tool dev add posts/foo --title="Foo"

@@ -19,6 +19,7 @@ works fine.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-htmx-hono dev
 ```
 

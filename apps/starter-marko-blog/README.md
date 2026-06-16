@@ -16,6 +16,7 @@ runtime streams HTML as data resolves.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-marko-blog dev
 ```
 

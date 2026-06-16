@@ -15,6 +15,7 @@ external consumers get browsable, try-it-now docs without writing any docs.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-openapi dev
 ```
 

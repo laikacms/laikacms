@@ -16,6 +16,7 @@ dependencies beyond Hono + LaikaCMS — the four renderers fit in ~150 LOC in `s
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-rss dev
 ```
 

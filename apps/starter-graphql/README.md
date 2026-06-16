@@ -21,6 +21,7 @@ Use this starter when:
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-graphql dev
 ```
 

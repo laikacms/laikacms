@@ -17,6 +17,7 @@ submissions, bearer-token-guarded admin endpoints.
 cp .env.example .env
 # Generate an admin token: openssl rand -hex 32
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-comments dev
 ```
 

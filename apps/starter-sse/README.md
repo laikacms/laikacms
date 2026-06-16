@@ -18,6 +18,7 @@ during editing, "new content" toast notifications, dashboards.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-sse dev
 ```
 

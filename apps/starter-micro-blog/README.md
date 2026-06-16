@@ -48,6 +48,7 @@ admin-client.ts    ← esbuild entry: registers laika backend
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev        # builds admin bundle, then starts server on :3000
 ```
 

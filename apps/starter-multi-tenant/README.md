@@ -16,6 +16,7 @@ JSON:API surface.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-multi-tenant dev
 ```
 

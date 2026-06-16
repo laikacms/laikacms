@@ -18,6 +18,7 @@ without modifying the core.
 
 ```bash
 pnpm install
+pnpm build
 
 # Start Meilisearch locally (Docker):
 pnpm --filter @laikacms/starter-meilisearch meili:up

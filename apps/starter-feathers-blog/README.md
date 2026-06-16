@@ -14,6 +14,7 @@ Minimal blog built with [Feathers.js v5](https://feathersjs.com) and LaikaCMS. D
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev
 ```
 

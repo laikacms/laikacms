@@ -22,6 +22,7 @@ Starter blog exposing LaikaCMS content through a [tRPC](https://trpc.io/) API se
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev   # http://localhost:3000
 ```
 

@@ -40,7 +40,13 @@ export AWS_PROFILE=my-profile
 export AWS_REGION=us-east-1
 ```
 
-### 3. Start the dev server
+### 3. Build workspace dependencies
+
+```bash
+pnpm build
+```
+
+### 4. Start the dev server
 
 ```bash
 pnpm dev

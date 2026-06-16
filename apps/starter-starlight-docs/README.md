@@ -13,6 +13,14 @@ rendered by Starlight.
 
 ## Quick start
 
+First build workspace dependencies:
+
+```bash
+pnpm build
+```
+
+Then:
+
 ```bash
 pnpm dev
 ```

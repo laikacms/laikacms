@@ -47,6 +47,7 @@ outer.use(foalApp); // FoalTS handles everything else
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev
 ```
 

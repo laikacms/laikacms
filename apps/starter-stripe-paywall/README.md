@@ -31,6 +31,7 @@ Real-world monetization pattern for newsletter-style content sites.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-stripe-paywall dev
 ```
 

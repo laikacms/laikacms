@@ -18,6 +18,7 @@ payload for the public blog is effectively zero.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-qwik-blog dev
 ```
 

@@ -8,6 +8,7 @@ your GitHub repo using `apprunner.yaml`.
 
 ```bash
 pnpm install
+pnpm build
 pnpm dev
 ```
 

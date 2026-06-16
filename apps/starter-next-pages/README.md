@@ -13,6 +13,7 @@ admin. Complement to `starter-next-blog` (App Router) for projects that haven't 
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-next-pages dev
 ```
 

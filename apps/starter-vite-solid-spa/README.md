@@ -17,6 +17,7 @@ possible runtime JS payload.
 
 ```bash
 pnpm install
+pnpm build
 pnpm --filter @laikacms/starter-vite-solid-spa dev
 ```
 
