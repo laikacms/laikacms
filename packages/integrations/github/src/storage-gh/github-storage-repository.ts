@@ -339,6 +339,17 @@ export class GithubStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* this.collectRecursive(folderKey, options.depth);
+      const aggregateTotal = all.length;
+      return { summaries: applyPagination(all, options.pagination), aggregateTotal };
+    });
+  }
+
+  private collectRecursive(
+    folderKey: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const listing = yield* liftResult(this.dataSource.listDirectory(folderKey));
       const filtered = listing.filter(
         entry => this.excludeFilter.every(re => !re.test(entry.path)),
@@ -358,8 +369,13 @@ export class GithubStorageRepository extends StorageRepository {
           key,
         };
       });
-      const aggregateTotal = summaries.length;
-      return { summaries: applyPagination(summaries, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* this.collectRecursive(s.key, depth - 1);
+          summaries.push(...nested);
+        }
+      }
+      return summaries;
     });
   }
 

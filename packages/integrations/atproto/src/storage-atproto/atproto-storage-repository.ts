@@ -571,6 +571,18 @@ export class AtprotoStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* this.collectRecursive(folderKey, options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private collectRecursive(
+    folderKey: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const k = stripSlashes(folderKey);
       const rkeyBase = k === '' ? '' : pathToRkey(k);
 
@@ -601,7 +613,6 @@ export class AtprotoStorageRepository extends StorageRepository {
       // Implicit folders: any deeper file under `<rkey>:` whose direct parent isn't `k`?
       for (const r of filePage.records) {
         if (r.value.parent === k) continue;
-        // Path looks like `k/intermediate/...` — the next segment is an implicit folder.
         const parts = r.value.parent === '' ? [] : r.value.parent.split('/');
         const myParts = k === '' ? [] : k.split('/');
         if (parts.length > myParts.length && parts.slice(0, myParts.length).join('/') === k) {
@@ -619,11 +630,15 @@ export class AtprotoStorageRepository extends StorageRepository {
         key: callerPrefix + name,
       }));
 
-      const merged = [...files, ...folders]
+      const merged: AtomSummary[] = [...files, ...folders]
         .filter(s => this.excludeFilter.every(pattern => !pattern.test(s.key)));
-      const sorted = [...merged].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of merged.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) merged.push(...nested.success);
+        }
+      }
+      return merged;
     });
   }
 

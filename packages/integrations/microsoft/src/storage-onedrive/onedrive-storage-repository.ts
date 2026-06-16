@@ -4,7 +4,6 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
-  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -372,59 +371,33 @@ export class OneDriveStorageRepository extends StorageRepository {
           return { removed: 0, skipped: skipped0 };
         }
 
-        // ── Round-trip 1: resolve every key to its (item, extension), or probe
-        // for a folder facet when resolveFile returns null.
+        // ── Round-trip 1: resolve every key to its (item, extension).
         const resolved = yield* Effect.promise(async () => {
-          const out: Array<
-            | { key: string, kind: 'file', item: OneDriveItem, extension: string }
-            | { key: string, kind: 'folder', item: OneDriveItem }
-            | { key: string, kind: 'non-empty-folder' }
-            | { key: string, kind: 'missing' }
-          > = [];
+          const out: Array<{ key: string, resolved: { item: OneDriveItem, extension: string } | null }> = [];
           for (const k of cleanKeys) {
             const r = await this.resolveFile(k);
-            if (r) {
-              out.push({ key: k, kind: 'file', item: r.item, extension: r.extension });
-              continue;
-            }
-            // Probe for a folder item (no extension).
-            const itemResult = await this.dataSource.getItem(this.absolutePath(k));
-            if (Result.isSuccess(itemResult) && itemResult.success?.folder) {
-              const childCount = itemResult.success.folder.childCount ?? 0;
-              if (childCount > 0) {
-                out.push({ key: k, kind: 'non-empty-folder' });
-              } else {
-                out.push({ key: k, kind: 'folder', item: itemResult.success });
-              }
-            } else {
-              out.push({ key: k, kind: 'missing' });
-            }
+            out.push({ key: k, resolved: r });
           }
           return out;
         });
 
-        const fileFound = resolved.filter(r => r.kind === 'file') as Array<
-          { key: string, kind: 'file', item: OneDriveItem, extension: string }
+        const found = resolved.filter(r => r.resolved !== null) as Array<
+          { key: string, resolved: { item: OneDriveItem, extension: string } }
         >;
-        const folderFound = resolved.filter(r => r.kind === 'folder') as Array<
-          { key: string, kind: 'folder', item: OneDriveItem }
-        >;
-        const nonEmptyFolders = resolved.filter(r => r.kind === 'non-empty-folder');
-        const missing = resolved.filter(r => r.kind === 'missing');
+        const missing = resolved.filter(r => r.resolved === null);
 
-        // ── Round-trip 2: ONE $batch with N DELETE sub-requests for files.
+        // ── Round-trip 2: ONE $batch with N DELETE sub-requests.
         // *The* distinctive trait — N HTTP semantics in one round-trip,
         // each with its own status/body in the responses[] array.
         let removed = 0;
-        let extraSkipped = 0;
-        if (fileFound.length > 0) {
+        if (found.length > 0) {
           // Graph caps $batch at 20; chunk if needed.
-          for (let i = 0; i < fileFound.length; i += 20) {
-            const chunk = fileFound.slice(i, i + 20);
+          for (let i = 0; i < found.length; i += 20) {
+            const chunk = found.slice(i, i + 20);
             const requests = chunk.map((f, j) => ({
               id: String(j),
               method: 'DELETE' as const,
-              url: this.driveRootPathUrl(`${this.stripExtension(f.key)}.${f.extension}`),
+              url: this.driveRootPathUrl(`${this.stripExtension(f.key)}.${f.resolved.extension}`),
             }));
             const batchResult = yield* liftResult(this.dataSource.batch(requests));
             for (let j = 0; j < chunk.length; j += 1) {
@@ -438,48 +411,15 @@ export class OneDriveStorageRepository extends StorageRepository {
                 yield* emit.recoverableError(
                   new BadRequestError(`Graph $batch DELETE failed for ${f.key} (status ${sub?.status ?? '?'})`),
                 );
-                extraSkipped += 1;
               }
             }
           }
         }
 
-        // ── Folder deletes via $batch (empty folders only).
-        if (folderFound.length > 0) {
-          for (let i = 0; i < folderFound.length; i += 20) {
-            const chunk = folderFound.slice(i, i + 20);
-            const requests = chunk.map((f, j) => ({
-              id: String(j),
-              method: 'DELETE' as const,
-              url: this.driveRootPathUrl(f.key),
-            }));
-            const batchResult = yield* liftResult(this.dataSource.batch(requests));
-            for (let j = 0; j < chunk.length; j += 1) {
-              const sub = batchResult.find(r => r.id === String(j));
-              const f = chunk[j]!;
-              if (sub && (sub.status === 204 || sub.status === 200 || sub.status === 404)) {
-                yield* emit.data(f.key);
-                removed += 1;
-              } else {
-                yield* emit.recoverableError(
-                  new BadRequestError(`Graph $batch DELETE failed for folder ${f.key} (status ${sub?.status ?? '?'})`),
-                );
-                extraSkipped += 1;
-              }
-            }
-          }
-        }
-
-        for (const f of nonEmptyFolders) {
-          yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${f.key}"`));
-        }
         for (const m of missing) {
           yield* emit.recoverableError(new NotFoundError(`OneDrive item not found: ${m.key}`));
         }
-        return {
-          removed,
-          skipped: skipped0 + missing.length + nonEmptyFolders.length + extraSkipped,
-        };
+        return { removed, skipped: skipped0 + missing.length + (found.length - removed) };
       })
     );
   }
@@ -523,6 +463,18 @@ export class OneDriveStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* this.collectRecursive(folderKey, options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private collectRecursive(
+    folderKey: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const path = this.absolutePath(folderKey);
       const items = yield* liftResult(this.dataSource.listChildren(path));
 
@@ -543,9 +495,13 @@ export class OneDriveStorageRepository extends StorageRepository {
       });
 
       const filtered = summaries.filter(s => this.excludeFilter.every(pattern => !pattern.test(s.key)));
-      const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of filtered.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) filtered.push(...nested.success);
+        }
+      }
+      return filtered;
     });
   }
 

@@ -469,18 +469,28 @@ export class AirtableStorageRepository extends StorageRepository {
   > {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
-
       if (trimmed !== '') {
         const folder = yield* liftResult(this.findFolder(trimmed));
         if (!folder) {
           return {
             summaries: [] as ReadonlyArray<AtomSummary>,
-            aggregateTotal: 0,
             missingFolder: new NotFoundError(`No folder found at key "${folderKey}"`),
+            aggregateTotal: 0,
           };
         }
       }
+      const all = yield* this.collectRecursive(trimmed, options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
+  private collectRecursive(
+    trimmed: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const rows = yield* liftResult(this.dataSource.list<StorageFields>(
         `{Parent} = ${escapeAirtableString(trimmed)}`,
       ));
@@ -496,9 +506,13 @@ export class AirtableStorageRepository extends StorageRepository {
           : fullKey;
         return { type: 'object-summary', key: bareKey };
       });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) summaries.push(...nested.success);
+        }
+      }
+      return summaries;
     });
   }
 

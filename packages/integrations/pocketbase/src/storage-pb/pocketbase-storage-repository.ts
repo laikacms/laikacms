@@ -459,7 +459,6 @@ export class PocketBaseStorageRepository extends StorageRepository {
   > {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
-
       if (trimmed !== '') {
         const folder = yield* liftResult(this.dataSource.findOne(
           `type = ${escapePbFilterValue(TYPE_FOLDER)} && path = ${escapePbFilterValue(trimmed)}`,
@@ -472,7 +471,18 @@ export class PocketBaseStorageRepository extends StorageRepository {
           };
         }
       }
+      const all = yield* this.collectRecursive(trimmed, options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
+  private collectRecursive(
+    trimmed: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const children = yield* liftResult(this.dataSource.list(
         `parent = ${escapePbFilterValue(trimmed)}`,
       ));
@@ -488,9 +498,13 @@ export class PocketBaseStorageRepository extends StorageRepository {
           : fullKey;
         return { type: 'object-summary', key: bareKey };
       });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) summaries.push(...nested.success);
+        }
+      }
+      return summaries;
     });
   }
 

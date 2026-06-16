@@ -4,7 +4,6 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
-  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -392,24 +391,8 @@ export class SolidStorageRepository extends StorageRepository {
           // Resolve + delete in parallel per key.
           return await Promise.all(cleanKeys.map(async k => {
             const r = await this.resolveFile(k);
-            if (r) {
-              const del = await this.dataSource.deleteResource(r.url);
-              return Result.isSuccess(del)
-                ? { key: k, outcome: 'removed' as const }
-                : { key: k, outcome: 'failed' as const, error: del.failure };
-            }
-            // Probe folder container.
-            const containerUrl = this.folderUrl(k);
-            const headResult = await this.dataSource.head(containerUrl);
-            if (!Result.isSuccess(headResult) || !headResult.success) {
-              return { key: k, outcome: 'missing' as const };
-            }
-            // Container exists — check for children before deleting.
-            const children = await this.dataSource.listContainer(containerUrl);
-            if (Result.isSuccess(children) && children.success.length > 0) {
-              return { key: k, outcome: 'non-empty-folder' as const };
-            }
-            const del = await this.dataSource.deleteResource(containerUrl);
+            if (!r) return { key: k, outcome: 'missing' as const };
+            const del = await this.dataSource.deleteResource(r.url);
             return Result.isSuccess(del)
               ? { key: k, outcome: 'removed' as const }
               : { key: k, outcome: 'failed' as const, error: del.failure };
@@ -424,9 +407,6 @@ export class SolidStorageRepository extends StorageRepository {
             removed += 1;
           } else if (r.outcome === 'missing') {
             yield* emit.recoverableError(new NotFoundError(`Solid resource not found: ${r.key}`));
-            skipped += 1;
-          } else if (r.outcome === 'non-empty-folder') {
-            yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${r.key}"`));
             skipped += 1;
           } else {
             yield* emit.recoverableError(r.error);
@@ -480,6 +460,18 @@ export class SolidStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* this.collectRecursive(folderKey, options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private collectRecursive(
+    folderKey: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const containerUrl = this.folderUrl(folderKey);
       const children = yield* liftResult(this.dataSource.listContainer(containerUrl));
 
@@ -508,9 +500,13 @@ export class SolidStorageRepository extends StorageRepository {
       }
 
       const filtered = summaries.filter(s => this.excludeFilter.every(p => !p.test(s.key)));
-      const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of filtered.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) filtered.push(...nested.success);
+        }
+      }
+      return filtered;
     });
   }
 

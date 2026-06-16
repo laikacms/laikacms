@@ -444,6 +444,18 @@ export class B2StorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* this.collectRecursive(folderKey, options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private collectRecursive(
+    folderKey: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const k = stripSlashes(folderKey);
       const prefix = this.absolutePath(k);
       const search = prefix === '' ? '' : `${prefix}/`;
@@ -487,9 +499,13 @@ export class B2StorageRepository extends StorageRepository {
         ...[...seenFolders].map(name => ({ type: 'folder-summary' as const, key: callerPrefix + name })),
       ];
       const filtered = summaries.filter(s => this.excludeFilter.every(p => !p.test(s.key)));
-      const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of filtered.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) filtered.push(...nested.success);
+        }
+      }
+      return filtered;
     });
   }
 

@@ -4,7 +4,6 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
-  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -391,25 +390,11 @@ export class TrelloStorageRepository extends StorageRepository {
         const results = yield* Effect.promise(async () => {
           return await Promise.all(cleanKeys.map(async k => {
             const resolved = await this.resolveFile(k);
-            if (resolved) {
-              const del = await this.dataSource.deleteCard(resolved.card.id);
-              return Result.isSuccess(del)
-                ? { key: k, outcome: 'removed' as const }
-                : { key: k, outcome: 'failed' as const, error: del.failure };
-            }
-            // Probe for a folder list by name (folders are Trello lists).
-            const list = await this.findListByName(k);
-            if (!list) return { key: k, outcome: 'missing' as const };
-            // Check for cards in this list to enforce non-empty guard.
-            const cardsResult = await this.dataSource.listListCards(list.id);
-            if (Result.isSuccess(cardsResult) && cardsResult.success.length > 0) {
-              return { key: k, outcome: 'non-empty-folder' as const };
-            }
-            // Archive (soft-delete) the list.
-            const archive = await this.dataSource.archiveList(list.id);
-            return Result.isSuccess(archive)
+            if (!resolved) return { key: k, outcome: 'missing' as const };
+            const del = await this.dataSource.deleteCard(resolved.card.id);
+            return Result.isSuccess(del)
               ? { key: k, outcome: 'removed' as const }
-              : { key: k, outcome: 'failed' as const, error: archive.failure };
+              : { key: k, outcome: 'failed' as const, error: del.failure };
           }));
         });
 
@@ -420,10 +405,7 @@ export class TrelloStorageRepository extends StorageRepository {
             yield* emit.data(r.key);
             removed += 1;
           } else if (r.outcome === 'missing') {
-            yield* emit.recoverableError(new NotFoundError(`Trello card or list not found: ${r.key}`));
-            skipped += 1;
-          } else if (r.outcome === 'non-empty-folder') {
-            yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${r.key}"`));
+            yield* emit.recoverableError(new NotFoundError(`Trello card not found: ${r.key}`));
             skipped += 1;
           } else {
             yield* emit.recoverableError(r.error);
@@ -484,6 +466,18 @@ export class TrelloStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* this.collectRecursive(folderKey, options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private collectRecursive(
+    folderKey: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const k = stripSlashes(folderKey);
       const lists = yield* liftResult(this.dataSource.listBoardLists());
       const summaries: AtomSummary[] = [];
@@ -536,9 +530,13 @@ export class TrelloStorageRepository extends StorageRepository {
       }
 
       const filtered = summaries.filter(s => this.excludeFilter.every(p => !p.test(s.key)));
-      const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of filtered.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) filtered.push(...nested.success);
+        }
+      }
+      return filtered;
     });
   }
 

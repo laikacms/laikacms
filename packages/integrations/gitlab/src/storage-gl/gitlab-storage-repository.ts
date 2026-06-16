@@ -363,14 +363,25 @@ export class GitlabStorageRepository extends StorageRepository {
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
-      const listing = yield* Effect.result(liftResult(this.dataSource.listDirectory(folderKey)));
-      if (Result.isFailure(listing)) {
-        if (listing.failure instanceof NotFoundError) {
-          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: listing.failure, aggregateTotal: 0 };
+      const r = yield* Effect.result(this.collectRecursive(folderKey, options.depth));
+      if (Result.isFailure(r)) {
+        if (r.failure instanceof NotFoundError) {
+          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: r.failure, aggregateTotal: 0 };
         }
-        return yield* Effect.fail(listing.failure);
+        return yield* Effect.fail(r.failure);
       }
-      const filtered = listing.success.filter(entry => this.excludeFilter.every(re => !re.test(entry.path)));
+      const aggregateTotal = r.success.length;
+      return { summaries: applyPagination(r.success, options.pagination), aggregateTotal };
+    });
+  }
+
+  private collectRecursive(
+    folderKey: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const listing = yield* liftResult(this.dataSource.listDirectory(folderKey));
+      const filtered = listing.filter(entry => this.excludeFilter.every(re => !re.test(entry.path)));
       const summaries: AtomSummary[] = filtered.map(entry => {
         let key = entry.path;
         if (entry.type === 'file') {
@@ -383,8 +394,13 @@ export class GitlabStorageRepository extends StorageRepository {
         }
         return { type: entry.type === 'file' ? 'object-summary' : 'folder-summary', key };
       });
-      const aggregateTotal = summaries.length;
-      return { summaries: applyPagination(summaries, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) summaries.push(...nested.success);
+        }
+      }
+      return summaries;
     });
   }
 

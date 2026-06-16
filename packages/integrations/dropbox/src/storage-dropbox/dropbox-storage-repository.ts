@@ -416,17 +416,28 @@ export class DropboxStorageRepository extends StorageRepository {
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
-      const listing = yield* Effect.result(liftResult(this.dataSource.listFolder(folderKey)));
-      if (Result.isFailure(listing)) {
-        if (listing.failure instanceof NotFoundError) {
-          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: listing.failure, aggregateTotal: 0 };
+      const r = yield* Effect.result(this.collectRecursive(folderKey, options.depth));
+      if (Result.isFailure(r)) {
+        if (r.failure instanceof NotFoundError) {
+          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: r.failure, aggregateTotal: 0 };
         }
-        return yield* Effect.fail(listing.failure);
+        return yield* Effect.fail(r.failure);
       }
+      const sorted = [...r.success].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
+  private collectRecursive(
+    folderKey: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const listing = yield* liftResult(this.dataSource.listFolder(folderKey));
       const summaries: AtomSummary[] = [];
       const trimmed = trimSlashes(folderKey);
-      for (const entry of listing.success) {
+      for (const entry of listing) {
         const name = entry.name;
         if (entry['.tag'] === DROPBOX_FOLDER_TAG) {
           summaries.push({
@@ -445,9 +456,13 @@ export class DropboxStorageRepository extends StorageRepository {
           });
         }
       }
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) summaries.push(...nested.success);
+        }
+      }
+      return summaries;
     });
   }
 

@@ -501,6 +501,24 @@ export class FirestoreStorageRepository extends StorageRepository {
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
+      const r = yield* Effect.result(this.collectRecursive(folderKey, options.depth));
+      if (Result.isFailure(r)) {
+        if (r.failure instanceof NotFoundError) {
+          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: r.failure, aggregateTotal: 0 };
+        }
+        return yield* Effect.fail(r.failure);
+      }
+      const sorted = [...r.success].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private collectRecursive(
+    folderKey: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const segmentsResult = validateSegments(folderKey);
       if (Result.isFailure(segmentsResult)) return yield* Effect.fail(segmentsResult.failure);
       const segments = segmentsResult.success;
@@ -509,11 +527,7 @@ export class FirestoreStorageRepository extends StorageRepository {
         const folderDoc = yield* liftResult(this.dataSource.getDocument(segments));
         const fields = folderDoc ? fromFirestoreFields(folderDoc.fields ?? {}) : null;
         if (!fields || fields[TYPE_FIELD] !== 'folder') {
-          return {
-            summaries: [] as ReadonlyArray<AtomSummary>,
-            missingFolder: new NotFoundError(`No folder found at key "${folderKey}"`),
-            aggregateTotal: 0,
-          };
+          return yield* Effect.fail(new NotFoundError(`No folder found at key "${folderKey}"`));
         }
       }
 
@@ -533,9 +547,13 @@ export class FirestoreStorageRepository extends StorageRepository {
           : childKey;
         return { type: 'object-summary', key: bareKey };
       });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) summaries.push(...nested.success);
+        }
+      }
+      return summaries;
     });
   }
 

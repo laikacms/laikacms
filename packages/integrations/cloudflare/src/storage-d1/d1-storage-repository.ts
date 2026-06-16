@@ -544,8 +544,6 @@ export class D1StorageRepository extends StorageRepository {
   > {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
-
-      // Confirm the folder exists (root is implicit).
       if (trimmed !== '') {
         const { parent, name } = splitKey(trimmed);
         const folderRow = yield* liftResult(this.getRow(parent, name));
@@ -557,7 +555,18 @@ export class D1StorageRepository extends StorageRepository {
           };
         }
       }
+      const all = yield* this.collectRecursive(trimmed, options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
+  private collectRecursive(
+    trimmed: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const rows = yield* liftResult(this.dataSource.query<D1Row>(
         `SELECT * FROM "${this.tableName}" WHERE parent_key = ?`,
         [trimmed],
@@ -572,9 +581,13 @@ export class D1StorageRepository extends StorageRepository {
           : fullKey;
         return { type: 'object-summary', key: bareKey };
       });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) summaries.push(...nested.success);
+        }
+      }
+      return summaries;
     });
   }
 

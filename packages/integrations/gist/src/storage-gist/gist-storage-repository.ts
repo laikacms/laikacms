@@ -445,7 +445,26 @@ export class GistStorageRepository extends StorageRepository {
     return Effect.gen({ self: this }, function*() {
       const validated = yield* Effect.fromResult(this.validateKey(folderKey));
       const gist = yield* liftResult(this.dataSource.getGist());
+      const all = yield* this.collectRecursiveGist(gist, validated, options.depth);
+      if (validated !== '' && all.length === 0) {
+        return {
+          summaries: [] as ReadonlyArray<AtomSummary>,
+          missingFolder: new NotFoundError(`No folder found at key "${folderKey}"`),
+          aggregateTotal: 0,
+        };
+      }
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
+  private collectRecursiveGist(
+    gist: { files: Record<string, unknown> },
+    validated: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       // Build the listing client-side from the single getGist response.
       const prefix = validated === '' ? '' : `${encodeGistFilename(validated)}__`;
       const folderSet = new Set<string>();
@@ -467,14 +486,6 @@ export class GistStorageRepository extends StorageRepository {
         }
       }
 
-      if (validated !== '' && folderSet.size === 0 && objectSet.size === 0) {
-        return {
-          summaries: [] as ReadonlyArray<AtomSummary>,
-          missingFolder: new NotFoundError(`No folder found at key "${folderKey}"`),
-          aggregateTotal: 0,
-        };
-      }
-
       const summaries: AtomSummary[] = [
         ...[...folderSet].map(name => ({
           type: 'folder-summary' as const,
@@ -485,9 +496,13 @@ export class GistStorageRepository extends StorageRepository {
           key: validated === '' ? name : `${validated}/${name}`,
         })),
       ];
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursiveGist(gist, s.key, depth - 1));
+          if (Result.isSuccess(nested)) summaries.push(...nested.success);
+        }
+      }
+      return summaries;
     });
   }
 

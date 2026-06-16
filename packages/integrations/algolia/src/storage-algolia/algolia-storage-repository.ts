@@ -466,19 +466,28 @@ export class AlgoliaStorageRepository extends StorageRepository {
   > {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
-
-      // Confirm the parent folder exists when it isn't the root.
       if (trimmed !== '') {
         const parentRecord = yield* liftResult(this.dataSource.getRecord(trimmed));
         if (!parentRecord || parentRecord[TYPE_ATTR] !== 'folder') {
           return {
             summaries: [] as ReadonlyArray<AtomSummary>,
-            aggregateTotal: 0,
             missingFolder: new NotFoundError(`No folder found at key "${folderKey}"`),
+            aggregateTotal: 0,
           };
         }
       }
+      const all = yield* this.collectRecursive(trimmed, options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
+  private collectRecursive(
+    trimmed: string,
+    depth: number,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const children = yield* liftResult(this.dataSource.queryByParent(trimmed));
       const summaries: AtomSummary[] = children.map(record => {
         if (record[TYPE_ATTR] === 'folder') {
@@ -487,9 +496,13 @@ export class AlgoliaStorageRepository extends StorageRepository {
         const { key } = this.keyAndExtension(record);
         return { type: 'object-summary', key };
       });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      if (depth > 1) {
+        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
+          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
+          if (Result.isSuccess(nested)) summaries.push(...nested.success);
+        }
+      }
+      return summaries;
     });
   }
 
