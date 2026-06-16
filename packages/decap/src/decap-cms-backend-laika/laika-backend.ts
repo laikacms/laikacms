@@ -730,11 +730,19 @@ export default function createLaikaBackend(
       // Process ALL data files - important for i18n with multiple_folders structure
       // Each locale gets its own file (e.g., pages/en/index.json, pages/nl/index.json)
       for (const dataFile of entry.dataFiles) {
-        const content = typeof dataFile.raw === 'string'
-          ? JSON.parse(dataFile.raw)
-          : dataFile.raw || {};
+        // dataFile.raw is the serialized file content as Decap produced it:
+        // - JSON collections: a JSON string that should be parsed back to an object
+        // - Markdown/YAML/TOML collections: the raw file text, passed through as-is
+        const isJsonFile = /\.json$/i.test(dataFile.path);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const content: any = typeof dataFile.raw === 'string'
+          ? isJsonFile ? JSON.parse(dataFile.raw) : dataFile.raw
+          : dataFile.raw ?? {};
 
         const entryKey = normalizeKey(dataFile.path);
+        const language: string = typeof content === 'object' && content !== null
+          ? (content as Record<string, unknown>).language as string | undefined ?? 'unk'
+          : 'unk';
 
         if (options.useWorkflow && typeof options.status === 'string' && options.status !== 'published') {
           const newEntry = options.newEntry || options.unpublished === false;
@@ -743,7 +751,7 @@ export default function createLaikaBackend(
               type: 'unpublished',
               status: options.status || 'draft',
               key: entryKey,
-              language: content.language ?? 'unk',
+              language,
               content,
             }));
             if (Result.isFailure(r)) {
@@ -774,7 +782,7 @@ export default function createLaikaBackend(
               type: 'published',
               status: 'published',
               key: entryKey,
-              language: content.language ?? 'unk',
+              language,
               content,
             }));
             if (Result.isFailure(r)) {

@@ -664,3 +664,85 @@ describe('LaikaBackend.entriesByFiles()', () => {
     expect(entries[0].file.path).toBe('articles/ok');
   });
 });
+
+// ---------------------------------------------------------------------------
+// Suite: persistEntry
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.persistEntry()', () => {
+  let mockDocRepo: ReturnType<typeof makeMockDocumentsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockDocRepo = makeMockDocumentsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => makeMockAssetsRepository() as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).documentsRepository = mockDocRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('persists a JSON entry as a parsed object (not a double-serialised string)', async () => {
+    mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
+
+    const raw = JSON.stringify({ title: 'Hello', language: 'en' });
+    await backend.persistEntry(
+      { dataFiles: [{ path: 'articles/hello.json', raw }], assets: [] },
+      { newEntry: true, useWorkflow: false },
+    );
+
+    expect(mockDocRepo.createDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ content: { title: 'Hello', language: 'en' } }),
+    );
+  });
+
+  it('persists a markdown/frontmatter entry as a raw string without JSON.parse', async () => {
+    mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
+
+    const raw = '---\ntitle: My Post\n---\n\nBody text here.';
+    // This must NOT throw SyntaxError (JSON.parse would throw on non-JSON input)
+    await expect(
+      backend.persistEntry(
+        { dataFiles: [{ path: 'posts/my-post.md', raw }], assets: [] },
+        { newEntry: true, useWorkflow: false },
+      ),
+    ).resolves.toBeUndefined();
+
+    expect(mockDocRepo.createDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ content: raw }),
+    );
+  });
+
+  it('round-trips a markdown entry: persist then read back the same raw string', async () => {
+    const raw = '---\ntitle: Round-trip\ndate: 2024-01-01\n---\n\nContent body.';
+
+    mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
+    mockDocRepo.getDocument.mockReturnValue(
+      succeed({ key: 'posts/round-trip', content: raw, type: 'published' }),
+    );
+
+    await backend.persistEntry(
+      { dataFiles: [{ path: 'posts/round-trip.md', raw }], assets: [] },
+      { newEntry: true, useWorkflow: false },
+    );
+
+    const entry = await backend.getEntry('posts/round-trip.md');
+    expect(entry.data).toBe(raw);
+  });
+
+  it('persists a YAML entry as a raw string', async () => {
+    mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
+
+    const raw = 'title: My Config\nvalue: 42\n';
+    await backend.persistEntry(
+      { dataFiles: [{ path: 'config/settings.yaml', raw }], assets: [] },
+      { newEntry: true, useWorkflow: false },
+    );
+
+    expect(mockDocRepo.createDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ content: raw }),
+    );
+  });
+});
