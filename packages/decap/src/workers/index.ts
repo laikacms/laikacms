@@ -11,7 +11,7 @@
  *
  * Composes the pieces you would otherwise wire by hand:
  *   - `R2StorageRepository` over the R2 bucket you pass in.
- *   - `R2AssetsRepository` for binary uploads (configurable sanitizer).
+ *   - `ContentBaseAssetsRepository` for binary uploads (configurable sanitizer; R2AssetsRepository planned for a future release).
  *   - `DecapContentBaseSettingsProvider` reading `${configKey}.yml` from R2.
  *   - `ContentBaseDocumentsRepository` over R2 storage + settings.
  *   - `decapApi(...)` with your chosen auth mode.
