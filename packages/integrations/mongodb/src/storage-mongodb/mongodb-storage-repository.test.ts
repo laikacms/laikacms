@@ -289,6 +289,33 @@ describe('MongoStorageRepository', () => {
     expect(removed.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
   });
 
+  it('removeAtoms removes an empty explicit folder key and emits it (LCMS-184)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'my-folder' }));
+    const removed = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['my-folder']),
+    );
+    expect(removed.done).toEqual({ removed: 1, skipped: 0 });
+    expect(removed.data).toEqual(['my-folder']);
+    expect(removed.recoverableErrors.length).toBe(0);
+    expect(store.has('my-folder')).toBe(false);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty folder key (LCMS-184)', async () => {
+    const { ForbiddenError } = await import('laikacms/core');
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'my-folder' }));
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'my-folder/child', content: { body: 'x' } }),
+    );
+    const removed = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['my-folder']),
+    );
+    expect(removed.done).toEqual({ removed: 0, skipped: 1 });
+    expect(removed.data.length).toBe(0);
+    expect(removed.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+  });
+
   it('listAtomSummaries dispatches an aggregation pipeline; suppresses content', async () => {
     const repo = makeRepo();
     await LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'notes/a', content: { body: 'a' } }));

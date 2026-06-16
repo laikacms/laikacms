@@ -173,6 +173,18 @@ const evalAql = (query: string, bindVars: Record<string, unknown>): unknown[] =>
     return [...coll.values()].filter(d => d.parent === bindVars['parent']);
   }
 
+  // ---- Single-key folder delete: REMOVE @key IN <coll> RETURN OLD._key
+  m = q.match(/^REMOVE @key IN (\w+) RETURN OLD\._key$/);
+  if (m) {
+    const coll = collections.get(m[1]!);
+    if (!coll) return [];
+    const key = String(bindVars['key']);
+    const existing = coll.get(key);
+    if (!existing) return [];
+    coll.delete(key);
+    return [key];
+  }
+
   throw new Error(`mock: unrecognised AQL: ${q.slice(0, 200)}`);
 };
 
@@ -495,6 +507,33 @@ describe('ArangoStorageRepository', () => {
     );
     expect(removed.done).toEqual({ removed: 1, skipped: 1 });
     expect(removed.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('removeAtoms removes an empty explicit folder key and emits it (LCMS-184)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'my-folder' }));
+    const removed = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['my-folder']),
+    );
+    expect(removed.done).toEqual({ removed: 1, skipped: 0 });
+    expect(removed.data).toEqual(['my-folder']);
+    expect(removed.recoverableErrors.length).toBe(0);
+    expect(collections.get('laika_folders')?.has('my-folder')).toBe(false);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty folder key (LCMS-184)', async () => {
+    const { ForbiddenError } = await import('laikacms/core');
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'my-folder' }));
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'my-folder/child', content: { body: 'x' } }),
+    );
+    const removed = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['my-folder']),
+    );
+    expect(removed.done).toEqual({ removed: 0, skipped: 1 });
+    expect(removed.data.length).toBe(0);
+    expect(removed.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
   });
 
   it('listAtomSummaries dispatches two AQL queries (files + folders)', async () => {
