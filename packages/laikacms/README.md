@@ -146,14 +146,14 @@ const { items, done } = await collectStream(myStream, {
 });
 ```
 
-Omitting `options` (or `onProgress`) uses a data-only fast path that avoids allocating metadata
-arrays. Note that when `onProgress` is omitted, **`RecoverableError` and `Progress` events are
-silently discarded** — callers that need to surface warnings or non-fatal errors must supply the
-callback.
+Omitting `options` (or `onProgress`) uses a data-only fast path. Note that when `onProgress` is
+omitted, **`RecoverableError` and `Progress` events are silently discarded** — callers that need to
+surface warnings or non-fatal errors must supply the callback.
 
-`runTask` without `onProgress` uses `LaikaTask.runPromise`, which genuinely has no metadata
-overhead. `collectStream` without `onProgress` uses a data-only drain, so it also avoids allocating
-the recoverable-error and progress arrays.
+`runTask` without `onProgress` drains metadata chunks through the Effect channel (queue allocations
+and Effect pulls still occur) but does not allocate metadata arrays or fire any callback.
+`collectStream` without `onProgress` performs a data-only drain: no metadata arrays are allocated
+and no callback is fired, though channel overhead still applies.
 
 ## License
 
