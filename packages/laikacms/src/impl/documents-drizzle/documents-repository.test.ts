@@ -319,6 +319,32 @@ describe('DrizzleDocumentsRepository', () => {
 
       expect(docs.length).toBeGreaterThanOrEqual(2);
     });
+
+    it('returns the correct page when using page-based pagination', async () => {
+      const keys = ['p1', 'p2', 'p3', 'p4', 'p5'];
+      for (const key of keys) {
+        await resolveTask(
+          repo.createDocument({ key, type: 'published', status: 'published', content: {}, language: 'en' }),
+        );
+      }
+
+      const page2Docs: import('laikacms/documents').Record[] = [];
+      for await (
+        const chunk of repo.listRecords({
+          type: 'published',
+          folder: '',
+          pagination: { page: 2, perPage: 2 },
+          depth: 10,
+        })
+      ) {
+        for (const el of chunk) {
+          if (el._tag === 'Data') page2Docs.push(el.value);
+        }
+      }
+
+      expect(page2Docs.length).toBe(2);
+      expect(page2Docs.map(d => d.key)).toEqual(['p3', 'p4']);
+    });
   });
 
   describe('createRevision / getRevision / listRevisions', () => {
