@@ -431,10 +431,10 @@ export class AirtableStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, missingFolder, aggregateTotal } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -442,7 +442,7 @@ export class AirtableStorageRepository extends StorageRepository {
   listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, missingFolder, aggregateTotal } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
@@ -455,7 +455,7 @@ export class AirtableStorageRepository extends StorageRepository {
             else yield* emit.data(result.success);
           }
         }
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -464,7 +464,7 @@ export class AirtableStorageRepository extends StorageRepository {
     folderKey: string,
     options: ListAtomsOptions,
   ): Effect.Effect<
-    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError },
+    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError, aggregateTotal: number },
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
@@ -475,6 +475,7 @@ export class AirtableStorageRepository extends StorageRepository {
         if (!folder) {
           return {
             summaries: [] as ReadonlyArray<AtomSummary>,
+            aggregateTotal: 0,
             missingFolder: new NotFoundError(`No folder found at key "${folderKey}"`),
           };
         }
@@ -496,7 +497,8 @@ export class AirtableStorageRepository extends StorageRepository {
         return { type: 'object-summary', key: bareKey };
       });
       const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      return { summaries: applyPagination(sorted, options.pagination) };
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 

@@ -326,10 +326,10 @@ export class GitlabStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, missingFolder, aggregateTotal } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -337,7 +337,7 @@ export class GitlabStorageRepository extends StorageRepository {
   listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, missingFolder, aggregateTotal } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
@@ -350,7 +350,7 @@ export class GitlabStorageRepository extends StorageRepository {
             else yield* emit.data(result.success);
           }
         }
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -359,14 +359,14 @@ export class GitlabStorageRepository extends StorageRepository {
     folderKey: string,
     options: ListAtomsOptions,
   ): Effect.Effect<
-    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError },
+    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError, aggregateTotal: number },
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
       const listing = yield* Effect.result(liftResult(this.dataSource.listDirectory(folderKey)));
       if (Result.isFailure(listing)) {
         if (listing.failure instanceof NotFoundError) {
-          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: listing.failure };
+          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: listing.failure, aggregateTotal: 0 };
         }
         return yield* Effect.fail(listing.failure);
       }
@@ -383,7 +383,8 @@ export class GitlabStorageRepository extends StorageRepository {
         }
         return { type: entry.type === 'file' ? 'object-summary' : 'folder-summary', key };
       });
-      return { summaries: applyPagination(summaries, options.pagination) };
+      const aggregateTotal = summaries.length;
+      return { summaries: applyPagination(summaries, options.pagination), aggregateTotal };
     });
   }
 

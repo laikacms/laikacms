@@ -368,10 +368,10 @@ export class NotionStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, missingFolder, aggregateTotal } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -379,7 +379,7 @@ export class NotionStorageRepository extends StorageRepository {
   listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, missingFolder, aggregateTotal } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
@@ -392,7 +392,7 @@ export class NotionStorageRepository extends StorageRepository {
             else yield* emit.data(result.success);
           }
         }
-        return { total: summaries.length };
+        return { total: aggregateTotal };
       })
     );
   }
@@ -401,14 +401,14 @@ export class NotionStorageRepository extends StorageRepository {
     folderKey: string,
     options: ListAtomsOptions,
   ): Effect.Effect<
-    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError },
+    { summaries: ReadonlyArray<AtomSummary>, missingFolder?: LaikaError, aggregateTotal: number },
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
       const resolved = yield* Effect.result(liftResult(this.resolveFolderId(folderKey)));
       if (Result.isFailure(resolved)) {
         if (resolved.failure instanceof NotFoundError) {
-          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: resolved.failure };
+          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: resolved.failure, aggregateTotal: 0 };
         }
         return yield* Effect.fail(resolved.failure);
       }
@@ -430,7 +430,8 @@ export class NotionStorageRepository extends StorageRepository {
         });
       }
       const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      return { summaries: applyPagination(sorted, options.pagination) };
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 
