@@ -229,11 +229,11 @@ pnpm dlx laikacli local serve
 
 All local-file dev tooling lives under the `local` namespace.
 
-| Command          | What it does                                                                                                |
-| ---------------- | ----------------------------------------------------------------------------------------------------------- |
-| `local serve`    | Start a local-file JSON:API storage server for dev workflows (`--root`, `--port`, `--host`, `--auth-token`) |
-| `local generate` | Generate a typed TypeScript module from a Decap CMS `config.yaml` (add `--watch` to keep it fresh)          |
-| `local migrate`  | Copy every atom from one storage repository to another (`-s ./source -d ./dest`)                            |
+| Command          | What it does                                                                                                                                       |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `local serve`    | Start a local-file JSON:API storage server for dev workflows (`--root`, `--port`, `--host`, `--default-extension` (default: `md`), `--auth-token`) |
+| `local generate` | Generate a typed TypeScript module from a Decap CMS `config.yaml` (add `--watch` to keep it fresh)                                                 |
+| `local migrate`  | Copy every atom from one storage repository to another (`-s ./source -d ./dest`)                                                                   |
 
 Run `laika local <command> --help` for the full flag reference.
 
