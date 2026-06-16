@@ -28,10 +28,32 @@ import { Asset, AssetCreate, AssetsRepository } from 'laikacms/assets';
 
 ```typescript
 abstract class AssetsRepository {
-  abstract getAsset(key: string): ResultStream<Asset>;
-  abstract createAsset(create: AssetCreate): ResultStream<Asset>;
-  abstract getUrls(assets: Asset[]): ResultStream<AssetUrl[]>;
-  // ...
+  abstract getCapabilities(): LaikaTask.LaikaTask<AssetsCapabilities>;
+
+  // Resource Operations
+  abstract getResource(
+    key: string,
+    options?: GetResourceOptions,
+  ): LaikaTask.LaikaTask<ReadonlyArray<Resource>>;
+  abstract listResources(
+    folderKey: string,
+    options: ListResourcesOptions,
+  ): LaikaStream.LaikaStream<Resource, ListResourcesDone>;
+
+  // Asset Operations
+  abstract getAsset(key: string, options?: GetResourceOptions): LaikaTask.LaikaTask<Asset>;
+  abstract createAsset(create: AssetCreate): LaikaTask.LaikaTask<Asset>;
+  abstract updateAsset(update: AssetUpdate): LaikaTask.LaikaTask<Asset>;
+  abstract deleteAsset(key: Key): LaikaTask.LaikaTask<void>;
+  abstract deleteAssets(keys: readonly Key[]): LaikaStream.LaikaStream<Key, DeleteAssetsDone>;
+  abstract getVariations(assets: Asset[]): LaikaStream.LaikaStream<AssetVariations, LaikaDone>;
+  abstract getUrls(assets: Asset[]): LaikaStream.LaikaStream<AssetUrl, LaikaDone>;
+  abstract getMetadata(assets: Asset[]): LaikaStream.LaikaStream<AssetMetadata, LaikaDone>;
+
+  // Folder Operations
+  abstract getFolder(key: Key): LaikaTask.LaikaTask<Folder>;
+  abstract createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder>;
+  abstract deleteFolder(key: string, recursive?: boolean): LaikaTask.LaikaTask<void>;
 }
 ```
 
