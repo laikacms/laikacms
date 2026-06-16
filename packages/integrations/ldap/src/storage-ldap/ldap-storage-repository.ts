@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -486,29 +487,45 @@ export class LdapStorageRepository extends StorageRepository {
           return { removed: 0, skipped: skipped0 };
         }
 
-        // ── Round-trip 1: resolve every key → DN via parallel filter
-        //    searches.
+        // ── Round-trip 1: resolve every key → file DN or folder DN.
         const resolved = yield* Effect.promise(async () => {
-          const out: Array<{ key: string, dn: string | null }> = [];
+          const out: Array<
+            | { key: string, kind: 'file', dn: string }
+            | { key: string, kind: 'folder', dn: string }
+            | { key: string, kind: 'missing' }
+          > = [];
           for (const k of cleanKeys) {
             const r = await this.resolveFile(k);
-            out.push({ key: k, dn: r?.entry.dn ?? null });
+            if (r) {
+              out.push({ key: k, kind: 'file', dn: r.entry.dn });
+              continue;
+            }
+            const isFolder = await this.hasFolder(k);
+            if (isFolder) {
+              out.push({ key: k, kind: 'folder', dn: this.folderDn(k) });
+            } else {
+              out.push({ key: k, kind: 'missing' });
+            }
           }
           return out;
         });
 
-        const found = resolved.filter(r => r.dn !== null) as Array<{ key: string, dn: string }>;
-        const missing = resolved.filter(r => r.dn === null);
+        const fileFound = resolved.filter(r => r.kind === 'file') as Array<{ key: string, kind: 'file', dn: string }>;
+        const folderFound = resolved.filter(r => r.kind === 'folder') as Array<
+          { key: string, kind: 'folder', dn: string }
+        >;
+        const missing = resolved.filter(r => r.kind === 'missing');
 
-        // ── Round-trip 2: ONE bulkOps call with N `del` actions.
+        // ── Round-trip 2: ONE bulkOps call with N `del` actions for files.
         // The 13th structurally distinct atomic-multi-write mechanism.
         let removed = 0;
-        if (found.length > 0) {
-          const ops: LdapBulkOp[] = found.map(f => ({ kind: 'del', dn: f.dn }));
+        let fileSkipped = 0;
+        if (fileFound.length > 0) {
+          const ops: LdapBulkOp[] = fileFound.map(f => ({ kind: 'del', dn: f.dn }));
           const bulkResult = yield* liftResult(this.dataSource.bulkOps(ops));
-          for (let i = 0; i < found.length; i += 1) {
+          for (let i = 0; i < fileFound.length; i += 1) {
             const r = bulkResult[i];
-            const f = found[i]!;
+            const f = fileFound[i]!;
             if (r && r.status === 'OK') {
               yield* emit.data(f.key);
               removed += 1;
@@ -516,13 +533,50 @@ export class LdapStorageRepository extends StorageRepository {
               yield* emit.recoverableError(
                 new NotFoundError(`LDAP bulk-delete failed for ${f.key}: ${r?.message ?? 'unknown'}`),
               );
+              fileSkipped += 1;
             }
           }
         }
+
+        // ── Handle folder keys one-by-one (child check needed per folder).
+        let folderSkipped = 0;
+        for (const f of folderFound) {
+          // Search for immediate children of this OU to enforce non-empty guard.
+          const children = yield* Effect.result(
+            liftResult(this.dataSource.search({
+              base: f.dn,
+              scope: 'one',
+              filter: '(objectClass=*)',
+              sizeLimit: 1,
+            })),
+          );
+          if (Result.isSuccess(children) && children.success.length > 0) {
+            yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${f.key}"`));
+            folderSkipped += 1;
+            continue;
+          }
+          const delResult = yield* Effect.result(liftResult(this.dataSource.bulkOps([{ kind: 'del', dn: f.dn }])));
+          if (Result.isFailure(delResult)) {
+            yield* emit.recoverableError(delResult.failure);
+            folderSkipped += 1;
+          } else {
+            const r = delResult.success[0];
+            if (r && r.status === 'OK') {
+              yield* emit.data(f.key);
+              removed += 1;
+            } else {
+              yield* emit.recoverableError(
+                new NotFoundError(`LDAP bulk-delete failed for folder ${f.key}: ${r?.message ?? 'unknown'}`),
+              );
+              folderSkipped += 1;
+            }
+          }
+        }
+
         for (const m of missing) {
           yield* emit.recoverableError(new NotFoundError(`LDAP entry not found: ${m.key}`));
         }
-        return { removed, skipped: skipped0 + missing.length + (found.length - removed) };
+        return { removed, skipped: skipped0 + missing.length + fileSkipped + folderSkipped };
       })
     );
   }

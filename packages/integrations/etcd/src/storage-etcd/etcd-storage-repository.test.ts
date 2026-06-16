@@ -1,4 +1,4 @@
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -368,6 +368,45 @@ describe('EtcdStorageRepository', () => {
     expect(removed.done).toEqual({ removed: 1, skipped: 1 });
     expect(removed.recoverableErrors.length).toBe(1);
     expect(removed.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('removeAtoms deletes an empty etcd folder (/d/ key) and emits its key', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'empty-folder' }));
+    // /d/empty-folder must be in the store.
+    const folderEtcdKey = [...store.keys()].find(k => k.includes('/d/empty-folder'));
+    expect(folderEtcdKey).toBeDefined();
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['empty-folder']));
+    expect(result.done).toEqual({ removed: 1, skipped: 0 });
+    expect(result.data).toEqual(['empty-folder']);
+    expect(result.recoverableErrors).toHaveLength(0);
+    expect(store.has(folderEtcdKey!)).toBe(false);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty etcd folder (has file children)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'notes' }));
+    await LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'notes/doc', content: { body: 'x' } }));
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['notes']));
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.data).toHaveLength(0);
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+    // /d/notes key must still exist.
+    const folderEtcdKey = [...store.keys()].find(k => k.includes('/d/notes'));
+    expect(folderEtcdKey).toBeDefined();
+    expect(store.has(folderEtcdKey!)).toBe(true);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty etcd folder (has sub-folder children)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'parent' }));
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'parent/child' }));
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['parent']));
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
   });
 
   it('listAtomSummaries reconstructs subfolder grouping from etcd range tails', async () => {

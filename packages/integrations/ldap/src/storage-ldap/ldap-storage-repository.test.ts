@@ -1,4 +1,4 @@
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -434,6 +434,43 @@ describe('LdapStorageRepository', () => {
     );
     expect(removed.done).toEqual({ removed: 1, skipped: 1 });
     expect(removed.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('removeAtoms deletes an empty LDAP OU (folder) via bulkOps del and emits its key', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'empty-folder' }));
+    const folderDn = normaliseDn('ou=empty-folder,' + BASE_DN);
+    expect(entries.has(folderDn)).toBe(true);
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['empty-folder']));
+    expect(result.done).toEqual({ removed: 1, skipped: 0 });
+    expect(result.data).toEqual(['empty-folder']);
+    expect(result.recoverableErrors).toHaveLength(0);
+    expect(entries.has(folderDn)).toBe(false);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty LDAP OU (folder with file entries)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'notes' }));
+    await LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'notes/doc', content: { body: 'x' } }));
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['notes']));
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.data).toHaveLength(0);
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+    // OU must still exist.
+    const folderDn = normaliseDn('ou=notes,' + BASE_DN);
+    expect(entries.has(folderDn)).toBe(true);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty LDAP OU (folder with sub-folder)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'parent' }));
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'parent/child' }));
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['parent']));
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
   });
 
   it('listAtomSummaries uses scope=one against the parent OU', async () => {

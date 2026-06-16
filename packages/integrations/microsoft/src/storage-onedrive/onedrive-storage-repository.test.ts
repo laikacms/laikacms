@@ -1,4 +1,4 @@
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -68,7 +68,13 @@ const itemToGraphResponse = (item: Item): OneDriveItem => ({
       file: { mimeType: item.mimeType },
       '@microsoft.graph.downloadUrl': downloadUrlFor(item.path),
     }
-    : { folder: { childCount: 0 } }),
+    : {
+      folder: {
+        childCount: [...items.values()].filter(
+          i => i.parentPath === item.path,
+        ).length,
+      },
+    }),
   size: item.content?.length ?? 0,
   createdDateTime: item.createdDateTime,
   lastModifiedDateTime: item.lastModifiedDateTime,
@@ -407,6 +413,38 @@ describe('OneDriveStorageRepository', () => {
     expect(removed.done).toEqual({ removed: 1, skipped: 1 });
     expect(removed.recoverableErrors.length).toBe(1);
     expect(removed.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('removeAtoms DELETEs an empty OneDrive folder via $batch and emits its key', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'empty-folder' }));
+    expect(items.has('empty-folder')).toBe(true);
+
+    batchCallCount = 0;
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['empty-folder']));
+    expect(result.done).toEqual({ removed: 1, skipped: 0 });
+    expect(result.data).toEqual(['empty-folder']);
+    expect(result.recoverableErrors).toHaveLength(0);
+    expect(items.has('empty-folder')).toBe(false);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty OneDrive folder', async () => {
+    const repo = makeRepo();
+    // Create the folder explicitly then add a child file.
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'notes' }));
+    await LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'notes/doc', content: { body: 'x' } }));
+    // The mock computes childCount dynamically — 'notes/doc.md' has parentPath='notes'.
+    expect(items.has('notes')).toBe(true);
+    expect(items.has('notes/doc.md')).toBe(true);
+    // Sanity: folder mock reflects child.
+    expect([...items.values()].filter(i => i.parentPath === 'notes').length).toBeGreaterThan(0);
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['notes']));
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.data).toHaveLength(0);
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+    // Folder must still exist.
+    expect(items.has('notes')).toBe(true);
   });
 
   it('listAtomSummaries uses native server-side hierarchy', async () => {

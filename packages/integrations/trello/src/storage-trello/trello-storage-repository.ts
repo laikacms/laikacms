@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -390,11 +391,25 @@ export class TrelloStorageRepository extends StorageRepository {
         const results = yield* Effect.promise(async () => {
           return await Promise.all(cleanKeys.map(async k => {
             const resolved = await this.resolveFile(k);
-            if (!resolved) return { key: k, outcome: 'missing' as const };
-            const del = await this.dataSource.deleteCard(resolved.card.id);
-            return Result.isSuccess(del)
+            if (resolved) {
+              const del = await this.dataSource.deleteCard(resolved.card.id);
+              return Result.isSuccess(del)
+                ? { key: k, outcome: 'removed' as const }
+                : { key: k, outcome: 'failed' as const, error: del.failure };
+            }
+            // Probe for a folder list by name (folders are Trello lists).
+            const list = await this.findListByName(k);
+            if (!list) return { key: k, outcome: 'missing' as const };
+            // Check for cards in this list to enforce non-empty guard.
+            const cardsResult = await this.dataSource.listListCards(list.id);
+            if (Result.isSuccess(cardsResult) && cardsResult.success.length > 0) {
+              return { key: k, outcome: 'non-empty-folder' as const };
+            }
+            // Archive (soft-delete) the list.
+            const archive = await this.dataSource.archiveList(list.id);
+            return Result.isSuccess(archive)
               ? { key: k, outcome: 'removed' as const }
-              : { key: k, outcome: 'failed' as const, error: del.failure };
+              : { key: k, outcome: 'failed' as const, error: archive.failure };
           }));
         });
 
@@ -405,7 +420,10 @@ export class TrelloStorageRepository extends StorageRepository {
             yield* emit.data(r.key);
             removed += 1;
           } else if (r.outcome === 'missing') {
-            yield* emit.recoverableError(new NotFoundError(`Trello card not found: ${r.key}`));
+            yield* emit.recoverableError(new NotFoundError(`Trello card or list not found: ${r.key}`));
+            skipped += 1;
+          } else if (r.outcome === 'non-empty-folder') {
+            yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${r.key}"`));
             skipped += 1;
           } else {
             yield* emit.recoverableError(r.error);

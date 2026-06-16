@@ -1,4 +1,4 @@
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -368,6 +368,35 @@ describe('TrelloStorageRepository', () => {
     );
     expect(removed.done).toEqual({ removed: 1, skipped: 1 });
     expect(removed.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('removeAtoms archives an empty Trello list (folder) and emits its key', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'empty-folder' }));
+    const listBefore = [...lists.values()].find(l => l.name === 'empty-folder');
+    expect(listBefore).toBeDefined();
+    expect(listBefore?.closed).toBe(false);
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['empty-folder']));
+    expect(result.done).toEqual({ removed: 1, skipped: 0 });
+    expect(result.data).toEqual(['empty-folder']);
+    expect(result.recoverableErrors).toHaveLength(0);
+    // List is archived (soft-deleted) — not physically removed from the map.
+    const listAfter = [...lists.values()].find(l => l.name === 'empty-folder');
+    expect(listAfter?.closed).toBe(true);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty Trello list (folder with cards)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'notes/doc', content: { body: 'x' } }));
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['notes']));
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.data).toHaveLength(0);
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+    // List must still be open.
+    const list = [...lists.values()].find(l => l.name === 'notes');
+    expect(list?.closed).toBe(false);
   });
 
   it('listAtomSummaries returns files + nested folders for a parent', async () => {

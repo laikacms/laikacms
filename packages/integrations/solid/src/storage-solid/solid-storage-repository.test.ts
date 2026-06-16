@@ -1,4 +1,4 @@
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -416,6 +416,34 @@ describe('SolidStorageRepository', () => {
     );
     expect(removed.done).toEqual({ removed: 1, skipped: 1 });
     expect(removed.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('removeAtoms DELETEs an empty LDP container (folder) and emits its key', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createFolder({ type: 'folder', key: 'empty-folder' }));
+    expect(containers.has(`${POD_ROOT}empty-folder/`)).toBe(true);
+
+    deleteCount = 0;
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['empty-folder']));
+    expect(result.done).toEqual({ removed: 1, skipped: 0 });
+    expect(result.data).toEqual(['empty-folder']);
+    expect(result.recoverableErrors).toHaveLength(0);
+    expect(deleteCount).toBe(1);
+    expect(containers.has(`${POD_ROOT}empty-folder/`)).toBe(false);
+  });
+
+  it('removeAtoms emits ForbiddenError for a non-empty LDP container (folder with children)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'notes/doc', content: { body: 'x' } }));
+    // notes/ container has a child resource — should be refused.
+    expect(containers.has(`${POD_ROOT}notes/`)).toBe(true);
+
+    const result = await LaikaStream.runPromiseCollect(repo.removeAtoms(['notes']));
+    expect(result.done).toEqual({ removed: 0, skipped: 1 });
+    expect(result.data).toHaveLength(0);
+    expect(result.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+    // Container must still exist.
+    expect(containers.has(`${POD_ROOT}notes/`)).toBe(true);
   });
 
   it('createFolder creates an LDP basic container at <url/>', async () => {
