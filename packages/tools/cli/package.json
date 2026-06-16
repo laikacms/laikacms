@@ -37,6 +37,8 @@
     "build": "tsup && chmod +x dist/cli.js",
     "dev": "tsup --watch",
     "start": "node dist/cli.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
@@ -59,7 +61,8 @@
     "laikacms": "workspace:*",
     "rimraf": "catalog:tools",
     "tsup": "catalog:tools",
-    "typescript": "catalog:tools"
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
   },
   "engines": {
     "node": ">=22"
