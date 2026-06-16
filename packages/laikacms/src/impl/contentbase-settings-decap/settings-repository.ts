@@ -6,9 +6,8 @@ import type {
   ContentBaseSettings,
   DocumentCollectionSettings,
   MediaCollectionSettings,
-  UnpublishedStatusConfig,
 } from 'laikacms/contentbase-settings';
-import { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
+import { ContentBaseSettingsProvider, defaultUnpublishedStatuses } from 'laikacms/contentbase-settings';
 import type { LaikaError, LaikaResult } from 'laikacms/core';
 import { InvalidData, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { StorageRepository } from 'laikacms/storage';
@@ -172,17 +171,11 @@ export class DecapContentBaseSettingsProvider extends ContentBaseSettingsProvide
     return Result.succeed(content as DecapConfig);
   }
 
-  private translateCollection(c: DecapCollection): DocumentCollectionSettings | null {
+  private translateCollection(
+    c: DecapCollection,
+    editorialWorkflow: boolean,
+  ): DocumentCollectionSettings | null {
     if (!isFolderCollection(c)) return null;
-
-    const editorialWorkflow = c.publish !== false;
-    const unpublishedStatuses: Record<string, UnpublishedStatusConfig> | undefined = editorialWorkflow
-      ? {
-        draft: { directory: 'draft', name: 'Draft' },
-        pending_review: { directory: 'pending_review', name: 'Pending Review' },
-        pending_publish: { directory: 'pending_publish', name: 'Pending Publish' },
-      }
-      : undefined;
 
     return {
       type: 'document',
@@ -190,15 +183,16 @@ export class DecapContentBaseSettingsProvider extends ContentBaseSettingsProvide
       name: c.label ?? startCase(c.name),
       directory: c.folder,
       recursive: !!c.nested,
-      ...(unpublishedStatuses ? { unpublishedStatuses } : {}),
+      ...(editorialWorkflow ? { unpublishedStatuses: defaultUnpublishedStatuses } : {}),
       revisionDirectory: `.contentbase/revisions/${c.name}`,
     };
   }
 
   private buildSettings(config: DecapConfig): ContentBaseSettings {
+    const editorialWorkflow = config.publish_mode === 'editorial_workflow';
     const collections: Record<string, CollectionSettings> = {};
     for (const decapCollection of config.collections ?? []) {
-      const translated = this.translateCollection(decapCollection);
+      const translated = this.translateCollection(decapCollection, editorialWorkflow);
       if (translated) collections[translated.key] = translated;
     }
     return { collections };
