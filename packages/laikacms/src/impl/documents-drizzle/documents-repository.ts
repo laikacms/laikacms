@@ -362,8 +362,16 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
                 ? qb.depthLte(pathToSegments(options.folder).length + options.depth)
                 : undefined,
             ].filter((x): x is NonNullable<typeof x> => x !== undefined)),
-            offset: 'offset' in options.pagination ? options.pagination.offset : 0,
-            limit: 'limit' in options.pagination ? options.pagination.limit : 100,
+            offset: 'offset' in options.pagination
+              ? options.pagination.offset
+              : 'page' in options.pagination
+              ? (options.pagination.page - 1) * (options.pagination.perPage ?? 100)
+              : 0,
+            limit: 'offset' in options.pagination
+              ? (options.pagination.limit ?? 100)
+              : 'page' in options.pagination
+              ? (options.pagination.perPage ?? 100)
+              : 100,
           })
         );
 
@@ -460,13 +468,25 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
 
   listRevisions(
     key: string,
-    _options: ListRevisionsOptions,
+    options: ListRevisionsOptions,
   ): LaikaStream.LaikaStream<RevisionSummary, ListRevisionsDone> {
     return LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
       Effect.gen({ self: this }, function*() {
         const qb = this.options.revisionQueryBuilders;
+        const pagination = options.pagination;
+        const offset = 'offset' in pagination
+          ? pagination.offset
+          : 'page' in pagination
+          ? (pagination.page - 1) * (pagination.perPage ?? 100)
+          : 0;
+        const limit = 'offset' in pagination
+          ? (pagination.limit ?? 100)
+          : 'page' in pagination
+          ? (pagination.perPage ?? 100)
+          : 100;
         const rows = yield* Effect.promise(() => this.options.callbacks.revisions.select({ where: qb.keyEquals(key) }));
-        for (const row of rows) {
+        const page = rows.slice(offset, offset + limit);
+        for (const row of page) {
           yield* emit.data({
             type: 'revision-summary' as const,
             key,
@@ -476,7 +496,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
             updatedAt: row.updatedAt,
           });
         }
-        return { total: rows.length };
+        return { total: page.length };
       })
     );
   }
