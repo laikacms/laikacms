@@ -89,6 +89,7 @@ export default {
 | ---------------------------- | --------------------------------------------------------------- |
 | `laikacms/documents/testing` | Contract test harness for `DocumentsRepository` implementations |
 | `laikacms/storage/testing`   | Contract test harness for `StorageRepository` implementations   |
+| `laikacms/assets/testing`    | Contract test harness for `AssetsRepository` implementations    |
 
 ### Serializers
 
