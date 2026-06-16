@@ -1,8 +1,8 @@
-# @laikacms/decap-oauth2
+# @laikacms/decap-integrations/decap-oauth2
 
-[![npm](https://img.shields.io/npm/v/@laikacms/decap-oauth2)](https://www.npmjs.com/package/@laikacms/decap-oauth2)
-[![npm](https://img.shields.io/npm/dm/@laikacms/decap-oauth2)](https://www.npmjs.com/package/@laikacms/decap-oauth2)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/decap-oauth2)](https://bundlephobia.com/result?p=@laikacms/decap-oauth2)
+[![npm](https://img.shields.io/npm/v/@laikacms/decap-integrations)](https://www.npmjs.com/package/@laikacms/decap-integrations)
+[![npm](https://img.shields.io/npm/dm/@laikacms/decap-integrations)](https://www.npmjs.com/package/@laikacms/decap-integrations)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/decap-integrations)](https://bundlephobia.com/result?p=@laikacms/decap-integrations)
 
 OAuth2 authentication server for Decap CMS with PKCE support.
 
@@ -16,13 +16,13 @@ OAuth2 authentication server for Decap CMS with PKCE support.
 ## Installation
 
 ```bash
-pnpm add @laikacms/decap-oauth2
+pnpm add @laikacms/decap-integrations
 ```
 
 ## Usage
 
 ```typescript
-import { decapOauth2 } from '@laikacms/decap-oauth2';
+import { decapOauth2 } from '@laikacms/decap-integrations/decap-oauth2';
 
 const oauth2 = decapOauth2({
   basePath: '/oauth2',
