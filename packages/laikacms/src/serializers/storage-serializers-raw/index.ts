@@ -7,6 +7,14 @@ export const rawSerializer: StorageSerializer<StorageFormat> = {
     content: StorageObjectContent,
     _schema: JSONSchema7,
   ): Promise<string> {
+    const extraFields = Object.keys(content).filter(k => k !== 'body');
+    if (extraFields.length > 0) {
+      throw new Error(
+        `rawSerializer only persists the 'body' field; fields [${
+          extraFields.join(', ')
+        }] would be silently dropped. Use jsonSerializer to store multi-field content.`,
+      );
+    }
     return '' + (content.body ?? '');
   },
   async deserializeDocumentFileContents(
