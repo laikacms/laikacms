@@ -27,6 +27,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -566,17 +567,14 @@ export class ConvexStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
-      const all = yield* this.collectRecursive(folderKey, options.depth);
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
       const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
       const aggregateTotal = sorted.length;
       return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 
-  private collectRecursive(
-    folderKey: string,
-    depth: number,
-  ): Effect.Effect<AtomSummary[], LaikaError> {
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const parent = stripSlashes(folderKey);
       const rows = yield* liftResult(this.dataSource.query<ConvexChildRow[]>(
@@ -589,14 +587,7 @@ export class ConvexStorageRepository extends StorageRepository {
           ? { type: 'object-summary', key: callerPrefix + row.name }
           : { type: 'folder-summary', key: callerPrefix + row.name };
       });
-      const filtered = summaries.filter(s => this.excludeFilter.every(p => !p.test(s.key)));
-      if (depth > 1) {
-        for (const s of filtered.filter(s => s.type === 'folder-summary')) {
-          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
-          if (Result.isSuccess(nested)) filtered.push(...nested.success);
-        }
-      }
-      return filtered;
+      return summaries.filter(s => this.excludeFilter.every(p => !p.test(s.key)));
     });
   }
 

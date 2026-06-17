@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -501,7 +502,9 @@ export class FirestoreStorageRepository extends StorageRepository {
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
-      const r = yield* Effect.result(this.collectRecursive(folderKey, options.depth));
+      const r = yield* Effect.result(
+        collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth),
+      );
       if (Result.isFailure(r)) {
         if (r.failure instanceof NotFoundError) {
           return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: r.failure, aggregateTotal: 0 };
@@ -514,9 +517,8 @@ export class FirestoreStorageRepository extends StorageRepository {
     });
   }
 
-  private collectRecursive(
+  private listFolderLevel(
     folderKey: string,
-    depth: number,
   ): Effect.Effect<AtomSummary[], LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const segmentsResult = validateSegments(folderKey);
@@ -533,7 +535,7 @@ export class FirestoreStorageRepository extends StorageRepository {
 
       const children = yield* liftResult(this.dataSource.listCollection(segments));
       const parentKey = trimSlashes(folderKey);
-      const summaries: AtomSummary[] = children.map((doc): AtomSummary => {
+      return children.map((doc): AtomSummary => {
         const childKey = this.childKey(parentKey, doc);
         const fields = fromFirestoreFields(doc.fields ?? {});
         if (fields[TYPE_FIELD] === 'folder') {
@@ -547,13 +549,6 @@ export class FirestoreStorageRepository extends StorageRepository {
           : childKey;
         return { type: 'object-summary', key: bareKey };
       });
-      if (depth > 1) {
-        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
-          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
-          if (Result.isSuccess(nested)) summaries.push(...nested.success);
-        }
-      }
-      return summaries;
     });
   }
 

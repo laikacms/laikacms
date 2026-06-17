@@ -28,6 +28,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   naturalCompare,
   StorageRepository,
@@ -412,19 +413,18 @@ export class NotionStorageRepository extends StorageRepository {
         }
         return yield* Effect.fail(resolved.failure);
       }
-      const all = yield* this.collectRecursive(folderKey, resolved.success, options.depth);
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
       const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
       const aggregateTotal = sorted.length;
       return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 
-  private collectRecursive(
+  private listFolderLevel(
     folderKey: string,
-    folderId: string,
-    depth: number,
   ): Effect.Effect<AtomSummary[], LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const folderId = yield* liftResult(this.resolveFolderId(folderKey));
       const pages = yield* liftResult(this.dataSource.listChildPages(folderId));
 
       // For each direct child page we must determine whether it is a folder
@@ -441,15 +441,6 @@ export class NotionStorageRepository extends StorageRepository {
           type: hasChildPages(childBlocks) ? 'folder-summary' : 'object-summary',
           key: summaryKey,
         });
-      }
-      if (depth > 1) {
-        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
-          const childResolved = yield* Effect.result(liftResult(this.resolveFolderId(s.key)));
-          if (Result.isSuccess(childResolved)) {
-            const nested = yield* Effect.result(this.collectRecursive(s.key, childResolved.success, depth - 1));
-            if (Result.isSuccess(nested)) summaries.push(...nested.success);
-          }
-        }
       }
       return summaries;
     });

@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -445,7 +446,11 @@ export class GistStorageRepository extends StorageRepository {
     return Effect.gen({ self: this }, function*() {
       const validated = yield* Effect.fromResult(this.validateKey(folderKey));
       const gist = yield* liftResult(this.dataSource.getGist());
-      const all = yield* this.collectRecursiveGist(gist, validated, options.depth);
+      const all = yield* collectAtomSummariesWithDepth(
+        validated,
+        key => this.listFolderLevel(gist, key),
+        options.depth,
+      );
       if (validated !== '' && all.length === 0) {
         return {
           summaries: [] as ReadonlyArray<AtomSummary>,
@@ -459,51 +464,41 @@ export class GistStorageRepository extends StorageRepository {
     });
   }
 
-  private collectRecursiveGist(
+  private listFolderLevel(
     gist: { files: Record<string, unknown> },
-    validated: string,
-    depth: number,
+    folderKey: string,
   ): Effect.Effect<AtomSummary[], LaikaError> {
-    return Effect.gen({ self: this }, function*() {
-      // Build the listing client-side from the single getGist response.
-      const prefix = validated === '' ? '' : `${encodeGistFilename(validated)}__`;
-      const folderSet = new Set<string>();
-      const objectSet = new Set<string>();
+    // Build the listing client-side from the single getGist response.
+    const prefix = folderKey === '' ? '' : `${encodeGistFilename(folderKey)}__`;
+    const folderSet = new Set<string>();
+    const objectSet = new Set<string>();
 
-      for (const encodedFilename of Object.keys(gist.files)) {
-        if (validated !== '' && !encodedFilename.startsWith(prefix)) continue;
-        const relativeEncoded = validated === '' ? encodedFilename : encodedFilename.slice(prefix.length);
-        const decoded = decodeGistFilename(relativeEncoded);
-        const slash = decoded.indexOf('/');
-        if (slash === -1) {
-          // Direct file child — strip extension.
-          if (decoded === '.keep') continue;
-          const bareName = this.stripExtension(decoded);
-          objectSet.add(bareName);
-        } else {
-          // Nested — surface the immediate subfolder.
-          folderSet.add(decoded.slice(0, slash));
-        }
+    for (const encodedFilename of Object.keys(gist.files)) {
+      if (folderKey !== '' && !encodedFilename.startsWith(prefix)) continue;
+      const relativeEncoded = folderKey === '' ? encodedFilename : encodedFilename.slice(prefix.length);
+      const decoded = decodeGistFilename(relativeEncoded);
+      const slash = decoded.indexOf('/');
+      if (slash === -1) {
+        // Direct file child — strip extension.
+        if (decoded === '.keep') continue;
+        const bareName = this.stripExtension(decoded);
+        objectSet.add(bareName);
+      } else {
+        // Nested — surface the immediate subfolder.
+        folderSet.add(decoded.slice(0, slash));
       }
+    }
 
-      const summaries: AtomSummary[] = [
-        ...[...folderSet].map(name => ({
-          type: 'folder-summary' as const,
-          key: validated === '' ? name : `${validated}/${name}`,
-        })),
-        ...[...objectSet].map(name => ({
-          type: 'object-summary' as const,
-          key: validated === '' ? name : `${validated}/${name}`,
-        })),
-      ];
-      if (depth > 1) {
-        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
-          const nested = yield* Effect.result(this.collectRecursiveGist(gist, s.key, depth - 1));
-          if (Result.isSuccess(nested)) summaries.push(...nested.success);
-        }
-      }
-      return summaries;
-    });
+    return Effect.succeed([
+      ...[...folderSet].map(name => ({
+        type: 'folder-summary' as const,
+        key: folderKey === '' ? name : `${folderKey}/${name}`,
+      })),
+      ...[...objectSet].map(name => ({
+        type: 'object-summary' as const,
+        key: folderKey === '' ? name : `${folderKey}/${name}`,
+      })),
+    ]);
   }
 
   getCapabilities(): LaikaTask.LaikaTask<Capabilities> {

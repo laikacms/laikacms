@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -396,32 +397,22 @@ export class DdbStorageRepository extends StorageRepository {
         };
       }
 
-      const all = yield* this.collectRecursiveDdb(folderKey, listing.success, options.depth);
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
       const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
       const aggregateTotal = sorted.length;
       return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 
-  private collectRecursiveDdb(
+  private listFolderLevel(
     folderKey: string,
-    children: StorageItem[],
-    depth: number,
   ): Effect.Effect<AtomSummary[], LaikaError> {
     return Effect.gen({ self: this }, function*() {
-      const summaries: AtomSummary[] = children.map(item => {
+      const children = yield* liftResult(this.dataSource.listChildren(folderKey));
+      return children.map(item => {
         const key = this.keyFor(item);
-        return { type: item.type === 'file' ? 'object-summary' : 'folder-summary', key };
+        return { type: item.type === 'file' ? 'object-summary' : 'folder-summary', key } satisfies AtomSummary;
       });
-      if (depth > 1) {
-        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
-          const childListingResult = yield* Effect.result(liftResult(this.dataSource.listChildren(s.key)));
-          if (Result.isFailure(childListingResult)) continue;
-          const nested = yield* Effect.result(this.collectRecursiveDdb(s.key, childListingResult.success, depth - 1));
-          if (Result.isSuccess(nested)) summaries.push(...nested.success);
-        }
-      }
-      return summaries;
     });
   }
 

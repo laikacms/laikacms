@@ -16,6 +16,7 @@ import {
   type Atom,
   type AtomSummary,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -340,7 +341,9 @@ export class BitbucketStorageRepository extends StorageRepository {
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
-      const r = yield* Effect.result(this.collectRecursive(folderKey, options.depth));
+      const r = yield* Effect.result(
+        collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth),
+      );
       if (Result.isFailure(r)) {
         if (r.failure instanceof NotFoundError) {
           return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: r.failure, aggregateTotal: 0 };
@@ -352,14 +355,13 @@ export class BitbucketStorageRepository extends StorageRepository {
     });
   }
 
-  private collectRecursive(
+  private listFolderLevel(
     folderKey: string,
-    depth: number,
   ): Effect.Effect<AtomSummary[], LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const listing = yield* liftResult(this.dataSource.listDirectory(folderKey));
       const filtered = listing.filter(entry => this.excludeFilter.every(re => !re.test(entry.path)));
-      const summaries: AtomSummary[] = filtered.map(entry => {
+      return filtered.map(entry => {
         let key = entry.path;
         if (entry.type === 'file') {
           for (const ext of this.availableExtensions) {
@@ -369,15 +371,8 @@ export class BitbucketStorageRepository extends StorageRepository {
             }
           }
         }
-        return { type: entry.type === 'file' ? 'object-summary' : 'folder-summary', key };
+        return { type: entry.type === 'file' ? 'object-summary' : 'folder-summary', key } satisfies AtomSummary;
       });
-      if (depth > 1) {
-        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
-          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
-          if (Result.isSuccess(nested)) summaries.push(...nested.success);
-        }
-      }
-      return summaries;
     });
   }
 

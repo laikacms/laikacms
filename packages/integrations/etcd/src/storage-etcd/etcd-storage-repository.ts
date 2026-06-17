@@ -28,6 +28,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -493,17 +494,14 @@ export class EtcdStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
-      const all = yield* this.collectRecursive(folderKey, options.depth);
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
       const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
       const aggregateTotal = sorted.length;
       return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 
-  private collectRecursive(
-    folderKey: string,
-    depth: number,
-  ): Effect.Effect<AtomSummary[], LaikaError> {
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const k = stripSlashes(folderKey);
       const dPrefix = k === '' ? `${this.rootPrefix()}d/` : `${this.folderKey(k)}/`;
@@ -556,15 +554,8 @@ export class EtcdStorageRepository extends StorageRepository {
         key: callerPrefix + name,
       }));
 
-      const merged: AtomSummary[] = [...fileSummaries, ...folderSummaries]
+      return [...fileSummaries, ...folderSummaries]
         .filter(s => this.excludeFilter.every(pattern => !pattern.test(s.key)));
-      if (depth > 1) {
-        for (const s of merged.filter(s => s.type === 'folder-summary')) {
-          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
-          if (Result.isSuccess(nested)) merged.push(...nested.success);
-        }
-      }
-      return merged;
     });
   }
 

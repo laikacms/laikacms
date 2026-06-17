@@ -46,45 +46,34 @@ const createMockOctokit = () => {
       };
     }
 
-    // Check if path looks like a directory
-    const dirChildren = [...files.values()].filter(f => {
-      const childPrefix = path === '' ? '' : `${path}/`;
-      if (!f.path.startsWith(childPrefix)) return false;
-      if (path === '') return true;
-      const rest = f.path.slice(childPrefix.length);
-      return !rest.includes('/');
-    });
+    // Build a directory listing that includes both direct file children and
+    // immediate subdirectory entries (needed for depth>1 traversal).
+    const childPrefix = path === '' ? '' : `${path}/`;
+    const seen = new Set<string>();
+    const entries: Array<{ type: string, sha: string, path: string, name: string }> = [];
 
-    if (dirChildren.length > 0) {
-      return dirChildren.map(f => ({
-        type: 'file',
-        sha: f.sha,
-        path: f.path,
-        name: f.path.split('/').pop() ?? f.path,
-      }));
-    }
-
-    // Check for subdirectories
-    const subDirChildren = [...files.values()].filter(f => {
-      const childPrefix = `${path}/`;
-      return f.path.startsWith(childPrefix);
-    }).map(f => {
-      const rest = f.path.slice(`${path}/`.length);
+    for (const f of files.values()) {
+      if (path !== '' && !f.path.startsWith(childPrefix)) continue;
+      const rest = path === '' ? f.path : f.path.slice(childPrefix.length);
       const slash = rest.indexOf('/');
-      const childName = slash === -1 ? rest : rest.slice(0, slash);
-      return { type: slash === -1 ? 'file' : 'dir', path: `${path}/${childName}`, name: childName, sha: f.sha };
-    });
-
-    if (subDirChildren.length > 0) {
-      // Deduplicate dirs
-      const seen = new Set<string>();
-      const unique = subDirChildren.filter(e => {
-        if (seen.has(e.path)) return false;
-        seen.add(e.path);
-        return true;
-      });
-      return unique;
+      if (slash === -1) {
+        // Direct file child
+        if (!seen.has(f.path)) {
+          seen.add(f.path);
+          entries.push({ type: 'file', sha: f.sha, path: f.path, name: f.path.split('/').pop() ?? f.path });
+        }
+      } else {
+        // Nested under a subdirectory — emit the immediate subdirectory entry
+        const childName = rest.slice(0, slash);
+        const childPath = path === '' ? childName : `${path}/${childName}`;
+        if (!seen.has(childPath)) {
+          seen.add(childPath);
+          entries.push({ type: 'dir', sha: f.sha, path: childPath, name: childName });
+        }
+      }
     }
+
+    if (entries.length > 0) return entries;
 
     // Simulate 404
     const err = new Error('Not Found') as Error & { status: number };

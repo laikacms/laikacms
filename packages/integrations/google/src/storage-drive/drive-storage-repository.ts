@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -432,7 +433,9 @@ export class GoogleDriveStorageRepository extends StorageRepository {
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
-      const r = yield* Effect.result(this.collectRecursive(folderKey, options.depth));
+      const r = yield* Effect.result(
+        collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth),
+      );
       if (Result.isFailure(r)) {
         if (r.failure instanceof NotFoundError) {
           return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: r.failure, aggregateTotal: 0 };
@@ -445,10 +448,7 @@ export class GoogleDriveStorageRepository extends StorageRepository {
     });
   }
 
-  private collectRecursive(
-    folderKey: string,
-    depth: number,
-  ): Effect.Effect<AtomSummary[], LaikaError> {
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const folderId = yield* liftResult(this.dataSource.resolveFolderId(folderKey));
       const children = yield* liftResult(this.dataSource.listChildren(folderId));
@@ -466,12 +466,6 @@ export class GoogleDriveStorageRepository extends StorageRepository {
           type: 'object-summary',
           key: folderKey ? `${folderKey}/${bare}` : bare,
         });
-      }
-      if (depth > 1) {
-        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
-          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
-          if (Result.isSuccess(nested)) summaries.push(...nested.success);
-        }
       }
       return summaries;
     });

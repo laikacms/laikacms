@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -574,24 +575,21 @@ export class HygraphStorageRepository extends StorageRepository {
           };
         }
       }
-      const all = yield* this.collectRecursive(trimmed, options.depth);
+      const all = yield* collectAtomSummariesWithDepth(trimmed, key => this.listFolderLevel(key), options.depth);
       const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
       const aggregateTotal = sorted.length;
       return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 
-  private collectRecursive(
-    trimmed: string,
-    depth: number,
-  ): Effect.Effect<AtomSummary[], LaikaError> {
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const children = yield* liftResult(this.dataSource.graphql<{
         laikaObjects: FileNode[],
         laikaFolders: FolderNode[],
       }>(
         LIST_CHILDREN_QUERY,
-        { parent: trimmed, stage: this.stage },
+        { parent: folderKey, stage: this.stage },
         'ListLaikaChildren',
       ));
 
@@ -599,22 +597,16 @@ export class HygraphStorageRepository extends StorageRepository {
       for (const folder of children.laikaFolders) {
         summaries.push({
           type: 'folder-summary',
-          key: trimmed === '' ? folder.name : `${trimmed}/${folder.name}`,
+          key: folderKey === '' ? folder.name : `${folderKey}/${folder.name}`,
         });
       }
       for (const file of children.laikaObjects) {
-        const fullKey = trimmed === '' ? file.name : `${trimmed}/${file.name}`;
+        const fullKey = folderKey === '' ? file.name : `${folderKey}/${file.name}`;
         const ext = file.extension;
         const bareKey = ext && fullKey.endsWith(`.${ext}`)
           ? fullKey.slice(0, -(ext.length + 1))
           : fullKey;
         summaries.push({ type: 'object-summary', key: bareKey });
-      }
-      if (depth > 1) {
-        for (const s of summaries.filter(s => s.type === 'folder-summary')) {
-          const nested = yield* Effect.result(this.collectRecursive(s.key, depth - 1));
-          if (Result.isSuccess(nested)) summaries.push(...nested.success);
-        }
       }
       return summaries;
     });
