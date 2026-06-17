@@ -46,8 +46,8 @@ export default { fetch: oauth2.fetch.bind(oauth2) };
 
 ## Optional features
 
-All optional features are enabled by adding the corresponding key to your `OAuthConfig`. None
-are required for basic email/password login.
+All optional features are enabled by adding the corresponding key to your `OAuthConfig`. None are
+required for basic email/password login.
 
 ### Passkey (WebAuthn)
 
@@ -82,17 +82,19 @@ const oauth2 = decapOauth2({
     residentKey: 'preferred',
 
     callbacks: {
-      storeCredential(credential): Promise<void> { /* persist StoredCredential */ },
-      getCredentialById(credentialId): Promise<StoredCredential | null> { /* ... */ },
-      getCredentialsByUserId(userId): Promise<StoredCredential[]> { /* ... */ },
-      updateCredential(credentialId, updates): Promise<void> { /* ... */ },
-      deleteCredential(credentialId): Promise<void> { /* ... */ },
-      storeChallenge(challenge): Promise<void> { /* persist StoredChallenge */ },
-      consumeChallenge(challenge): Promise<StoredChallenge | null> { /* get + delete */ },
-      getUserById(userId): Promise<{ id: string; email: string; name?: string } | null> { /* ... */ },
-      getUserByEmail(email): Promise<{ id: string; email: string; name?: string } | null> { /* ... */ },
-      storePendingPasskeySetupSession(sessionId, userId, expiresAt): Promise<void> { /* ... */ },
-      getPendingPasskeySetupSession(sessionId): Promise<{ userId: string } | null> { /* ... */ },
+      storeCredential(credential): Promise<void> {/* persist StoredCredential */},
+      getCredentialById(credentialId): Promise<StoredCredential | null> {/* ... */},
+      getCredentialsByUserId(userId): Promise<StoredCredential[]> {/* ... */},
+      updateCredential(credentialId, updates): Promise<void> {/* ... */},
+      deleteCredential(credentialId): Promise<void> {/* ... */},
+      storeChallenge(challenge): Promise<void> {/* persist StoredChallenge */},
+      consumeChallenge(challenge): Promise<StoredChallenge | null> {/* get + delete */},
+      getUserById(userId): Promise<{ id: string, email: string, name?: string } | null> {/* ... */},
+      getUserByEmail(email): Promise<{ id: string, email: string, name?: string } | null> {
+        /* ... */
+      },
+      storePendingPasskeySetupSession(sessionId, userId, expiresAt): Promise<void> {/* ... */},
+      getPendingPasskeySetupSession(sessionId): Promise<{ userId: string } | null> {/* ... */},
     },
   },
 });
@@ -120,16 +122,16 @@ const oauth2 = decapOauth2({
     window: 1,
 
     callbacks: {
-      hasTotp(userId): Promise<boolean> { /* ... */ },
-      getTotpSecret(userId): Promise<string | null> { /* base32 secret or null */ },
-      storeTotpSecret(userId, secret): Promise<void> { /* ... */ },
-      storePendingTotpSession(sessionId, userId, expiresAt): Promise<void> { /* ... */ },
-      getPendingTotpSession(sessionId): Promise<{ userId: string } | null> { /* ... */ },
+      hasTotp(userId): Promise<boolean> {/* ... */},
+      getTotpSecret(userId): Promise<string | null> {/* base32 secret or null */},
+      storeTotpSecret(userId, secret): Promise<void> {/* ... */},
+      storePendingTotpSession(sessionId, userId, expiresAt): Promise<void> {/* ... */},
+      getPendingTotpSession(sessionId): Promise<{ userId: string } | null> {/* ... */},
       // Optional — omitting relies on natural TTL expiry:
-      deletePendingTotpSession(sessionId): Promise<void> { /* ... */ },
+      deletePendingTotpSession(sessionId): Promise<void> {/* ... */},
       // Optional — omitting disables per-step replay protection:
-      getLastTotpStep(userId): Promise<number | null> { /* ... */ },
-      setLastTotpStep(userId, step): Promise<void> { /* ... */ },
+      getLastTotpStep(userId): Promise<number | null> {/* ... */},
+      setLastTotpStep(userId, step): Promise<void> {/* ... */},
     },
   },
 });
@@ -159,15 +161,15 @@ const oauth2 = decapOauth2({
     /** Token TTL in seconds (default: 3600 = 1 hour) */
     tokenExpiration: 3600,
     /** Override the HTML reset-email renderer (optional) */
-    renderHtml: (vars) => myTemplate(vars),
+    renderHtml: vars => myTemplate(vars),
     /** Override the plain-text reset-email renderer (optional) */
-    renderText: (vars) => myTextTemplate(vars),
+    renderText: vars => myTextTemplate(vars),
 
     callbacks: {
-      storeResetToken(token): Promise<void> { /* persist PasswordResetToken */ },
-      getResetToken(token): Promise<PasswordResetToken | null> { /* ... */ },
-      deleteResetToken(token): Promise<void> { /* ... */ },
-      updateUserPassword(userId, passwordHash): Promise<void> { /* ... */ },
+      storeResetToken(token): Promise<void> {/* persist PasswordResetToken */},
+      getResetToken(token): Promise<PasswordResetToken | null> {/* ... */},
+      deleteResetToken(token): Promise<void> {/* ... */},
+      updateUserPassword(userId, passwordHash): Promise<void> {/* ... */},
     },
   },
 });
@@ -188,9 +190,9 @@ export interface EmailProvider {
 
 ### CAPTCHA
 
-Adds CAPTCHA verification to the login and forgot-password forms. Any provider that renders a
-widget via HTML and exposes a form field token is supported (reCAPTCHA v2, hCaptcha, Cloudflare
-Turnstile, etc.).
+Adds CAPTCHA verification to the login and forgot-password forms. Any provider that renders a widget
+via HTML and exposes a form field token is supported (reCAPTCHA v2, hCaptcha, Cloudflare Turnstile,
+etc.).
 
 ```typescript
 const oauth2 = decapOauth2({
@@ -210,7 +212,8 @@ const oauth2 = decapOauth2({
      * Script tag(s) to load the CAPTCHA library, inserted in <head>.
      * Example: '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>'
      */
-    scriptHtml: '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>',
+    scriptHtml:
+      '<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>',
     /**
      * Form field name containing the token.
      * Default field names: reCAPTCHA → 'g-recaptcha-response', hCaptcha → 'h-captcha-response',
@@ -242,8 +245,8 @@ const oauth2 = decapOauth2({
 ### Translations / i18n
 
 All user-facing strings can be localized via the `translations` field. The package ships English
-(`en`) and Dutch (`nl`) out of the box; import them from the `@laikacms/decap-integrations/decap-oauth2/i18n`
-subpath.
+(`en`) and Dutch (`nl`) out of the box; import them from the
+`@laikacms/decap-integrations/decap-oauth2/i18n` subpath.
 
 ```typescript
 import { decapOauth2 } from '@laikacms/decap-integrations/decap-oauth2';
@@ -261,14 +264,14 @@ To provide fully custom translations, implement the `OAuthMessages` (alias of `T
 import type { OAuthMessages } from '@laikacms/decap-integrations/decap-oauth2';
 
 const myTranslations: OAuthMessages = {
-  auth: { /* login/logout strings */ },
-  totp: { /* TOTP setup/verification strings */ },
-  passkey: { /* passkey registration/authentication strings */ },
-  passwordReset: { /* forgot-password flow strings */ },
-  email: { /* email-related strings */ },
-  error: { /* generic error strings */ },
-  logout: { /* logout page strings */ },
-  common: { /* shared strings like button labels */ },
+  auth: {/* login/logout strings */},
+  totp: {/* TOTP setup/verification strings */},
+  passkey: {/* passkey registration/authentication strings */},
+  passwordReset: {/* forgot-password flow strings */},
+  email: {/* email-related strings */},
+  error: {/* generic error strings */},
+  logout: {/* logout page strings */},
+  common: {/* shared strings like button labels */},
 };
 
 const oauth2 = decapOauth2({
@@ -277,7 +280,8 @@ const oauth2 = decapOauth2({
 });
 ```
 
-Both `OAuthMessages` and `Translation` are exported from `@laikacms/decap-integrations/decap-oauth2/i18n`.
+Both `OAuthMessages` and `Translation` are exported from
+`@laikacms/decap-integrations/decap-oauth2/i18n`.
 
 ## Security Considerations
 
