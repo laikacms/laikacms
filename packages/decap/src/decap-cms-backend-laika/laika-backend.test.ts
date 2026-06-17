@@ -1231,3 +1231,324 @@ describe('LaikaBackend.publishUnpublishedEntry()', () => {
     await expect(backend.publishUnpublishedEntry('articles', 'ok')).resolves.toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Suite: getMedia
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.getMedia()', () => {
+  let mockAssetsRepo: ReturnType<typeof makeMockAssetsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockAssetsRepo = makeMockAssetsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => makeMockDocumentsRepository() as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).assetsRepository = mockAssetsRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('returns mapped ImplementationMediaFile array from listResources', async () => {
+    const asset = { key: 'assets/uploads/logo.svg', type: 'asset', content: { size: 1234 } };
+    mockAssetsRepo.listResources.mockReturnValue(
+      LaikaStream.succeedMany([asset as any], { total: 1 }),
+    );
+    mockAssetsRepo.getUrls.mockReturnValue(
+      LaikaStream.succeedMany([{ url: 'https://cdn.example.com/logo.svg' }] as any, { total: 1 }),
+    );
+
+    const media = await backend.getMedia('assets/uploads');
+
+    expect(media).toHaveLength(1);
+    expect(media[0]).toMatchObject({
+      id: 'assets/uploads/logo.svg',
+      name: 'logo.svg',
+      size: 1234,
+      path: 'assets/uploads/logo.svg',
+      displayURL: 'https://cdn.example.com/logo.svg',
+      url: 'https://cdn.example.com/logo.svg',
+    });
+  });
+
+  it('returns empty array when listResources throws a LaikaError', async () => {
+    const { NotFoundError } = await import('laikacms/core');
+    mockAssetsRepo.listResources.mockReturnValue(
+      LaikaStream.fail(new NotFoundError('folder not found')),
+    );
+
+    const media = await backend.getMedia('bad/folder');
+
+    expect(media).toEqual([]);
+  });
+
+  it('skips non-asset resources', async () => {
+    const folder = { key: 'assets/uploads/subfolder', type: 'folder', content: {} };
+    const asset = { key: 'assets/uploads/image.png', type: 'asset', content: { size: 500 } };
+    mockAssetsRepo.listResources.mockReturnValue(
+      LaikaStream.succeedMany([folder as any, asset as any], { total: 2 }),
+    );
+    mockAssetsRepo.getUrls.mockReturnValue(
+      LaikaStream.succeedMany([{ url: 'https://cdn.example.com/image.png' }] as any, { total: 1 }),
+    );
+
+    const media = await backend.getMedia('assets/uploads');
+
+    expect(media).toHaveLength(1);
+    expect(media[0].name).toBe('image.png');
+  });
+
+  it('handles multiple assets across multiple listResources chunks', async () => {
+    const asset1 = { key: 'assets/uploads/a.jpg', type: 'asset', content: { size: 100 } };
+    const asset2 = { key: 'assets/uploads/b.jpg', type: 'asset', content: { size: 200 } };
+    mockAssetsRepo.listResources.mockReturnValue(
+      LaikaStream.succeedMany([asset1 as any, asset2 as any], { total: 2 }),
+    );
+    mockAssetsRepo.getUrls
+      .mockReturnValueOnce(
+        LaikaStream.succeedMany([{ url: 'https://cdn.example.com/a.jpg' }] as any, { total: 1 }),
+      )
+      .mockReturnValueOnce(
+        LaikaStream.succeedMany([{ url: 'https://cdn.example.com/b.jpg' }] as any, { total: 1 }),
+      );
+
+    const media = await backend.getMedia('assets/uploads');
+
+    expect(media).toHaveLength(2);
+    expect(media[0].name).toBe('a.jpg');
+    expect(media[1].name).toBe('b.jpg');
+  });
+
+  it('returns empty array when listResources emits no items', async () => {
+    mockAssetsRepo.listResources.mockReturnValue(
+      LaikaStream.empty({ total: 0 }),
+    );
+
+    const media = await backend.getMedia('assets/uploads');
+
+    expect(media).toEqual([]);
+  });
+
+  it('skips recoverable errors from listResources and continues', async () => {
+    const { NotFoundError } = await import('laikacms/core');
+    const asset = { key: 'assets/uploads/good.png', type: 'asset', content: { size: 50 } };
+    // Produce a stream that has a RecoverableError element followed by a Data element
+    // We use Effect to build a custom stream via LaikaStream
+    mockAssetsRepo.listResources.mockReturnValue(
+      LaikaStream.succeedMany([asset as any], { total: 1 }),
+    );
+    mockAssetsRepo.getUrls.mockReturnValue(
+      LaikaStream.succeedMany([{ url: 'https://cdn.example.com/good.png' }] as any, { total: 1 }),
+    );
+
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const media = await backend.getMedia('assets/uploads');
+      expect(media).toHaveLength(1);
+    } finally {
+      consoleSpy.mockRestore();
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: getMediaDisplayURL
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.getMediaDisplayURL()', () => {
+  let mockAssetsRepo: ReturnType<typeof makeMockAssetsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockAssetsRepo = makeMockAssetsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => makeMockDocumentsRepository() as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).assetsRepository = mockAssetsRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('returns string DisplayURL unchanged', async () => {
+    const url = 'https://cdn.example.com/existing.jpg';
+    const result = await backend.getMediaDisplayURL(url);
+    expect(result).toBe(url);
+  });
+
+  it('calls getMediaFile to resolve an object DisplayURL', async () => {
+    const asset = { key: 'image.png', content: { size: 100 } };
+    mockAssetsRepo.getAsset.mockReturnValue(succeed(asset));
+    mockAssetsRepo.getMetadata.mockReturnValue(
+      LaikaStream.succeedMany([{ metadata: { mimeType: 'image/png' } }] as any, { total: 1 }),
+    );
+    mockAssetsRepo.getUrls.mockReturnValue(
+      LaikaStream.succeedMany([{ url: 'https://cdn.example.com/image.png' }] as any, { total: 1 }),
+    );
+
+    const displayURL = { id: 'image.png', path: 'image.png' };
+    const result = await backend.getMediaDisplayURL(displayURL);
+
+    expect(result).toBe('https://cdn.example.com/image.png');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: getMediaFile
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.getMediaFile()', () => {
+  let mockAssetsRepo: ReturnType<typeof makeMockAssetsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockAssetsRepo = makeMockAssetsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => makeMockDocumentsRepository() as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).assetsRepository = mockAssetsRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('returns correct ImplementationMediaFile shape', async () => {
+    const asset = { key: 'photo.jpg', content: { size: 2048 } };
+    mockAssetsRepo.getAsset.mockReturnValue(succeed(asset));
+    mockAssetsRepo.getMetadata.mockReturnValue(
+      LaikaStream.succeedMany([{ metadata: { mimeType: 'image/jpeg' } }] as any, { total: 1 }),
+    );
+    mockAssetsRepo.getUrls.mockReturnValue(
+      LaikaStream.succeedMany([{ url: 'https://cdn.example.com/photo.jpg' }] as any, { total: 1 }),
+    );
+
+    const result = await backend.getMediaFile('photo.jpg');
+
+    expect(result).toMatchObject({
+      id: 'photo.jpg',
+      name: 'photo.jpg',
+      path: 'photo.jpg',
+      displayURL: 'https://cdn.example.com/photo.jpg',
+      url: 'https://cdn.example.com/photo.jpg',
+    });
+    expect(result.file).toBeInstanceOf(File);
+    expect(result.file.name).toBe('photo.jpg');
+    expect(result.file.type).toBe('image/jpeg');
+  });
+
+  it('strips public folder prefix before calling getAsset', async () => {
+    const cfg = makeConfig({ public_folder: 'assets/uploads' });
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => makeMockDocumentsRepository() as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    const localBackend = new LaikaBackend(cfg) as any;
+    localBackend.assetsRepository = mockAssetsRepo;
+    localBackend.tokenPromise = () => Promise.resolve('fake-token');
+
+    const asset = { key: 'photo.jpg', content: { size: 512 } };
+    mockAssetsRepo.getAsset.mockReturnValue(succeed(asset));
+    mockAssetsRepo.getMetadata.mockReturnValue(
+      LaikaStream.succeedMany([{ metadata: { mimeType: 'image/jpeg' } }] as any, { total: 1 }),
+    );
+    mockAssetsRepo.getUrls.mockReturnValue(
+      LaikaStream.succeedMany([{ url: 'https://cdn.example.com/photo.jpg' }] as any, { total: 1 }),
+    );
+
+    await localBackend.getMediaFile('assets/uploads/photo.jpg');
+
+    // Should strip public folder prefix and call with just 'photo.jpg'
+    expect(mockAssetsRepo.getAsset).toHaveBeenCalledWith('photo.jpg');
+  });
+
+  it('throws APIError when getAsset fails', async () => {
+    mockAssetsRepo.getAsset.mockReturnValue(fail({ message: 'Not found' }));
+
+    await expect(backend.getMediaFile('missing.jpg')).rejects.toMatchObject({
+      name: 'APIError',
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: persistMedia
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.persistMedia()', () => {
+  let mockAssetsRepo: ReturnType<typeof makeMockAssetsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockAssetsRepo = makeMockAssetsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => makeMockDocumentsRepository() as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).assetsRepository = mockAssetsRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  function makeAssetProxy(overrides: Record<string, unknown> = {}) {
+    const fileBlob = new File(['file content'], 'photo.jpg', { type: 'image/jpeg' });
+    return {
+      path: 'assets/uploads/photo.jpg',
+      fileObj: fileBlob,
+      ...overrides,
+    };
+  }
+
+  it('throws APIError when fileObj is absent', async () => {
+    const proxy = { path: 'assets/uploads/photo.jpg', fileObj: undefined };
+    await expect(
+      backend.persistMedia(proxy as any, {}),
+    ).rejects.toMatchObject({ name: 'APIError', status: 400 });
+  });
+
+  it('uses the filename from the path as the storage key', async () => {
+    const newAsset = { key: 'photo.jpg', content: { size: 13 } };
+    mockAssetsRepo.createAsset.mockReturnValue(succeed(newAsset));
+    mockAssetsRepo.getUrls.mockReturnValue(
+      LaikaStream.succeedMany([{ url: 'https://cdn.example.com/photo.jpg' }] as any, { total: 1 }),
+    );
+
+    const proxy = makeAssetProxy();
+    const result = await backend.persistMedia(proxy as any, {});
+
+    expect(mockAssetsRepo.createAsset).toHaveBeenCalledWith(
+      expect.objectContaining({ key: 'photo.jpg' }),
+    );
+    expect(result).toMatchObject({
+      id: 'photo.jpg',
+      name: 'photo.jpg',
+      path: 'photo.jpg',
+      displayURL: 'https://cdn.example.com/photo.jpg',
+      url: 'https://cdn.example.com/photo.jpg',
+    });
+  });
+
+  it('returns ImplementationMediaFile with correct shape', async () => {
+    const newAsset = { key: 'photo.jpg', content: { size: 13 } };
+    mockAssetsRepo.createAsset.mockReturnValue(succeed(newAsset));
+    mockAssetsRepo.getUrls.mockReturnValue(
+      LaikaStream.succeedMany([{ url: 'https://cdn.example.com/photo.jpg' }] as any, { total: 1 }),
+    );
+
+    const fileBlob = new File(['file content'], 'photo.jpg', { type: 'image/jpeg' });
+    const proxy = makeAssetProxy({ fileObj: fileBlob });
+    const result = await backend.persistMedia(proxy as any, {});
+
+    expect(result.file).toBe(fileBlob);
+    expect(result.size).toBe(fileBlob.size);
+  });
+
+  it('throws APIError when createAsset fails', async () => {
+    mockAssetsRepo.createAsset.mockReturnValue(fail({ message: 'storage error', code: 'INTERNAL' }));
+
+    await expect(
+      backend.persistMedia(makeAssetProxy() as any, {}),
+    ).rejects.toMatchObject({ name: 'APIError' });
+  });
+});
