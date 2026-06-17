@@ -1,2 +1,6 @@
 pnpm format:check
 pnpm lint
+
+if command -v trufflehog >/dev/null 2>&1; then
+  trufflehog git file://. --since-commit HEAD --results=verified,unknown --fail
+fi
