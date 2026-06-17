@@ -209,7 +209,10 @@ These are the things that consistently bite first-time integrators:
 5. **Workers/edge storage is currently R2-only.** Vercel Blob, Netlify Blobs, Deno KV, Bun S3 don't
    have first-party `StorageRepository` adapters yet. The Vercel Edge and Netlify Functions starters
    document this gap — for production on those platforms, write a small `StorageRepository` adapter
-   or use `@laikacms/storage-gh` (GitHub-backed).
+   or use `@laikacms/github/storage-gh` (GitHub-backed):
+   ```ts
+   import { GithubStorageRepository } from '@laikacms/github/storage-gh';
+   ```
 
 6. **Hide the Decap admin shell from your framework's hydration.** SSR frameworks hydrate the whole
    `<html>`. Decap also expects to own it. Pick one of:
@@ -246,9 +249,12 @@ These are the things that consistently bite first-time integrators:
    - Bridge `laika.fetch` into Effect HTTP: `yield* HttpServerRequest.toWeb(request)` gives a WHATWG
      `Request`; wrap the result with `HttpServerResponse.fromWeb(response)`.
 
-10. **Pagination shape is `{ page, perPage }`, not `{ offset, limit }`.** Use
-    `listRecordSummaries({ pagination: { page: 1, perPage: 100 } })`. The method `listRecords` does
-    not exist — it's always `listRecordSummaries`.
+10. **Pagination shape is `{ page, perPage }`, not `{ offset, limit }`.** Both
+    `listRecordSummaries` and `listRecords` exist on `DocumentsRepository`:
+    - `listRecordSummaries({ pagination: { page: 1, perPage: 100 } })` — lightweight summaries,
+      prefer this for listing/index pages.
+    - `listRecords({ pagination: { page: 1, perPage: 100 } })` — full record bodies, use when you
+      need the complete content of every record in one pass.
 
 11. **`NotFoundError` must be imported from `laikacms/core` and re-thrown.** A bare `catch {}`
     swallows all errors. Always check:
