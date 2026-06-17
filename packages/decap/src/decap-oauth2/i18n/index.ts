@@ -3,14 +3,14 @@
  *
  * This module provides the Translation type and default English messages.
  * Users can provide their own translations by passing a Translation object
- * to the OAuthConfig.messages option.
+ * to the OAuthConfig.translations option.
  *
  * @example
  * ```typescript
  * import { type Translation, defaultMessages } from '@laikacms/decap-oauth2/i18n';
  *
  * // Use default English messages
- * const config = { messages: defaultMessages };
+ * const config = { translations: defaultMessages };
  *
  * // Or provide custom translations
  * const customMessages: Translation = {
@@ -18,7 +18,7 @@
  *   totp: { ... },
  *   // ...
  * };
- * const config = { messages: customMessages };
+ * const config = { translations: customMessages };
  * ```
  */
 
