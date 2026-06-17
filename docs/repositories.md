@@ -36,7 +36,6 @@ flowchart TB
         end
         
         subgraph ClientImplementations["Client Repository Implementations"]
-            LocalStorageDocRepo[LocalStorage Document Repository]:::document
             GithubRepo[Github Repository]:::document
             DocStorageAdapter[Document Storage Adapter Repository]:::document
             DocHTTPProxy[Document HTTP Proxy Repository]:::document
@@ -70,9 +69,10 @@ flowchart TB
         end
         
         subgraph DocumentImplementations["Document Repository Implementations"]
-            DynamoDBRepo[DynamoDB Repository]:::document
-            ExcelRepo[Excel Sheet Repository]:::document
-            LDAPRepo[LDAP Repository]:::document
+            ContentbaseRepo[documents-contentbase]:::document
+            DrizzleRepo[documents-drizzle]:::document
+            ObsidianRepo[documents-obsidian]:::document
+            JsonapiProxyRepo[documents-jsonapi-proxy]:::document
         end
         
         subgraph AssetImplementations["Asset Repository Implementations"]
@@ -95,7 +95,6 @@ flowchart TB
     AssetRepo --> AssetRoutingRepo
     DocRepo --> DocRoutingRepo
     
-    DocRoutingRepo --> LocalStorageDocRepo
     DocRoutingRepo --> GithubRepo
     DocRoutingRepo --> DocStorageAdapter
     DocRoutingRepo --> DocHTTPProxy
@@ -122,9 +121,10 @@ flowchart TB
     BackendAssetRepo --> AssetRoutingBackend
     BackendStorageRepo --> StorageRoutingBackend
     
-    DocRoutingBackend --> DynamoDBRepo
-    DocRoutingBackend --> ExcelRepo
-    DocRoutingBackend --> LDAPRepo
+    DocRoutingBackend --> ContentbaseRepo
+    DocRoutingBackend --> DrizzleRepo
+    DocRoutingBackend --> ObsidianRepo
+    DocRoutingBackend --> JsonapiProxyRepo
     
     AssetRoutingBackend --> S3Repo
     AssetRoutingBackend --> GoogleDriveRepo
@@ -146,7 +146,7 @@ flowchart TB
 
 1. **Document Repository**
    - Stores and retrieves structured content (pages, posts, settings)
-   - Implementations: LocalStorage, GitHub, DynamoDB, Excel, LDAP
+   - Implementations: GitHub, documents-contentbase, documents-drizzle, documents-obsidian, documents-jsonapi-proxy
 
 2. **Asset Repository**
    - Manages binary files like images, PDFs, videos

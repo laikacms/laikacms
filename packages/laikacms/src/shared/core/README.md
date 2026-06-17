@@ -90,7 +90,8 @@ import { collectStream, runTask } from 'laikacms/compat';
 const object = await runTask(repository.getObject(key));
 
 // Collect all data items from a LaikaStream — resolves with { items, done }
-const { items, done } = await collectStream(repository.listObjects(prefix));
-console.log(items); // StorageObject[]
-console.log(done); // { total?: number; pagination?: Pagination }
+const { items, done } = await collectStream(
+  repository.listAtoms(folderKey, { depth: 1, pagination: { limit: 100 } }),
+);
+console.log(items); // Atom[]
 ```

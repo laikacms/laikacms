@@ -7,7 +7,7 @@
 
 ```typescript
 // src/index.ts
-import { markdownSerializer } from 'laikacms/serializer-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { buildJsonApi } from 'laikacms/storage-api';
 import { R2StorageRepository } from 'laikacms/storage-r2';
 
@@ -37,7 +37,7 @@ Deploy: `wrangler deploy`
 
 ```typescript
 import { serve } from '@hono/node-server';
-import { markdownSerializer } from 'laikacms/serializer-markdown';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { buildJsonApi } from 'laikacms/storage-api';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 
