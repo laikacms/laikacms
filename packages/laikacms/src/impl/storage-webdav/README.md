@@ -29,7 +29,7 @@ const repo = new WebDavStorageRepository(
   'md',
 );
 
-const stream = repo.listAtomSummaries('', { pagination: { offset: 0, limit: 50 } });
+const stream = repo.listAtomSummaries('', { depth: 1, pagination: { offset: 0, limit: 50 } });
 ```
 
 ### Bearer-token auth
