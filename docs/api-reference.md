@@ -562,24 +562,84 @@ Revisions record snapshots of published documents.
 
 #### GET /
 
-Returns a list of available endpoint names.
+Returns meta-information about the Documents API and its available endpoints.
 
 **Response**
 
 ```json
 {
   "data": {
-    "type": "endpoints",
-    "id": "documents-api",
+    "type": "api-info",
+    "id": "documents",
     "attributes": {
+      "name": "Documents API",
+      "version": "1.0.0",
       "endpoints": [
-        "records",
-        "record-summaries",
-        "published",
-        "unpublished",
-        "unpublished-summaries",
-        "revisions",
-        "operations"
+        {
+          "path": "/capabilities",
+          "methods": ["GET"],
+          "description": "Underlying documents repository capabilities"
+        },
+        {
+          "path": "/records",
+          "methods": ["GET"],
+          "description": "List full records (published + unpublished view per key)"
+        },
+        {
+          "path": "/record-summaries",
+          "methods": ["GET"],
+          "description": "List record summaries (lightweight listing)"
+        },
+        {
+          "path": "/published",
+          "methods": ["POST"],
+          "description": "Create a published document"
+        },
+        {
+          "path": "/published/{key}",
+          "methods": ["GET", "PATCH", "DELETE"],
+          "description": "Read, update, or remove a published document"
+        },
+        {
+          "path": "/published/{key}/unpublish",
+          "methods": ["POST"],
+          "description": "State transition: move a published document to unpublished"
+        },
+        {
+          "path": "/unpublished",
+          "methods": ["POST"],
+          "description": "Create an unpublished draft"
+        },
+        {
+          "path": "/unpublished/{key}",
+          "methods": ["GET", "PATCH", "DELETE"],
+          "description": "Read, update, or remove an unpublished draft"
+        },
+        {
+          "path": "/unpublished/{key}/publish",
+          "methods": ["POST"],
+          "description": "State transition: publish an unpublished draft"
+        },
+        {
+          "path": "/revisions",
+          "methods": ["POST"],
+          "description": "Create a revision for a document"
+        },
+        {
+          "path": "/revisions/{key}",
+          "methods": ["GET"],
+          "description": "List revisions for a document"
+        },
+        {
+          "path": "/revisions/{key}/{revisionId}",
+          "methods": ["GET"],
+          "description": "Read a specific revision of a document"
+        },
+        {
+          "path": "/operations",
+          "methods": ["POST"],
+          "description": "Atomic operations (add/update/remove + publish/unpublish transitions)"
+        }
       ]
     }
   }
