@@ -150,6 +150,152 @@ createEmbeddedLaika({
 });
 ```
 
+### Production auth with `decap-oauth2`
+
+Rather than building an OAuth2 server from scratch, use the bundled `decapOauth2` helper. It is a
+self-contained PKCE authorization server with email/password login, optional passkey (WebAuthn), and
+optional TOTP 2FA. You wire it alongside `createEmbeddedLaika` in the same Express or Hono app.
+
+```bash
+pnpm add @laikacms/decap-integrations
+```
+
+**Hono example**
+
+```ts
+import { decapOauth2 } from '@laikacms/decap-integrations/decap-oauth2';
+import { createEmbeddedLaika } from '@laikacms/decap-integrations/embedded';
+import { Hono } from 'hono';
+import { resolve } from 'node:path';
+
+import { decapConfig } from './decap-config.js';
+
+const CLIENT_ID = process.env.DECAP_CLIENT_ID!;
+const OAUTH_BASE = '/oauth2';
+
+const oauth2 = decapOauth2({
+  basePath: OAUTH_BASE,
+  clientId: CLIENT_ID,
+  callbacks: {
+    // Return User | null — { id, email, passwordHash }
+    getUserByEmail: async email => db.users.findByEmail(email),
+    getUserById: async id => db.users.findById(id),
+
+    // Authorization codes (one-time use, short-lived)
+    storeAuthorizationCode: async code => db.authCodes.insert(code),
+    getAuthorizationCode: async code => db.authCodes.findByCode(code),
+    deleteAuthorizationCode: async code => db.authCodes.deleteByCode(code),
+
+    // Sessions (hold both access + refresh tokens)
+    createSession: async session => db.sessions.insert(session),
+    getSessionByAccessToken: async token => db.sessions.findByAccessToken(token),
+    getSessionByRefreshToken: async token => db.sessions.findByRefreshToken(token),
+    logoutSession: async sessionId => db.sessions.deleteById(sessionId),
+    logoutAll: async userId => db.sessions.deleteAllForUser(userId),
+  },
+});
+
+const laika = createEmbeddedLaika({
+  contentDir: resolve(process.cwd(), 'content'),
+  decapConfig,
+  basePath: '/api/decap',
+  auth: {
+    mode: 'custom',
+    async authenticateAccessToken(token) {
+      const session = await db.sessions.findByAccessToken(token);
+      if (!session) return null;
+      const user = await db.users.findById(session.userId);
+      if (!user) return null;
+      return { id: user.id, email: user.email, name: user.email };
+    },
+  },
+});
+
+const app = new Hono();
+app.all(`${OAUTH_BASE}/*`, c => oauth2.fetch(c.req.raw));
+app.all('/api/decap/*', c => laika.fetch(c.req.raw));
+
+export default app;
+```
+
+**Express example** (uses the [manual bridge](#express--plain-httpserver--manual-bridge) for
+`laika`):
+
+```ts
+import { decapOauth2 } from '@laikacms/decap-integrations/decap-oauth2';
+import express from 'express';
+
+const oauth2 = decapOauth2({ basePath: '/oauth2', clientId: CLIENT_ID, callbacks });
+
+const app = express();
+// oauth2 speaks Web API — it has its own body parsing, no express.json() needed here
+app.all('/oauth2/*', async (req, res) => {
+  const url = `${req.protocol}://${req.headers.host}${req.originalUrl}`;
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  const body = chunks.length ? Buffer.concat(chunks) : null;
+  const webRequest = new Request(url, {
+    method: req.method,
+    headers: req.headers as Record<string, string>,
+    body: body
+      ? (body.buffer.slice(body.byteOffset, body.byteOffset + body.byteLength) as ArrayBuffer)
+      : null,
+    ...(body ? { duplex: 'half' } : {}),
+  } as RequestInit);
+  const webResponse = await oauth2.fetch(webRequest);
+  res.status(webResponse.status);
+  webResponse.headers.forEach((value, key) => res.setHeader(key, value));
+  res.send(Buffer.from(await webResponse.arrayBuffer()));
+});
+// Mount laika with the same bridge (see Express bridge section)
+app.all('/api/decap/*', (req, res) => bridgeToLaika(req, res, laika));
+```
+
+**Point Decap at the OAuth2 server**
+
+In your Decap config, set `backend.base_url` to the origin where the OAuth2 server runs and
+`backend.auth_endpoint` to the authorize path:
+
+```ts
+const decapConfig = {
+  backend: {
+    name: 'laika',
+    api_root: '/api/decap',
+    base_url: 'https://cms.example.com', // origin serving /oauth2/*
+    auth_endpoint: '/oauth2/authorize',
+  },
+  // …collections…
+};
+```
+
+Or when using `decapAdminHtml`, pass `auth.backendUrl`:
+
+```ts
+import { decapAdminHtml } from '@laikacms/decap-integrations/embedded';
+
+const ADMIN_HTML = decapAdminHtml({
+  decapConfig,
+  auth: {
+    backendUrl: 'https://cms.example.com',
+    authEndpoint: '/oauth2/authorize',
+  },
+});
+```
+
+**Optional extensions**
+
+| Feature        | Option key in `decapOauth2(…)`       | Notes                                                        |
+| -------------- | ------------------------------------ | ------------------------------------------------------------ |
+| Passkey        | `passkey: { enabled: true, … }`      | WebAuthn registration + authentication flows                 |
+| TOTP 2FA       | `totp: { … }`                        | TOTP enrollment and per-login verification                   |
+| CAPTCHA        | `captcha: { enabled: true, … }`      | Any provider (reCAPTCHA, hCaptcha, Turnstile, …)             |
+| Password reset | `passwordReset: { … }`               | Email-based reset link flow                                  |
+| i18n           | `translations: nl` (or other locale) | Import from `@laikacms/decap-integrations/decap-oauth2/i18n` |
+
+See
+[`packages/decap/src/decap-oauth2/README.md`](https://github.com/laikacms/laikacms/blob/develop/packages/decap/src/decap-oauth2/README.md)
+for the full `OAuthConfig` option reference.
+
 ---
 
 ## Hosted gateway (multi-tenant)
