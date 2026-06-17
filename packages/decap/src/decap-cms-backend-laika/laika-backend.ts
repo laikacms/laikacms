@@ -741,8 +741,8 @@ export default function createLaikaBackend(
 
         const entryKey = normalizeKey(dataFile.path);
         const language: string = typeof content === 'object' && content !== null
-          ? (content as Record<string, unknown>).language as string | undefined ?? 'unk'
-          : 'unk';
+          ? (content as Record<string, unknown>).language as string | undefined ?? 'und'
+          : 'und';
 
         if (options.useWorkflow && typeof options.status === 'string' && options.status !== 'published') {
           const newEntry = options.newEntry || options.unpublished === false;

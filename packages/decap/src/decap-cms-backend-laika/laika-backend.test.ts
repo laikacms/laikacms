@@ -745,4 +745,32 @@ describe('LaikaBackend.persistEntry()', () => {
       expect.objectContaining({ content: raw }),
     );
   });
+
+  it('uses "und" as the language when content has no language field', async () => {
+    mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
+
+    const raw = JSON.stringify({ title: 'No language field' });
+    await backend.persistEntry(
+      { dataFiles: [{ path: 'articles/no-lang.json', raw }], assets: [] },
+      { newEntry: true, useWorkflow: false },
+    );
+
+    expect(mockDocRepo.createDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ language: 'und' }),
+    );
+  });
+
+  it('uses "und" as the language when content is a non-object (string)', async () => {
+    mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
+
+    const raw = '---\ntitle: Markdown post\n---\n\nBody.';
+    await backend.persistEntry(
+      { dataFiles: [{ path: 'posts/no-lang.md', raw }], assets: [] },
+      { newEntry: true, useWorkflow: false },
+    );
+
+    expect(mockDocRepo.createDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ language: 'und' }),
+    );
+  });
 });
