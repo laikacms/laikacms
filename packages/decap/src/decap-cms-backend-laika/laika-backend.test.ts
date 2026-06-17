@@ -774,3 +774,460 @@ describe('LaikaBackend.persistEntry()', () => {
     );
   });
 });
+
+// ---------------------------------------------------------------------------
+// Suite: unpublishedEntries
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.unpublishedEntries()', () => {
+  let mockDocRepo: ReturnType<typeof makeMockDocumentsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockDocRepo = makeMockDocumentsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => makeMockAssetsRepository() as any,
+    });
+    backend = new LaikaBackend(makeConfig({
+      collections: [{ name: 'articles' }, { name: 'pages' }],
+    }));
+    (backend as any).documentsRepository = mockDocRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('returns keys for all unpublished records across collections', async () => {
+    mockDocRepo.listRecords
+      .mockReturnValueOnce(LaikaStream.succeedMany([
+        {
+          key: 'articles/draft-one',
+          content: { title: 'Draft One' },
+          type: 'unpublished',
+          status: 'draft',
+          updatedAt: '2024-01-01T00:00:00Z',
+        },
+      ] as any[], {}))
+      .mockReturnValueOnce(LaikaStream.succeedMany([
+        {
+          key: 'pages/draft-page',
+          content: { title: 'Draft Page' },
+          type: 'unpublished',
+          status: 'draft',
+          updatedAt: '2024-01-02T00:00:00Z',
+        },
+      ] as any[], {}));
+
+    const keys = await backend.unpublishedEntries();
+
+    expect(keys).toContain('articles/draft-one');
+    expect(keys).toContain('pages/draft-page');
+    expect(keys).toHaveLength(2);
+  });
+
+  it('returns empty array when no unpublished records exist', async () => {
+    mockDocRepo.listRecords.mockReturnValue(empty());
+
+    const keys = await backend.unpublishedEntries();
+
+    expect(keys).toEqual([]);
+  });
+
+  it('skips RecoverableError elements and continues with remaining valid records', async () => {
+    // Use LaikaStream.make to emit a recoverable error then a valid Data element.
+    const { LaikaStream: LS, NotFoundError: NFE } = await import('laikacms/core');
+    const Effect = await import('effect/Effect');
+    const mixedStream = LS.make<
+      { key: string, content: object, type: string, status: string, updatedAt: string },
+      object
+    >(emit =>
+      Effect.gen(function*() {
+        yield* emit.recoverableError(new NFE('simulated repo warning'));
+        yield* emit.data({
+          key: 'articles/ok',
+          content: { title: 'OK' },
+          type: 'unpublished',
+          status: 'draft',
+          updatedAt: '2024-01-01T00:00:00Z',
+        });
+        return {};
+      })
+    );
+    mockDocRepo.listRecords
+      .mockReturnValueOnce(mixedStream)
+      .mockReturnValueOnce(empty());
+
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const keys = await backend.unpublishedEntries();
+      expect(keys).toContain('articles/ok');
+      expect(errorSpy).toHaveBeenCalled();
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it('returns cached result on second call without hitting the repo again', async () => {
+    mockDocRepo.listRecords
+      .mockReturnValue(LaikaStream.succeedMany([
+        {
+          key: 'articles/cached',
+          content: {},
+          type: 'unpublished',
+          status: 'draft',
+          updatedAt: '2024-01-01T00:00:00Z',
+        },
+      ] as any[], {}));
+
+    await backend.unpublishedEntries();
+    await backend.unpublishedEntries();
+
+    // listRecords is called once per collection per call; with caching the second
+    // unpublishedEntries() call should NOT re-invoke listRecords at all.
+    // We have 2 collections → first call = 2 invocations; second call = 0.
+    expect(mockDocRepo.listRecords).toHaveBeenCalledTimes(2);
+  });
+
+  it('populates unpublishedEntryCache so a subsequent unpublishedEntry() call skips the repo', async () => {
+    mockDocRepo.listRecords
+      .mockReturnValueOnce(LaikaStream.succeedMany([
+        {
+          key: 'articles/pre-cached',
+          content: { title: 'Pre' },
+          type: 'unpublished',
+          status: 'draft',
+          updatedAt: '2024-01-01T00:00:00Z',
+        },
+      ] as any[], {}))
+      .mockReturnValueOnce(empty());
+
+    await backend.unpublishedEntries();
+
+    // Now calling unpublishedEntry with the same key should be served from cache
+    const entry = await backend.unpublishedEntry({ id: 'articles/pre-cached' });
+
+    expect(entry.collection).toBe('articles');
+    expect(entry.slug).toBe('pre-cached');
+    // getUnpublished should NOT have been called (cache hit)
+    expect(mockDocRepo.getUnpublished).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: unpublishedEntry
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.unpublishedEntry()', () => {
+  let mockDocRepo: ReturnType<typeof makeMockDocumentsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockDocRepo = makeMockDocumentsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => makeMockAssetsRepository() as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).documentsRepository = mockDocRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('returns correct shape when fetched by id', async () => {
+    const unpub = {
+      key: 'articles/my-draft',
+      content: { title: 'My Draft' },
+      type: 'unpublished',
+      status: 'draft',
+      updatedAt: '2024-01-01T00:00:00Z',
+    };
+    mockDocRepo.getUnpublished.mockReturnValue(succeed(unpub));
+
+    const entry = await backend.unpublishedEntry({ id: 'articles/my-draft' });
+
+    expect(entry).toMatchObject({
+      collection: 'articles',
+      slug: 'my-draft',
+      status: 'draft',
+      diffs: [],
+    });
+    expect(typeof entry.updatedAt).toBe('string');
+  });
+
+  it('returns correct shape when fetched by collection + slug', async () => {
+    const unpub = {
+      key: 'posts/hello-world',
+      content: 'raw md',
+      type: 'unpublished',
+      status: 'inReview',
+      updatedAt: '2024-02-01T00:00:00Z',
+    };
+    mockDocRepo.getUnpublished.mockReturnValue(succeed(unpub));
+
+    const entry = await backend.unpublishedEntry({ collection: 'posts', slug: 'hello-world' });
+
+    expect(entry.collection).toBe('posts');
+    expect(entry.slug).toBe('hello-world');
+    expect(entry.status).toBe('inReview');
+    expect(mockDocRepo.getUnpublished).toHaveBeenCalledWith('posts/hello-world');
+  });
+
+  it('strips file extensions from id before querying', async () => {
+    const unpub = {
+      key: 'articles/no-ext',
+      content: {},
+      type: 'unpublished',
+      status: 'draft',
+      updatedAt: '2024-01-01T00:00:00Z',
+    };
+    mockDocRepo.getUnpublished.mockReturnValue(succeed(unpub));
+
+    await backend.unpublishedEntry({ id: 'articles/no-ext.json' });
+
+    expect(mockDocRepo.getUnpublished).toHaveBeenCalledWith('articles/no-ext');
+  });
+
+  it('returns cached result on second call without hitting the repo again', async () => {
+    const unpub = {
+      key: 'articles/dup',
+      content: {},
+      type: 'unpublished',
+      status: 'draft',
+      updatedAt: '2024-01-01T00:00:00Z',
+    };
+    mockDocRepo.getUnpublished.mockReturnValue(succeed(unpub));
+
+    await backend.unpublishedEntry({ id: 'articles/dup' });
+    await backend.unpublishedEntry({ id: 'articles/dup' });
+
+    expect(mockDocRepo.getUnpublished).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws when neither id nor collection+slug provided', async () => {
+    await expect(backend.unpublishedEntry({})).rejects.toThrow();
+  });
+
+  it('throws APIError when repo returns not-found', async () => {
+    mockDocRepo.getUnpublished.mockReturnValue(fail({ code: 'NOT_FOUND', message: 'not here' }));
+
+    await expect(backend.unpublishedEntry({ id: 'articles/missing' })).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: unpublishedEntryDataFile
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.unpublishedEntryDataFile()', () => {
+  let mockDocRepo: ReturnType<typeof makeMockDocumentsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockDocRepo = makeMockDocumentsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => makeMockAssetsRepository() as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).documentsRepository = mockDocRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('returns stringified content for an object payload', async () => {
+    const unpub = {
+      key: 'articles/data-entry',
+      content: { title: 'Data' },
+      type: 'unpublished',
+      status: 'draft',
+      updatedAt: '2024-01-01T00:00:00Z',
+    };
+    mockDocRepo.getUnpublished.mockReturnValue(succeed(unpub));
+
+    const result = await backend.unpublishedEntryDataFile(
+      'articles',
+      'data-entry',
+      'articles/data-entry',
+      'articles/data-entry',
+    );
+
+    expect(result).toBe(JSON.stringify({ title: 'Data' }));
+    expect(mockDocRepo.getUnpublished).toHaveBeenCalledWith('articles/data-entry');
+  });
+
+  it('returns raw string content as-is', async () => {
+    const raw = '---\ntitle: Raw\n---\n\nBody.';
+    const unpub = {
+      key: 'posts/raw',
+      content: raw,
+      type: 'unpublished',
+      status: 'draft',
+      updatedAt: '2024-01-01T00:00:00Z',
+    };
+    mockDocRepo.getUnpublished.mockReturnValue(succeed(unpub));
+
+    const result = await backend.unpublishedEntryDataFile('posts', 'raw', 'posts/raw', 'posts/raw');
+
+    expect(result).toBe(raw);
+  });
+
+  it('prefers id over path when building the key', async () => {
+    const unpub = {
+      key: 'articles/by-id',
+      content: {},
+      type: 'unpublished',
+      status: 'draft',
+      updatedAt: '2024-01-01T00:00:00Z',
+    };
+    mockDocRepo.getUnpublished.mockReturnValue(succeed(unpub));
+
+    await backend.unpublishedEntryDataFile('articles', 'other', 'articles/other', 'articles/by-id');
+
+    expect(mockDocRepo.getUnpublished).toHaveBeenCalledWith('articles/by-id');
+  });
+
+  it('throws when repo returns error', async () => {
+    mockDocRepo.getUnpublished.mockReturnValue(fail({ code: 'NOT_FOUND', message: 'gone' }));
+
+    await expect(
+      backend.unpublishedEntryDataFile('articles', 'gone', 'articles/gone', 'articles/gone'),
+    ).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: updateUnpublishedEntryStatus
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.updateUnpublishedEntryStatus()', () => {
+  let mockDocRepo: ReturnType<typeof makeMockDocumentsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockDocRepo = makeMockDocumentsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => makeMockAssetsRepository() as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).documentsRepository = mockDocRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('calls repo.updateUnpublished with normalised key and new status', async () => {
+    mockDocRepo.updateUnpublished.mockReturnValue(succeed(undefined));
+
+    await backend.updateUnpublishedEntryStatus('articles', 'my-post', 'inReview');
+
+    expect(mockDocRepo.updateUnpublished).toHaveBeenCalledWith({
+      key: 'articles/my-post',
+      status: 'inReview',
+    });
+  });
+
+  it('strips file extension from slug before building key', async () => {
+    mockDocRepo.updateUnpublished.mockReturnValue(succeed(undefined));
+
+    await backend.updateUnpublishedEntryStatus('articles', 'my-post.json', 'ready');
+
+    expect(mockDocRepo.updateUnpublished).toHaveBeenCalledWith({
+      key: 'articles/my-post',
+      status: 'ready',
+    });
+  });
+
+  it('throws APIError when repo returns error', async () => {
+    mockDocRepo.updateUnpublished.mockReturnValue(fail({ code: 'NOT_FOUND', message: 'not found' }));
+
+    await expect(
+      backend.updateUnpublishedEntryStatus('articles', 'missing', 'inReview'),
+    ).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: deleteUnpublishedEntry
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.deleteUnpublishedEntry()', () => {
+  let mockDocRepo: ReturnType<typeof makeMockDocumentsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockDocRepo = makeMockDocumentsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => makeMockAssetsRepository() as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).documentsRepository = mockDocRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('calls repo.deleteUnpublished with the normalised key', async () => {
+    mockDocRepo.deleteUnpublished.mockReturnValue(succeed(undefined));
+
+    await backend.deleteUnpublishedEntry('articles', 'my-draft');
+
+    expect(mockDocRepo.deleteUnpublished).toHaveBeenCalledWith('articles/my-draft');
+  });
+
+  it('strips file extension from slug before calling deleteUnpublished', async () => {
+    mockDocRepo.deleteUnpublished.mockReturnValue(succeed(undefined));
+
+    await backend.deleteUnpublishedEntry('articles', 'my-draft.md');
+
+    expect(mockDocRepo.deleteUnpublished).toHaveBeenCalledWith('articles/my-draft');
+  });
+
+  it('throws APIError when repo returns error', async () => {
+    mockDocRepo.deleteUnpublished.mockReturnValue(fail({ code: 'NOT_FOUND', message: 'not found' }));
+
+    await expect(backend.deleteUnpublishedEntry('articles', 'missing')).rejects.toThrow();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: publishUnpublishedEntry
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.publishUnpublishedEntry()', () => {
+  let mockDocRepo: ReturnType<typeof makeMockDocumentsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockDocRepo = makeMockDocumentsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => makeMockAssetsRepository() as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).documentsRepository = mockDocRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('calls repo.publish with the normalised key', async () => {
+    mockDocRepo.publish.mockReturnValue(succeed(undefined));
+
+    await backend.publishUnpublishedEntry('articles', 'my-draft');
+
+    expect(mockDocRepo.publish).toHaveBeenCalledWith('articles/my-draft');
+  });
+
+  it('strips file extension from slug before publishing', async () => {
+    mockDocRepo.publish.mockReturnValue(succeed(undefined));
+
+    await backend.publishUnpublishedEntry('posts', 'hello-world.json');
+
+    expect(mockDocRepo.publish).toHaveBeenCalledWith('posts/hello-world');
+  });
+
+  it('throws APIError when repo.publish fails', async () => {
+    mockDocRepo.publish.mockReturnValue(fail({ code: 'NOT_FOUND', message: 'Entry not found' }));
+
+    await expect(backend.publishUnpublishedEntry('articles', 'bad-key')).rejects.toThrow();
+  });
+
+  it('resolves without error on success', async () => {
+    mockDocRepo.publish.mockReturnValue(succeed(undefined));
+
+    await expect(backend.publishUnpublishedEntry('articles', 'ok')).resolves.toBeUndefined();
+  });
+});

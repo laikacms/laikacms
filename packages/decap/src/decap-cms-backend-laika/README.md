@@ -40,17 +40,18 @@ backend:
 
 All options are passed to `createLaikaBackend(options)`. Every field is optional.
 
-| Option | Type | Default | Description |
-|---|---|---|---|
-| `documentsApiBaseUrl` | `string` | — | Base URL used by the default `DocumentsJsonApiProxyRepository`. |
-| `assetsApiBaseUrl` | `string` | — | Base URL used by the default `AssetsJsonApiProxyRepository`. |
-| `getDocumentsRepository` | `(options: GetDocumentsRepositoryOptions) => DocumentsRepository` | built-in proxy | Factory that returns a custom `DocumentsRepository`. |
-| `getAssetsRepository` | `(options: GetAssetsRepositoryOptions) => AssetsRepository` | built-in proxy | Factory that returns a custom `AssetsRepository`. |
-| `onWarning` | `(error: LaikaError) => void` | `console.warn` | Called for every recoverable warning emitted by the backend. |
+| Option                   | Type                                                              | Default        | Description                                                     |
+| ------------------------ | ----------------------------------------------------------------- | -------------- | --------------------------------------------------------------- |
+| `documentsApiBaseUrl`    | `string`                                                          | —              | Base URL used by the default `DocumentsJsonApiProxyRepository`. |
+| `assetsApiBaseUrl`       | `string`                                                          | —              | Base URL used by the default `AssetsJsonApiProxyRepository`.    |
+| `getDocumentsRepository` | `(options: GetDocumentsRepositoryOptions) => DocumentsRepository` | built-in proxy | Factory that returns a custom `DocumentsRepository`.            |
+| `getAssetsRepository`    | `(options: GetAssetsRepositoryOptions) => AssetsRepository`       | built-in proxy | Factory that returns a custom `AssetsRepository`.               |
+| `onWarning`              | `(error: LaikaError) => void`                                     | `console.warn` | Called for every recoverable warning emitted by the backend.    |
 
 ### `getDocumentsRepository`
 
-Inject a custom `DocumentsRepository` — useful for in-process testing, local mocks, or direct database access without an HTTP proxy.
+Inject a custom `DocumentsRepository` — useful for in-process testing, local mocks, or direct
+database access without an HTTP proxy.
 
 The factory receives a `GetDocumentsRepositoryOptions` object:
 
@@ -109,16 +110,19 @@ const LaikaBackend = createLaikaBackend({
 
 ### `onWarning`
 
-Called for every recoverable warning the backend encounters (for example, a partial-success state where the CMS operation succeeded but a secondary action — such as an R2 readback — fell back to a synthesized response).
+Called for every recoverable warning the backend encounters (for example, a partial-success state
+where the CMS operation succeeded but a secondary action — such as an R2 readback — fell back to a
+synthesized response).
 
-By default, warnings are written to `console.warn` so they surface in browser devtools. Provide your own handler to route them to a structured logger or error-tracking service.
+By default, warnings are written to `console.warn` so they surface in browser devtools. Provide your
+own handler to route them to a structured logger or error-tracking service.
 
 ```typescript
 import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
 import * as Sentry from '@sentry/browser';
 
 const LaikaBackend = createLaikaBackend({
-  onWarning: (error) => {
+  onWarning: error => {
     // Route to Sentry as a breadcrumb so warnings appear alongside errors
     Sentry.addBreadcrumb({
       category: 'laika-backend',
@@ -138,7 +142,7 @@ import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
 import { logger } from './logger';
 
 const LaikaBackend = createLaikaBackend({
-  onWarning: (error) => {
+  onWarning: error => {
     logger.warn({ code: error.code, message: error.message }, 'laika-backend recoverable warning');
   },
 });
