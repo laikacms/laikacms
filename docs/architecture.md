@@ -41,35 +41,40 @@
 ```typescript
 // Domain defines the interface
 abstract class StorageRepository {
-  abstract getObject(key: string): ResultStream<StorageObject>;
-  abstract createObject(create: StorageObjectCreate): ResultStream<StorageObject>;
+  abstract getObject(key: string): LaikaTask<StorageObject>;
+  abstract createObject(create: StorageObjectCreate): LaikaTask<StorageObject>;
+  abstract listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream<Atom, ListAtomsDone>;
 }
 
 // Implementation provides concrete behavior
 class R2StorageRepository extends StorageRepository {
-  async *getObject(key: string): ResultStream<StorageObject> {
-    const object = await this.bucket.get(key);
-    if (!object) {
-      yield Result.fail(new NotFoundError(`Not found: ${key}`));
-      return;
-    }
-    yield Result.succeed({ key, content: await object.text() });
+  getObject(key: string): LaikaTask<StorageObject> {
+    return LaikaTask.make(async (emit) => {
+      const object = await this.bucket.get(key);
+      if (!object) throw new NotFoundError(`Not found: ${key}`);
+      return { key, content: await object.text() };
+    });
   }
 }
 ```
 
 ### Result Streams
 
-All repository methods return `AsyncGenerator<LaikaResult<T>>` for streaming results with error
-handling.
+Repository methods return either `LaikaTask<T>` (single result) or `LaikaStream<T, D>` (multiple
+results with a typed done value). Both are Effect-based; use the `laikacms/compat` helpers to
+consume them without importing Effect directly.
 
 ```typescript
-const gen = repo.listAtoms({ prefix: 'posts/' });
-for await (const result of gen) {
-  if (Result.isSuccess(result)) {
-    console.log(result.value);
-  }
-}
+import { collectStream, runTask } from 'laikacms/compat';
+
+// Single result
+const object = await runTask(repo.getObject('posts/hello'));
+
+// Stream of results
+const { items, done } = await collectStream(
+  repo.listAtoms('posts/', { depth: 1, pagination: { limit: 100 } }),
+);
+console.log(items); // Atom[]
 ```
 
 ## Standard Schema
@@ -85,6 +90,7 @@ const PostSchema = z.object({
   content: z.string(),
 });
 
-// Works with any Standard Schema compatible library
-repo.createObject({ key: 'posts/hello', content: data, schema: PostSchema });
+// Works with any Standard Schema compatible library — validation is handled
+// by the repository layer, not passed as a createObject option
+await runTask(repo.createObject({ key: 'posts/hello', content: data }));
 ```
