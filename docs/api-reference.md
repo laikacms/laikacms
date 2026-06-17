@@ -762,7 +762,7 @@ Content-Type: application/vnd.api+json
 | `data.attributes.language` | string        | yes      | BCP 47 language tag (e.g. `"en"`)       |
 | `data.attributes.content`  | object        | no       | Arbitrary document content              |
 
-**Response** — `200 OK` with the created document
+**Response** — `201 Created` with the created document
 
 ```json
 {
@@ -974,7 +974,7 @@ Content-Type: application/vnd.api+json
 | `data.attributes.language` | string          | yes      | BCP 47 language tag                     |
 | `data.attributes.content`  | object          | no       | Arbitrary document content              |
 
-**Response** — created unpublished document (same shape as `GET /unpublished/:key`)
+**Response** — `201 Created` — created unpublished document (same shape as `GET /unpublished/:key`)
 
 ---
 
@@ -1111,7 +1111,7 @@ Content-Type: application/vnd.api+json
 | `data.attributes.language` | string       | yes      | BCP 47 language tag                              |
 | `data.attributes.content`  | object       | no       | Snapshot of the document content                 |
 
-**Response** — created revision
+**Response** — `201 Created` — created revision
 
 ```json
 {
@@ -1635,7 +1635,7 @@ curl -X POST http://localhost:3002/api/assets/resources \
   -F 'customMetadata={"alt":"Hero image"}'
 ```
 
-**Response** — created `asset` resource
+**Response** — `201 Created` — created `asset` resource
 
 ```json
 {
@@ -1714,7 +1714,7 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-**Response** — created `folder` resource
+**Response** — `201 Created` — created `folder` resource
 
 ```json
 {
