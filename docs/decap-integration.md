@@ -218,7 +218,8 @@ app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 export default app;
 ```
 
-**Express example** (uses the [manual bridge](#express--plain-httpserver--manual-bridge) for `laika`):
+**Express example** (uses the [manual bridge](#express--plain-httpserver--manual-bridge) for
+`laika`):
 
 ```ts
 import { decapOauth2 } from '@laikacms/decap-integrations/decap-oauth2';
@@ -283,16 +284,17 @@ const ADMIN_HTML = decapAdminHtml({
 
 **Optional extensions**
 
-| Feature    | Option key in `decapOauth2(…)`      | Notes                                             |
-| ---------- | ----------------------------------- | ------------------------------------------------- |
-| Passkey    | `passkey: { enabled: true, … }`     | WebAuthn registration + authentication flows      |
-| TOTP 2FA   | `totp: { … }`                       | TOTP enrollment and per-login verification        |
-| CAPTCHA    | `captcha: { enabled: true, … }`     | Any provider (reCAPTCHA, hCaptcha, Turnstile, …)  |
-| Password reset | `passwordReset: { … }`          | Email-based reset link flow                       |
-| i18n       | `translations: nl` (or other locale) | Import from `@laikacms/decap-integrations/decap-oauth2/i18n` |
+| Feature        | Option key in `decapOauth2(…)`       | Notes                                                        |
+| -------------- | ------------------------------------ | ------------------------------------------------------------ |
+| Passkey        | `passkey: { enabled: true, … }`      | WebAuthn registration + authentication flows                 |
+| TOTP 2FA       | `totp: { … }`                        | TOTP enrollment and per-login verification                   |
+| CAPTCHA        | `captcha: { enabled: true, … }`      | Any provider (reCAPTCHA, hCaptcha, Turnstile, …)             |
+| Password reset | `passwordReset: { … }`               | Email-based reset link flow                                  |
+| i18n           | `translations: nl` (or other locale) | Import from `@laikacms/decap-integrations/decap-oauth2/i18n` |
 
-See [`packages/decap/src/decap-oauth2/README.md`](../packages/decap/src/decap-oauth2/README.md) for
-the full `OAuthConfig` option reference.
+See
+[`packages/decap/src/decap-oauth2/README.md`](https://github.com/laikacms/laikacms/blob/develop/packages/decap/src/decap-oauth2/README.md)
+for the full `OAuthConfig` option reference.
 
 ---
 
