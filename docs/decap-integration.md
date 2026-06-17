@@ -345,7 +345,6 @@ automatically (content/asset repos, config seeding, Decap API, dev auth).
 
 ```ts
 import { createCustomLaika } from '@laikacms/decap-integrations/custom';
-// also re-exported from /embedded and /workers
 
 const laika = createCustomLaika({
   storage, // any StorageRepository
