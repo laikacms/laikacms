@@ -242,8 +242,13 @@ const AtomicOperationsRequestSchema = S.toStandardSchemaV1(S.Struct({
   'atomic:operations': S.Array(AtomicOperationSchema),
 }));
 
+const FolderCreateBodySchema = S.toStandardSchemaV1(S.Struct({
+  data: JsonApiFolderCreateSchema,
+}));
+
 type StorageObjectCreateBody = S.Schema.Type<typeof StorageObjectCreateBodySchema>;
 type StorageObjectUpdateBody = S.Schema.Type<typeof StorageObjectUpdateBodySchema>;
+type FolderCreateBody = S.Schema.Type<typeof FolderCreateBodySchema>;
 type AtomicOperation = S.Schema.Type<typeof AtomicOperationSchema>;
 type AtomicOperationsRequest = S.Schema.Type<typeof AtomicOperationsRequestSchema>;
 
@@ -265,6 +270,7 @@ export function buildJsonApi(options: StorageApiOptions) {
 
   const decodeStorageObjectCreateBody = S.decodeUnknownSync(StorageObjectCreateBodySchema);
   const decodeStorageObjectUpdateBody = S.decodeUnknownSync(StorageObjectUpdateBodySchema);
+  const decodeFolderCreateBody = S.decodeUnknownSync(FolderCreateBodySchema);
   const decodeAtomicOperationsRequest = S.decodeUnknownSync(AtomicOperationsRequestSchema);
 
   /** Notify onError and delegate to respondError. */
@@ -404,7 +410,28 @@ export function buildJsonApi(options: StorageApiOptions) {
       });
     }
     if (resource === 'atoms' && request.method === 'GET') return listFullAtoms();
-    else if (resource === 'atom-summaries' && request.method === 'GET') return listAtomSummaries();
+    else if (resource === 'atoms' && request.method === 'POST') {
+      let body: FolderCreateBody;
+      try {
+        const rawBody = await request.json();
+        body = decodeFolderCreateBody(rawBody);
+      } catch {
+        return failResponse(Result.fail(new InvalidData('Invalid request body')), 400);
+      }
+      const data: FolderCreate = { key: body.data.id, type: 'folder' };
+      const result = await runTaskWithMetadata(repo.createFolder(data));
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 400;
+        return failResponse(result, status);
+      }
+      return respondResourceWithConverter(
+        Result.succeed(result.success.value),
+        folderToJsonApi,
+        basePath,
+        result.success.recoverableErrors,
+        201,
+      );
+    } else if (resource === 'atom-summaries' && request.method === 'GET') return listAtomSummaries();
     else if (resource === 'objects' && request.method === 'GET') {
       if (!key) return failResponse(Result.fail(new InvalidData('Missing object key')), 400);
       const result = await runTaskWithMetadata(repo.getObject(key));
