@@ -1,3 +1,7 @@
 pnpm typecheck
 pnpm lint
 pnpm test --passWithNoTests
+
+if command -v trufflehog >/dev/null 2>&1; then
+  trufflehog git file://. --since-commit HEAD --results=verified,unknown --fail --exclude-paths=.github/trufflehog-exclude.txt
+fi
