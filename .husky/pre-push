@@ -1,7 +1,43 @@
+# git sends the list of refs being pushed on stdin — capture it before
+# running anything else that might consume stdin.
+refs=$(cat)
+
 pnpm typecheck
 pnpm lint
 pnpm test --passWithNoTests
 
+# Scan every commit being pushed for secrets. Skipped if trufflehog is not
+# installed (see CONTRIBUTING.md).
 if command -v trufflehog >/dev/null 2>&1; then
-  trufflehog git file://. --since-commit HEAD --results=verified,unknown --fail --exclude-paths=.github/trufflehog-exclude.txt
+  z40=0000000000000000000000000000000000000000
+  status_file=$(mktemp)
+  echo 0 >"$status_file"
+
+  echo "$refs" | while read -r local_ref local_oid remote_ref remote_oid; do
+    # Skip branch deletions — nothing to scan.
+    [ -z "$local_oid" ] && continue
+    [ "$local_oid" = "$z40" ] && continue
+
+    if [ "$remote_oid" = "$z40" ] || [ -z "$remote_oid" ]; then
+      # New branch on the remote: scan commits not yet on the default branch.
+      base=$(git merge-base origin/develop "$local_oid" 2>/dev/null || true)
+    else
+      # Existing branch: scan only the commits added since the remote tip.
+      base="$remote_oid"
+    fi
+
+    if [ -n "$base" ]; then
+      set -- --since-commit "$base"
+    else
+      set --
+    fi
+
+    if ! trufflehog git "file://." "$@" --results=verified,unknown --fail --exclude-paths=.github/trufflehog-exclude.txt; then
+      echo 1 >"$status_file"
+    fi
+  done
+
+  scan_status=$(cat "$status_file")
+  rm -f "$status_file"
+  [ "$scan_status" = 0 ] || exit 1
 fi
