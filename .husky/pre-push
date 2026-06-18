@@ -4,7 +4,7 @@ refs=$(cat)
 
 pnpm typecheck
 pnpm lint
-pnpm test --passWithNoTests
+pnpm test -- --passWithNoTests
 
 # Scan every commit being pushed for secrets. Skipped if trufflehog is not
 # installed (see CONTRIBUTING.md).
