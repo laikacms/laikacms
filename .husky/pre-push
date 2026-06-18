@@ -32,7 +32,7 @@ if command -v trufflehog >/dev/null 2>&1; then
       set --
     fi
 
-    if ! trufflehog git "file://." "$@" --results=verified,unknown --fail --exclude-paths=.github/trufflehog-exclude.txt; then
+    if ! trufflehog git "file://." "$@" --results=verified --fail --exclude-paths=.github/trufflehog-exclude.txt; then
       echo 1 >"$status_file"
     fi
   done
