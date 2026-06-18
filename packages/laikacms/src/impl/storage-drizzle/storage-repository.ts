@@ -3,6 +3,7 @@ import * as Result from 'effect/Result';
 
 import {
   EntryAlreadyExistsError,
+  ForbiddenError,
   InternalError,
   InvalidData,
   type LaikaError,
@@ -121,7 +122,19 @@ export class DrizzleStorageRepository extends StorageRepository {
             continue;
           }
           if (attempt.success.length === 0) {
-            yield* emit.recoverableError(new NotFoundError(`No atom found at key "${key}"`));
+            const children = yield* Effect.promise(() =>
+              this.options.callbacks.select({
+                where: this.options.queryBuilders.keyStartsWith(`${key}/`),
+                limit: 1,
+              })
+            );
+            if (children.length > 0) {
+              yield* emit.recoverableError(
+                new ForbiddenError(`Cannot remove folder key via removeAtoms: '${key}'`),
+              );
+            } else {
+              yield* emit.recoverableError(new NotFoundError(`No atom found at key "${key}"`));
+            }
             skipped += 1;
             continue;
           }
