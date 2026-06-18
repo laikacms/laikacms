@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -432,18 +433,25 @@ export class GoogleDriveStorageRepository extends StorageRepository {
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
-      const folderResult = yield* Effect.result(liftResult(this.dataSource.resolveFolderId(folderKey)));
-      if (Result.isFailure(folderResult)) {
-        if (folderResult.failure instanceof NotFoundError) {
-          return {
-            summaries: [] as ReadonlyArray<AtomSummary>,
-            missingFolder: folderResult.failure,
-            aggregateTotal: 0,
-          };
+      const r = yield* Effect.result(
+        collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth),
+      );
+      if (Result.isFailure(r)) {
+        if (r.failure instanceof NotFoundError) {
+          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: r.failure, aggregateTotal: 0 };
         }
-        return yield* Effect.fail(folderResult.failure);
+        return yield* Effect.fail(r.failure);
       }
-      const children = yield* liftResult(this.dataSource.listChildren(folderResult.success));
+      const sorted = [...r.success].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const folderId = yield* liftResult(this.dataSource.resolveFolderId(folderKey));
+      const children = yield* liftResult(this.dataSource.listChildren(folderId));
       const summaries: AtomSummary[] = [];
       for (const child of children) {
         const isFolder = child.mimeType === FOLDER_MIME_TYPE;
@@ -459,9 +467,7 @@ export class GoogleDriveStorageRepository extends StorageRepository {
           key: folderKey ? `${folderKey}/${bare}` : bare,
         });
       }
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return summaries;
     });
   }
 

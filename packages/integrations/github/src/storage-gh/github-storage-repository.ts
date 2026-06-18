@@ -16,6 +16,7 @@ import {
   type Atom,
   type AtomSummary,
   Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -339,6 +340,14 @@ export class GithubStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
+      const aggregateTotal = all.length;
+      return { summaries: applyPagination(all, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const listing = yield* liftResult(this.dataSource.listDirectory(folderKey));
       const filtered = listing.filter(
         entry => this.excludeFilter.every(re => !re.test(entry.path)),
@@ -358,8 +367,7 @@ export class GithubStorageRepository extends StorageRepository {
           key,
         };
       });
-      const aggregateTotal = summaries.length;
-      return { summaries: applyPagination(summaries, options.pagination), aggregateTotal };
+      return summaries;
     });
   }
 

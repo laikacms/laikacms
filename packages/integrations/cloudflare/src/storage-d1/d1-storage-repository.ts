@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -544,8 +545,6 @@ export class D1StorageRepository extends StorageRepository {
   > {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
-
-      // Confirm the folder exists (root is implicit).
       if (trimmed !== '') {
         const { parent, name } = splitKey(trimmed);
         const folderRow = yield* liftResult(this.getRow(parent, name));
@@ -557,7 +556,16 @@ export class D1StorageRepository extends StorageRepository {
           };
         }
       }
+      const all = yield* collectAtomSummariesWithDepth(trimmed, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const trimmed = trimSlashes(folderKey);
       const rows = yield* liftResult(this.dataSource.query<D1Row>(
         `SELECT * FROM "${this.tableName}" WHERE parent_key = ?`,
         [trimmed],
@@ -572,9 +580,7 @@ export class D1StorageRepository extends StorageRepository {
           : fullKey;
         return { type: 'object-summary', key: bareKey };
       });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return summaries;
     });
   }
 

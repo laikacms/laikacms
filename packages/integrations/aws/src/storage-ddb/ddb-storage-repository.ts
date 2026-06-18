@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -391,18 +392,27 @@ export class DdbStorageRepository extends StorageRepository {
       if (!exists && listing.success.length === 0) {
         return {
           summaries: [] as ReadonlyArray<AtomSummary>,
-          aggregateTotal: 0,
           missingFolder: new NotFoundError(`No folder found at key "${folderKey || '<root>'}"`),
+          aggregateTotal: 0,
         };
       }
 
-      const summaries: AtomSummary[] = listing.success.map(item => {
-        const key = this.keyFor(item);
-        return { type: item.type === 'file' ? 'object-summary' : 'folder-summary', key };
-      });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
       const aggregateTotal = sorted.length;
       return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(
+    folderKey: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const children = yield* liftResult(this.dataSource.listChildren(folderKey));
+      return children.map(item => {
+        const key = this.keyFor(item);
+        return { type: item.type === 'file' ? 'object-summary' : 'folder-summary', key } satisfies AtomSummary;
+      });
     });
   }
 

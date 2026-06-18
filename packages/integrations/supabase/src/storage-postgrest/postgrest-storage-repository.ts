@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -485,6 +486,17 @@ export class PostgrestStorageRepository extends StorageRepository {
           };
         }
       }
+      const all = yield* collectAtomSummariesWithDepth(trimmed, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(
+    trimmed: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const rows = yield* liftResult(this.dataSource.list<StorageRow>([
         { column: 'Parent', operator: 'eq', value: trimmed },
       ]));
@@ -501,9 +513,7 @@ export class PostgrestStorageRepository extends StorageRepository {
           : fullKey;
         return { type: 'object-summary', key: bareKey };
       });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return summaries;
     });
   }
 

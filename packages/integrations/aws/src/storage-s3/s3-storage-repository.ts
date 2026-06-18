@@ -28,6 +28,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -317,8 +318,19 @@ export class S3StorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(
+    folderKey: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const entries = yield* liftResult(this.dataSource.listDirectory(folderKey));
-      const filtered = entries
+      return entries
         .filter(entry => this.excludeFilter.every(pattern => !pattern.test(entry.key)))
         .map((entry): AtomSummary => {
           let key = entry.key;
@@ -332,9 +344,6 @@ export class S3StorageRepository extends StorageRepository {
           }
           return { type: entry.type === 'file' ? 'object-summary' : 'folder-summary', key };
         });
-      const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 

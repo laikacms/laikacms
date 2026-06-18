@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -466,16 +467,11 @@ export class UpstashRedisStorageRepository extends StorageRepository {
   > {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
-
-      // Confirm the parent folder exists (root is always implicit).
       if (trimmed !== '') {
         const exists = yield* liftResult(
           this.dataSource.run<number>(['EXISTS', this.folderKey(trimmed)]),
         );
         if ((exists ?? 0) === 0) {
-          // Empty might still be valid if files live underneath without a
-          // folder marker (defensive), but for correctness we treat missing
-          // markers as a missing folder.
           return {
             summaries: [] as ReadonlyArray<AtomSummary>,
             missingFolder: new NotFoundError(`No folder found at key "${folderKey}"`),
@@ -483,7 +479,17 @@ export class UpstashRedisStorageRepository extends StorageRepository {
           };
         }
       }
+      const all = yield* collectAtomSummariesWithDepth(trimmed, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
+  private listFolderLevel(
+    trimmed: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const fileKeys = yield* liftResult(this.dataSource.scanAll(this.filePattern(trimmed)));
       const folderKeys = yield* liftResult(this.dataSource.scanAll(this.folderPattern(trimmed)));
 
@@ -526,9 +532,7 @@ export class UpstashRedisStorageRepository extends StorageRepository {
           key: trimmed === '' ? name : `${trimmed}/${name}`,
         })),
       ];
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return summaries;
     });
   }
 

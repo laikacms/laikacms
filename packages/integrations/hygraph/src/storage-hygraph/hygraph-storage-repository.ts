@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -560,7 +561,6 @@ export class HygraphStorageRepository extends StorageRepository {
   > {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
-
       if (trimmed !== '') {
         const folder = yield* liftResult(this.dataSource.graphql<{ laikaFolders: FolderNode[] }>(
           GET_FOLDER_QUERY,
@@ -575,14 +575,21 @@ export class HygraphStorageRepository extends StorageRepository {
           };
         }
       }
+      const all = yield* collectAtomSummariesWithDepth(trimmed, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
-      // **One** GraphQL operation for both child files and child folders.
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const children = yield* liftResult(this.dataSource.graphql<{
         laikaObjects: FileNode[],
         laikaFolders: FolderNode[],
       }>(
         LIST_CHILDREN_QUERY,
-        { parent: trimmed, stage: this.stage },
+        { parent: folderKey, stage: this.stage },
         'ListLaikaChildren',
       ));
 
@@ -590,21 +597,18 @@ export class HygraphStorageRepository extends StorageRepository {
       for (const folder of children.laikaFolders) {
         summaries.push({
           type: 'folder-summary',
-          key: trimmed === '' ? folder.name : `${trimmed}/${folder.name}`,
+          key: folderKey === '' ? folder.name : `${folderKey}/${folder.name}`,
         });
       }
       for (const file of children.laikaObjects) {
-        const fullKey = trimmed === '' ? file.name : `${trimmed}/${file.name}`;
+        const fullKey = folderKey === '' ? file.name : `${folderKey}/${file.name}`;
         const ext = file.extension;
         const bareKey = ext && fullKey.endsWith(`.${ext}`)
           ? fullKey.slice(0, -(ext.length + 1))
           : fullKey;
         summaries.push({ type: 'object-summary', key: bareKey });
       }
-
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return summaries;
     });
   }
 

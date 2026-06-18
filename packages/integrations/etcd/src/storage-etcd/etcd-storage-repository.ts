@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -416,94 +417,62 @@ export class EtcdStorageRepository extends StorageRepository {
           return { removed: 0, skipped: skipped0 };
         }
 
-        // ── Round-trip 1: resolve every key to its (etcd-key, kv) pair or
-        // a folder marker at /d/<key>.
-        const resolved = yield* Effect.promise(async () => {
-          const out: Array<
-            | { key: string, kind: 'file', etcdKey: string }
-            | { key: string, kind: 'folder', etcdKey: string }
-            | { key: string, kind: 'missing' }
-          > = [];
-          for (const k of cleanKeys) {
+        // ── Round-trip 1: resolve every key to its etcd key, or classify as
+        //    empty/non-empty folder, or truly missing.
+        type ResolvedEntry =
+          | { kind: 'file', key: string, etcdKey: string }
+          | { kind: 'empty-folder', key: string, etcdKey: string }
+          | { kind: 'non-empty-folder', key: string }
+          | { kind: 'missing', key: string };
+
+        const resolved = yield* Effect.promise(async (): Promise<ResolvedEntry[]> => {
+          return await Promise.all(cleanKeys.map(async k => {
             const r = await this.resolveFile(k);
-            if (r) {
-              out.push({ key: k, kind: 'file', etcdKey: r.etcdKey });
-              continue;
-            }
-            // Probe the folder key at /d/<k>.
+            if (r) return { kind: 'file', key: k, etcdKey: r.etcdKey };
+            // Not a file — check for folder (explicit marker or implicit from files).
             const folderEtcdKey = this.folderKey(k);
-            const folderKv = await this.dataSource.get(folderEtcdKey);
-            if (Result.isSuccess(folderKv) && folderKv.success) {
-              out.push({ key: k, kind: 'folder', etcdKey: folderEtcdKey });
-            } else {
-              out.push({ key: k, kind: 'missing' });
-            }
-          }
-          return out;
+            const [explicitKv, fileChildren, folderChildren] = await Promise.all([
+              this.dataSource.get(folderEtcdKey),
+              this.dataSource.listPrefix(`${this.filePrefix(k)}/`, { limit: 1 }),
+              this.dataSource.listPrefix(`${folderEtcdKey}/`, { limit: 1 }),
+            ]);
+            const isFolder = (Result.isSuccess(explicitKv) && explicitKv.success !== null)
+              || (Result.isSuccess(fileChildren) && fileChildren.success.length > 0)
+              || (Result.isSuccess(folderChildren) && folderChildren.success.length > 0);
+            if (!isFolder) return { kind: 'missing', key: k };
+            // Folder exists — check for children under /d/<k>/ or /f/<k>/.
+            const hasChildren = (Result.isSuccess(fileChildren) && fileChildren.success.length > 0)
+              || (Result.isSuccess(folderChildren) && folderChildren.success.length > 0);
+            if (hasChildren) return { kind: 'non-empty-folder', key: k };
+            return { kind: 'empty-folder', key: k, etcdKey: folderEtcdKey };
+          }));
         });
 
-        const fileKeys = resolved.filter(r => r.kind === 'file') as Array<
-          { key: string, kind: 'file', etcdKey: string }
-        >;
-        const folderKeys = resolved.filter(r => r.kind === 'folder') as Array<
-          { key: string, kind: 'folder', etcdKey: string }
-        >;
-        const missing = resolved.filter(r => r.kind === 'missing');
+        const fileEntries = resolved.filter((r): r is Extract<ResolvedEntry, { kind: 'file' }> => r.kind === 'file');
+        const emptyFolders = resolved.filter(
+          (r): r is Extract<ResolvedEntry, { kind: 'empty-folder' }> => r.kind === 'empty-folder',
+        );
+        const nonEmptyFolders = resolved.filter(r => r.kind === 'non-empty-folder');
+        const missingEntries = resolved.filter(r => r.kind === 'missing');
 
-        // ── Round-trip 2: ONE etcd Txn with N `requestDeleteRange` ops for files.
-        // etcd transactions are linearisable — atomic at the cluster level.
-        if (fileKeys.length > 0) {
-          const ops: TxnOp[] = fileKeys.map(f => ({
+        // ── Round-trip 2: ONE etcd Txn with N `requestDeleteRange` ops for
+        //    files and empty folders. etcd transactions are linearisable.
+        const deletable = [...fileEntries, ...emptyFolders];
+        if (deletable.length > 0) {
+          const ops: TxnOp[] = deletable.map(f => ({
             requestDeleteRange: { key: f.etcdKey },
           }));
           yield* liftResult(this.dataSource.txn({ success: ops }));
         }
 
-        for (const f of fileKeys) yield* emit.data(f.key);
-
-        // ── Handle folder keys one-by-one (child check needed per folder).
-        let folderRemoved = 0;
-        let folderSkipped = 0;
-        for (const f of folderKeys) {
-          // Check for child files under /f/<key>/ to enforce non-empty guard.
-          const childFilePrefix = `${this.filePrefix(f.key)}/`;
-          const childFiles = yield* Effect.result(
-            liftResult(this.dataSource.listPrefix(childFilePrefix, { limit: 1 })),
-          );
-          if (Result.isSuccess(childFiles) && childFiles.success.length > 0) {
-            yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${f.key}"`));
-            folderSkipped += 1;
-            continue;
-          }
-          // Check for child folder markers under /d/<key>/.
-          const childFolderPrefix = `${this.folderKey(f.key)}/`;
-          const childFolders = yield* Effect.result(
-            liftResult(this.dataSource.listPrefix(childFolderPrefix, { limit: 1 })),
-          );
-          if (Result.isSuccess(childFolders) && childFolders.success.length > 0) {
-            yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${f.key}"`));
-            folderSkipped += 1;
-            continue;
-          }
-          const deleted = yield* Effect.result(
-            liftResult(this.dataSource.txn({ success: [{ requestDeleteRange: { key: f.etcdKey } }] })),
-          );
-          if (Result.isFailure(deleted)) {
-            yield* emit.recoverableError(deleted.failure);
-            folderSkipped += 1;
-          } else {
-            yield* emit.data(f.key);
-            folderRemoved += 1;
-          }
+        for (const f of deletable) yield* emit.data(f.key);
+        for (const f of nonEmptyFolders) {
+          yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${f.key}"`));
         }
-
-        for (const m of missing) {
+        for (const m of missingEntries) {
           yield* emit.recoverableError(new NotFoundError(`etcd key not found: ${m.key}`));
         }
-        return {
-          removed: fileKeys.length + folderRemoved,
-          skipped: skipped0 + missing.length + folderSkipped,
-        };
+        return { removed: deletable.length, skipped: skipped0 + nonEmptyFolders.length + missingEntries.length };
       })
     );
   }
@@ -551,6 +520,15 @@ export class EtcdStorageRepository extends StorageRepository {
     folderKey: string,
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const k = stripSlashes(folderKey);
       const dPrefix = k === '' ? `${this.rootPrefix()}d/` : `${this.folderKey(k)}/`;
@@ -603,11 +581,8 @@ export class EtcdStorageRepository extends StorageRepository {
         key: callerPrefix + name,
       }));
 
-      const merged = [...fileSummaries, ...folderSummaries]
+      return [...fileSummaries, ...folderSummaries]
         .filter(s => this.excludeFilter.every(pattern => !pattern.test(s.key)));
-      const sorted = [...merged].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 

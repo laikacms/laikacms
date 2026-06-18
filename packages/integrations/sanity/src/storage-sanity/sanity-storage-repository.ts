@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -484,7 +485,6 @@ export class SanityStorageRepository extends StorageRepository {
   > {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
-
       if (trimmed !== '') {
         const folderQuery = yield* liftResult(this.dataSource.query<SanityDocument[]>(
           `*[_type == $type && path == $path][0..0]`,
@@ -498,7 +498,17 @@ export class SanityStorageRepository extends StorageRepository {
           };
         }
       }
+      const all = yield* collectAtomSummariesWithDepth(trimmed, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
+  private listFolderLevel(
+    trimmed: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const children = yield* liftResult(this.dataSource.query<SanityDocument[]>(
         `*[(_type == $folder || _type == $file) && parent == $parent]`,
         { folder: TYPE_FOLDER, file: TYPE_FILE, parent: trimmed },
@@ -515,9 +525,7 @@ export class SanityStorageRepository extends StorageRepository {
           : fullKey;
         return { type: 'object-summary', key: bareKey };
       });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return summaries;
     });
   }
 

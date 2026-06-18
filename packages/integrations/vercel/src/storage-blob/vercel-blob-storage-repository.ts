@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -428,6 +429,17 @@ export class VercelBlobStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(
+    folderKey: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const fullPrefix = this.fullPath(folderKey);
       const search = fullPrefix === '' ? '' : `${fullPrefix}/`;
 
@@ -471,11 +483,9 @@ export class VercelBlobStorageRepository extends StorageRepository {
         key: callerPrefix + k,
       }));
 
-      const merged = [...files, ...folders]
+      const merged: AtomSummary[] = [...files, ...folders]
         .filter(s => this.excludeFilter.every(pattern => !pattern.test(s.key)));
-      const sorted = [...merged].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return merged;
     });
   }
 

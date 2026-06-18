@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -486,7 +487,6 @@ export class PinataStorageRepository extends StorageRepository {
   > {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
-
       if (trimmed !== '') {
         const folder = yield* liftResult(this.findFolder(trimmed));
         if (!folder) {
@@ -497,8 +497,17 @@ export class PinataStorageRepository extends StorageRepository {
           };
         }
       }
+      const all = yield* collectAtomSummariesWithDepth(trimmed, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
-      // `metadata[keyvalues]` accepts a JSON-encoded operator map.
+  private listFolderLevel(
+    trimmed: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const children = yield* liftResult(this.dataSource.searchPins({
         'metadata[keyvalues]': JSON.stringify({ parent: { value: trimmed, op: 'eq' } }),
       }));
@@ -523,9 +532,7 @@ export class PinataStorageRepository extends StorageRepository {
           summaries.push({ type: 'object-summary', key: path });
         }
       }
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return summaries;
     });
   }
 

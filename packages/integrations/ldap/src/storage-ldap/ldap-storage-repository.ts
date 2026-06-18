@@ -28,6 +28,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -487,45 +488,53 @@ export class LdapStorageRepository extends StorageRepository {
           return { removed: 0, skipped: skipped0 };
         }
 
-        // ── Round-trip 1: resolve every key → file DN or folder DN.
-        const resolved = yield* Effect.promise(async () => {
-          const out: Array<
-            | { key: string, kind: 'file', dn: string }
-            | { key: string, kind: 'folder', dn: string }
-            | { key: string, kind: 'missing' }
-          > = [];
-          for (const k of cleanKeys) {
+        // ── Round-trip 1: resolve every key → DN via parallel filter
+        //    searches. For keys that don't resolve to a file, check whether
+        //    they are folder OUs (and whether they're empty).
+        type ResolvedEntry =
+          | { kind: 'file', key: string, dn: string }
+          | { kind: 'empty-folder', key: string, dn: string }
+          | { kind: 'non-empty-folder', key: string }
+          | { kind: 'missing', key: string };
+
+        const resolved = yield* Effect.promise(async (): Promise<ResolvedEntry[]> => {
+          return await Promise.all(cleanKeys.map(async k => {
             const r = await this.resolveFile(k);
-            if (r) {
-              out.push({ key: k, kind: 'file', dn: r.entry.dn });
-              continue;
-            }
+            if (r) return { kind: 'file', key: k, dn: r.entry.dn };
+            // Not a file — probe for folder OU.
             const isFolder = await this.hasFolder(k);
-            if (isFolder) {
-              out.push({ key: k, kind: 'folder', dn: this.folderDn(k) });
-            } else {
-              out.push({ key: k, kind: 'missing' });
-            }
-          }
-          return out;
+            if (!isFolder) return { kind: 'missing', key: k };
+            // Folder exists — check for children.
+            const childSearch = await this.dataSource.search({
+              base: this.folderDn(k),
+              scope: 'one',
+              filter: '(objectClass=*)',
+              sizeLimit: 1,
+            });
+            const hasChildren = Result.isSuccess(childSearch) && childSearch.success.length > 0;
+            if (hasChildren) return { kind: 'non-empty-folder', key: k };
+            return { kind: 'empty-folder', key: k, dn: this.folderDn(k) };
+          }));
         });
 
-        const fileFound = resolved.filter(r => r.kind === 'file') as Array<{ key: string, kind: 'file', dn: string }>;
-        const folderFound = resolved.filter(r => r.kind === 'folder') as Array<
-          { key: string, kind: 'folder', dn: string }
-        >;
-        const missing = resolved.filter(r => r.kind === 'missing');
+        const fileEntries = resolved.filter((r): r is Extract<ResolvedEntry, { kind: 'file' }> => r.kind === 'file');
+        const emptyFolders = resolved.filter(
+          (r): r is Extract<ResolvedEntry, { kind: 'empty-folder' }> => r.kind === 'empty-folder',
+        );
+        const nonEmptyFolders = resolved.filter(r => r.kind === 'non-empty-folder');
+        const missingEntries = resolved.filter(r => r.kind === 'missing');
 
-        // ── Round-trip 2: ONE bulkOps call with N `del` actions for files.
+        // ── Round-trip 2: ONE bulkOps call with N `del` actions for files
+        //    and empty folder OUs.
         // The 13th structurally distinct atomic-multi-write mechanism.
         let removed = 0;
-        let fileSkipped = 0;
-        if (fileFound.length > 0) {
-          const ops: LdapBulkOp[] = fileFound.map(f => ({ kind: 'del', dn: f.dn }));
+        const deletable = [...fileEntries, ...emptyFolders];
+        if (deletable.length > 0) {
+          const ops: LdapBulkOp[] = deletable.map(f => ({ kind: 'del', dn: f.dn }));
           const bulkResult = yield* liftResult(this.dataSource.bulkOps(ops));
-          for (let i = 0; i < fileFound.length; i += 1) {
+          for (let i = 0; i < deletable.length; i += 1) {
             const r = bulkResult[i];
-            const f = fileFound[i]!;
+            const f = deletable[i]!;
             if (r && r.status === 'OK') {
               yield* emit.data(f.key);
               removed += 1;
@@ -533,50 +542,19 @@ export class LdapStorageRepository extends StorageRepository {
               yield* emit.recoverableError(
                 new NotFoundError(`LDAP bulk-delete failed for ${f.key}: ${r?.message ?? 'unknown'}`),
               );
-              fileSkipped += 1;
             }
           }
         }
-
-        // ── Handle folder keys one-by-one (child check needed per folder).
-        let folderSkipped = 0;
-        for (const f of folderFound) {
-          // Search for immediate children of this OU to enforce non-empty guard.
-          const children = yield* Effect.result(
-            liftResult(this.dataSource.search({
-              base: f.dn,
-              scope: 'one',
-              filter: '(objectClass=*)',
-              sizeLimit: 1,
-            })),
-          );
-          if (Result.isSuccess(children) && children.success.length > 0) {
-            yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${f.key}"`));
-            folderSkipped += 1;
-            continue;
-          }
-          const delResult = yield* Effect.result(liftResult(this.dataSource.bulkOps([{ kind: 'del', dn: f.dn }])));
-          if (Result.isFailure(delResult)) {
-            yield* emit.recoverableError(delResult.failure);
-            folderSkipped += 1;
-          } else {
-            const r = delResult.success[0];
-            if (r && r.status === 'OK') {
-              yield* emit.data(f.key);
-              removed += 1;
-            } else {
-              yield* emit.recoverableError(
-                new NotFoundError(`LDAP bulk-delete failed for folder ${f.key}: ${r?.message ?? 'unknown'}`),
-              );
-              folderSkipped += 1;
-            }
-          }
+        for (const f of nonEmptyFolders) {
+          yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${f.key}"`));
         }
-
-        for (const m of missing) {
+        for (const m of missingEntries) {
           yield* emit.recoverableError(new NotFoundError(`LDAP entry not found: ${m.key}`));
         }
-        return { removed, skipped: skipped0 + missing.length + fileSkipped + folderSkipped };
+        return {
+          removed,
+          skipped: skipped0 + nonEmptyFolders.length + missingEntries.length + (deletable.length - removed),
+        };
       })
     );
   }
@@ -624,6 +602,17 @@ export class LdapStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(
+    folderKey: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const k = stripSlashes(folderKey);
       const base = k === '' ? this.baseDn : this.folderDn(k);
 
@@ -658,9 +647,7 @@ export class LdapStorageRepository extends StorageRepository {
       }
 
       const filtered = summaries.filter(s => this.excludeFilter.every(p => !p.test(s.key)));
-      const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return filtered;
     });
   }
 

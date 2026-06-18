@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -501,6 +502,25 @@ export class FirestoreStorageRepository extends StorageRepository {
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
+      const r = yield* Effect.result(
+        collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth),
+      );
+      if (Result.isFailure(r)) {
+        if (r.failure instanceof NotFoundError) {
+          return { summaries: [] as ReadonlyArray<AtomSummary>, missingFolder: r.failure, aggregateTotal: 0 };
+        }
+        return yield* Effect.fail(r.failure);
+      }
+      const sorted = [...r.success].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(
+    folderKey: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const segmentsResult = validateSegments(folderKey);
       if (Result.isFailure(segmentsResult)) return yield* Effect.fail(segmentsResult.failure);
       const segments = segmentsResult.success;
@@ -509,17 +529,13 @@ export class FirestoreStorageRepository extends StorageRepository {
         const folderDoc = yield* liftResult(this.dataSource.getDocument(segments));
         const fields = folderDoc ? fromFirestoreFields(folderDoc.fields ?? {}) : null;
         if (!fields || fields[TYPE_FIELD] !== 'folder') {
-          return {
-            summaries: [] as ReadonlyArray<AtomSummary>,
-            missingFolder: new NotFoundError(`No folder found at key "${folderKey}"`),
-            aggregateTotal: 0,
-          };
+          return yield* Effect.fail(new NotFoundError(`No folder found at key "${folderKey}"`));
         }
       }
 
       const children = yield* liftResult(this.dataSource.listCollection(segments));
       const parentKey = trimSlashes(folderKey);
-      const summaries: AtomSummary[] = children.map((doc): AtomSummary => {
+      return children.map((doc): AtomSummary => {
         const childKey = this.childKey(parentKey, doc);
         const fields = fromFirestoreFields(doc.fields ?? {});
         if (fields[TYPE_FIELD] === 'folder') {
@@ -533,9 +549,6 @@ export class FirestoreStorageRepository extends StorageRepository {
           : childKey;
         return { type: 'object-summary', key: bareKey };
       });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
     });
   }
 

@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -459,7 +460,6 @@ export class PocketBaseStorageRepository extends StorageRepository {
   > {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
-
       if (trimmed !== '') {
         const folder = yield* liftResult(this.dataSource.findOne(
           `type = ${escapePbFilterValue(TYPE_FOLDER)} && path = ${escapePbFilterValue(trimmed)}`,
@@ -472,7 +472,17 @@ export class PocketBaseStorageRepository extends StorageRepository {
           };
         }
       }
+      const all = yield* collectAtomSummariesWithDepth(trimmed, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
 
+  private listFolderLevel(
+    trimmed: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const children = yield* liftResult(this.dataSource.list(
         `parent = ${escapePbFilterValue(trimmed)}`,
       ));
@@ -488,9 +498,7 @@ export class PocketBaseStorageRepository extends StorageRepository {
           : fullKey;
         return { type: 'object-summary', key: bareKey };
       });
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return summaries;
     });
   }
 

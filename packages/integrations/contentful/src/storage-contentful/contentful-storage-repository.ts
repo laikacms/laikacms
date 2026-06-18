@@ -29,6 +29,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   naturalCompare,
   StorageRepository,
@@ -431,15 +432,6 @@ export class ContentfulStorageRepository extends StorageRepository {
     return Effect.gen({ self: this }, function*() {
       const trimmed = trimSlashes(folderKey);
 
-      // Root: list every content type as a folder.
-      if (trimmed === '') {
-        const cts = yield* liftResult(this.dataSource.listContentTypes());
-        const summaries: AtomSummary[] = cts.map(ct => ({ type: 'folder-summary', key: ct.sys.id }));
-        const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
-        const aggregateTotal = sorted.length;
-        return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
-      }
-
       if (trimmed.includes('/')) {
         return {
           summaries: [] as ReadonlyArray<AtomSummary>,
@@ -450,23 +442,37 @@ export class ContentfulStorageRepository extends StorageRepository {
         };
       }
 
-      // Single content-type folder: list its entries.
-      const ct = yield* liftResult(this.dataSource.getContentType(trimmed));
-      if (!ct) {
-        return {
-          summaries: [] as ReadonlyArray<AtomSummary>,
-          missingFolder: new NotFoundError(`No content type found for "${folderKey}"`),
-          aggregateTotal: 0,
-        };
+      // Single content-type folder: verify it exists before listing.
+      if (trimmed !== '') {
+        const ct = yield* liftResult(this.dataSource.getContentType(trimmed));
+        if (!ct) {
+          return {
+            summaries: [] as ReadonlyArray<AtomSummary>,
+            missingFolder: new NotFoundError(`No content type found for "${folderKey}"`),
+            aggregateTotal: 0,
+          };
+        }
       }
-      const entries = yield* liftResult(this.dataSource.listEntries(trimmed));
-      const summaries: AtomSummary[] = entries.map(entry => ({
-        type: 'object-summary',
-        key: `${trimmed}/${entry.sys.id}`,
-      }));
-      const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
+
+      const all = yield* collectAtomSummariesWithDepth(trimmed, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
       const aggregateTotal = sorted.length;
       return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const trimmed = trimSlashes(folderKey);
+      if (trimmed === '') {
+        const cts = yield* liftResult(this.dataSource.listContentTypes());
+        return cts.map(ct => ({ type: 'folder-summary' as const, key: ct.sys.id }));
+      }
+      const entries = yield* liftResult(this.dataSource.listEntries(trimmed));
+      return entries.map(entry => ({
+        type: 'object-summary' as const,
+        key: `${trimmed}/${entry.sys.id}`,
+      }));
     });
   }
 

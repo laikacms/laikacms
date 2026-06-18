@@ -27,6 +27,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -517,6 +518,17 @@ export class MeiliStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(
+    folderKey: string,
+  ): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       yield* liftResult(this.ensureIndex());
       const parent = stripSlashes(folderKey);
       const result = yield* liftResult(this.dataSource.search(this.indexUid, {
@@ -531,9 +543,7 @@ export class MeiliStorageRepository extends StorageRepository {
           : { type: 'folder-summary', key: callerPrefix + hit.name };
       });
       const filtered = summaries.filter(s => this.excludeFilter.every(p => !p.test(s.key)));
-      const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return filtered;
     });
   }
 

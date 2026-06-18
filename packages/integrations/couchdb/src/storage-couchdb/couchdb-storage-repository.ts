@@ -30,6 +30,7 @@ import type {
 import {
   applyPagination,
   type Capabilities,
+  collectAtomSummariesWithDepth,
   CompatibilityDate,
   defaultDetermineExtension,
   type DetermineExtension,
@@ -506,6 +507,15 @@ export class CouchDbStorageRepository extends StorageRepository {
     options: ListAtomsOptions,
   ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, aggregateTotal: number }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
+      const all = yield* collectAtomSummariesWithDepth(folderKey, key => this.listFolderLevel(key), options.depth);
+      const sorted = [...all].sort((a, b) => naturalCompare(a.key, b.key));
+      const aggregateTotal = sorted.length;
+      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+    });
+  }
+
+  private listFolderLevel(folderKey: string): Effect.Effect<AtomSummary[], LaikaError> {
+    return Effect.gen({ self: this }, function*() {
       const parent = stripSlashes(folderKey);
       const docs = yield* liftResult(this.dataSource.find<StorageDoc>({
         selector: { parent },
@@ -517,10 +527,7 @@ export class CouchDbStorageRepository extends StorageRepository {
           ? { type: 'object-summary', key: callerKey }
           : { type: 'folder-summary', key: callerKey };
       });
-      const filtered = summaries.filter(s => this.excludeFilter.every(pattern => !pattern.test(s.key)));
-      const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
-      const aggregateTotal = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), aggregateTotal };
+      return summaries.filter(s => this.excludeFilter.every(pattern => !pattern.test(s.key)));
     });
   }
 

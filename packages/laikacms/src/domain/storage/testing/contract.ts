@@ -149,6 +149,42 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
       }
     });
 
+    // --- listAtoms depth > 1 ---
+    itOrSkip('listAtoms')('listAtoms depth>1: nested objects are returned', async () => {
+      const prefix = `contract-test/depth-atoms-${Date.now()}`;
+      const shallowKey = `${prefix}/a`;
+      const deepKey = `${prefix}/sub/b`;
+
+      await runTask(repo.createObject({ key: shallowKey, type: 'object', content: { level: 1 } }));
+      await runTask(repo.createFolder({ key: `${prefix}/sub`, type: 'folder' }));
+      await runTask(repo.createObject({ key: deepKey, type: 'object', content: { level: 2 } }));
+
+      const { items } = await collectStream(
+        repo.listAtoms(prefix, { depth: 2, pagination: DEFAULT_PAGINATION }),
+      );
+      const returnedKeys = (items as Atom[]).map(a => a.key);
+      expect(returnedKeys).toContain(shallowKey);
+      expect(returnedKeys).toContain(deepKey);
+    });
+
+    // --- listAtomSummaries depth > 1 ---
+    itOrSkip('listAtomSummaries')('listAtomSummaries depth>1: nested summaries are returned', async () => {
+      const prefix = `contract-test/depth-summaries-${Date.now()}`;
+      const shallowKey = `${prefix}/x`;
+      const deepKey = `${prefix}/nested/y`;
+
+      await runTask(repo.createObject({ key: shallowKey, type: 'object', content: { level: 1 } }));
+      await runTask(repo.createFolder({ key: `${prefix}/nested`, type: 'folder' }));
+      await runTask(repo.createObject({ key: deepKey, type: 'object', content: { level: 2 } }));
+
+      const { items } = await collectStream(
+        repo.listAtomSummaries(prefix, { depth: 2, pagination: DEFAULT_PAGINATION }),
+      );
+      const returnedKeys = (items as AtomSummary[]).map(s => s.key);
+      expect(returnedKeys).toContain(shallowKey);
+      expect(returnedKeys).toContain(deepKey);
+    });
+
     // --- getAtom for object ---
     itOrSkip('getAtom')('getAtom for object: returns an Atom', async () => {
       const key = `contract-test/get-atom-obj-${Date.now()}`;
