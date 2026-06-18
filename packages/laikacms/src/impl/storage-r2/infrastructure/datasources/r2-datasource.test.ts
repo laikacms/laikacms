@@ -329,15 +329,16 @@ describe('R2DataSource.deleteObjects', () => {
     expect(bucket.store.has('b.md')).toBe(false);
   });
 
-  it('yields a failure for keys that cannot be resolved', async () => {
+  it('yields a NotFoundError failure for keys that cannot be resolved', async () => {
     const ds = makeDS();
 
     const results: Array<Result.Result<unknown, unknown>> = [];
     for await (const result of ds.deleteObjects(['missing'])) {
       results.push(result);
     }
-    // resolveKeyWithExtension returns null -> errorMessages push, then continue;
-    // no yield is emitted for that key. This also documents current behaviour.
-    expect(results).toEqual([]);
+    expect(results).toHaveLength(1);
+    expect(Result.isFailure(results[0]!)).toBe(true);
+    const failure = (results[0] as Result.Failure<unknown>).failure;
+    expect((failure as { code?: string }).code).toBe('not_found');
   });
 });

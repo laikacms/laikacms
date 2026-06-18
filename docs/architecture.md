@@ -43,13 +43,16 @@
 abstract class StorageRepository {
   abstract getObject(key: string): LaikaTask<StorageObject>;
   abstract createObject(create: StorageObjectCreate): LaikaTask<StorageObject>;
-  abstract listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream<Atom, ListAtomsDone>;
+  abstract listAtoms(
+    folderKey: string,
+    options: ListAtomsOptions,
+  ): LaikaStream<Atom, ListAtomsDone>;
 }
 
 // Implementation provides concrete behavior
 class R2StorageRepository extends StorageRepository {
   getObject(key: string): LaikaTask<StorageObject> {
-    return LaikaTask.make(async (emit) => {
+    return LaikaTask.make(async emit => {
       const object = await this.bucket.get(key);
       if (!object) throw new NotFoundError(`Not found: ${key}`);
       return { key, content: await object.text() };

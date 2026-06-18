@@ -249,8 +249,8 @@ These are the things that consistently bite first-time integrators:
    - Bridge `laika.fetch` into Effect HTTP: `yield* HttpServerRequest.toWeb(request)` gives a WHATWG
      `Request`; wrap the result with `HttpServerResponse.fromWeb(response)`.
 
-10. **Pagination shape is `{ page, perPage }`, not `{ offset, limit }`.** Both
-    `listRecordSummaries` and `listRecords` exist on `DocumentsRepository`:
+10. **Pagination shape is `{ page, perPage }`, not `{ offset, limit }`.** Both `listRecordSummaries`
+    and `listRecords` exist on `DocumentsRepository`:
     - `listRecordSummaries({ pagination: { page: 1, perPage: 100 } })` — lightweight summaries,
       prefer this for listing/index pages.
     - `listRecords({ pagination: { page: 1, perPage: 100 } })` — full record bodies, use when you
