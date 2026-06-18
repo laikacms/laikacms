@@ -1,8 +1,0 @@
-# TruffleHog path exclusions (regex, one per line).
-# Scoped allowlist for documented placeholder credentials in starter examples.
-# Real source is still scanned with --results=verified,unknown; only these
-# example/placeholder files are exempt because they ship illustrative
-# connection-string placeholders that trufflehog reports as unverified
-# "unknown" results. These are not real secrets.
-.*\.env\.example$
-apps/starter-[^/]+/README\.md$
