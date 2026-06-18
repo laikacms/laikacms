@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   InternalError,
   type LaikaError,
   type LaikaResult,
@@ -416,36 +417,62 @@ export class EtcdStorageRepository extends StorageRepository {
           return { removed: 0, skipped: skipped0 };
         }
 
-        // ── Round-trip 1: resolve every key to its (etcd-key, kv) pair.
-        // Done in parallel for wall-clock latency.
-        const resolved = yield* Effect.promise(async () => {
-          const out: Array<{ key: string, resolved: { etcdKey: string } | null }> = [];
-          for (const k of cleanKeys) {
+        // ── Round-trip 1: resolve every key to its etcd key, or classify as
+        //    empty/non-empty folder, or truly missing.
+        type ResolvedEntry =
+          | { kind: 'file', key: string, etcdKey: string }
+          | { kind: 'empty-folder', key: string, etcdKey: string }
+          | { kind: 'non-empty-folder', key: string }
+          | { kind: 'missing', key: string };
+
+        const resolved = yield* Effect.promise(async (): Promise<ResolvedEntry[]> => {
+          return await Promise.all(cleanKeys.map(async k => {
             const r = await this.resolveFile(k);
-            out.push({ key: k, resolved: r ? { etcdKey: r.etcdKey } : null });
-          }
-          return out;
+            if (r) return { kind: 'file', key: k, etcdKey: r.etcdKey };
+            // Not a file — check for folder (explicit marker or implicit from files).
+            const folderEtcdKey = this.folderKey(k);
+            const [explicitKv, fileChildren, folderChildren] = await Promise.all([
+              this.dataSource.get(folderEtcdKey),
+              this.dataSource.listPrefix(`${this.filePrefix(k)}/`, { limit: 1 }),
+              this.dataSource.listPrefix(`${folderEtcdKey}/`, { limit: 1 }),
+            ]);
+            const isFolder = (Result.isSuccess(explicitKv) && explicitKv.success !== null)
+              || (Result.isSuccess(fileChildren) && fileChildren.success.length > 0)
+              || (Result.isSuccess(folderChildren) && folderChildren.success.length > 0);
+            if (!isFolder) return { kind: 'missing', key: k };
+            // Folder exists — check for children under /d/<k>/ or /f/<k>/.
+            const hasChildren = (Result.isSuccess(fileChildren) && fileChildren.success.length > 0)
+              || (Result.isSuccess(folderChildren) && folderChildren.success.length > 0);
+            if (hasChildren) return { kind: 'non-empty-folder', key: k };
+            return { kind: 'empty-folder', key: k, etcdKey: folderEtcdKey };
+          }));
         });
 
-        const found = resolved.filter(r => r.resolved !== null) as Array<
-          { key: string, resolved: { etcdKey: string } }
-        >;
-        const missing = resolved.filter(r => r.resolved === null);
+        const fileEntries = resolved.filter((r): r is Extract<ResolvedEntry, { kind: 'file' }> => r.kind === 'file');
+        const emptyFolders = resolved.filter(
+          (r): r is Extract<ResolvedEntry, { kind: 'empty-folder' }> => r.kind === 'empty-folder',
+        );
+        const nonEmptyFolders = resolved.filter(r => r.kind === 'non-empty-folder');
+        const missingEntries = resolved.filter(r => r.kind === 'missing');
 
-        // ── Round-trip 2: ONE etcd Txn with N `requestDeleteRange` ops.
-        // etcd transactions are linearisable — atomic at the cluster level.
-        if (found.length > 0) {
-          const ops: TxnOp[] = found.map(f => ({
-            requestDeleteRange: { key: f.resolved.etcdKey },
+        // ── Round-trip 2: ONE etcd Txn with N `requestDeleteRange` ops for
+        //    files and empty folders. etcd transactions are linearisable.
+        const deletable = [...fileEntries, ...emptyFolders];
+        if (deletable.length > 0) {
+          const ops: TxnOp[] = deletable.map(f => ({
+            requestDeleteRange: { key: f.etcdKey },
           }));
           yield* liftResult(this.dataSource.txn({ success: ops }));
         }
 
-        for (const f of found) yield* emit.data(f.key);
-        for (const m of missing) {
+        for (const f of deletable) yield* emit.data(f.key);
+        for (const f of nonEmptyFolders) {
+          yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${f.key}"`));
+        }
+        for (const m of missingEntries) {
           yield* emit.recoverableError(new NotFoundError(`etcd key not found: ${m.key}`));
         }
-        return { removed: found.length, skipped: skipped0 + missing.length };
+        return { removed: deletable.length, skipped: skipped0 + nonEmptyFolders.length + missingEntries.length };
       })
     );
   }

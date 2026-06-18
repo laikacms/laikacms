@@ -4,6 +4,7 @@ import * as Result from 'effect/Result';
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  ForbiddenError,
   type LaikaError,
   type LaikaResult,
   LaikaStream,
@@ -488,28 +489,52 @@ export class LdapStorageRepository extends StorageRepository {
         }
 
         // ── Round-trip 1: resolve every key → DN via parallel filter
-        //    searches.
-        const resolved = yield* Effect.promise(async () => {
-          const out: Array<{ key: string, dn: string | null }> = [];
-          for (const k of cleanKeys) {
+        //    searches. For keys that don't resolve to a file, check whether
+        //    they are folder OUs (and whether they're empty).
+        type ResolvedEntry =
+          | { kind: 'file', key: string, dn: string }
+          | { kind: 'empty-folder', key: string, dn: string }
+          | { kind: 'non-empty-folder', key: string }
+          | { kind: 'missing', key: string };
+
+        const resolved = yield* Effect.promise(async (): Promise<ResolvedEntry[]> => {
+          return await Promise.all(cleanKeys.map(async k => {
             const r = await this.resolveFile(k);
-            out.push({ key: k, dn: r?.entry.dn ?? null });
-          }
-          return out;
+            if (r) return { kind: 'file', key: k, dn: r.entry.dn };
+            // Not a file — probe for folder OU.
+            const isFolder = await this.hasFolder(k);
+            if (!isFolder) return { kind: 'missing', key: k };
+            // Folder exists — check for children.
+            const childSearch = await this.dataSource.search({
+              base: this.folderDn(k),
+              scope: 'one',
+              filter: '(objectClass=*)',
+              sizeLimit: 1,
+            });
+            const hasChildren = Result.isSuccess(childSearch) && childSearch.success.length > 0;
+            if (hasChildren) return { kind: 'non-empty-folder', key: k };
+            return { kind: 'empty-folder', key: k, dn: this.folderDn(k) };
+          }));
         });
 
-        const found = resolved.filter(r => r.dn !== null) as Array<{ key: string, dn: string }>;
-        const missing = resolved.filter(r => r.dn === null);
+        const fileEntries = resolved.filter((r): r is Extract<ResolvedEntry, { kind: 'file' }> => r.kind === 'file');
+        const emptyFolders = resolved.filter(
+          (r): r is Extract<ResolvedEntry, { kind: 'empty-folder' }> => r.kind === 'empty-folder',
+        );
+        const nonEmptyFolders = resolved.filter(r => r.kind === 'non-empty-folder');
+        const missingEntries = resolved.filter(r => r.kind === 'missing');
 
-        // ── Round-trip 2: ONE bulkOps call with N `del` actions.
+        // ── Round-trip 2: ONE bulkOps call with N `del` actions for files
+        //    and empty folder OUs.
         // The 13th structurally distinct atomic-multi-write mechanism.
         let removed = 0;
-        if (found.length > 0) {
-          const ops: LdapBulkOp[] = found.map(f => ({ kind: 'del', dn: f.dn }));
+        const deletable = [...fileEntries, ...emptyFolders];
+        if (deletable.length > 0) {
+          const ops: LdapBulkOp[] = deletable.map(f => ({ kind: 'del', dn: f.dn }));
           const bulkResult = yield* liftResult(this.dataSource.bulkOps(ops));
-          for (let i = 0; i < found.length; i += 1) {
+          for (let i = 0; i < deletable.length; i += 1) {
             const r = bulkResult[i];
-            const f = found[i]!;
+            const f = deletable[i]!;
             if (r && r.status === 'OK') {
               yield* emit.data(f.key);
               removed += 1;
@@ -520,10 +545,16 @@ export class LdapStorageRepository extends StorageRepository {
             }
           }
         }
-        for (const m of missing) {
+        for (const f of nonEmptyFolders) {
+          yield* emit.recoverableError(new ForbiddenError(`Refusing to delete non-empty folder "${f.key}"`));
+        }
+        for (const m of missingEntries) {
           yield* emit.recoverableError(new NotFoundError(`LDAP entry not found: ${m.key}`));
         }
-        return { removed, skipped: skipped0 + missing.length + (found.length - removed) };
+        return {
+          removed,
+          skipped: skipped0 + nonEmptyFolders.length + missingEntries.length + (deletable.length - removed),
+        };
       })
     );
   }
