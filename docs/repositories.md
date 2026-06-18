@@ -146,7 +146,8 @@ flowchart TB
 
 1. **Document Repository**
    - Stores and retrieves structured content (pages, posts, settings)
-   - Implementations: GitHub, documents-contentbase, documents-drizzle, documents-obsidian, documents-jsonapi-proxy
+   - Implementations: GitHub, documents-contentbase, documents-drizzle, documents-obsidian,
+     documents-jsonapi-proxy
 
 2. **Asset Repository**
    - Manages binary files like images, PDFs, videos

@@ -84,14 +84,12 @@ export class R2DataSource {
    * Delete multiple objects from R2
    */
   async *deleteObjects(keys: readonly string[]): AsyncGenerator<LaikaResult<Key>> {
-    const errorMessages: string[] = [];
-
     for (const key of keys) {
       try {
         const resolvedKey = await this.resolveKeyWithExtension(key);
 
         if (!resolvedKey) {
-          errorMessages.push(`Object at ${key} does not exist`);
+          yield Result.fail(new NotFoundError(`Object at ${key} does not exist`));
           continue;
         }
 
@@ -99,7 +97,6 @@ export class R2DataSource {
         const keyWithoutExt = this.stripExtension(resolvedKey);
         yield Result.succeed(keyWithoutExt);
       } catch (error) {
-        errorMessages.push(error instanceof Error ? error.message : String(error));
         yield Result.fail(new InternalError(`Failed to delete object at ${key}`, { cause: Cause.fail(error) }));
       }
     }
