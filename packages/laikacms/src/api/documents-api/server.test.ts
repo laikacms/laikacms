@@ -1,5 +1,11 @@
 import * as Effect from 'effect/Effect';
-import type { DocumentsRepository, ListRecordsDone, ListRecordsOptions } from 'laikacms/documents';
+import * as Result from 'effect/Result';
+import type {
+  DocumentsCapabilities,
+  DocumentsRepository,
+  ListRecordsDone,
+  ListRecordsOptions,
+} from 'laikacms/documents';
 import { describe, expect, it, vi } from 'vitest';
 
 import { InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
@@ -7,6 +13,45 @@ import { InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/cor
 import { buildJsonApi } from './server.js';
 
 const stubRepo = {} as DocumentsRepository;
+
+// ---------------------------------------------------------------------------
+// Fixture helpers
+// ---------------------------------------------------------------------------
+
+const makeDocument = (key = 'posts/hello') => ({
+  type: 'published' as const,
+  key,
+  status: 'published' as const,
+  language: 'en' as const,
+  content: { title: 'Hello' },
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+});
+
+const makeUnpublished = (key = 'posts/draft') => ({
+  type: 'unpublished' as const,
+  key,
+  status: 'draft',
+  language: 'en' as const,
+  content: { title: 'Draft' },
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+});
+
+const makeRevision = (key = 'posts/hello', revision = 'rev-1') => ({
+  type: 'revision' as const,
+  key,
+  revision,
+  language: 'en' as const,
+  content: { title: 'Hello v1' },
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+});
+
+const makeCapabilities = (): DocumentsCapabilities => ({
+  compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+  pagination: { cursor: true, offset: false },
+});
 
 describe('documents-api Cache-Control', () => {
   it('sends Cache-Control: no-store on the root API info response', async () => {
@@ -165,5 +210,376 @@ describe('documents-api meta.warnings', () => {
     expect(body['atomic:results'][0]?.meta?.warnings).toHaveLength(1);
     expect(body['atomic:results'][0]?.meta?.warnings?.[0]?.code).toBe('invalid_data');
     expect(body['atomic:results'][0]?.meta?.warnings?.[0]?.detail).toContain('orphaned sidecar');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET / — root info
+// ---------------------------------------------------------------------------
+
+describe('GET /', () => {
+  it('returns 200 with api-info resource', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string, attributes: { name: string } } };
+    expect(body.data.type).toBe('api-info');
+    expect(body.data.id).toBe('documents');
+    expect(body.data.attributes.name).toBe('Documents API');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /capabilities
+// ---------------------------------------------------------------------------
+
+describe('GET /capabilities', () => {
+  it('returns 200 with documents-capabilities resource', async () => {
+    const repo = {
+      getCapabilities: () => LaikaTask.make(() => Effect.succeed(makeCapabilities())),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/capabilities'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      data: { type: string, id: string, attributes: { compatibilityDate: string } },
+    };
+    expect(body.data.type).toBe('documents-capabilities');
+    expect(body.data.id).toBe('self');
+    expect(body.data.attributes.compatibilityDate).toBe('2026-01-01');
+  });
+
+  it('returns JSON:API error shape when repo fails', async () => {
+    const repo = {
+      getCapabilities: () => LaikaTask.make(() => Effect.fail(new NotFoundError('capabilities unavailable'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/capabilities'));
+    // capabilities route calls failResponse without a status arg — always 400
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /published/:key
+// ---------------------------------------------------------------------------
+
+describe('GET /published/:key', () => {
+  it('returns 200 with published resource', async () => {
+    const doc = makeDocument();
+    const repo = {
+      getDocument: (_key: string) => LaikaTask.make(() => Effect.succeed(doc)),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/published/posts%2Fhello'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('published');
+    expect(body.data.id).toBe('posts/hello');
+  });
+
+  it('returns 404 JSON:API error when document not found', async () => {
+    const repo = {
+      getDocument: (_key: string) => LaikaTask.make(() => Effect.fail(new NotFoundError('document not found'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/published/posts%2Fmissing'));
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /published — create
+// ---------------------------------------------------------------------------
+
+describe('POST /published', () => {
+  it('returns 201 on successful document creation', async () => {
+    const doc = makeDocument('posts/new');
+    const repo = {
+      createDocument: vi.fn(() => LaikaTask.make(() => Effect.succeed(doc))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'published',
+            id: 'posts/new',
+            attributes: { status: 'published', content: { title: 'Hello' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('published');
+    expect(body.data.id).toBe('posts/new');
+  });
+
+  it('returns 400 JSON:API error on invalid body', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/published', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'wrong-type', id: 'x', attributes: {} } }),
+      }),
+    );
+    // Schema decode throws; outer catch wraps as InternalError — HTTP 400 response
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    // InternalError maps to status 500 in the JSON:API error body
+    expect(body.errors[0]!.status).toBe('500');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /published/:key — update
+// ---------------------------------------------------------------------------
+
+describe('PATCH /published/:key', () => {
+  it('returns 200 on successful document update', async () => {
+    const doc = makeDocument('posts/hello');
+    const repo = {
+      updateDocument: vi.fn(() => LaikaTask.make(() => Effect.succeed(doc))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fhello', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'published',
+            id: 'posts/hello',
+            attributes: { status: 'published', content: { title: 'Updated' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('published');
+    expect(body.data.id).toBe('posts/hello');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /published/:key
+// ---------------------------------------------------------------------------
+
+describe('DELETE /published/:key', () => {
+  it('returns 200 with meta.deleted on successful delete', async () => {
+    const repo = {
+      deleteDocument: vi.fn((_key: string) => LaikaTask.make(() => Effect.succeed(undefined))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fhello', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { meta: { deleted: boolean } };
+    expect(body.meta.deleted).toBe(true);
+  });
+
+  it('returns JSON:API error when document not found', async () => {
+    const repo = {
+      deleteDocument: vi.fn((_key: string) =>
+        LaikaTask.make(() => Effect.fail(new NotFoundError('document not found')))
+      ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fmissing', { method: 'DELETE' }),
+    );
+    // respondVoid calls respondError with no explicit status — defaults to 400
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /unpublished/:key/publish — state transition
+// ---------------------------------------------------------------------------
+
+describe('POST /unpublished/:key/publish', () => {
+  it('returns 200 with published resource after publishing', async () => {
+    const doc = makeDocument('posts/hello');
+    const repo = {
+      publish: vi.fn((_key: string) => LaikaTask.make(() => Effect.succeed(doc))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fhello/publish', { method: 'POST' }),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('published');
+    expect(body.data.id).toBe('posts/hello');
+  });
+
+  it('returns 404 JSON:API error when draft not found', async () => {
+    const repo = {
+      publish: vi.fn((_key: string) => LaikaTask.make(() => Effect.fail(new NotFoundError('unpublished not found')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fmissing/publish', { method: 'POST' }),
+    );
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /unpublished — create draft
+// ---------------------------------------------------------------------------
+
+describe('POST /unpublished', () => {
+  it('returns 201 on successful draft creation', async () => {
+    const draft = makeUnpublished('posts/draft');
+    const repo = {
+      createUnpublished: vi.fn(() => LaikaTask.make(() => Effect.succeed(draft))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'unpublished',
+            id: 'posts/draft',
+            attributes: { status: 'draft', content: { title: 'Draft' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('unpublished');
+    expect(body.data.id).toBe('posts/draft');
+  });
+
+  it('returns 400 JSON:API error on invalid body', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'published', id: 'x', attributes: {} } }),
+      }),
+    );
+    // Schema decode throws; outer catch wraps as InternalError — HTTP 400 response
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    // InternalError maps to status 500 in the JSON:API error body
+    expect(body.errors[0]!.status).toBe('500');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /revisions — create revision
+// ---------------------------------------------------------------------------
+
+describe('POST /revisions', () => {
+  it('returns 201 on successful revision creation', async () => {
+    const rev = makeRevision('posts/hello', 'rev-1');
+    const repo = {
+      createRevision: vi.fn(() => LaikaTask.make(() => Effect.succeed(rev))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/revisions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'revision',
+            id: 'posts/hello',
+            attributes: { revision: 'rev-1', content: { title: 'Hello v1' }, createdAt: '2026-01-01T00:00:00Z' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('revision');
+    expect(body.data.id).toBe('posts/hello');
+  });
+
+  it('returns 400 JSON:API error on invalid body', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/revisions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'published', id: 'x', attributes: {} } }),
+      }),
+    );
+    // Schema decode throws; outer catch wraps as InternalError — HTTP 400 response
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    // InternalError maps to status 500 in the JSON:API error body
+    expect(body.errors[0]!.status).toBe('500');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 404 on unknown endpoint
+// ---------------------------------------------------------------------------
+
+describe('404 on unknown routes', () => {
+  it('returns 404 JSON:API error shape on unknown path', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/unknown-resource'));
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string, title: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
   });
 });
