@@ -1,8 +1,0 @@
-node_modules/
-dist/
-.turbo/
-.env
-.env.local
-.env.*.local
-*.tsbuildinfo
-public/admin/bundle.js

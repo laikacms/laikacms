@@ -1,8 +1,0 @@
-node_modules
-dist
-/server
-.env*.local
-.turbo
-.qwik
-content/.contentbase
-public/admin/bundle.js

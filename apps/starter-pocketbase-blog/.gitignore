@@ -1,9 +1,0 @@
-node_modules/
-dist/
-pb_data/
-pb_public/
-.turbo/
-.env
-.env.local
-.env.*.local
-*.tsbuildinfo

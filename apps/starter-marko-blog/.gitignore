@@ -1,6 +1,0 @@
-node_modules
-dist
-.marko-run
-.env*.local
-.turbo
-content/.contentbase

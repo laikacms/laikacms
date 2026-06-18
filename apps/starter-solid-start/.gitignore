@@ -1,7 +1,0 @@
-node_modules
-.vinxi
-.output
-.tanstack
-.env*.local
-.turbo
-content/.contentbase

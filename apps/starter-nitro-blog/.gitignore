@@ -1,9 +1,0 @@
-node_modules/
-.nitro/
-.output/
-.turbo/
-.env
-.env.local
-.env.*.local
-*.tsbuildinfo
-public/admin/bundle.js

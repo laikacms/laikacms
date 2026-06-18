@@ -1,6 +1,0 @@
-node_modules
-dist
-laikacms.db
-laikacms.db-*
-.env*.local
-.turbo

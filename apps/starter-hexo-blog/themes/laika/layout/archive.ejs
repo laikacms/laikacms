@@ -1,8 +1,0 @@
-<h1>Archives</h1>
-<% page.posts.each(post => { %>
-<p>
-  <span class="meta"><%= date(post.date, config.date_format) %></span>
-  &nbsp;
-  <a href="<%= post.path %>"><%= post.title %></a>
-</p>
-<% }) %>
