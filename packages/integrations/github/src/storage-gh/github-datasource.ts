@@ -288,6 +288,7 @@ export class GithubDataSource {
         content: textToBase64(content),
         branch: this.branch,
         sha,
+        author: options.author,
         committer: options.author,
       });
 
@@ -316,6 +317,7 @@ export class GithubDataSource {
         message: options.commitMessage ?? `Delete ${relativePath}`,
         sha,
         branch: this.branch,
+        author: options.author,
         committer: options.author,
       });
       return Result.succeed({ path: relativePath });
