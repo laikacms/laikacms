@@ -54,21 +54,19 @@ export default {
 
 ## Packages
 
+This repository carries the three core packages. The storage/asset adapters (`@laikacms/aws`,
+`@laikacms/github`, …), `laikacli`, `@laikacms/git-gateway`, the `portable-text-*` mappers, and the
+example apps were moved out into their own repositories in June 2026 — see
+[docs/restructure-2026-06.md](./docs/restructure-2026-06.md).
+
 | Package                        | Description                                                                                                                                                                           |
 | ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `laikacms`                     | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
-| `@laikacms/aws`                | AWS service implementations (DynamoDB-backed contentbase settings)                                                                                                                    |
 | `@laikacms/decap-integrations` | Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives in `@laikacms/decap-ai`                                                                              |
-| `@laikacms/git-gateway`        | Drop-in Netlify git-gateway-compatible HTTP handler (Decap `backend: git-gateway`)                                                                                                    |
-| `@laikacms/github`             | GitHub-backed `StorageRepository` (GitHub App auth)                                                                                                                                   |
+| `@laikacms/decap-ai`           | AI chat integration for Decap CMS (Vercel AI SDK)                                                                                                                                     |
 
-See [docs/packages.md](./docs/packages.md) for the full list of subpath exports.
-
-## Apps
-
-| App             | Description                                                                                                                                                                                                                                                                                                                      |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `laika-gateway` | Hosted multi-tenant Cloudflare Worker. One GitHub App; users install it on their own repo and point Decap CMS at this gateway instead of standing up their own Worker. URL scheme is namespaced (`/github/...`) so other source backends can be added later. See [apps/laika-gateway/README.md](./apps/laika-gateway/README.md). |
+See [docs/packages.md](./docs/packages.md) for the full list of subpath exports, including the
+packages that now live in separate repositories.
 
 ## Documentation
 
@@ -87,11 +85,10 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Releasing
 
-All public packages (`laikacms`, `@laikacms/aws`, `@laikacms/decap-integrations`,
-`@laikacms/github`) are released together at the same version (changesets `fixed` group). Internal
-`workspace:*` references are pinned to the exact version on publish. `@laikacms/dynamodb-local` is
-`private` and never published — its version stays in lockstep with the rest but is not pushed to
-npm.
+The three core packages (`laikacms`, `@laikacms/decap-integrations`, `@laikacms/decap-ai`) are
+released together at the same version (changesets `fixed` group). Internal `workspace:*` references
+are pinned to the exact version on publish. Packages that were moved out of this repo (the adapters,
+`laikacli`, `@laikacms/git-gateway`, …) are now released from their own repositories.
 
 ```
 pnpm changeset

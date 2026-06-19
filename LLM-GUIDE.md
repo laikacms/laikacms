@@ -4,6 +4,11 @@ A condensed entry point for anyone (LLM or human) bootstrapping with LaikaCMS in
 If you're a coding agent dropped into a repo that wants to use LaikaCMS, **read this first**, then
 [`docs/starters.md`](./docs/starters.md), then the specific docs you need.
 
+> **Note (June 2026):** the `starter-*` reference apps and most adapter packages were moved out of
+> this monorepo (see [`docs/restructure-2026-06.md`](./docs/restructure-2026-06.md)). The
+> `starter-…` names below still tell you which **preset and pattern** to use; the directories
+> themselves now live in separate repositories (locations TBD).
+
 ---
 
 ## 1. The two-minute mental model

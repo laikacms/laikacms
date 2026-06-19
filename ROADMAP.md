@@ -76,7 +76,7 @@ lower-priority extensions to it.
       defaults to a `console.warn` line so devtools show them.
 - [x] Netlify git-gateway compatible HTTP handler (`@laikacms/git-gateway`) — lets Decap CMS
       configured with `backend: git-gateway` point at a Laika worker without changing client config
-- [x] Hosted multi-tenant gateway app (`apps/laika-gateway`) — one GitHub App that anyone can
-      install on their repo; tenants point Decap at the gateway URL
+- [x] Hosted multi-tenant gateway app (`laika-gateway`, moved to its own repo June 2026) — one
+      GitHub App that anyone can install on their repo; tenants point Decap at the gateway URL
       (`/github/{owner}/{repo}/api/decap`) instead of standing up their own Worker. Namespaced URL
       scheme leaves room for `/gitlab/...` etc. later.

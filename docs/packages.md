@@ -1,7 +1,14 @@
 # Packages
 
-Laika CMS is published as four npm packages. Most functionality lives in `laikacms` as subpath
-exports; specialized integrations live in their own packages.
+Most functionality lives in `laikacms` as subpath exports; specialized integrations live in their
+own packages.
+
+> **Repository layout (June 2026).** This monorepo now carries only the three core packages —
+> `laikacms`, `@laikacms/decap-integrations`, and `@laikacms/decap-ai`. The other packages
+> documented below (`@laikacms/aws`, `@laikacms/github`, `@laikacms/git-gateway`, `laikacli`, and the
+> rest of the adapters) are still published to npm under the same names but are now developed in
+> **separate repositories**. See [the restructure note](./restructure-2026-06.md) for details and the
+> current status of the moved repos.
 
 ## `laikacms`
 

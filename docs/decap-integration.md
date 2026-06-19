@@ -5,7 +5,7 @@ Three integration shapes are supported, in increasing order of complexity:
 | Pattern                                                               | When to use                                                                 | Backend host                                                      | Auth                                        |
 | --------------------------------------------------------------------- | --------------------------------------------------------------------------- | ----------------------------------------------------------------- | ------------------------------------------- |
 | **[Embedded](#embedded-same-origin-recommended-for-single-site-cms)** | The CMS edits content for a single site, and you control that site's server | Same process as the public site (Astro, Next, Hono, …)            | Dev token (local) or your own session check |
-| **[Hosted gateway](#hosted-gateway-multi-tenant)**                    | Multiple sites sharing one Decap admin + Laika backend                      | A separate Worker / server you operate (see `apps/laika-gateway`) | GitHub OAuth (or other provider)            |
+| **[Hosted gateway](#hosted-gateway-multi-tenant)**                    | Multiple sites sharing one Decap admin + Laika backend                      | A separate Worker / server you operate (the `laika-gateway` app moved to its own repo) | GitHub OAuth (or other provider)            |
 | **[Standalone Worker](#standalone-worker-byo-storage)**               | You want full control of storage, auth, and routing                         | Your own Hono/Worker app                                          | JWT (or your scheme)                        |
 
 ---
@@ -300,9 +300,11 @@ for the full `OAuthConfig` option reference.
 
 ## Hosted gateway (multi-tenant)
 
-If multiple sites share one editing experience, host `apps/laika-gateway` separately and point each
+If multiple sites share one editing experience, host a gateway Worker separately and point each
 site's Decap admin at it. Auth is per-tenant via GitHub OAuth (or other). Storage is the tenant's
-own GitHub repo. See `apps/laika-gateway/src/index.ts` for the canonical shape.
+own GitHub repo. The `laika-gateway` app and the `@laikacms/git-gateway` package were moved out of
+this monorepo in June 2026 (see [restructure-2026-06.md](./restructure-2026-06.md)); they now live in
+their own repositories.
 
 ---
 
@@ -394,7 +396,9 @@ export const laika = createCustomLaika({
 });
 ```
 
-See `apps/starter-webdav-blog` for a complete example including an embedded local-dev WebDAV server.
+The `starter-webdav-blog` example (a complete WebDAV setup including an embedded local-dev WebDAV
+server) was moved out of this monorepo in June 2026 — see
+[restructure-2026-06.md](./restructure-2026-06.md).
 
 ---
 
