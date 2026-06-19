@@ -9,15 +9,17 @@ why, and in what order.
 Vitest 4.x is wired into the workspace catalog and Turbo has a `test` task. Tests now exist for
 several modules under `packages/laikacms/src/shared/crypto/`,
 `packages/laikacms/src/shared/file-sanitizer/`,
-`packages/integrations/aws/src/contentbase-settings-ddb/` (added in LCMS-221),
 `packages/laikacms/src/impl/contentbase-settings-default/`, and
-`packages/laikacms/src/impl/documents-contentbase/`. Coverage across the rest of the codebase is
-still incomplete — see "Where to invest first" below for the remaining priorities.
+`packages/laikacms/src/impl/documents-contentbase/`. The `@laikacms/aws` DynamoDB settings tests
+(added in LCMS-221) moved out with that package. Coverage across the rest of the codebase is still
+incomplete — see "Where to invest first" below for the remaining priorities.
 
-> Note: this document predates the package consolidation that merged the original 39 packages into
-> `laikacms`, `@laikacms/aws`, `@laikacms/decap`, and `@laikacms/github`. References to module paths
-> (e.g. `packages/shared/crypto`) have been updated where they are wrong; the high-level
-> test-rollout guidance is still applicable.
+> Note: this document predates two reshapes — the package consolidation that merged the original 39
+> packages into `laikacms`, `@laikacms/aws`, `@laikacms/decap`, and `@laikacms/github`, and the
+> [June 2026 restructure](./restructure-2026-06.md) that moved the adapters (including
+> `@laikacms/aws`) and the example apps out of this repo. References to module paths (e.g.
+> `packages/shared/crypto`) have been updated where they are wrong; the high-level test-rollout
+> guidance is still applicable to the three remaining packages.
 
 | Metric                                            | Value (snapshot, pre-consolidation) |
 | ------------------------------------------------- | ----------------------------------- |

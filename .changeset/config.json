@@ -6,8 +6,7 @@
     [
       "laikacms",
       "@laikacms/decap-integrations",
-      "@laikacms/decap-ai",
-      "@laikacms/git-gateway"
+      "@laikacms/decap-ai"
     ]
   ],
   "linked": [],

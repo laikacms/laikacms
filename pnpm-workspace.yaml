@@ -2,14 +2,6 @@ packages:
   - "packages/laikacms"
   - "packages/decap"
   - "packages/decap-ai"
-  - "packages/decap-cms-lexical-core"
-  - "packages/decap-cms-widget-lexicaleditor"
-  - "packages/decap-cms-widget-portabletext-editor"
-  - "packages/git-gateway"
-  - "packages/integrations/*"
-  - "packages/tools/*"
-  - "packages/portable-text/*"
-  - "apps/*"
   - "docs"
 
 catalogs:

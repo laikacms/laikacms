@@ -5,8 +5,8 @@ export default defineConfig({
   description: 'Modular, runtime-agnostic content management software for your own custom or existing UIs.',
   cleanUrls: true,
   lastUpdated: true,
-  // starters.md links into ../apps/starter-* (the source dirs on disk / GitHub),
-  // not into vitepress pages — those are intentionally not built as docs.
+  // The apps/ tree was moved out of the monorepo (June 2026, see restructure-2026-06.md).
+  // Any lingering ../apps/ references point at external source dirs, not vitepress pages.
   ignoreDeadLinks: [/\/apps\//],
   themeConfig: {
     nav: [
@@ -23,6 +23,7 @@ export default defineConfig({
           { text: 'Security', link: '/SECURITY' },
           { text: 'Security Audit (2026-05)', link: '/security-audit-2026-05' },
           { text: 'Test Strategy', link: '/test-strategy' },
+          { text: 'Restructure (2026-06)', link: '/restructure-2026-06' },
         ],
       },
     ],
@@ -56,6 +57,7 @@ export default defineConfig({
           { text: 'Security', link: '/SECURITY' },
           { text: 'Security Audit 2026-05', link: '/security-audit-2026-05' },
           { text: 'Test Strategy', link: '/test-strategy' },
+          { text: 'Restructure 2026-06', link: '/restructure-2026-06' },
         ],
       },
     ],
