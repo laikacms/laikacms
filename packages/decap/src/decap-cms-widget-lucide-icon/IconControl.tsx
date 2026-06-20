@@ -1,13 +1,23 @@
 import { css } from '@emotion/css';
-import type { CmsWidgetControlProps } from 'decap-cms-core';
-import { colors, shadows } from 'decap-cms-ui-default';
+import { colors, shadows } from '@laikacms/decap/ui-default';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import * as lucideReact from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
 const allIcons = Object.fromEntries(Object.entries(lucideReact.icons));
 
-export type IconControlProps = CmsWidgetControlProps<string>;
+// v4.beta dropped the exported `CmsWidgetControlProps` generic; widgets now
+// declare the slice of the control contract they actually use (matches the
+// fork's own widgets, e.g. StringControl). See PLAN S-05.
+export interface IconControlProps {
+  value?: string;
+  onChange: (value: string) => void;
+  forID?: string;
+  classNameWrapper?: string;
+  setActiveStyle: () => void;
+  setInactiveStyle: () => void;
+  t: (key: string) => string;
+}
 
 export const IconControl: React.FC<IconControlProps> = props => {
   const [isOpen, setIsOpen] = useState(false);
