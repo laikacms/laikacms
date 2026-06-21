@@ -124,10 +124,6 @@ You should receive a JSON:API response describing the available endpoints.
 
 ### 4a. Install the backend
 
-> **Note:** `@laikacms/decap-integrations` is not yet published to npm. It is a rename of the
-> currently published `@laikacms/decap` package. Use `@laikacms/decap` until the renamed package
-> appears on the registry.
-
 ```bash
 # npm
 npm install @laikacms/decap decap-cms-app

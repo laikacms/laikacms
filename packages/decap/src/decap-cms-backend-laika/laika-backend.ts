@@ -1,4 +1,4 @@
-import { AccessTokenError, APIError, unsentRequest } from '@laikacms/decap/lib-util';
+import { AccessTokenError, APIError, unsentRequest } from '@laikacms/decap-cms/lib-util';
 
 import React from 'react';
 
@@ -19,7 +19,7 @@ import type {
   PersistOptions,
   UnpublishedEntry,
   User,
-} from '@laikacms/decap/lib-util';
+} from '@laikacms/decap-cms/lib-util';
 
 import * as Result from 'effect/Result';
 import type { AssetCreate, AssetsRepository } from 'laikacms/assets';

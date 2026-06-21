@@ -32,8 +32,8 @@ LaikaCMS is **three things stacked**:
 You pick a **storage backend**, wrap it in **repos**, expose them through the **HTTP API**, and
 mount the resulting `(Request) => Promise<Response>` handler in your framework.
 
-The `@laikacms/decap-integrations` package ships a one-call **preset** that does all of this for
-you. There are two presets:
+The `@laikacms/decap` package ships a one-call **preset** that does all of this for you. There are
+two presets:
 
 - **`createEmbeddedLaika`** — Node.js runtime, FileSystem storage.
 - **`createWorkersLaika`** — V8 isolates (Cloudflare Workers, Vercel Edge, etc.), R2 storage.
@@ -47,11 +47,7 @@ For 95% of starters: pick a preset, pass a config, mount `.fetch` on a catch-all
 ### a) Spin up a Node.js backend (Express/Hono/Fastify/Koa/Bun/Deno)
 
 ```ts
-import {
-  createEmbeddedLaika,
-  decapAdminHtml,
-  minimalBlogConfig,
-} from '@laikacms/decap-integrations/embedded';
+import { createEmbeddedLaika, decapAdminHtml, minimalBlogConfig } from '@laikacms/decap/embedded';
 import { resolve } from 'node:path';
 
 const laika = createEmbeddedLaika({
@@ -100,11 +96,7 @@ try {
 ### c) Deploy to Cloudflare Workers + R2
 
 ```ts
-import {
-  createWorkersLaika,
-  decapAdminHtml,
-  minimalBlogConfig,
-} from '@laikacms/decap-integrations/workers';
+import { createWorkersLaika, decapAdminHtml, minimalBlogConfig } from '@laikacms/decap/workers';
 import { Hono } from 'hono';
 
 export interface Env {
@@ -175,10 +167,10 @@ with a server-side token injection. See `apps/starter-jose-auth` for the full lo
 
 ## 3. The presets — choose the right one
 
-| Preset                                                      | Runtime                            | Storage                        | Helpers re-exported                                        |
-| ----------------------------------------------------------- | ---------------------------------- | ------------------------------ | ---------------------------------------------------------- |
-| `@laikacms/decap-integrations/embedded.createEmbeddedLaika` | Node, Bun, Deno                    | FileSystem                     | `minimalBlogConfig`, `decapAdminHtml`, `DEFAULT_DEV_TOKEN` |
-| `@laikacms/decap-integrations/workers.createWorkersLaika`   | V8 isolates (Workers, Vercel Edge) | R2 (or `MinimalR2Bucket` shim) | same helpers (re-exported)                                 |
+| Preset                                         | Runtime                            | Storage                        | Helpers re-exported                                        |
+| ---------------------------------------------- | ---------------------------------- | ------------------------------ | ---------------------------------------------------------- |
+| `@laikacms/decap/embedded.createEmbeddedLaika` | Node, Bun, Deno                    | FileSystem                     | `minimalBlogConfig`, `decapAdminHtml`, `DEFAULT_DEV_TOKEN` |
+| `@laikacms/decap/workers.createWorkersLaika`   | V8 isolates (Workers, Vercel Edge) | R2 (or `MinimalR2Bucket` shim) | same helpers (re-exported)                                 |
 
 Both return `{ fetch, authenticateRequest, storage, documents, assets }`. Mount `.fetch` from your
 framework's catch-all route. Use `.documents` / `.storage` / `.assets` directly from server render
@@ -205,8 +197,8 @@ These are the things that consistently bite first-time integrators:
      `import { FileSystemStorageRepository } from
      'laikacms/storage-fs'`. Same for
      `storage-api`, `documents-api`, `storage-serializers-*`, etc.
-   - The Decap backend lives at `@laikacms/decap-integrations/decap-cms-backend-laika` — a subpath
-     of `@laikacms/decap-integrations`, NOT a separate `@laikacms/decap-cms-backend-laika` package.
+   - The Decap backend lives at `@laikacms/decap/decap-cms-backend-laika` — a subpath of
+     `@laikacms/decap`, NOT a separate `@laikacms/decap-cms-backend-laika` package.
 
 4. **`createEmbeddedLaika` is Node-only.** It calls `node:fs.mkdirSync` at module-load time. Don't
    import it from Workers/edge code. Use `createWorkersLaika` instead.
@@ -225,8 +217,8 @@ These are the things that consistently bite first-time integrators:
    - Iframe with `srcDoc` (Next App Router).
    - Inline server-rendered HTML response from a non-page route (SvelteKit `+server.ts`, Marko
      `+handler.ts`, Astro `is:inline`). The `decapAdminHtml()` helper from
-     `@laikacms/decap-integrations/embedded` returns the HTML string ready to serve — use it instead
-     of hand-rolling a 50-line static file.
+     `@laikacms/decap/embedded` returns the HTML string ready to serve — use it instead of
+     hand-rolling a 50-line static file.
 
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** When adding a new
    starter under `apps/`, mirror this convention — see existing starters' `package.json`.

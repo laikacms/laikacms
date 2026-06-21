@@ -1,5 +1,5 @@
-import type { CmsWidgetControlProps } from '@laikacms/decap/core';
-import { colors, shadows } from '@laikacms/decap/ui-default';
+import type { CmsWidgetControlProps } from '@laikacms/decap-cms/core';
+import { colors, shadows } from '@laikacms/decap-cms/ui-default';
 import { ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
 import type { IconProps } from '@radix-ui/react-icons/dist/types';
 import React, { useEffect, useMemo, useState } from 'react';

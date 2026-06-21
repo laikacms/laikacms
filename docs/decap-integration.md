@@ -18,14 +18,14 @@ This is the simplest integration. The Astro/Next/Hono site that serves the publi
 ### Server
 
 ```bash
-pnpm add @laikacms/decap-integrations laikacms
+pnpm add @laikacms/decap laikacms
 ```
 
 ```ts
 // src/lib/laika.ts (Astro example)
 import { resolve } from 'node:path';
 
-import { createEmbeddedLaika } from '@laikacms/decap-integrations/embedded';
+import { createEmbeddedLaika } from '@laikacms/decap/embedded';
 
 import { decapConfig } from './decap-config.ts'; // your Decap CMS config object
 
@@ -73,7 +73,7 @@ esbuild step, no `public/admin/bundle.js`, no React dependency. Available from a
 (`/embedded`, `/custom`, `/workers`):
 
 ```ts
-import { decapAdminHtml, minimalBlogConfig } from '@laikacms/decap-integrations/custom';
+import { decapAdminHtml, minimalBlogConfig } from '@laikacms/decap/custom';
 
 const decapConfig = minimalBlogConfig();
 const ADMIN_HTML = decapAdminHtml({ decapConfig, title: 'My Admin' });
@@ -94,12 +94,12 @@ Use when you need custom widgets or the Decap React tree:
 
 ```ts
 // src/components/DecapAdmin.tsx (a React island)
-import { createLaikaBackend } from '@laikacms/decap-integrations/decap-cms-backend-laika';
-import DecapCmsCore, { App, DecapCmsProvider } from '@laikacms/decap/core';
-import DEFAULT_WIDGET_STRING from '@laikacms/decap/widget-string';
+import DecapCmsCore, { App, DecapCmsProvider } from '@laikacms/decap-cms/core';
+import DEFAULT_WIDGET_STRING from '@laikacms/decap-cms/widget-string';
+import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 // …other widgets…
 
-import { DEFAULT_DEV_TOKEN } from '@laikacms/decap-integrations/embedded';
+import { DEFAULT_DEV_TOKEN } from '@laikacms/decap/embedded';
 import { decapConfig } from '~/lib/decap-config.ts';
 
 DecapCmsCore.registerBackend('laika', createLaikaBackend());
@@ -133,7 +133,7 @@ in front (see the gateway pattern below) or pass a `mode: 'custom'` validator to
 ### Custom auth (production embedded)
 
 ```ts
-import { createEmbeddedLaika } from '@laikacms/decap-integrations/embedded';
+import { createEmbeddedLaika } from '@laikacms/decap/embedded';
 import { jwtVerify } from 'jose'; // example
 
 createEmbeddedLaika({
@@ -157,14 +157,14 @@ self-contained PKCE authorization server with email/password login, optional pas
 optional TOTP 2FA. You wire it alongside `createEmbeddedLaika` in the same Express or Hono app.
 
 ```bash
-pnpm add @laikacms/decap-integrations
+pnpm add @laikacms/decap
 ```
 
 **Hono example**
 
 ```ts
-import { decapOauth2 } from '@laikacms/decap-integrations/decap-oauth2';
-import { createEmbeddedLaika } from '@laikacms/decap-integrations/embedded';
+import { decapOauth2 } from '@laikacms/decap/decap-oauth2';
+import { createEmbeddedLaika } from '@laikacms/decap/embedded';
 import { Hono } from 'hono';
 import { resolve } from 'node:path';
 
@@ -222,7 +222,7 @@ export default app;
 `laika`):
 
 ```ts
-import { decapOauth2 } from '@laikacms/decap-integrations/decap-oauth2';
+import { decapOauth2 } from '@laikacms/decap/decap-oauth2';
 import express from 'express';
 
 const oauth2 = decapOauth2({ basePath: '/oauth2', clientId: CLIENT_ID, callbacks });
@@ -271,7 +271,7 @@ const decapConfig = {
 Or when using `decapAdminHtml`, pass `auth.backendUrl`:
 
 ```ts
-import { decapAdminHtml } from '@laikacms/decap-integrations/embedded';
+import { decapAdminHtml } from '@laikacms/decap/embedded';
 
 const ADMIN_HTML = decapAdminHtml({
   decapConfig,
@@ -284,13 +284,13 @@ const ADMIN_HTML = decapAdminHtml({
 
 **Optional extensions**
 
-| Feature        | Option key in `decapOauth2(…)`       | Notes                                                        |
-| -------------- | ------------------------------------ | ------------------------------------------------------------ |
-| Passkey        | `passkey: { enabled: true, … }`      | WebAuthn registration + authentication flows                 |
-| TOTP 2FA       | `totp: { … }`                        | TOTP enrollment and per-login verification                   |
-| CAPTCHA        | `captcha: { enabled: true, … }`      | Any provider (reCAPTCHA, hCaptcha, Turnstile, …)             |
-| Password reset | `passwordReset: { … }`               | Email-based reset link flow                                  |
-| i18n           | `translations: nl` (or other locale) | Import from `@laikacms/decap-integrations/decap-oauth2/i18n` |
+| Feature        | Option key in `decapOauth2(…)`       | Notes                                            |
+| -------------- | ------------------------------------ | ------------------------------------------------ |
+| Passkey        | `passkey: { enabled: true, … }`      | WebAuthn registration + authentication flows     |
+| TOTP 2FA       | `totp: { … }`                        | TOTP enrollment and per-login verification       |
+| CAPTCHA        | `captcha: { enabled: true, … }`      | Any provider (reCAPTCHA, hCaptcha, Turnstile, …) |
+| Password reset | `passwordReset: { … }`               | Email-based reset link flow                      |
+| i18n           | `translations: nl` (or other locale) | Import from `@laikacms/decap/decap-oauth2/i18n`  |
 
 See
 [`packages/decap/src/decap-oauth2/README.md`](https://github.com/laikacms/laikacms/blob/develop/packages/decap/src/decap-oauth2/README.md)
@@ -313,7 +313,7 @@ in their own repositories.
 For full control, wire the pieces by hand:
 
 ```ts
-import { decapApi } from '@laikacms/decap-integrations/decap-api';
+import { decapApi } from '@laikacms/decap/decap-api';
 import { Hono } from 'hono';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
@@ -346,7 +346,7 @@ Between `createEmbeddedLaika` (filesystem, simple) and the raw `decapApi` wiring
 automatically (content/asset repos, config seeding, Decap API, dev auth).
 
 ```ts
-import { createCustomLaika } from '@laikacms/decap-integrations/custom';
+import { createCustomLaika } from '@laikacms/decap/custom';
 
 const laika = createCustomLaika({
   storage, // any StorageRepository
@@ -404,18 +404,15 @@ server) was moved out of this monorepo in June 2026 — see
 
 ## Widgets
 
-| Widget       | Subpath                                                     |
-| ------------ | ----------------------------------------------------------- |
-| AI Chat      | `@laikacms/decap-ai/widget`                                 |
-| Lucide Icons | `@laikacms/decap-integrations/decap-cms-widget-lucide-icon` |
-| Radix Icons  | `@laikacms/decap-integrations/decap-cms-widget-radix-icon`  |
+| Widget       | Subpath                                        |
+| ------------ | ---------------------------------------------- |
+| AI Chat      | `@laikacms/decap-ai/widget`                    |
+| Lucide Icons | `@laikacms/decap/decap-cms-widget-lucide-icon` |
+| Radix Icons  | `@laikacms/decap/decap-cms-widget-radix-icon`  |
 
 ```ts
-import {
-  LucideIconPreview,
-  LucideIconWidget,
-} from '@laikacms/decap-integrations/decap-cms-widget-lucide-icon';
-import DecapCmsCore from '@laikacms/decap/core';
+import DecapCmsCore from '@laikacms/decap-cms/core';
+import { LucideIconPreview, LucideIconWidget } from '@laikacms/decap/decap-cms-widget-lucide-icon';
 
 DecapCmsCore.registerWidget('lucide-icon', LucideIconWidget, LucideIconPreview);
 ```
@@ -429,9 +426,9 @@ There are **two** packages in the laika-cms ecosystem with confusingly similar n
 - **`@laikacms/decap`** — fork of upstream Decap CMS itself (the React `App`, `DecapCmsProvider`,
   widgets, backends like `backend-github`, etc.). Lives in
   [`laikacms/decap-cms#v4.beta`](https://github.com/laikacms/decap-cms).
-- **`@laikacms/decap-integrations`** — adapters _around_ Decap: the `laika` Decap backend, the
-  JSON:API server (`decap-api`), the `createEmbeddedLaika` preset, custom widgets, OAuth proxies.
-  Lives in this repo under `packages/decap/`.
+- **`@laikacms/decap`** — adapters _around_ Decap: the `laika` Decap backend, the JSON:API server
+  (`decap-api`), the `createEmbeddedLaika` preset, custom widgets, OAuth proxies. Lives in this repo
+  under `packages/decap/`.
 
 Their subpath exports do not overlap, so you can `pnpm add` both side by side.
 
@@ -690,8 +687,8 @@ export default function AdminPage() {
 
 ### AdonisJS v6 — access the raw Node.js request via `ctx.request.request`
 
-AdonisJS v6 is **ESM-native** — it can import `laikacms` and `@laikacms/decap-integrations` directly
-without the dynamic `import()` workaround required by CommonJS frameworks like NestJS.
+AdonisJS v6 is **ESM-native** — it can import `laikacms` and `@laikacms/decap` directly without the
+dynamic `import()` workaround required by CommonJS frameworks like NestJS.
 
 AdonisJS wraps `IncomingMessage` in its own `Request` class. The raw Node.js objects are:
 
@@ -842,7 +839,7 @@ level, not per-request:
 
 ```ts
 // src/lib/laika.ts
-import { createEmbeddedLaika } from '@laikacms/decap-integrations/embedded';
+import { createEmbeddedLaika } from '@laikacms/decap/embedded';
 import { resolve } from 'node:path';
 import { blogCollections } from './decap-config.js';
 
@@ -874,7 +871,7 @@ pattern uses a `+page.svelte` that bootstraps Decap via `onMount`:
     script.src = 'https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js';
     script.onload = async () => {
       const { default: createLaikaBackend } = await import(
-        '@laikacms/decap-integrations/decap-cms-backend-laika'
+        '@laikacms/decap/decap-cms-backend-laika'
       );
       window.CMS.registerBackend('laika', createLaikaBackend());
       window.CMS.init({ config: { /* your decap config */ } });

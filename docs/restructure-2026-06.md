@@ -23,11 +23,11 @@ packages, while the adapters and examples evolve independently on their own rele
 
 Three published packages remain:
 
-| Package                        | Path                | Description                                                           |
-| ------------------------------ | ------------------- | --------------------------------------------------------------------- |
-| `laikacms`                     | `packages/laikacms` | Core domain, APIs, default implementations, serializers, shared utils |
-| `@laikacms/decap-integrations` | `packages/decap`    | Decap CMS integrations: backend, OAuth2, widgets, server adapters     |
-| `@laikacms/decap-ai`           | `packages/decap-ai` | AI chat integration for Decap CMS (Vercel AI SDK)                     |
+| Package              | Path                | Description                                                           |
+| -------------------- | ------------------- | --------------------------------------------------------------------- |
+| `laikacms`           | `packages/laikacms` | Core domain, APIs, default implementations, serializers, shared utils |
+| `@laikacms/decap`    | `packages/decap`    | Decap CMS integrations: backend, OAuth2, widgets, server adapters     |
+| `@laikacms/decap-ai` | `packages/decap-ai` | AI chat integration for Decap CMS (Vercel AI SDK)                     |
 
 The `apps/` directory no longer exists.
 

@@ -44,9 +44,9 @@
  *   });
  *   const storage = new R2StorageRepository(bucket, serializers, 'md');
  *
- * Note: this file has no `@laikacms/decap-integrations` dependency — it's a
+ * Note: this file has no `@laikacms/decap` dependency — it's a
  * pure storage adapter. Pair it with the lower-level `decapApi` directly
- * or with `createCustomLaika` from `@laikacms/decap-integrations/custom`.
+ * or with `createCustomLaika` from `@laikacms/decap/custom`.
  *
  * The peer dep on `@aws-sdk/client-s3` is OPTIONAL — only callers using S3
  * pull it in.

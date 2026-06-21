@@ -1,8 +1,8 @@
-# @laikacms/decap-integrations/decap-oauth2
+# @laikacms/decap/decap-oauth2
 
-[![npm](https://img.shields.io/npm/v/@laikacms/decap-integrations)](https://www.npmjs.com/package/@laikacms/decap-integrations)
-[![npm](https://img.shields.io/npm/dm/@laikacms/decap-integrations)](https://www.npmjs.com/package/@laikacms/decap-integrations)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/decap-integrations)](https://bundlephobia.com/result?p=@laikacms/decap-integrations)
+[![npm](https://img.shields.io/npm/v/@laikacms/decap)](https://www.npmjs.com/package/@laikacms/decap)
+[![npm](https://img.shields.io/npm/dm/@laikacms/decap)](https://www.npmjs.com/package/@laikacms/decap)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/decap)](https://bundlephobia.com/result?p=@laikacms/decap)
 
 OAuth2 authentication server for Decap CMS with PKCE support.
 
@@ -16,13 +16,13 @@ OAuth2 authentication server for Decap CMS with PKCE support.
 ## Installation
 
 ```bash
-pnpm add @laikacms/decap-integrations
+pnpm add @laikacms/decap
 ```
 
 ## Usage
 
 ```typescript
-import { decapOauth2 } from '@laikacms/decap-integrations/decap-oauth2';
+import { decapOauth2 } from '@laikacms/decap/decap-oauth2';
 
 const oauth2 = decapOauth2({
   basePath: '/oauth2',
@@ -55,7 +55,7 @@ Adds passwordless FIDO2/WebAuthn login. Users can register a passkey after first
 their password and may optionally be required to do so.
 
 ```typescript
-import { decapOauth2 } from '@laikacms/decap-integrations/decap-oauth2';
+import { decapOauth2 } from '@laikacms/decap/decap-oauth2';
 
 const oauth2 = decapOauth2({
   // ... required options
@@ -100,8 +100,7 @@ const oauth2 = decapOauth2({
 });
 ```
 
-`StoredCredential` and `StoredChallenge` are exported from
-`@laikacms/decap-integrations/decap-oauth2`.
+`StoredCredential` and `StoredChallenge` are exported from `@laikacms/decap/decap-oauth2`.
 
 ### TOTP 2FA
 
@@ -175,8 +174,7 @@ const oauth2 = decapOauth2({
 });
 ```
 
-`EmailProvider` and `PasswordResetToken` are exported from
-`@laikacms/decap-integrations/decap-oauth2`.
+`EmailProvider` and `PasswordResetToken` are exported from `@laikacms/decap/decap-oauth2`.
 
 #### EmailProvider interface
 
@@ -245,12 +243,12 @@ const oauth2 = decapOauth2({
 ### Translations / i18n
 
 All user-facing strings can be localized via the `translations` field. The package ships English
-(`en`) and Dutch (`nl`) out of the box; import them from the
-`@laikacms/decap-integrations/decap-oauth2/i18n` subpath.
+(`en`) and Dutch (`nl`) out of the box; import them from the `@laikacms/decap/decap-oauth2/i18n`
+subpath.
 
 ```typescript
-import { decapOauth2 } from '@laikacms/decap-integrations/decap-oauth2';
-import { nl } from '@laikacms/decap-integrations/decap-oauth2/i18n';
+import { decapOauth2 } from '@laikacms/decap/decap-oauth2';
+import { nl } from '@laikacms/decap/decap-oauth2/i18n';
 
 const oauth2 = decapOauth2({
   // ... required options
@@ -261,7 +259,7 @@ const oauth2 = decapOauth2({
 To provide fully custom translations, implement the `OAuthMessages` (alias of `Translation`) type:
 
 ```typescript
-import type { OAuthMessages } from '@laikacms/decap-integrations/decap-oauth2';
+import type { OAuthMessages } from '@laikacms/decap/decap-oauth2';
 
 const myTranslations: OAuthMessages = {
   auth: {/* login/logout strings */},
@@ -280,8 +278,7 @@ const oauth2 = decapOauth2({
 });
 ```
 
-Both `OAuthMessages` and `Translation` are exported from
-`@laikacms/decap-integrations/decap-oauth2/i18n`.
+Both `OAuthMessages` and `Translation` are exported from `@laikacms/decap/decap-oauth2/i18n`.
 
 ## Security Considerations
 

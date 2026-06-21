@@ -1,4 +1,4 @@
-import type { CmsWidgetPreviewProps } from '@laikacms/decap/core';
+import type { CmsWidgetPreviewProps } from '@laikacms/decap-cms/core';
 import * as allIcons from '@radix-ui/react-icons';
 import React from 'react';
 

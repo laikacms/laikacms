@@ -1,5 +1,5 @@
-import { PkceAuthenticator } from '@laikacms/decap/lib-auth';
-import { AuthenticationPage, Icon } from '@laikacms/decap/ui-default';
+import { PkceAuthenticator } from '@laikacms/decap-cms/lib-auth';
+import { AuthenticationPage, Icon } from '@laikacms/decap-cms/ui-default';
 import React, { Component } from 'react';
 
 interface BackendConfig {

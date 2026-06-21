@@ -11,7 +11,7 @@
  * Example:
  *
  *   import config from './config.gen';
- *   import { ExtractFieldsType } from '@laikacms/decap-integrations/decap-config-types';
+ *   import { ExtractFieldsType } from '@laikacms/decap/decap-config-types';
  *
  *   type PagesCollection = Extract<
  *     typeof config['collections'][number],
@@ -125,7 +125,7 @@ export type ExtractFieldsType<Fields> = Fields extends readonly unknown[] ? Part
  * Example:
  *
  *   import config from './config.gen';
- *   import { ExtractCollectionType } from '@laikacms/decap-integrations/decap-config-types';
+ *   import { ExtractCollectionType } from '@laikacms/decap/decap-config-types';
  *
  *   type PagesCollection = Extract<
  *     typeof config['collections'][number],

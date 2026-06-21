@@ -12,9 +12,8 @@
     `tsc` build. Tests aren't shipped to npm and a few contract-testkit suites have latent type
     errors that surfaced once turbo's cache was invalidated; excluding them unblocks a clean build
     without touching the (passing) test code.
-  - First publish of `@laikacms/decap-integrations` — the package was previously published as
-    `@laikacms/decap`; this is a rename with the same content tree plus the new `./embedded` subpath
-    (`createEmbeddedLaika`) and the dev-token auth flow.
+  - `@laikacms/decap` — adds the new `./embedded` subpath (`createEmbeddedLaika`) and the dev-token
+    auth flow.
 
 ## 1.0.0
 
