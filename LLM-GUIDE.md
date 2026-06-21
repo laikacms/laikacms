@@ -6,8 +6,8 @@ If you're a coding agent dropped into a repo that wants to use LaikaCMS, **read 
 
 > **Note (June 2026):** the `starter-*` reference apps and most adapter packages were moved out of
 > this monorepo (see [`docs/restructure-2026-06.md`](./docs/restructure-2026-06.md)). The
-> `starter-…` names below still tell you which **preset and pattern** to use; the directories
-> themselves now live in separate repositories (locations TBD).
+> `starter-…` names below still tell you which **pattern** to use; the directories themselves now
+> live in separate repositories (locations TBD).
 
 ---
 
@@ -32,13 +32,17 @@ LaikaCMS is **three things stacked**:
 You pick a **storage backend**, wrap it in **repos**, expose them through the **HTTP API**, and
 mount the resulting `(Request) => Promise<Response>` handler in your framework.
 
-The `@laikacms/decap` package ships a one-call **preset** that does all of this for you. There are
-two presets:
+The `@laikacms/decap` package gives you the primitives for each layer:
 
-- **`createEmbeddedLaika`** — Node.js runtime, FileSystem storage.
-- **`createWorkersLaika`** — V8 isolates (Cloudflare Workers, Vercel Edge, etc.), R2 storage.
+- **`decapApi(...)`** (`@laikacms/decap/decap-api`) — the Decap-compatible HTTP API over your repos.
+  Returns `{ fetch, authenticateRequest }`; mount `.fetch` on a catch-all route.
+- **`createLaikaBackend()`** (`@laikacms/decap/decap-cms-backend-laika`) — the Decap CMS backend the
+  admin UI registers to talk to that API.
+- **`decapOauth2(...)`** (`@laikacms/decap/decap-oauth2`) — an optional PKCE OAuth2 server for
+  production login.
 
-For 95% of starters: pick a preset, pass a config, mount `.fetch` on a catch-all route.
+For most apps: construct a `StorageRepository`, wrap it in the ContentBase document/asset repos,
+pass them to `decapApi(...)`, and mount `.fetch` on a catch-all route.
 
 ---
 
@@ -47,21 +51,36 @@ For 95% of starters: pick a preset, pass a config, mount `.fetch` on a catch-all
 ### a) Spin up a Node.js backend (Express/Hono/Fastify/Koa/Bun/Deno)
 
 ```ts
-import { createEmbeddedLaika, decapAdminHtml, minimalBlogConfig } from '@laikacms/decap/embedded';
+import { decapApi } from '@laikacms/decap/decap-api';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { resolve } from 'node:path';
 
-const laika = createEmbeddedLaika({
-  contentDir: resolve(process.cwd(), 'content'),
-  decapConfig: minimalBlogConfig(), // pre-baked single-collection blog config
+const storage = new FileSystemStorageRepository(
+  resolve(process.cwd(), 'content'),
+  { md: markdownSerializer },
+  'md',
+);
+const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+const documents = new ContentBaseDocumentsRepository(storage, settings);
+const assets = new ContentBaseAssetsRepository(storage, settings);
+
+const laika = decapApi({
+  documents,
+  storage,
+  assets,
   basePath: '/api/decap',
-  auth: { mode: 'dev' }, // dev token only — replace before prod
+  authenticateAccessToken: yourValidator, // throw to reject; see task (e) for production auth
 });
 
 // Mount on every method at /api/decap/*:
 app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 
-// Serve the Decap CMS admin shell:
-app.get('/admin', c => c.html(decapAdminHtml({ decapConfig: minimalBlogConfig() })));
+// Serve the Decap CMS admin shell (loads Decap from CDN, registers the Laika backend):
+app.get('/admin', c => c.html(ADMIN_HTML)); // see docs/decap-integration.md → "Serving the Decap admin shell"
 ```
 
 ### b) Render content server-side in a framework page (Next/SvelteKit/Astro/Nuxt/Remix/etc.)
@@ -69,11 +88,13 @@ app.get('/admin', c => c.html(decapAdminHtml({ decapConfig: minimalBlogConfig() 
 ```ts
 import { collectStream, runTask } from 'laikacms/compat';
 import { NotFoundError } from 'laikacms/core';
-import { laika } from '~/server/laika';
+// Export the `documents` repo you built in task (a) and import it directly —
+// `decapApi(...)` returns only { fetch, authenticateRequest }, so SSR reads use the repo.
+import { documents } from '~/server/laika';
 
 // List published posts in a folder:
 const { items } = await collectStream(
-  laika.documents.listRecordSummaries({
+  documents.listRecordSummaries({
     folder: 'posts',
     depth: 1,
     pagination: { page: 1, perPage: 100 }, // NOT { offset, limit }
@@ -83,7 +104,7 @@ const { items } = await collectStream(
 
 // Read one published document by key:
 try {
-  const doc = await runTask(laika.documents.getDocument('posts/hello-world'));
+  const doc = await runTask(documents.getDocument('posts/hello-world'));
   const { title, body } = doc.content as { title?: string, body?: string };
 } catch (err) {
   if (err instanceof NotFoundError) {
@@ -95,9 +116,16 @@ try {
 
 ### c) Deploy to Cloudflare Workers + R2
 
+The same `decapApi(...)` wiring works on the edge — just swap `FileSystemStorageRepository` for an
+edge-compatible repo such as `R2StorageRepository` (`node:fs` is unavailable in V8 isolates).
+
 ```ts
-import { createWorkersLaika, decapAdminHtml, minimalBlogConfig } from '@laikacms/decap/workers';
+import { decapApi } from '@laikacms/decap/decap-api';
 import { Hono } from 'hono';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { R2StorageRepository } from 'laikacms/storage-r2';
 
 export interface Env {
   CONTENT: R2Bucket;
@@ -105,17 +133,20 @@ export interface Env {
 
 const app = new Hono<{ Bindings: Env }>();
 
-const makeLaika = (env: Env) =>
-  createWorkersLaika({
-    bucket: env.CONTENT,
-    decapConfig: minimalBlogConfig(),
+const makeLaika = (env: Env) => {
+  const storage = new R2StorageRepository(/* … env.CONTENT … */);
+  const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+  return decapApi({
+    documents: new ContentBaseDocumentsRepository(storage, settings),
+    storage,
+    assets: new ContentBaseAssetsRepository(storage, settings),
     basePath: '/api/decap',
-    seedConfigOnFirstRequest: true, // writes config.yml to R2 on first request
-    auth: { mode: 'dev' },
+    authenticateAccessToken: yourValidator,
   });
+};
 
 app.all('/api/decap/*', c => makeLaika(c.env).fetch(c.req.raw));
-app.get('/admin', c => c.html(decapAdminHtml({ decapConfig: minimalBlogConfig() })));
+app.get('/admin', c => c.html(ADMIN_HTML)); // see docs/decap-integration.md → "Serving the Decap admin shell"
 
 export default app;
 ```
@@ -131,7 +162,12 @@ safely hold one.
 
 ### e) Add real auth (production)
 
+Pass a real `authenticateAccessToken` validator to `decapApi(...)`. It receives the Bearer token on
+every request and must return a `User` (throw to reject — `decapApi` turns thrown errors into a
+401).
+
 ```ts
+import { decapApi } from '@laikacms/decap/decap-api';
 import { jwtVerify, SignJWT } from 'jose';
 
 // 1. Issue a JWT after your login form:
@@ -141,40 +177,48 @@ const token = await new SignJWT({ email: user.email, name: user.name })
   .setExpirationTime('8h')
   .sign(secret);
 
-// 2. Inject it into the admin shell server-side (no CDN dev-token import):
-app.get('/admin', requireLogin, async c => {
-  const token = getCookie(c, 'session')!;
-  return c.html(decapAdminHtml({ devToken: token }));
-});
+// 2. Hand that token to the admin shell so Decap sends it as the Bearer token
+//    (inject it into the HTML you serve at /admin behind your login guard).
 
 // 3. Validate it on every API request:
-createEmbeddedLaika({
-  // ... contentDir, decapConfig, basePath ...
-  auth: {
-    mode: 'custom',
-    async authenticateAccessToken(token) {
-      const { payload } = await jwtVerify(token, secret);
-      return { id: payload.sub, email: payload.email, name: payload.name };
-    },
+const laika = decapApi({
+  documents,
+  storage,
+  assets,
+  basePath: '/api/decap',
+  async authenticateAccessToken(token) {
+    const { payload } = await jwtVerify(token, secret);
+    return {
+      id: payload.sub as string,
+      email: payload.email as string,
+      name: payload.name as string,
+    };
   },
 });
 ```
 
-The `devToken` option to `decapAdminHtml()` replaces the hardcoded `DEFAULT_DEV_TOKEN` CDN import
-with a server-side token injection. See `apps/starter-jose-auth` for the full login→JWT→admin flow.
+For a full self-contained login server (email/password, passkey, TOTP) use the `decapOauth2(...)`
+PKCE server from `@laikacms/decap/decap-oauth2` — see
+[docs/decap-integration.md → "Production auth with decap-oauth2"](./docs/decap-integration.md#production-auth-with-decap-oauth2).
 
 ---
 
-## 3. The presets — choose the right one
+## 3. Choosing a storage backend
 
-| Preset                                         | Runtime                            | Storage                        | Helpers re-exported                                        |
-| ---------------------------------------------- | ---------------------------------- | ------------------------------ | ---------------------------------------------------------- |
-| `@laikacms/decap/embedded.createEmbeddedLaika` | Node, Bun, Deno                    | FileSystem                     | `minimalBlogConfig`, `decapAdminHtml`, `DEFAULT_DEV_TOKEN` |
-| `@laikacms/decap/workers.createWorkersLaika`   | V8 isolates (Workers, Vercel Edge) | R2 (or `MinimalR2Bucket` shim) | same helpers (re-exported)                                 |
+`decapApi(...)` is runtime-agnostic — the only thing that changes between Node and the edge is which
+`StorageRepository` you construct:
 
-Both return `{ fetch, authenticateRequest, storage, documents, assets }`. Mount `.fetch` from your
-framework's catch-all route. Use `.documents` / `.storage` / `.assets` directly from server render
-code to **bypass HTTP auth** — server-internal reads don't need a token.
+| Storage repo                  | Subpath                    | Runtime                            |
+| ----------------------------- | -------------------------- | ---------------------------------- |
+| `FileSystemStorageRepository` | `laikacms/storage-fs`      | Node, Bun, Deno (needs `node:fs`)  |
+| `R2StorageRepository`         | `laikacms/storage-r2`      | V8 isolates (Workers, Vercel Edge) |
+| `DrizzleStorageRepository`    | `laikacms/storage-drizzle` | Any SQL DB via Drizzle ORM         |
+| `WebDavStorageRepository`     | `laikacms/storage-webdav`  | Any RFC 4918 WebDAV server         |
+
+Wrap the repo in `ContentBaseDocumentsRepository` / `ContentBaseAssetsRepository`, pass them to
+`decapApi(...)`, and mount `.fetch` from your framework's catch-all route. `decapApi(...)` returns
+`{ fetch, authenticateRequest }`. For server-side render reads, call the `documents` / `assets` /
+`storage` repos directly to **bypass HTTP auth** — server-internal reads don't need a token.
 
 ---
 
@@ -200,8 +244,10 @@ These are the things that consistently bite first-time integrators:
    - The Decap backend lives at `@laikacms/decap/decap-cms-backend-laika` — a subpath of
      `@laikacms/decap`, NOT a separate `@laikacms/decap-cms-backend-laika` package.
 
-4. **`createEmbeddedLaika` is Node-only.** It calls `node:fs.mkdirSync` at module-load time. Don't
-   import it from Workers/edge code. Use `createWorkersLaika` instead.
+4. **`FileSystemStorageRepository` is Node-only.** It needs `node:fs` and a writable local
+   filesystem, so it can't run in Workers/edge code. On the edge, construct an edge-compatible
+   `StorageRepository` such as `R2StorageRepository` instead and pass it to the same
+   `decapApi(...)`.
 
 5. **Workers/edge storage is currently R2-only.** Vercel Blob, Netlify Blobs, Deno KV, Bun S3 don't
    have first-party `StorageRepository` adapters yet. The Vercel Edge and Netlify Functions starters
@@ -216,9 +262,9 @@ These are the things that consistently bite first-time integrators:
    - Static file in `public/admin.html` (TanStack, Nuxt, Remix, SolidStart) — cleanest.
    - Iframe with `srcDoc` (Next App Router).
    - Inline server-rendered HTML response from a non-page route (SvelteKit `+server.ts`, Marko
-     `+handler.ts`, Astro `is:inline`). The `decapAdminHtml()` helper from
-     `@laikacms/decap/embedded` returns the HTML string ready to serve — use it instead of
-     hand-rolling a 50-line static file.
+     `+handler.ts`, Astro `is:inline`). Serve a small HTML string that loads Decap from CDN and
+     registers `createLaikaBackend()` — see
+     [docs/decap-integration.md → "Serving the Decap admin shell"](./docs/decap-integration.md#serving-the-decap-admin-shell).
 
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** When adding a new
    starter under `apps/`, mirror this convention — see existing starters' `package.json`.
@@ -226,9 +272,8 @@ These are the things that consistently bite first-time integrators:
 8. **`api_root` (not `api_url`) in the Decap backend config.** The Laika backend constructor reads
    `config.backend.api_root` (with `api_url` accepted as a deprecated alias). Without it, all Decap
    admin API calls resolve to the site root and silently 404.
-   - When using `decapAdminHtml()` + `minimalBlogConfig()`, `api_root: '/api/decap'` is included in
-     the default backend config automatically since v0.x — you only need to pass it explicitly when
-     overriding the `backend` key.
+   - In your Decap config's `backend` key, set `api_root` to the path you mounted `decapApi(...)` on
+     (e.g. `'/api/decap'`).
    - When wiring your own `CMS.init()` (next-blog / astro-blog pattern), use:
      `backend: { name: 'laika', api_root: '/api/decap' }`
    - The serializer registry needs all four types: `{ md, yaml, yml, json, raw }`. If you only
@@ -319,7 +364,7 @@ These are the things that consistently bite first-time integrators:
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-If your target isn't listed: pick the closest preset and copy the shape. `starter-hono-backend` is
+If your target isn't listed: pick the closest pattern and copy the shape. `starter-hono-backend` is
 the canonical "minimal Node example"; `starter-workers-r2` is the canonical "minimal edge example".
 
 ---

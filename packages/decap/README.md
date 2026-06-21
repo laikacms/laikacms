@@ -10,14 +10,11 @@ pnpm add @laikacms/decap
 
 ## Exports
 
-### Presets
+### Type utilities
 
-| Export                               | Purpose                                                                                                                                                                                                  |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@laikacms/decap/embedded`           | `createEmbeddedLaika(options)` — One-call Laika+Decap setup for Node/Astro/Next/Hono using `FileSystemStorageRepository`                                                                                 |
-| `@laikacms/decap/workers`            | `createWorkersLaika(options)` — Cloudflare Workers preset using `R2StorageRepository` + `ContentBaseAssetsRepository` (native R2 asset storage via `R2AssetsRepository` is planned for a future release) |
-| `@laikacms/decap/custom`             | `createCustomLaika(options)` — Storage-agnostic preset; accepts any `StorageRepository`                                                                                                                  |
-| `@laikacms/decap/decap-config-types` | `ExtractFieldsType<T>`, `ExtractCollectionType<T>` — TypeScript utilities to derive typed frontmatter from a const-asserted Decap CMS config                                                             |
+| Export                               | Purpose                                                                                                                                      |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@laikacms/decap/decap-config-types` | `ExtractFieldsType<T>`, `ExtractCollectionType<T>` — TypeScript utilities to derive typed frontmatter from a const-asserted Decap CMS config |
 
 #### `decap-config-types` usage
 

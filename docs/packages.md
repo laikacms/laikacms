@@ -116,19 +116,16 @@ Provides a runtime-agnostic server adapter, a React widget, and document-manipul
 Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives in the separate
 `@laikacms/decap-ai` package.
 
-| Subpath                                                     | Description                                                           |
-| ----------------------------------------------------------- | --------------------------------------------------------------------- |
-| `@laikacms/decap/decap-cms-backend-laika`                   | Decap CMS backend                                                     |
-| `@laikacms/decap/decap-api`                                 | Decap-compatible API                                                  |
-| `@laikacms/decap/decap-oauth2`                              | OAuth2 server with PKCE                                               |
-| `@laikacms/decap/decap-cms-widget-lucide-icon`              | Lucide icon picker                                                    |
-| `@laikacms/decap/decap-cms-widget-radix-icon`               | Radix icon picker                                                     |
-| `@laikacms/decap/decap-cms-locale-nl`                       | Dutch locale                                                          |
-| `@laikacms/decap/decap-cms-editor-component-embedded-entry` | Embedded entry editor component                                       |
-| `@laikacms/decap/embedded`                                  | One-call setup for embedding Laika+Decap in Node.js apps (FS-backed)  |
-| `@laikacms/decap/workers`                                   | One-call setup for Cloudflare Workers (R2-backed, no Node.js imports) |
-| `@laikacms/decap/custom`                                    | Storage-agnostic preset — bring your own `StorageRepository`          |
-| `@laikacms/decap/decap-config-types`                        | TypeScript type utilities derived from a Decap CMS config object      |
+| Subpath                                                     | Description                                                      |
+| ----------------------------------------------------------- | ---------------------------------------------------------------- |
+| `@laikacms/decap/decap-cms-backend-laika`                   | Decap CMS backend                                                |
+| `@laikacms/decap/decap-api`                                 | Decap-compatible API                                             |
+| `@laikacms/decap/decap-oauth2`                              | OAuth2 server with PKCE                                          |
+| `@laikacms/decap/decap-cms-widget-lucide-icon`              | Lucide icon picker                                               |
+| `@laikacms/decap/decap-cms-widget-radix-icon`               | Radix icon picker                                                |
+| `@laikacms/decap/decap-cms-locale-nl`                       | Dutch locale                                                     |
+| `@laikacms/decap/decap-cms-editor-component-embedded-entry` | Embedded entry editor component                                  |
+| `@laikacms/decap/decap-config-types`                        | TypeScript type utilities derived from a Decap CMS config object |
 
 ## `@laikacms/github`
 

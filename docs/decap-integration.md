@@ -1,82 +1,145 @@
 # Decap CMS Integration
 
-Three integration shapes are supported, in increasing order of complexity:
+Two integration shapes are supported, in increasing order of complexity:
 
-| Pattern                                                               | When to use                                                                 | Backend host                                                                           | Auth                                        |
-| --------------------------------------------------------------------- | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------- |
-| **[Embedded](#embedded-same-origin-recommended-for-single-site-cms)** | The CMS edits content for a single site, and you control that site's server | Same process as the public site (Astro, Next, Hono, …)                                 | Dev token (local) or your own session check |
-| **[Hosted gateway](#hosted-gateway-multi-tenant)**                    | Multiple sites sharing one Decap admin + Laika backend                      | A separate Worker / server you operate (the `laika-gateway` app moved to its own repo) | GitHub OAuth (or other provider)            |
-| **[Standalone Worker](#standalone-worker-byo-storage)**               | You want full control of storage, auth, and routing                         | Your own Hono/Worker app                                                               | JWT (or your scheme)                        |
+| Pattern                                                 | When to use                                            | Backend host                                                                           | Auth                             |
+| ------------------------------------------------------- | ------------------------------------------------------ | -------------------------------------------------------------------------------------- | -------------------------------- |
+| **[Hosted gateway](#hosted-gateway-multi-tenant)**      | Multiple sites sharing one Decap admin + Laika backend | A separate Worker / server you operate (the `laika-gateway` app moved to its own repo) | GitHub OAuth (or other provider) |
+| **[Standalone Worker](#standalone-worker-byo-storage)** | You want full control of storage, auth, and routing    | Your own Hono/Worker app                                                               | JWT (or your scheme)             |
+
+The primary documented integration path is the **Standalone Worker (BYO storage)** wiring below: you
+construct a `StorageRepository`, wrap it in the ContentBase document/asset repos, and expose them
+through `decapApi(...)`. Everything else (admin shell, OAuth2, framework bridges) builds on top of
+that handler.
 
 ---
 
-## Embedded (same-origin) — recommended for single-site CMS
+## Standalone Worker (BYO storage)
 
-This is the simplest integration. The Astro/Next/Hono site that serves the public pages also serves
-`/admin` and `/api/decap/*`. No separate process, no OAuth dance for local dev, no CORS.
-
-### Server
-
-```bash
-pnpm add @laikacms/decap laikacms
-```
+This is the primary integration path. Wire the pieces by hand: pick a `StorageRepository`, wrap it
+in the ContentBase document/asset repos, and expose them through `decapApi(...)`. The resulting
+`api.fetch` is a Web-standard `(Request) => Promise<Response>` handler you mount on a catch-all
+route.
 
 ```ts
-// src/lib/laika.ts (Astro example)
-import { resolve } from 'node:path';
+import { decapApi } from '@laikacms/decap/decap-api';
+import { Hono } from 'hono';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { R2StorageRepository } from 'laikacms/storage-r2';
+// …serializers…
 
-import { createEmbeddedLaika } from '@laikacms/decap/embedded';
+const app = new Hono<{ Bindings: Env }>();
 
-import { decapConfig } from './decap-config.ts'; // your Decap CMS config object
-
-export const laika = createEmbeddedLaika({
-  contentDir: resolve(process.cwd(), 'content'),
-  decapConfig,
-  basePath: '/api/decap',
-  auth: { mode: 'dev' }, // pre-shared token, no OAuth
+app.all('/api/decap/*', async c => {
+  const storage = new R2StorageRepository(/* … */);
+  const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+  const api = decapApi({
+    documents: new ContentBaseDocumentsRepository(storage, settings),
+    storage,
+    assets: new ContentBaseAssetsRepository(storage, settings),
+    basePath: '/api/decap',
+    authenticateAccessToken: yourValidator,
+  });
+  return api.fetch(c.req.raw);
 });
 ```
 
-```ts
-// src/pages/api/decap/[...path].ts
-import type { APIRoute } from 'astro';
-import { laika } from '~/lib/laika.ts';
+Swap `R2StorageRepository` for any other `StorageRepository` implementation to change where content
+lives:
 
-export const prerender = false;
-const handler: APIRoute = ({ request }) => laika.fetch(request);
-export const GET = handler;
-export const POST = handler;
-export const PUT = handler;
-export const PATCH = handler;
-export const DELETE = handler;
+| Subpath                    | Class                           | Where                           |
+| -------------------------- | ------------------------------- | ------------------------------- |
+| `laikacms/storage-fs`      | `FileSystemStorageRepository`   | Node.js local disk              |
+| `laikacms/storage-r2`      | `R2StorageRepository`           | Cloudflare R2                   |
+| `laikacms/storage-s3`      | S3 shim → `R2StorageRepository` | AWS S3 / MinIO / B2 / DO Spaces |
+| `laikacms/storage-drizzle` | `DrizzleStorageRepository`      | Any SQL DB via Drizzle ORM      |
+| `laikacms/storage-webdav`  | `WebDavStorageRepository`       | Any RFC 4918 WebDAV server      |
+
+> `FileSystemStorageRepository` requires `node:fs` and a writable local filesystem, so it runs on
+> **Node.js** and **Deno 2** (which supports `node:` built-ins) but not on edge runtimes (Cloudflare
+> Workers, Deno Deploy, Vercel Edge, …). On the edge, use an edge-compatible storage repo such as
+> `R2StorageRepository`.
+
+`api.fetch` is the catch-all handler. To call content directly from server-side render code (and
+bypass the authenticated HTTP API), use the `documents` / `assets` / `storage` repos you
+constructed.
+
+### WebDAV storage
+
+`WebDavStorageRepository` works with Nextcloud, ownCloud, Apache `mod_dav`, nginx-dav, rclone, and
+any other RFC 4918 server. Only a URL (and optionally Basic auth) is needed. Construct it like any
+other `StorageRepository` and pass it to `decapApi(...)`:
+
+```ts
+import { decapApi } from '@laikacms/decap/decap-api';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
+import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
+import { WebDavStorageRepository } from 'laikacms/storage-webdav';
+
+const storage = new WebDavStorageRepository(
+  {
+    baseUrl: process.env.WEBDAV_URL, // https://cloud.example.com/remote.php/dav/files/alice
+    auth: { username: 'alice', password: '…' }, // omit for anonymous / token auth
+  },
+  { md: markdownSerializer, yml: yamlSerializer, json: jsonSerializer, raw: rawSerializer },
+  'md', // default extension for new documents
+);
+
+const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+const api = decapApi({
+  documents: new ContentBaseDocumentsRepository(storage, settings),
+  storage,
+  assets: new ContentBaseAssetsRepository(storage, settings),
+  basePath: '/api/decap',
+  authenticateAccessToken: yourValidator,
+});
+
+export const laika = api;
 ```
 
-That's the entire server. `createEmbeddedLaika` constructs the filesystem-backed storage, the
-ContentBase document + asset repos, and the `decapApi(...)` router. The first run seeds
-`content/config.yml` from your `decapConfig` so the editor and the server agree on the schema.
+The `starter-webdav-blog` example (a complete WebDAV setup including an embedded local-dev WebDAV
+server) was moved out of this monorepo in June 2026 — see
+[restructure-2026-06.md](./restructure-2026-06.md).
 
-> **Not for edge runtimes.** `createEmbeddedLaika` uses `FileSystemStorageRepository`, which
-> requires `node:fs` and a writable local filesystem. It runs on **Node.js** and **Deno 2** (Deno 2
-> supports `node:` built-ins — see `starter-fresh-blog` and `starter-lume-blog`), but is
-> incompatible with edge runtimes (Cloudflare Workers, Deno Deploy, Vercel Edge, etc.). For edge
-> deployments, wire the pieces manually using `decapApi` — see
-> [Standalone Worker](#standalone-worker-byo-storage) below.
+---
 
-### Client — Decap admin shell
+## Serving the Decap admin shell
 
-Two ways to serve the admin UI:
-
-**Option A — `decapAdminHtml()` (simpler, no build step)**
-
-When you already have a running server, the simplest admin shell is a single function call. No
-esbuild step, no `public/admin/bundle.js`, no React dependency. Available from all three presets
-(`/embedded`, `/custom`, `/workers`):
+The admin UI loads Decap from a CDN, registers the Laika backend, and points at your `decapApi`
+route. Build a small HTML page that does this and serve it from a non-page route (so your
+framework's SSR hydration doesn't fight Decap for the `<html>` element):
 
 ```ts
-import { decapAdminHtml, minimalBlogConfig } from '@laikacms/decap/custom';
-
-const decapConfig = minimalBlogConfig();
-const ADMIN_HTML = decapAdminHtml({ decapConfig, title: 'My Admin' });
+const ADMIN_HTML = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>My Admin</title>
+  </head>
+  <body>
+    <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
+    <script>
+      window.CMS_MANUAL_INIT = true;
+    </script>
+    <script type="module">
+      import createLaikaBackend from '@laikacms/decap/decap-cms-backend-laika';
+      window.CMS.registerBackend('laika', createLaikaBackend());
+      window.CMS.init({
+        config: {
+          backend: { name: 'laika', api_root: '/api/decap' },
+          // …collections…
+        },
+      });
+    </script>
+  </body>
+</html>`;
 
 // Hono
 app.get('/admin', c => c.html(ADMIN_HTML));
@@ -84,13 +147,7 @@ app.get('/admin', c => c.html(ADMIN_HTML));
 app.get('/admin', (_req, res) => res.send(ADMIN_HTML));
 ```
 
-The function inlines the Decap config into a `<script>` that loads Decap from CDN and registers the
-Laika backend. Dev-mode auth is wired automatically when `auth: { mode: 'dev' }` is passed to
-`createCustomLaika` / `createEmbeddedLaika`.
-
-**Option B — React island (full control, smaller bundle)**
-
-Use when you need custom widgets or the Decap React tree:
+For full control (custom widgets, the Decap React tree) you can instead render a React island:
 
 ```ts
 // src/components/DecapAdmin.tsx (a React island)
@@ -99,7 +156,6 @@ import DEFAULT_WIDGET_STRING from '@laikacms/decap-cms/widget-string';
 import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 // …other widgets…
 
-import { DEFAULT_DEV_TOKEN } from '@laikacms/decap/embedded';
 import { decapConfig } from '~/lib/decap-config.ts';
 
 DecapCmsCore.registerBackend('laika', createLaikaBackend());
@@ -112,7 +168,6 @@ export default function DecapAdmin() {
     backend: {
       ...decapConfig.backend,
       base_url: window.location.origin,
-      dev_token: DEFAULT_DEV_TOKEN, // skip OAuth in dev
     },
   };
   return (
@@ -123,38 +178,16 @@ export default function DecapAdmin() {
 }
 ```
 
-**Dev auth mode.** Setting `backend.dev_token` on the Decap config swaps the PKCE auth page for an
-auto-login that immediately submits `dev_token`. The embedded server validates it against the same
-token (passed to `createEmbeddedLaika({ auth: { mode: 'dev', devToken } })` — defaults to
-`DEFAULT_DEV_TOKEN`). For production, drop the `dev_token` field and configure a real OAuth provider
-in front (see the gateway pattern below) or pass a `mode: 'custom'` validator to
-`createEmbeddedLaika`.
-
-### Custom auth (production embedded)
-
-```ts
-import { createEmbeddedLaika } from '@laikacms/decap/embedded';
-import { jwtVerify } from 'jose'; // example
-
-createEmbeddedLaika({
-  contentDir: resolve(process.cwd(), 'content'),
-  decapConfig,
-  basePath: '/api/decap',
-  auth: {
-    mode: 'custom',
-    async authenticateAccessToken(token) {
-      const { payload } = await jwtVerify(token, jwks);
-      return { id: payload.sub, email: payload.email, name: payload.name };
-    },
-  },
-});
-```
+The `authenticateAccessToken` validator you pass to `decapApi(...)` decides who may call the API.
+For local development you can accept a pre-shared token; for production, validate a real session/JWT
+(or front the whole thing with the `decap-oauth2` server below).
 
 ### Production auth with `decap-oauth2`
 
 Rather than building an OAuth2 server from scratch, use the bundled `decapOauth2` helper. It is a
 self-contained PKCE authorization server with email/password login, optional passkey (WebAuthn), and
-optional TOTP 2FA. You wire it alongside `createEmbeddedLaika` in the same Express or Hono app.
+optional TOTP 2FA. You wire it alongside the `decapApi(...)` handler in the same Express or Hono
+app.
 
 ```bash
 pnpm add @laikacms/decap
@@ -163,12 +196,13 @@ pnpm add @laikacms/decap
 **Hono example**
 
 ```ts
+import { decapApi } from '@laikacms/decap/decap-api';
 import { decapOauth2 } from '@laikacms/decap/decap-oauth2';
-import { createEmbeddedLaika } from '@laikacms/decap/embedded';
 import { Hono } from 'hono';
-import { resolve } from 'node:path';
-
-import { decapConfig } from './decap-config.js';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { R2StorageRepository } from 'laikacms/storage-r2';
 
 const CLIENT_ID = process.env.DECAP_CLIENT_ID!;
 const OAUTH_BASE = '/oauth2';
@@ -195,19 +229,21 @@ const oauth2 = decapOauth2({
   },
 });
 
-const laika = createEmbeddedLaika({
-  contentDir: resolve(process.cwd(), 'content'),
-  decapConfig,
+// Build the Decap API handler — its validator checks the OAuth2 session token.
+const storage = new R2StorageRepository(/* … */);
+const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+const laika = decapApi({
+  documents: new ContentBaseDocumentsRepository(storage, settings),
+  storage,
+  assets: new ContentBaseAssetsRepository(storage, settings),
   basePath: '/api/decap',
-  auth: {
-    mode: 'custom',
-    async authenticateAccessToken(token) {
-      const session = await db.sessions.findByAccessToken(token);
-      if (!session) return null;
-      const user = await db.users.findById(session.userId);
-      if (!user) return null;
-      return { id: user.id, email: user.email, name: user.email };
-    },
+  // Reject by throwing — decapApi turns thrown errors into a 401.
+  async authenticateAccessToken(token) {
+    const session = await db.sessions.findByAccessToken(token);
+    if (!session) throw new Error('Invalid session');
+    const user = await db.users.findById(session.userId);
+    if (!user) throw new Error('Unknown user');
+    return { id: user.id, email: user.email, name: user.email };
   },
 });
 
@@ -268,19 +304,9 @@ const decapConfig = {
 };
 ```
 
-Or when using `decapAdminHtml`, pass `auth.backendUrl`:
-
-```ts
-import { decapAdminHtml } from '@laikacms/decap/embedded';
-
-const ADMIN_HTML = decapAdminHtml({
-  decapConfig,
-  auth: {
-    backendUrl: 'https://cms.example.com',
-    authEndpoint: '/oauth2/authorize',
-  },
-});
-```
+Use this same `decapConfig` when building the admin shell (see
+[Serving the Decap admin shell](#serving-the-decap-admin-shell) above) so the editor performs the
+PKCE login against `/oauth2/authorize`.
 
 **Optional extensions**
 
@@ -308,100 +334,6 @@ in their own repositories.
 
 ---
 
-## Standalone Worker (BYO storage)
-
-For full control, wire the pieces by hand:
-
-```ts
-import { decapApi } from '@laikacms/decap/decap-api';
-import { Hono } from 'hono';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
-import { R2StorageRepository } from 'laikacms/storage-r2';
-// …serializers…
-
-const app = new Hono<{ Bindings: Env }>();
-
-app.all('/api/decap/*', async c => {
-  const storage = new R2StorageRepository(/* … */);
-  const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-  const api = decapApi({
-    documents: new ContentBaseDocumentsRepository(storage, settings),
-    storage,
-    assets: new ContentBaseAssetsRepository(storage, settings),
-    basePath: '/api/decap',
-    authenticateAccessToken: yourValidator,
-  });
-  return api.fetch(c.req.raw);
-});
-```
-
----
-
-## `createCustomLaika` — BYO storage preset
-
-Between `createEmbeddedLaika` (filesystem, simple) and the raw `decapApi` wiring above sits
-`createCustomLaika`. It takes a **pre-built `StorageRepository`** of any kind and wires the rest
-automatically (content/asset repos, config seeding, Decap API, dev auth).
-
-```ts
-import { createCustomLaika } from '@laikacms/decap/custom';
-
-const laika = createCustomLaika({
-  storage, // any StorageRepository
-  decapConfig,
-  basePath: '/api/decap',
-  auth: { mode: 'dev' },
-});
-app.all('/api/decap/*', c => laika.fetch(c.req.raw));
-```
-
-Available `StorageRepository` implementations:
-
-| Subpath                    | Class                           | Where                           |
-| -------------------------- | ------------------------------- | ------------------------------- |
-| `laikacms/storage-fs`      | `FileSystemStorageRepository`   | Node.js local disk              |
-| `laikacms/storage-r2`      | `R2StorageRepository`           | Cloudflare R2                   |
-| `laikacms/storage-s3`      | S3 shim → `R2StorageRepository` | AWS S3 / MinIO / B2 / DO Spaces |
-| `laikacms/storage-drizzle` | `DrizzleStorageRepository`      | Any SQL DB via Drizzle ORM      |
-| `laikacms/storage-webdav`  | `WebDavStorageRepository`       | Any RFC 4918 WebDAV server      |
-
-### WebDAV storage
-
-`WebDavStorageRepository` works with Nextcloud, ownCloud, Apache `mod_dav`, nginx-dav, rclone, and
-any other RFC 4918 server. Only a URL (and optionally Basic auth) is needed:
-
-```ts
-import { jsonSerializer } from 'laikacms/storage-serializers-json';
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
-import { rawSerializer } from 'laikacms/storage-serializers-raw';
-import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
-import { WebDavStorageRepository } from 'laikacms/storage-webdav';
-
-const storage = new WebDavStorageRepository(
-  {
-    baseUrl: process.env.WEBDAV_URL, // https://cloud.example.com/remote.php/dav/files/alice
-    auth: { username: 'alice', password: '…' }, // omit for anonymous / token auth
-  },
-  { md: markdownSerializer, yml: yamlSerializer, json: jsonSerializer, raw: rawSerializer },
-  'md', // default extension for new documents
-);
-
-export const laika = createCustomLaika({
-  storage,
-  decapConfig,
-  basePath: '/api/decap',
-  auth: { mode: 'dev' },
-});
-```
-
-The `starter-webdav-blog` example (a complete WebDAV setup including an embedded local-dev WebDAV
-server) was moved out of this monorepo in June 2026 — see
-[restructure-2026-06.md](./restructure-2026-06.md).
-
----
-
 ## Widgets
 
 | Widget       | Subpath                                        |
@@ -426,9 +358,9 @@ There are **two** packages in the laika-cms ecosystem with confusingly similar n
 - **`@laikacms/decap`** — fork of upstream Decap CMS itself (the React `App`, `DecapCmsProvider`,
   widgets, backends like `backend-github`, etc.). Lives in
   [`laikacms/decap-cms#v4.beta`](https://github.com/laikacms/decap-cms).
-- **`@laikacms/decap`** — adapters _around_ Decap: the `laika` Decap backend, the JSON:API server
-  (`decap-api`), the `createEmbeddedLaika` preset, custom widgets, OAuth proxies. Lives in this repo
-  under `packages/decap/`.
+- **`@laikacms/decap`** — adapters _around_ Decap: the `laika` Decap backend (`createLaikaBackend`),
+  the Decap-compatible HTTP API (`decapApi`), the `decapOauth2` server, custom widgets. Lives in
+  this repo under `packages/decap/`.
 
 Their subpath exports do not overlap, so you can `pnpm add` both side by side.
 
@@ -839,26 +771,35 @@ level, not per-request:
 
 ```ts
 // src/lib/laika.ts
-import { createEmbeddedLaika } from '@laikacms/decap/embedded';
+import { decapApi } from '@laikacms/decap/decap-api';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { resolve } from 'node:path';
-import { blogCollections } from './decap-config.js';
 
-// Module-level singleton — initialized once, reused across all requests
-export const laika = createEmbeddedLaika({
-  contentDir: resolve(process.cwd(), 'content'),
+// Module-level singletons — initialized once, reused across all requests
+const storage = new FileSystemStorageRepository(
+  resolve(process.cwd(), 'content'),
+  { md: markdownSerializer },
+  'md',
+);
+const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+
+export const laika = decapApi({
+  documents: new ContentBaseDocumentsRepository(storage, settings),
+  storage,
+  assets: new ContentBaseAssetsRepository(storage, settings),
   basePath: '/api/decap',
-  auth: { mode: 'dev' },
-  decapConfig: {
-    backend: { name: 'laika', api_root: '/api/decap' },
-    collections: blogCollections,
-  },
+  authenticateAccessToken: yourValidator,
 });
 ```
 
 #### Decap admin via `+page.svelte` + `onMount`
 
-`decapAdminHtml()` returns a raw HTML string. SvelteKit has no `c.html()` equivalent. The correct
-pattern uses a `+page.svelte` that bootstraps Decap via `onMount`:
+SvelteKit has no `c.html()` equivalent for serving a raw admin shell. The correct pattern uses a
+`+page.svelte` that bootstraps Decap via `onMount`:
 
 ```svelte
 <!-- src/routes/admin/+page.svelte -->
