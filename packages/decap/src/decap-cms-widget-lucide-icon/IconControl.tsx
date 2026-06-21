@@ -1,6 +1,6 @@
 import { css } from '@emotion/css';
-import type { CmsWidgetControlProps } from 'decap-cms-core';
-import { colors, shadows } from 'decap-cms-ui-default';
+import type { CmsWidgetControlProps } from '@laikacms/decap/core';
+import { colors, shadows } from '@laikacms/decap/ui-default';
 import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import * as lucideReact from 'lucide-react';
 import React, { useMemo, useState } from 'react';

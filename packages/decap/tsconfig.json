@@ -29,6 +29,30 @@
       "../../node_modules/@types"
     ],
     "paths": {
+      "@laikacms/decap/core": [
+        "../../types/decap-cms-core/laika-core.d.ts"
+      ],
+      "@laikacms/decap/core/*": [
+        "../../types/decap-cms-core/*"
+      ],
+      "@laikacms/decap/lib-util": [
+        "../../types/decap-cms-lib-util/index.d.ts"
+      ],
+      "@laikacms/decap/lib-util/*": [
+        "../../types/decap-cms-lib-util/*"
+      ],
+      "@laikacms/decap/ui-default": [
+        "../../types/decap-cms-ui-default/index.d.ts"
+      ],
+      "@laikacms/decap/ui-default/*": [
+        "../../types/decap-cms-ui-default/*"
+      ],
+      "@laikacms/decap/lib-auth": [
+        "../../types/decap-cms-lib-auth/index.d.ts"
+      ],
+      "@laikacms/decap/lib-auth/*": [
+        "../../types/decap-cms-lib-auth/*"
+      ],
       "decap-cms-core": [
         "../../types/decap-cms-core/index.d.ts"
       ],

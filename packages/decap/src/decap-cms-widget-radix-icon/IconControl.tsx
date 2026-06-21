@@ -1,7 +1,7 @@
+import type { CmsWidgetControlProps } from '@laikacms/decap/core';
+import { colors, shadows } from '@laikacms/decap/ui-default';
 import { ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
 import type { IconProps } from '@radix-ui/react-icons/dist/types';
-import type { CmsWidgetControlProps } from 'decap-cms-core';
-import { colors, shadows } from 'decap-cms-ui-default';
 import React, { useEffect, useMemo, useState } from 'react';
 
 export type IconControlProps = CmsWidgetControlProps<string>;
