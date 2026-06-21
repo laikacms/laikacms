@@ -39,4 +39,3 @@ by hand:
 All three return the same shape: `{ fetch, authenticateRequest, storage, documents, assets }`. Mount
 `fetch` from your framework's catch-all route; call the repos directly from server-side render paths
 to bypass the (authenticated) HTTP API.
-</content>

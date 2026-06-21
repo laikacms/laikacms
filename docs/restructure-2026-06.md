@@ -9,8 +9,8 @@ This document is the record of what changed, why, and where things went.
 
 ## Why
 
-The monorepo had grown to ~170 example apps and ~150 packages. The vast majority of that surface area
-was reference material (starter templates) or optional integrations that:
+The monorepo had grown to ~170 example apps and ~150 packages. The vast majority of that surface
+area was reference material (starter templates) or optional integrations that:
 
 - slowed down `pnpm install`, builds, and CI,
 - coupled the release of the core packages to a long tail of adapters and demos, and
@@ -23,11 +23,11 @@ packages, while the adapters and examples evolve independently on their own rele
 
 Three published packages remain:
 
-| Package                        | Path                  | Description                                                            |
-| ------------------------------ | --------------------- | --------------------------------------------------------------------- |
-| `laikacms`                     | `packages/laikacms`   | Core domain, APIs, default implementations, serializers, shared utils |
-| `@laikacms/decap-integrations` | `packages/decap`      | Decap CMS integrations: backend, OAuth2, widgets, server adapters     |
-| `@laikacms/decap-ai`           | `packages/decap-ai`   | AI chat integration for Decap CMS (Vercel AI SDK)                     |
+| Package                        | Path                | Description                                                           |
+| ------------------------------ | ------------------- | --------------------------------------------------------------------- |
+| `laikacms`                     | `packages/laikacms` | Core domain, APIs, default implementations, serializers, shared utils |
+| `@laikacms/decap-integrations` | `packages/decap`    | Decap CMS integrations: backend, OAuth2, widgets, server adapters     |
+| `@laikacms/decap-ai`           | `packages/decap-ai` | AI chat integration for Decap CMS (Vercel AI SDK)                     |
 
 The `apps/` directory no longer exists.
 
@@ -44,16 +44,16 @@ The entire `apps/` tree was deleted:
 
 ### Packages (8 top-level directories, 100+ npm packages)
 
-| Removed path                                   | Contents                                                                          |
-| ---------------------------------------------- | --------------------------------------------------------------------------------- |
-| `packages/integrations/*`                      | ~40 storage / asset / auth adapters (`@laikacms/aws`, `@laikacms/github`, `@laikacms/algolia`, `@laikacms/supabase`, `@laikacms/mongodb`, …) |
-| `packages/portable-text/*`                     | ~67 `portable-text-to-*` mapper packages + `@laikacloud/portabletext-core`        |
-| `packages/tools/*`                             | `laikacli` and `@laikacms/dynamodb-local`                                          |
-| `packages/git-gateway`                         | `@laikacms/git-gateway`                                                            |
-| `packages/decap-cms-lexical-core`              | Lexical editor core for the Decap fork                                             |
-| `packages/decap-cms-widget-lexicaleditor`      | Lexical rich-text widget                                                           |
-| `packages/decap-cms-widget-portabletext-editor`| Portable Text editor widget                                                        |
-| `packages/shared`                              | Internal build/shared helpers                                                      |
+| Removed path                                    | Contents                                                                                                                                     |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `packages/integrations/*`                       | ~40 storage / asset / auth adapters (`@laikacms/aws`, `@laikacms/github`, `@laikacms/algolia`, `@laikacms/supabase`, `@laikacms/mongodb`, …) |
+| `packages/portable-text/*`                      | ~67 `portable-text-to-*` mapper packages + `@laikacloud/portabletext-core`                                                                   |
+| `packages/tools/*`                              | `laikacli` and `@laikacms/dynamodb-local`                                                                                                    |
+| `packages/git-gateway`                          | `@laikacms/git-gateway`                                                                                                                      |
+| `packages/decap-cms-lexical-core`               | Lexical editor core for the Decap fork                                                                                                       |
+| `packages/decap-cms-widget-lexicaleditor`       | Lexical rich-text widget                                                                                                                     |
+| `packages/decap-cms-widget-portabletext-editor` | Portable Text editor widget                                                                                                                  |
+| `packages/shared`                               | Internal build/shared helpers                                                                                                                |
 
 ## Where it went
 
@@ -79,12 +79,10 @@ repo:
 - [`docs/starters.md`](./starters.md) — starter templates moved out of the monorepo.
 - [`docs/packages.md`](./packages.md) — distinguishes in-repo packages from those developed
   elsewhere.
-- [`README.md`](../README.md) — Packages / Apps / Releasing sections.
-- [`LLM-GUIDE.md`](../LLM-GUIDE.md) — starter references are now external.
+- `README.md` — Packages / Apps / Releasing sections.
+- `LLM-GUIDE.md` — starter references are now external.
 - `pnpm-workspace.yaml` — workspace globs trimmed to the three remaining packages.
 
 ## See also
 
-- The cleanup commit: `8c3a81c` — *"chore: removed package bloat and moved out of monorepo"*.
-</content>
-</invoke>
+- The cleanup commit: `8c3a81c` — _"chore: removed package bloat and moved out of monorepo"_.
