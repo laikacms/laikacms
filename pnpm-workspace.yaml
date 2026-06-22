@@ -80,7 +80,10 @@ catalogs:
 
   icons:
     "@radix-ui/react-icons": "^1.3.2"
-    "lucide-react": "^1.7.0"
+    # Broad range: used only as @laikacms/decap's optional `lucide-react` peer.
+    # Spans the 0.46x+ line (e.g. superstar's 0.575) through 1.x — the icon API
+    # the lucide-icon widget uses (named *Icon exports + namespace) is stable across it.
+    "lucide-react": ">=0.460.0 <2"
 
   tanstack:
     "@tanstack/react-router": "1.170.10"

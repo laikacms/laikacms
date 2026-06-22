@@ -1,4 +1,4 @@
-import { type EditorComponentOptions } from 'decap-cms-core';
+import { type EditorComponentOptions } from '@laikacms/decap-cms/core';
 import React from 'react';
 
 export interface EmbeddedEntryMetadata {

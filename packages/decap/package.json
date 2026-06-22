@@ -109,8 +109,6 @@
     "@laikacms/decap-cms": "catalog:decap",
     "@octokit/rest": "catalog:octokit",
     "@radix-ui/react-icons": "catalog:icons",
-    "decap-cms-backend-github": "catalog:decap",
-    "decap-cms-core": "catalog:decap",
     "lucide-react": "catalog:icons",
     "react": "catalog:react",
     "react-dom": "catalog:react",
@@ -130,12 +128,6 @@
       "optional": true
     },
     "@radix-ui/react-icons": {
-      "optional": true
-    },
-    "decap-cms-backend-github": {
-      "optional": true
-    },
-    "decap-cms-core": {
       "optional": true
     },
     "lucide-react": {
