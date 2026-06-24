@@ -40,7 +40,6 @@ flowchart TB
             DocStorageAdapter[Document Storage Adapter Repository]:::document
             DocHTTPProxy[Document HTTP Proxy Repository]:::document
             
-            AlgoliaRepo[Algolia Repository]:::asset
             AssetStorageAdapter[Asset Storage Adapter Repository]:::asset
             AssetHTTPProxy[Asset HTTP Proxy Repository]:::asset
         end
@@ -76,15 +75,19 @@ flowchart TB
         end
         
         subgraph AssetImplementations["Asset Repository Implementations"]
-            S3Repo[S3 Repository]:::asset
-            GoogleDriveRepo[Google Drive Repository]:::asset
-            FTPRepo[FTP Repository]:::asset
+            AssetsR2Repo[assets-r2]:::asset
+            AssetsContentbaseRepo[assets-contentbase]:::asset
+            AssetsObsidianRepo[assets-obsidian]:::asset
+            AssetsJsonapiProxyRepo[assets-jsonapi-proxy]:::asset
         end
         
         subgraph StorageImplementations["Storage Repository Implementations"]
-            AzureBlobRepo[Azure Blob Storage]:::storage
-            DropboxRepo[Dropbox Repository]:::storage
-            CloudflareR2Repo[Cloudflare R2 Repository]:::storage
+            StorageFsRepo[storage-fs]:::storage
+            StorageR2Repo[storage-r2]:::storage
+            StorageS3Repo[storage-s3]:::storage
+            StorageWebdavRepo[storage-webdav]:::storage
+            StorageDrizzleRepo[storage-drizzle]:::storage
+            StorageJsonapiProxyRepo[storage-jsonapi-proxy]:::storage
         end
     end
 
@@ -99,7 +102,6 @@ flowchart TB
     DocRoutingRepo --> DocStorageAdapter
     DocRoutingRepo --> DocHTTPProxy
     
-    AssetRoutingRepo --> AlgoliaRepo
     AssetRoutingRepo --> AssetStorageAdapter
     AssetRoutingRepo --> AssetHTTPProxy
     
@@ -126,13 +128,17 @@ flowchart TB
     DocRoutingBackend --> ObsidianRepo
     DocRoutingBackend --> JsonapiProxyRepo
     
-    AssetRoutingBackend --> S3Repo
-    AssetRoutingBackend --> GoogleDriveRepo
-    AssetRoutingBackend --> FTPRepo
+    AssetRoutingBackend --> AssetsR2Repo
+    AssetRoutingBackend --> AssetsContentbaseRepo
+    AssetRoutingBackend --> AssetsObsidianRepo
+    AssetRoutingBackend --> AssetsJsonapiProxyRepo
     
-    StorageRoutingBackend --> AzureBlobRepo
-    StorageRoutingBackend --> DropboxRepo
-    StorageRoutingBackend --> CloudflareR2Repo
+    StorageRoutingBackend --> StorageFsRepo
+    StorageRoutingBackend --> StorageR2Repo
+    StorageRoutingBackend --> StorageS3Repo
+    StorageRoutingBackend --> StorageWebdavRepo
+    StorageRoutingBackend --> StorageDrizzleRepo
+    StorageRoutingBackend --> StorageJsonapiProxyRepo
 
     %% Styling
     classDef document fill:#dae8fc,stroke:#6c8ebf,color:#000
@@ -151,11 +157,12 @@ flowchart TB
 
 2. **Asset Repository**
    - Manages binary files like images, PDFs, videos
-   - Implementations: Algolia (search), S3, Google Drive, FTP
+   - Implementations: assets-r2, assets-contentbase, assets-obsidian, assets-jsonapi-proxy
 
 3. **Storage Repository**
    - Low-level storage abstraction for raw data
-   - Implementations: Azure Blob, Dropbox, Cloudflare R2
+   - Implementations: storage-fs, storage-r2, storage-s3, storage-webdav, storage-drizzle,
+     storage-jsonapi-proxy
 
 ### Routing Repository Pattern
 
