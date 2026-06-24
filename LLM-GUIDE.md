@@ -154,8 +154,9 @@ export default app;
 ### d) Use the HTTP API from a SPA (Vue/Solid/Lit/React-SPA)
 
 **Don't.** Use a sidecar Node/Workers backend that exposes `/api/posts` etc. as public endpoints
-(reading the repo directly), and have the SPA `fetch('/api/posts')`. See `apps/starter-vite-vue-spa`
-or `apps/starter-vite-solid-spa` for the canonical sidecar pattern.
+(reading the repo directly), and have the SPA `fetch('/api/posts')`. See
+[docs/starters.md](./docs/starters.md) for the canonical sidecar pattern (starters were moved to
+separate repos in the June 2026 restructure).
 
 Why: the LaikaCMS HTTP API requires a Bearer token on every endpoint except `/health`. SPAs can't
 safely hold one.
@@ -266,8 +267,9 @@ These are the things that consistently bite first-time integrators:
      registers `createLaikaBackend()` — see
      [docs/decap-integration.md → "Serving the Decap admin shell"](./docs/decap-integration.md#serving-the-decap-admin-shell).
 
-7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** When adding a new
-   starter under `apps/`, mirror this convention — see existing starters' `package.json`.
+7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** Use `workspace:*` for
+   any `@laikacms/*` package reference within the monorepo, and `catalog:*` for shared external
+   dependencies defined in the root `pnpm-workspace.yaml` catalog.
 
 8. **`api_root` (not `api_url`) in the Decap backend config.** The Laika backend constructor reads
    `config.backend.api_root` (with `api_url` accepted as a deprecated alias). Without it, all Decap
@@ -307,17 +309,17 @@ These are the things that consistently bite first-time integrators:
     }
     ```
 
-12. **Integration packages need a `dist/` before their starters can be type-checked.** Only a
-    handful of `packages/integrations/*` have pre-built dists committed to the repo. If you run
-    `pnpm --filter @laikacms/starter-foo exec tsc --noEmit` directly and get
-    `Cannot find module '@laikacms/foo/storage-bar'`, build the integration first:
+12. **Packages need a `dist/` before downstream packages can type-check.** The monorepo has three
+    core packages (`laikacms`, `@laikacms/decap`, `@laikacms/github`). If you run
+    `pnpm --filter <package> exec tsc --noEmit` directly and get
+    `Cannot find module '@laikacms/...'`, build the upstream package first:
     ```
-    pnpm --filter @laikacms/foo build
+    pnpm --filter @laikacms/decap build
     ```
     The correct way to typecheck in CI or as a one-shot command is the root-level turbo task, which
     builds upstream dependencies automatically:
     ```
-    pnpm run typecheck              # builds all integration packages, then checks all starters
+    pnpm run typecheck              # builds all packages, then type-checks everything
     pnpm run typecheck --filter ... # scoped to specific packages
     ```
 
