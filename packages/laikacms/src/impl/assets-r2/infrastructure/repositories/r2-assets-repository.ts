@@ -35,7 +35,7 @@ import { R2AssetsDataSource } from '../datasources/r2-assets-datasource.js';
 const liftResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
   Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
 
-interface R2AssetsRepositoryOptions {
+export interface R2AssetsRepositoryOptions {
   bucket: R2Bucket;
   sanitizer: Sanitizer | { dangerouslyAllowAllFiles: true };
   createUrl?: (url: string) => string;
