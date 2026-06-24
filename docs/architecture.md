@@ -75,7 +75,7 @@ const object = await runTask(repo.getObject('posts/hello'));
 
 // Stream of results
 const { items, done } = await collectStream(
-  repo.listAtoms('posts/', { depth: 1, pagination: { limit: 100 } }),
+  repo.listAtoms('posts/', { depth: 1, pagination: { offset: 0, limit: 100 } }),
 );
 console.log(items); // Atom[]
 ```
