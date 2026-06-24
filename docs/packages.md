@@ -5,10 +5,12 @@ own packages.
 
 > **Repository layout (June 2026).** This monorepo now carries only the three core packages —
 > `laikacms`, `@laikacms/decap`, and `@laikacms/decap-ai`. The other packages documented below
-> (`@laikacms/aws`, `@laikacms/github`, `@laikacms/git-gateway`, `laikacli`, and the rest of the
-> adapters) are still published to npm under the same names but are now developed in **separate
-> repositories**. See [the restructure note](./restructure-2026-06.md) for details and the current
-> status of the moved repos.
+> (`@laikacms/aws`, `@laikacms/github`, `@laikacms/git-gateway`, `laikacli`,
+> `decap-cms-widget-lexicaleditor`, `decap-cms-widget-portabletext-editor`,
+> `decap-cms-lexical-core`, and the rest of the adapters) are still published to npm under the same
+> names but are now developed in **separate repositories**. See
+> [the restructure note](./restructure-2026-06.md) for details and the current status of the moved
+> repos.
 
 ## `laikacms`
 
@@ -132,6 +134,123 @@ Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives
 | `@laikacms/decap/decap-cms-locale-nl`                       | Dutch locale                                                     |
 | `@laikacms/decap/decap-cms-editor-component-embedded-entry` | Embedded entry editor component                                  |
 | `@laikacms/decap/decap-config-types`                        | TypeScript type utilities derived from a Decap CMS config object |
+
+## `decap-cms-lexical-core`
+
+> **Developed in a separate repository** (moved out June 2026). Still published to npm under the
+> same name. See [the restructure note](./restructure-2026-06.md).
+
+Lexical-specific bindings for the editor-agnostic `@laikacloud/portabletext-core`: Portable Text ↔
+Lexical bridge, headless editor factory, custom blocks subsystem, and the `LexicalRichtextValue`
+class that derives canonical Portable Text from a Lexical editor state on every change.
+
+### Install
+
+```bash
+pnpm add decap-cms-lexical-core
+```
+
+### Main exports
+
+| Export                                          | Description                                                                           |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `LexicalRichtextValue`                          | `RichtextValue` subclass that owns a Lexical `EditorState` and produces Portable Text |
+| `createHeadlessEditor()`                        | Creates a Lexical headless editor with the standard node set pre-registered           |
+| `defaultNodes`                                  | Array of Lexical `EditorNode` constructors used by the standard headless editor       |
+| `lexicalToPortableText()`                       | Convert a Lexical `EditorState` to a `PortableTextDocument`                           |
+| `portableTextToLexical()`                       | Populate a Lexical editor from a `PortableTextDocument`                               |
+| `emptyPortableText()`                           | Returns a minimal valid empty `PortableTextDocument`                                  |
+| `BlockNode` / `blocksContext`                   | Custom block subsystem for embedding arbitrary Decap entries inside Lexical           |
+| Everything from `@laikacloud/portabletext-core` | Re-exported for convenience (`Mapper`, `RichtextValue`, `createKeyGenerator`, …)      |
+
+## `decap-cms-widget-lexicaleditor`
+
+> **Developed in a separate repository** (moved out June 2026). Still published to npm under the
+> same name. See [the restructure note](./restructure-2026-06.md).
+
+Lexical-based rich text widget for Decap CMS, built on a shadcn-editor fork. Stores content as
+Portable Text (via `decap-cms-lexical-core`) and renders a full-featured editor toolbar in the Decap
+CMS control panel.
+
+### Install
+
+```bash
+pnpm add decap-cms-widget-lexicaleditor decap-cms-lexical-core
+```
+
+### Main exports
+
+| Export                      | Description                                                          |
+| --------------------------- | -------------------------------------------------------------------- |
+| `Widget`                    | Decap CMS widget definition object — pass to `CMS.registerWidget()`  |
+| `LexicalControl`            | React control component (rendered in the Decap CMS editor panel)     |
+| `LexicalPreview`            | React preview component (rendered in the Decap CMS preview panel)    |
+| `lexicalEditorWidgetSchema` | Zod schema for the widget field configuration                        |
+| `passthroughSerializer`     | Serializer that stores the Portable Text value as-is (no conversion) |
+| `Editor`                    | The standalone Lexical editor React component (usable outside Decap) |
+
+### Basic usage
+
+```ts
+import CMS from 'decap-cms-app';
+import { Widget } from 'decap-cms-widget-lexicaleditor';
+
+CMS.registerWidget(Widget);
+```
+
+Then in your Decap CMS config:
+
+```yaml
+collections:
+  - name: posts
+    fields:
+      - name: body
+        widget: lexicaleditor
+```
+
+## `decap-cms-widget-portabletext-editor`
+
+> **Developed in a separate repository** (moved out June 2026). Still published to npm under the
+> same name. See [the restructure note](./restructure-2026-06.md).
+
+Decap CMS widget backed by `@portabletext/editor` (Sanity's native Portable Text editor). A sibling
+of `decap-cms-widget-lexicaleditor` — choose this one when you want the official Portable Text
+editing experience instead of Lexical.
+
+### Install
+
+```bash
+pnpm add decap-cms-widget-portabletext-editor
+```
+
+### Main exports
+
+| Export                      | Description                                                                |
+| --------------------------- | -------------------------------------------------------------------------- |
+| `Widget`                    | Decap CMS widget definition object — pass to `CMS.registerWidget()`        |
+| `PortableTextEditorControl` | React control component (rendered in the Decap CMS editor panel)           |
+| `PortableTextEditorPreview` | React preview component (rendered in the Decap CMS preview panel)          |
+| `PortableTextEditorView`    | The standalone Portable Text editor React component (usable outside Decap) |
+| `schema`                    | Default `@portabletext/editor` schema used by the widget                   |
+
+### Basic usage
+
+```ts
+import CMS from 'decap-cms-app';
+import { Widget } from 'decap-cms-widget-portabletext-editor';
+
+CMS.registerWidget(Widget);
+```
+
+Then in your Decap CMS config:
+
+```yaml
+collections:
+  - name: posts
+    fields:
+      - name: body
+        widget: portabletext-editor
+```
 
 ## `@laikacms/github`
 
