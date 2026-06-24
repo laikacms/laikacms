@@ -35,7 +35,7 @@ Methods return one of two effect types from `laikacms/core`:
 - `Folder` - A container for atoms
 - `FolderCreate` - Input type for creating a folder
 - `Capabilities` - Describes what the storage backend supports
-- `ListAtomsDone` - Type alias for `LaikaDone`; carries pagination and total via the base interface
+- `ListAtomsDone` - Type alias for `LaikaDone`; inherits pagination and total from the base interface
 - `RemoveAtomsDone` - Done value returned by `removeAtoms`; includes `removed` and `skipped` counts
 
 ## Repository Interface
@@ -74,6 +74,6 @@ abstract class StorageRepository {
 - `laikacms/storage-r2` - Cloudflare R2
 - `laikacms/storage-fs` - Local filesystem
 - `laikacms/storage-drizzle` - SQL via Drizzle ORM
-- `laikacms/storage-s3` - Amazon S3
-- `laikacms/storage-webdav` - WebDAV-compatible servers
-- `laikacms/storage-jsonapi-proxy` - JSON:API proxy
+- `laikacms/storage-s3` - S3→R2Bucket adapter (pairs with `R2StorageRepository`)
+- `laikacms/storage-webdav` - WebDAV server
+- `laikacms/storage-jsonapi-proxy` - Storage JSON:API proxy
