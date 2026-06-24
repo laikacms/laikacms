@@ -61,11 +61,11 @@ AI features live in the separate
 pnpm add @laikacms/decap-ai
 ```
 
-| Export                      | Purpose                                 |
-| --------------------------- | --------------------------------------- |
-| `@laikacms/decap-ai`        | AI chat backend (Anthropic-powered)     |
-| `@laikacms/decap-ai/tools`  | Tool definitions for the AI chat        |
-| `@laikacms/decap-ai/widget` | AI chat widget for in-editor assistance |
+| Export                      | Purpose                                                      |
+| --------------------------- | ------------------------------------------------------------ |
+| `@laikacms/decap-ai`        | AI chat backend (model-agnostic; any Vercel AI SDK provider) |
+| `@laikacms/decap-ai/tools`  | Tool definitions for the AI chat                             |
+| `@laikacms/decap-ai/widget` | AI chat widget for in-editor assistance                      |
 
 ### Locales
 

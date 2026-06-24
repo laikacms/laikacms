@@ -61,3 +61,5 @@ abstract class AssetsRepository {
 
 - `laikacms/assets-r2` - Cloudflare R2
 - `laikacms/assets-obsidian` - Obsidian vault files (read-oriented)
+- `laikacms/assets-contentbase` - Assets on top of storage
+- `laikacms/assets-jsonapi-proxy` - Assets via JSON:API proxy
