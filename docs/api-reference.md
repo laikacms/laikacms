@@ -19,7 +19,7 @@ specification. All responses use the `application/vnd.api+json` content type.
 - Atomic batch operations follow the [JSON:API Atomic Operations](https://jsonapi.org/ext/atomic/)
   extension: request body is `{ "atomic:operations": [ ... ] }`, response is
   `{ "atomic:results": [ ... ] }`.
-- Cursor-based pagination is controlled with `page[cursor]` and `page[limit]` query parameters.
+- Cursor-based pagination is controlled with `page[after]` (forward) / `page[before]` (backward) and `page[size]` query parameters. Offset-based pagination uses `page[offset]` and `page[limit]`.
 
 ---
 
@@ -165,11 +165,12 @@ empty key.
 
 **Query Parameters**
 
-| Parameter       | Type   | Default | Description                 |
-| --------------- | ------ | ------- | --------------------------- |
-| `page[cursor]`  | string | —       | Cursor for pagination       |
-| `page[limit]`   | number | 10      | Number of items per page    |
-| `filter[depth]` | number | `1`     | Traversal depth (minimum 1) |
+| Parameter       | Type   | Default | Description                          |
+| --------------- | ------ | ------- | ------------------------------------ |
+| `page[after]`   | string | —       | Forward cursor for pagination        |
+| `page[before]`  | string | —       | Backward cursor for pagination       |
+| `page[size]`    | number | 10      | Number of items per page             |
+| `filter[depth]` | number | `1`     | Traversal depth (minimum 1)          |
 
 **Response** — collection of `object` and/or `folder` resources
 
@@ -201,14 +202,13 @@ empty key.
   "links": {
     "self": "http://localhost:3000/atoms/posts",
     "first": "http://localhost:3000/atoms/posts",
-    "next": "http://localhost:3000/atoms/posts?page[cursor]=posts%2Fdrafts",
+    "next": "http://localhost:3000/atoms/posts?page[after]=posts%2Fdrafts",
     "prev": null,
     "last": null
   },
   "meta": {
     "page": {
-      "cursor": "posts/drafts",
-      "hasMore": false
+      "total": 2
     }
   }
 }
@@ -267,8 +267,7 @@ Same as `GET /atoms/:key`.
   },
   "meta": {
     "page": {
-      "cursor": "posts/drafts",
-      "hasMore": false
+      "total": 2
     }
   }
 }
@@ -707,13 +706,14 @@ folder, and depth.
 
 **Query Parameters**
 
-| Parameter        | Type                                        | Default       | Description                 |
-| ---------------- | ------------------------------------------- | ------------- | --------------------------- |
-| `filter[type]`   | `"published"` \| `"unpublished"` \| `"all"` | `"published"` | Filter by document state    |
-| `filter[folder]` | string                                      | `""`          | Folder path to list from    |
-| `filter[depth]`  | number                                      | `1`           | Traversal depth (minimum 1) |
-| `page[cursor]`   | string                                      | —             | Pagination cursor           |
-| `page[limit]`    | number                                      | —             | Items per page              |
+| Parameter        | Type                                        | Default       | Description                    |
+| ---------------- | ------------------------------------------- | ------------- | ------------------------------ |
+| `filter[type]`   | `"published"` \| `"unpublished"` \| `"all"` | `"published"` | Filter by document state       |
+| `filter[folder]` | string                                      | `""`          | Folder path to list from       |
+| `filter[depth]`  | number                                      | `1`           | Traversal depth (minimum 1)    |
+| `page[after]`    | string                                      | —             | Forward cursor for pagination  |
+| `page[before]`   | string                                      | —             | Backward cursor for pagination |
+| `page[size]`     | number                                      | —             | Items per page                 |
 
 **Response** — mixed array of `published` and `unpublished` resources
 
@@ -1258,10 +1258,11 @@ List revision summaries for a document key.
 
 **Query Parameters**
 
-| Parameter      | Type   | Default | Description       |
-| -------------- | ------ | ------- | ----------------- |
-| `page[cursor]` | string | —       | Pagination cursor |
-| `page[limit]`  | number | —       | Items per page    |
+| Parameter      | Type   | Default | Description                    |
+| -------------- | ------ | ------- | ------------------------------ |
+| `page[after]`  | string | —       | Forward cursor for pagination  |
+| `page[before]` | string | —       | Backward cursor for pagination |
+| `page[size]`   | number | —       | Items per page                 |
 
 **Response** — collection of `revision-summary` resources
 
@@ -1296,8 +1297,7 @@ List revision summaries for a document key.
   },
   "meta": {
     "page": {
-      "cursor": null,
-      "hasMore": false
+      "total": 2
     }
   }
 }
@@ -1560,6 +1560,7 @@ List all assets and folders under a given folder prefix.
 | `filter[depth]` or `depth`   | number | `1`     | Traversal depth (minimum 1)                      |
 | `page[limit]`                | number | `100`   | Items per page                                   |
 | `page[cursor]`               | string | —       | Cursor for pagination                            |
+| `page[direction]`            | string | `forward` | Pagination direction: `forward` or `backward`  |
 | `include`                    | string | —       | Comma-separated list of related types to include |
 
 **Response** — collection of `asset` and `folder` resources with optional `included`
