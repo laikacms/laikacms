@@ -1558,9 +1558,9 @@ List all assets and folders under a given folder prefix.
 | ---------------------------- | ------ | ------- | ------------------------------------------------ |
 | `folder` or `filter[prefix]` | string | `""`    | Folder key prefix to list                        |
 | `filter[depth]` or `depth`   | number | `1`     | Traversal depth (minimum 1)                      |
-| `page[size]`                 | number | `100`   | Items per page                                   |
-| `page[after]`                | string | —       | Forward cursor for pagination                    |
-| `page[before]`               | string | —       | Backward cursor for pagination                   |
+| `page[limit]`                | number | `100`   | Items per page                                   |
+| `page[cursor]`               | string | —       | Cursor for pagination                            |
+| `page[direction]`            | string | `forward` | Pagination direction: `forward` or `backward`  |
 | `include`                    | string | —       | Comma-separated list of related types to include |
 
 **Response** — collection of `asset` and `folder` resources with optional `included`
