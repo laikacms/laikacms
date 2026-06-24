@@ -246,6 +246,36 @@ const FolderCreateBodySchema = S.toStandardSchemaV1(S.Struct({
   data: JsonApiFolderCreateSchema,
 }));
 
+/**
+ * The set of attribute keys that are valid on a storage object resource.
+ * Any key outside this set indicates the caller likely misplaced their data
+ * (e.g. sent `attributes.title` instead of `attributes.content.title`).
+ */
+const ALLOWED_STORAGE_OBJECT_ATTRIBUTE_KEYS = new Set(['type', 'content']);
+
+/**
+ * Returns the first unknown key found in `rawBody.data.attributes`, or
+ * `undefined` if all keys are recognized. Used to surface a friendly 400
+ * before the schema decoder silently strips the unknown keys.
+ */
+const getUnknownAttributeKey = (rawBody: unknown): string | undefined => {
+  if (
+    typeof rawBody !== 'object' || rawBody === null ||
+    !('data' in rawBody) || typeof (rawBody as { data: unknown }).data !== 'object' ||
+    (rawBody as { data: unknown }).data === null
+  ) return undefined;
+
+  const data = (rawBody as { data: Record<string, unknown> }).data;
+  if (!('attributes' in data) || typeof data.attributes !== 'object' || data.attributes === null) {
+    return undefined;
+  }
+
+  for (const key of Object.keys(data.attributes as Record<string, unknown>)) {
+    if (!ALLOWED_STORAGE_OBJECT_ATTRIBUTE_KEYS.has(key)) return key;
+  }
+  return undefined;
+};
+
 type StorageObjectCreateBody = S.Schema.Type<typeof StorageObjectCreateBodySchema>;
 type StorageObjectUpdateBody = S.Schema.Type<typeof StorageObjectUpdateBodySchema>;
 type FolderCreateBody = S.Schema.Type<typeof FolderCreateBodySchema>;
@@ -465,6 +495,18 @@ export function buildJsonApi(options: StorageApiOptions) {
       let body: StorageObjectCreateBody;
       try {
         const rawBody = await request.json();
+        const unknownAttrKey = getUnknownAttributeKey(rawBody);
+        if (unknownAttrKey !== undefined) {
+          return failResponse(
+            Result.fail(
+              new InvalidData(
+                `Unknown attribute key "${unknownAttrKey}" in data.attributes. ` +
+                  'Only "content" and "type" are allowed — did you mean to nest your data under "content"?',
+              ),
+            ),
+            400,
+          );
+        }
         body = decodeStorageObjectCreateBody(rawBody);
       } catch {
         return failResponse(Result.fail(new InvalidData('Invalid request body')), 400);
@@ -495,6 +537,18 @@ export function buildJsonApi(options: StorageApiOptions) {
       let body: StorageObjectUpdateBody;
       try {
         const rawBody = await request.json();
+        const unknownAttrKey = getUnknownAttributeKey(rawBody);
+        if (unknownAttrKey !== undefined) {
+          return failResponse(
+            Result.fail(
+              new InvalidData(
+                `Unknown attribute key "${unknownAttrKey}" in data.attributes. ` +
+                  'Only "content" and "type" are allowed — did you mean to nest your data under "content"?',
+              ),
+            ),
+            400,
+          );
+        }
         body = decodeStorageObjectUpdateBody(rawBody);
       } catch {
         return failResponse(Result.fail(new InvalidData('Invalid request body')), 400);
@@ -526,6 +580,34 @@ export function buildJsonApi(options: StorageApiOptions) {
       let body: AtomicOperationsRequest;
       try {
         const rawBody = await request.json();
+        if (
+          typeof rawBody === 'object' && rawBody !== null &&
+          'atomic:operations' in rawBody &&
+          Array.isArray((rawBody as { 'atomic:operations': unknown })['atomic:operations'])
+        ) {
+          for (const op of (rawBody as { 'atomic:operations': unknown[] })['atomic:operations']) {
+            if (
+              typeof op === 'object' && op !== null &&
+              'op' in op && ((op as { op: unknown }).op === 'add' || (op as { op: unknown }).op === 'update') &&
+              'data' in op
+            ) {
+              const unknownAttrKey = getUnknownAttributeKey(
+                { data: (op as { data: unknown }).data },
+              );
+              if (unknownAttrKey !== undefined) {
+                return failResponse(
+                  Result.fail(
+                    new InvalidData(
+                      `Unknown attribute key "${unknownAttrKey}" in data.attributes. ` +
+                        'Only "content" and "type" are allowed — did you mean to nest your data under "content"?',
+                    ),
+                  ),
+                  400,
+                );
+              }
+            }
+          }
+        }
         body = decodeAtomicOperationsRequest(rawBody);
       } catch {
         return failResponse(
