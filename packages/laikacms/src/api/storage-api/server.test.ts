@@ -1,7 +1,7 @@
 import * as Effect from 'effect/Effect';
 import { describe, expect, it, vi } from 'vitest';
 
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { BadRequestError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type {
   Folder,
   FolderCreate,
@@ -325,5 +325,81 @@ describe('POST /atoms (create folder)', () => {
       }),
     );
     expect(res.status).toBe(400);
+  });
+});
+
+// LCMS-245 regression: a repo.createObject that fails via a typed LaikaError
+// (e.g. thrown inside Effect.tryPromise) must surface as a 4xx JSON:API error,
+// never hang the request. This verifies that runTaskWithMetadata's try-catch
+// correctly captures typed failures even when they originate from Promise
+// rejections inside the task.
+describe('storage-api LCMS-245 rawSerializer extra-field error propagation', () => {
+  it('returns a 400 JSON:API error when createObject fails with a typed BadRequestError', async () => {
+    const partialRepo = {
+      createObject: (_create: StorageObjectCreate) =>
+        LaikaTask.make<StorageObject>(() =>
+          Effect.fail(
+            new BadRequestError(
+              "rawSerializer only persists the 'body' field; fields [title] would be silently dropped.",
+            ),
+          )
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+
+    // Race with a timeout so the test fails fast if we regress to a hang
+    const res = await Promise.race([
+      api.fetch(
+        new Request('http://localhost/objects/notes%2Fhello', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/vnd.api+json' },
+          body: JSON.stringify({
+            data: {
+              type: 'object',
+              id: 'notes/hello',
+              attributes: { content: { body: 'hi', title: 'dropped' } },
+            },
+          }),
+        }),
+      ),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('POST /objects hung — LCMS-245 regression')), 3000)
+      ),
+    ]);
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string, detail: string }> };
+    expect(body.errors).toBeDefined();
+    expect(body.errors[0]?.code).toBe('bad_request');
+    expect(body.errors[0]?.detail).toContain('title');
+  });
+
+  it('returns 201 when createObject succeeds with only body field (no regression)', async () => {
+    const partialRepo = {
+      createObject: (create: StorageObjectCreate) =>
+        LaikaTask.make<StorageObject>(() =>
+          Effect.succeed({
+            type: 'object' as const,
+            key: create.key,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+            content: create.content ?? {},
+            metadata: { extension: 'raw' },
+          })
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/notes%2Fhello', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: { type: 'object', id: 'notes/hello', attributes: { content: { body: 'hi' } } },
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
   });
 });
