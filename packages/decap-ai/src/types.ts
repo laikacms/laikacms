@@ -154,7 +154,7 @@ export interface DecapAiConfig {
    *
    * @example
    * ```typescript
-   * import { tool } from 'ai';
+   * import { tool } from '@laikacms/decap-ai';
    * import { z } from 'zod';
    *
    * tools: {
