@@ -182,6 +182,63 @@ The `authenticateAccessToken` validator you pass to `decapApi(...)` decides who 
 For local development you can accept a pre-shared token; for production, validate a real session/JWT
 (or front the whole thing with the `decap-oauth2` server below).
 
+### Machine-to-machine auth with `authenticateApiToken`
+
+For server-to-server or CI/CD integrations that cannot perform an OAuth2 browser flow, you can
+enable API key authentication by passing the optional `authenticateApiToken` option. When present,
+any request that supplies a key via **either** of the two accepted header formats is routed through
+this callback instead of `authenticateAccessToken`:
+
+| Header format                 | Example                                |
+| ----------------------------- | -------------------------------------- |
+| `X-API-Key: <key>`            | `X-API-Key: sk-live-abc123`            |
+| `Authorization: ApiKey <key>` | `Authorization: ApiKey sk-live-abc123` |
+
+> Note: supplying `api_key` as a URL query-string parameter is explicitly rejected — keys in URLs
+> leak through server logs, CDN logs, and browser history.
+
+```ts
+import { decapApi } from '@laikacms/decap/decap-api';
+
+const api = decapApi({
+  documents,
+  storage,
+  authenticateAccessToken: async token => {
+    // validate OAuth2 / JWT bearer token
+    const session = await db.sessions.findByAccessToken(token);
+    if (!session) throw new Error('Invalid session');
+    return db.users.findById(session.userId);
+  },
+  // Optional: enable API key auth for machine-to-machine access
+  authenticateApiToken: async key => {
+    const apiKey = await db.apiKeys.findByKey(key);
+    if (!apiKey) throw new Error('Invalid API key');
+    return db.users.findById(apiKey.userId);
+  },
+});
+```
+
+If `authenticateApiToken` is not configured and a request arrives with `X-API-Key` or
+`Authorization: ApiKey`, the server returns `401`.
+
+### Logging with `logger`
+
+Pass any `logger` compatible with the `Console` interface (`error`, `warn`, `info`, `debug`) to
+receive structured diagnostic output from `decapApi`. The option is optional — if omitted, no output
+is produced.
+
+```ts
+const api = decapApi({
+  documents,
+  storage,
+  authenticateAccessToken: yourValidator,
+  logger: console, // or a structured logger such as pino / winston
+});
+```
+
+The logger is forwarded to the underlying `storage-api` and `documents-api` handlers so you get a
+unified log stream from a single option.
+
 ### Production auth with `decap-oauth2`
 
 Rather than building an OAuth2 server from scratch, use the bundled `decapOauth2` helper. It is a
