@@ -80,6 +80,8 @@ utilities. Imported via subpath exports.
 | `laikacms/crypto`         | Cryptographic utilities                                                                                                         |
 | `laikacms/file-sanitizer` | File upload sanitization                                                                                                        |
 | `laikacms/i18n`           | Internationalization                                                                                                            |
+| `laikacms/i18n/en`        | English UI strings                                                                                                              |
+| `laikacms/i18n/nl`        | Dutch UI strings                                                                                                                |
 | `laikacms/json-api`       | JSON:API utilities                                                                                                              |
 | `laikacms/sanitizer`      | Input sanitization                                                                                                              |
 
@@ -122,6 +124,9 @@ Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives
 | `@laikacms/decap/decap-cms-backend-laika`                   | Decap CMS backend                                                |
 | `@laikacms/decap/decap-api`                                 | Decap-compatible API                                             |
 | `@laikacms/decap/decap-oauth2`                              | OAuth2 server with PKCE                                          |
+| `@laikacms/decap/decap-oauth2/i18n`                         | OAuth2 i18n translations (types, defaults)                       |
+| `@laikacms/decap/decap-oauth2/i18n/en`                      | English OAuth2 UI strings                                        |
+| `@laikacms/decap/decap-oauth2/i18n/nl`                      | Dutch OAuth2 UI strings                                          |
 | `@laikacms/decap/decap-cms-widget-lucide-icon`              | Lucide icon picker                                               |
 | `@laikacms/decap/decap-cms-widget-radix-icon`               | Radix icon picker                                                |
 | `@laikacms/decap/decap-cms-locale-nl`                       | Dutch locale                                                     |
