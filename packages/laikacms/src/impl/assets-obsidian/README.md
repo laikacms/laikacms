@@ -29,19 +29,19 @@ const assets = new ObsidianAssetsRepository('/path/to/your/obsidian-vault', {
 new ObsidianAssetsRepository(vaultPath: string, options?: ObsidianAssetsRepositoryOptions)
 ```
 
-| Parameter | Type                                | Description                          |
-| --------- | ----------------------------------- | ------------------------------------ |
+| Parameter   | Type                              | Description                          |
+| ----------- | --------------------------------- | ------------------------------------ |
 | `vaultPath` | `string`                          | Absolute path to the Obsidian vault. |
 | `options`   | `ObsidianAssetsRepositoryOptions` | Optional configuration (see below).  |
 
 ## Options
 
-| Option                 | Type                        | Default                                          | Description                                                                                                     |
-| ---------------------- | --------------------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------- |
-| `attachmentsDirectory` | `string`                    | `''` (vault root)                                | Subdirectory treated as the asset root. Asset keys are resolved relative to it.                                 |
-| `documentExtensions`   | `string[]`                  | `['md']`                                         | File extensions (without the leading dot) excluded from listings because they belong to the documents layer.     |
-| `ignore`               | `string[]`                  | `['.obsidian', '.trash', '.git', '.DS_Store', 'Thumbs.db']` | Directory / file basenames skipped while listing.                                        |
-| `createUrl`            | `(key: string) => string`   | Returns the key unchanged                        | Builds a serving URL for an asset key. Supply this to point at a static host or CDN.                            |
+| Option                 | Type                      | Default                                                     | Description                                                                                                  |
+| ---------------------- | ------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `attachmentsDirectory` | `string`                  | `''` (vault root)                                           | Subdirectory treated as the asset root. Asset keys are resolved relative to it.                              |
+| `documentExtensions`   | `string[]`                | `['md']`                                                    | File extensions (without the leading dot) excluded from listings because they belong to the documents layer. |
+| `ignore`               | `string[]`                | `['.obsidian', '.trash', '.git', '.DS_Store', 'Thumbs.db']` | Directory / file basenames skipped while listing.                                                            |
+| `createUrl`            | `(key: string) => string` | Returns the key unchanged                                   | Builds a serving URL for an asset key. Supply this to point at a static host or CDN.                         |
 
 Every non-markdown file in the vault (images, PDFs, audio, …) is exposed as an `Asset` keyed by its
 vault-relative path. The implementation is read-oriented — for write-heavy workloads prefer
