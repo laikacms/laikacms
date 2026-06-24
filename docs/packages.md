@@ -73,14 +73,15 @@ utilities. Imported via subpath exports.
 
 ### Shared (`packages/laikacms/src/shared/`)
 
-| Subpath                   | Description              |
-| ------------------------- | ------------------------ |
-| `laikacms/core`           | Types, errors, utilities |
-| `laikacms/crypto`         | Cryptographic utilities  |
-| `laikacms/file-sanitizer` | File upload sanitization |
-| `laikacms/i18n`           | Internationalization     |
-| `laikacms/json-api`       | JSON:API utilities       |
-| `laikacms/sanitizer`      | Input sanitization       |
+| Subpath                   | Description                                                                                      |
+| ------------------------- | ------------------------------------------------------------------------------------------------ |
+| `laikacms/compat`         | Promise-bridge helpers (`runTask`, `collectStream`) for consuming `LaikaTask`/`LaikaStream` without importing `effect` directly |
+| `laikacms/core`           | Types, errors, utilities                                                                         |
+| `laikacms/crypto`         | Cryptographic utilities                                                                          |
+| `laikacms/file-sanitizer` | File upload sanitization                                                                         |
+| `laikacms/i18n`           | Internationalization                                                                             |
+| `laikacms/json-api`       | JSON:API utilities                                                                               |
+| `laikacms/sanitizer`      | Input sanitization                                                                               |
 
 ## `@laikacms/aws`
 
