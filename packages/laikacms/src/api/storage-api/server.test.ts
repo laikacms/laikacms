@@ -403,3 +403,99 @@ describe('storage-api LCMS-245 rawSerializer extra-field error propagation', () 
     expect(res.status).toBe(201);
   });
 });
+
+describe('POST /objects — unknown attribute key rejection (LCMS-254)', () => {
+  it('returns 400 when attributes contains top-level keys instead of a content wrapper', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'object',
+            id: 'p/foo',
+            attributes: { title: 'Hi', body: 'text' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ detail: string }> };
+    expect(body.errors[0]?.detail).toContain('title');
+  });
+
+  it('returns 400 when attributes contains a typo\'d content key', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'object',
+            id: 'p/foo',
+            attributes: { contnet: { title: 'Hi' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ detail: string }> };
+    expect(body.errors[0]?.detail).toContain('contnet');
+  });
+
+  it('returns 201 when attributes.content is correctly nested', async () => {
+    const partialRepo = {
+      createObject: (create: StorageObjectCreate) =>
+        LaikaTask.make<StorageObject>(() =>
+          Effect.succeed({
+            type: 'object' as const,
+            key: create.key,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+            content: create.content ?? {},
+            metadata: { extension: 'json' },
+          })
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'object',
+            id: 'p/foo',
+            attributes: { content: { title: 'Hi', body: 'text' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+  });
+});
+
+describe('PATCH /objects — unknown attribute key rejection (LCMS-254)', () => {
+  it('returns 400 when attributes contains top-level keys instead of a content wrapper', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/p%2Ffoo', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'object',
+            id: 'p/foo',
+            attributes: { title: 'Hi', body: 'text' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ detail: string }> };
+    expect(body.errors[0]?.detail).toContain('title');
+  });
+});
