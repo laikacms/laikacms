@@ -310,6 +310,7 @@ export function buildJsonApi(options: StorageApiOptions) {
                 methods: ['GET'],
                 description: 'Underlying storage repository capabilities',
               },
+              { path: '/atoms', methods: ['POST'], description: 'Create a folder' },
               { path: '/atoms/{key}', methods: ['GET'], description: 'List atoms in a folder' },
               {
                 path: '/atom-summaries/{key}',
