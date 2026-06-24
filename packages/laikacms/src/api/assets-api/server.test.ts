@@ -1,8 +1,15 @@
 import * as Effect from 'effect/Effect';
-import type { AssetsRepository, ListResourcesDone, ListResourcesOptions, Resource } from 'laikacms/assets';
+import type {
+  Asset,
+  AssetsRepository,
+  Folder,
+  ListResourcesDone,
+  ListResourcesOptions,
+  Resource,
+} from 'laikacms/assets';
 import { describe, expect, it } from 'vitest';
 
-import { ForbiddenError, InvalidData, LaikaStream, LaikaTask } from 'laikacms/core';
+import { ForbiddenError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 
 import { buildAssetsApi } from './server.js';
 
@@ -199,6 +206,257 @@ describe('assets-api meta.warnings', () => {
     const api = buildAssetsApi({ repository: partialRepo });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/pic.png', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(204);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /capabilities
+// ---------------------------------------------------------------------------
+
+describe('GET /capabilities', () => {
+  it('returns 200 with assets-capabilities JSON:API resource', async () => {
+    const capabilities = {
+      compatibilityDate: '2026-01-01' as unknown as import('laikacms/assets').AssetsCapabilities['compatibilityDate'],
+      pagination: { cursor: true, offset: false },
+    };
+    const partialRepo = {
+      getCapabilities: () => LaikaTask.succeed(capabilities),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/capabilities'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string, attributes: typeof capabilities } };
+    expect(body.data.type).toBe('assets-capabilities');
+    expect(body.data.id).toBe('self');
+    expect(body.data.attributes.compatibilityDate).toBe('2026-01-01');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /resources/:key
+// ---------------------------------------------------------------------------
+
+describe('GET /resources/:key', () => {
+  it('returns 200 with a JSON:API asset resource', async () => {
+    const asset: Asset = {
+      type: 'asset',
+      key: 'images/photo.jpg',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      content: { size: 1024, etag: 'abc123' },
+    };
+    const partialRepo = {
+      getResource: (_key: string) => LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.succeed([asset])),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources/images%2Fphoto.jpg'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string, attributes: { content: { size: number } } } };
+    expect(body.data.type).toBe('asset');
+    expect(body.data.id).toBe('images/photo.jpg');
+    expect(body.data.attributes.content.size).toBe(1024);
+  });
+
+  it('returns 404 when resource is not found', async () => {
+    const partialRepo = {
+      getResource: (_key: string) =>
+        LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.fail(new NotFoundError('Resource not found'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources/missing.jpg'));
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('404');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /resources — asset via JSON:API (base64 content)
+// ---------------------------------------------------------------------------
+
+describe('POST /resources — asset via JSON:API', () => {
+  it('returns 201 with a JSON:API asset after creating via base64 content', async () => {
+    const createdAsset: Asset = {
+      type: 'asset',
+      key: 'uploads/hello.txt',
+      createdAt: '2026-06-24T00:00:00Z',
+      updatedAt: '2026-06-24T00:00:00Z',
+      content: { size: 5, etag: 'hello-etag' },
+    };
+    const partialRepo = {
+      createAsset: () => LaikaTask.succeed(createdAsset),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const base64Content = btoa('hello');
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'asset',
+            id: 'uploads/hello.txt',
+            attributes: {
+              mimeType: 'text/plain',
+              content: base64Content,
+            },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('asset');
+    expect(body.data.id).toBe('uploads/hello.txt');
+  });
+
+  it('returns 400 when content attribute is missing', async () => {
+    const api = buildAssetsApi({ repository: {} as AssetsRepository });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'asset',
+            id: 'uploads/no-content.txt',
+            attributes: { mimeType: 'text/plain' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors[0]?.status).toBe('400');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /resources — folder via JSON:API
+// ---------------------------------------------------------------------------
+
+describe('POST /resources — folder via JSON:API', () => {
+  it('returns 201 with a JSON:API folder resource', async () => {
+    const createdFolder: Folder = {
+      type: 'folder',
+      key: 'my-folder/',
+      createdAt: '2026-06-24T00:00:00Z',
+      updatedAt: '2026-06-24T00:00:00Z',
+    };
+    const partialRepo = {
+      createFolder: () => LaikaTask.succeed(createdFolder),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'folder',
+            id: 'my-folder/',
+            attributes: {},
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('folder');
+    expect(body.data.id).toBe('my-folder/');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /resources/:key
+// ---------------------------------------------------------------------------
+
+describe('PATCH /resources/:key', () => {
+  it('returns 200 with updated JSON:API asset', async () => {
+    const updatedAsset: Asset = {
+      type: 'asset',
+      key: 'photo.jpg',
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-06-24T00:00:00Z',
+      content: { size: 512, etag: 'new-etag' },
+    };
+    const partialRepo = {
+      updateAsset: () => LaikaTask.succeed(updatedAsset),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/photo.jpg', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'asset',
+            attributes: { cacheControl: 'max-age=3600' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('asset');
+    expect(body.data.id).toBe('photo.jpg');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /resources/:key
+// ---------------------------------------------------------------------------
+
+describe('DELETE /resources/:key', () => {
+  it('returns 404 when the resource does not exist', async () => {
+    const partialRepo = {
+      getResource: (_key: string) =>
+        LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.fail(new NotFoundError('no such resource'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/ghost.png', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('404');
+    expect(body.errors[0]?.code).toBe('not_found');
+  });
+
+  it('returns 204 on clean deletion of a folder', async () => {
+    const partialRepo = {
+      getResource: (key: string) =>
+        LaikaTask.make<ReadonlyArray<Resource>>(() =>
+          Effect.succeed([{
+            type: 'folder' as const,
+            key,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          }])
+        ),
+      deleteFolder: (_key: string, _recursive: boolean) => LaikaTask.succeed(undefined),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/empty-folder/', { method: 'DELETE' }),
     );
     expect(res.status).toBe(204);
   });
