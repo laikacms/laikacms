@@ -79,6 +79,14 @@ const ai = decapAi({
       execute: async () => ({ configYaml: myCmsConfig }),
     }),
   },
+
+  // Optional: control response generation
+  maxOutputTokens: 4096, // default: 4096
+  temperature: 0.7, // default: 0.7
+  systemPrompt: 'You are a helpful assistant for editing CMS content.',
+
+  // Optional: custom base path for endpoints
+  basePath: '/api/ai',
 });
 
 // Mount in your framework of choice (Next.js, Hono, Cloudflare Workers, …)
@@ -86,6 +94,21 @@ export async function POST(request: Request) {
   return ai.fetch(request);
 }
 ```
+
+#### Config reference
+
+| Option                    | Type                 | Default     | Description                                                                                                               |
+| ------------------------- | -------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `authenticateAccessToken` | function             | _required_  | Validate a Bearer token and return user `{ id, email, name? }`.                                                           |
+| `model`                   | `LanguageModel`      | _required_  | Vercel AI SDK language model instance (e.g., `anthropic('claude-3-5-sonnet-20241022')`, `openai('gpt-4o')`).              |
+| `callbacks`               | `AiSessionCallbacks` | _required_  | Session storage implementation: `createSession`, `getSession`, `getSessionsByDocument`, `updateSession`, `deleteSession`. |
+| `tools`                   | `ToolSet`            | `undefined` | Custom server-side tools (use the Vercel AI SDK `tool()` function to define them).                                        |
+| `basePath`                | `string`             | `'/ai'`     | Base path for API endpoints (`/health`, `/chat`, `/sessions`).                                                            |
+| `maxOutputTokens`         | `number`             | `4096`      | Maximum tokens in the model response.                                                                                     |
+| `temperature`             | `number`             | `0.7`       | Sampling temperature (0–2); higher values increase randomness.                                                            |
+| `systemPrompt`            | `string`             | `undefined` | System prompt prepended to all conversations; overrides the default from `messages` translation.                          |
+| `logger`                  | `Logger`             | `undefined` | Optional logger instance for debug/info/warn/error output.                                                                |
+| `messages`                | `Translation`        | English     | Localized error messages and system prompt (English or Dutch i18n imports).                                               |
 
 #### Listing sessions
 

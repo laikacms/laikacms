@@ -68,10 +68,12 @@ title: My Note
 ---
 ```
 
-- `publish: true` — required; anything other than strict `true` is treated as unpublished.
+- `publish: true` — required; anything other than strict `true` is treated as unpublished. Also
+  preserved in the document's `content`.
 - `language` — optional BCP 47 tag (e.g. `en`, `nl`). Omitted or empty resolves to `'und'`
-  (undetermined).
-- All other frontmatter keys are passed through as document `content`.
+  (undetermined). Also preserved in the document's `content`.
+- All other frontmatter keys (including `publish` and `language` above) are passed through as
+  document `content`.
 
 ### Draft / unpublished note
 
@@ -84,13 +86,17 @@ title: My Draft
 ---
 ```
 
-- `publish: false` (or absent / any non-`true` value) — note is an `Unpublished` draft.
+- `publish: false` (or absent / any non-`true` value) — note is an `Unpublished` draft. Also
+  preserved in the document's `content`.
 - `status` — editorial state. Common values: `draft`, `pending_review`, `published` (though
   `published` is normally expressed via `publish: true`). Missing value falls back to
-  `defaultStatus`.
+  `defaultStatus`. Also preserved in the document's `content`.
+- `language` — optional BCP 47 tag. Also preserved in the document's `content`.
 
 When a note is published via `publish()` the `publish` property is set to `true` and the `status`
-property is removed. When it is unpublished via `unpublish()` the reverse happens.
+property is removed. When it is unpublished via `unpublish()` the reverse happens. Note that
+`publish`, `language`, and `status` are accessible both as top-level `Document` fields and within
+the `content` object.
 
 ## Behaviour notes
 
