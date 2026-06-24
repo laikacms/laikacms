@@ -71,9 +71,10 @@ title: My Note
 - `publish: true` — required; anything other than strict `true` is treated as unpublished. Also
   preserved in the document's `content`.
 - `language` — optional BCP 47 tag (e.g. `en`, `nl`). Omitted or empty resolves to `'und'`
-  (undetermined). Also preserved in the document's `content`.
-- All other frontmatter keys (including `publish` and `language` above) are passed through as
-  document `content`.
+  (undetermined).
+- All frontmatter keys — including `publish`, `language`, and `status` — are passed through as
+  document `content`. The implementation reads `publish` and `language` to derive document state and
+  language, but does not strip them from the content map.
 
 ### Draft / unpublished note
 

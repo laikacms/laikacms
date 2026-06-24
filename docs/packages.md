@@ -81,9 +81,15 @@ utilities. Imported via subpath exports.
 | `laikacms/core`           | Types, errors, utilities                                                                                                        |
 | `laikacms/crypto`         | Cryptographic utilities                                                                                                         |
 | `laikacms/file-sanitizer` | File upload sanitization                                                                                                        |
+<<<<<<< HEAD
 | `laikacms/i18n`           | Internationalization                                                                                                            |
 | `laikacms/i18n/en`        | English UI strings                                                                                                              |
 | `laikacms/i18n/nl`        | Dutch UI strings                                                                                                                |
+=======
+| `laikacms/i18n`           | Internationalization (bundle index)                                                                                             |
+| `laikacms/i18n/en`        | English translations                                                                                                            |
+| `laikacms/i18n/nl`        | Dutch translations                                                                                                              |
+>>>>>>> af86c702 (docs(LCMS-198, LCMS-242): fix README gaps — assets-obsidian options, documents-obsidian, decap-ai, domain READMEs)
 | `laikacms/json-api`       | JSON:API utilities                                                                                                              |
 | `laikacms/sanitizer`      | Input sanitization                                                                                                              |
 
@@ -126,9 +132,15 @@ Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives
 | `@laikacms/decap/decap-cms-backend-laika`                   | Decap CMS backend                                                |
 | `@laikacms/decap/decap-api`                                 | Decap-compatible API                                             |
 | `@laikacms/decap/decap-oauth2`                              | OAuth2 server with PKCE                                          |
+<<<<<<< HEAD
 | `@laikacms/decap/decap-oauth2/i18n`                         | OAuth2 i18n translations (types, defaults)                       |
 | `@laikacms/decap/decap-oauth2/i18n/en`                      | English OAuth2 UI strings                                        |
 | `@laikacms/decap/decap-oauth2/i18n/nl`                      | Dutch OAuth2 UI strings                                          |
+=======
+| `@laikacms/decap/decap-oauth2/i18n`                         | i18n bundle index for the OAuth2 UI                              |
+| `@laikacms/decap/decap-oauth2/i18n/en`                      | English translations for the OAuth2 UI                           |
+| `@laikacms/decap/decap-oauth2/i18n/nl`                      | Dutch translations for the OAuth2 UI                             |
+>>>>>>> af86c702 (docs(LCMS-198, LCMS-242): fix README gaps — assets-obsidian options, documents-obsidian, decap-ai, domain READMEs)
 | `@laikacms/decap/decap-cms-widget-lucide-icon`              | Lucide icon picker                                               |
 | `@laikacms/decap/decap-cms-widget-radix-icon`               | Radix icon picker                                                |
 | `@laikacms/decap/decap-cms-locale-nl`                       | Dutch locale                                                     |
@@ -260,6 +272,14 @@ GitHub-backed `StorageRepository` (GitHub App authentication).
 | ----------------------------- | -------------------------------- |
 | `@laikacms/github/storage-gh` | GitHub-backed storage repository |
 
+### `GithubDataSourceOptions`
+
+`GithubStorageRepository` accepts a `GithubDataSourceOptions` object. Notable option:
+
+| Option    | Type                  | Description                                                                                                               |
+| --------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `octokit` | `Octokit` (optional)  | Pre-configured Octokit instance. When provided, overrides the built-in GitHub App auth — useful for testing or fine-grained token auth. |
+
 ## `@laikacms/git-gateway`
 
 Drop-in [Netlify git-gateway](https://github.com/netlify/git-gateway)-compatible HTTP handler. Lets
@@ -278,7 +298,7 @@ Cloudflare Workers, Node, Bun, Deno, or anywhere Hono is supported.
 | `verifyToken`  | `(token: string) => Promise<User \| null>`                         | Validates the incoming Bearer token. Return `null` (or throw) to reject.                 |
 | `github`       | `{ appId, privateKey, installationId, owner, repo, apiBase? }`     | GitHub App credentials. `apiBase` defaults to `https://api.github.com` (useful for GHE). |
 | `allowedRoles` | `string[]` (optional)                                              | When set, the user returned by `verifyToken` must have at least one matching role.       |
-| `logger`       | `Pick<Console, 'error' \| 'warn' \| 'info' \| 'debug'>` (optional) | Pluggable structured logger (pino, bunyan, etc.). Defaults to a no-op.                   |
+| `logger`       | `{ error, warn, info?, debug? }` (optional)                        | Pluggable structured logger (pino, bunyan, etc.). Only `error` and `warn` are required; `info` and `debug` are optional. Defaults to a no-op. |
 | `userAgent`    | `string` (optional)                                                | Custom User-Agent for outgoing GitHub API requests. Defaults to `@laikacms/git-gateway`. |
 
 ### Endpoints

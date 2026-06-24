@@ -46,6 +46,21 @@ API route. It exposes three endpoints:
 | GET    | `{basePath}/sessions/:id`                 | Get a single session                                                                   |
 | DELETE | `{basePath}/sessions/:id`                 | Delete a session                                                                       |
 
+#### `decapAi()` options
+
+| Option                     | Type                        | Default                           | Description                                                                                        |
+| -------------------------- | --------------------------- | --------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `authenticateAccessToken`  | `(token: string) => Promise<User>` | —                          | **Required.** Validate Bearer tokens and return the user.                                          |
+| `model`                    | `LanguageModel`             | —                                 | **Required.** Any Vercel AI SDK `LanguageModel` (Anthropic, OpenAI, etc.).                         |
+| `callbacks`                | `AiSessionCallbacks`        | —                                 | **Required.** Session persistence (create / get / list / update / delete).                         |
+| `systemPrompt`             | `string`                    | From `messages.systemPrompt`      | System prompt prepended to all conversations. Overrides the default from the i18n `messages`.      |
+| `maxOutputTokens`          | `number`                    | `4096`                            | Maximum number of output tokens per response.                                                      |
+| `temperature`              | `number`                    | `0.7`                             | Sampling temperature for response generation.                                                      |
+| `tools`                    | `ToolSet`                   | `{}`                              | Additional server-side tools (use `tool()` from `@laikacms/decap-ai`).                             |
+| `basePath`                 | `string`                    | `'/ai'`                           | Base path for all AI endpoints.                                                                    |
+| `messages`                 | `Translation`               | English defaults                  | Localized error messages and default system prompt. Import from `@laikacms/decap-ai/i18n/en` etc. |
+| `logger`                   | `Logger`                    | no-op                             | Pluggable structured logger (`debug`, `info`, `warn`, `error`).                                    |
+
 ```typescript
 import { decapAi } from '@laikacms/decap-ai';
 import { tool } from '@laikacms/decap-ai';
