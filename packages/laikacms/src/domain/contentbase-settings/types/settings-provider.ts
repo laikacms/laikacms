@@ -1,30 +1,29 @@
-import type { Result } from 'effect/Result';
 import type { JSONSchema7 } from 'json-schema';
-import type { LaikaError } from 'laikacms/core';
+import type { LaikaTask } from 'laikacms/core';
 import type { ContentBaseSettings, DocumentCollectionSettings, MediaCollectionSettings } from '../entities/settings.js';
 
 export abstract class ContentBaseSettingsProvider {
-  abstract getSettings(): Promise<Result<ContentBaseSettings, LaikaError>>;
-  abstract putSettings(settings: ContentBaseSettings): Promise<Result<void, LaikaError>>;
+  abstract getSettings(): LaikaTask.LaikaTask<ContentBaseSettings>;
+  abstract putSettings(settings: ContentBaseSettings): LaikaTask.LaikaTask<void>;
   abstract getDocumentCollectionSettings(
     collection: string,
-  ): Promise<Result<DocumentCollectionSettings, LaikaError>>;
+  ): LaikaTask.LaikaTask<DocumentCollectionSettings>;
   abstract putDocumentCollectionSettings(
     collection: string,
     settings: DocumentCollectionSettings,
-  ): Promise<Result<void, LaikaError>>;
+  ): LaikaTask.LaikaTask<void>;
   abstract getMediaCollectionSettings(
     collection: string,
-  ): Promise<Result<MediaCollectionSettings, LaikaError>>;
+  ): LaikaTask.LaikaTask<MediaCollectionSettings>;
   abstract putMediaCollectionSettings(
     collection: string,
     settings: MediaCollectionSettings,
-  ): Promise<Result<void, LaikaError>>;
+  ): LaikaTask.LaikaTask<void>;
   abstract getCollectionSchema(
     collection: string,
-  ): Promise<Result<JSONSchema7, LaikaError>>;
+  ): LaikaTask.LaikaTask<JSONSchema7>;
   abstract putCollectionSchema(
     collection: string,
     schema: JSONSchema7,
-  ): Promise<Result<void, LaikaError>>;
+  ): LaikaTask.LaikaTask<void>;
 }

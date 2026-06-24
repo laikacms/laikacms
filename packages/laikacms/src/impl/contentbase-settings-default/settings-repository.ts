@@ -12,14 +12,15 @@ import type { LaikaError, LaikaResult } from 'laikacms/core';
 import { InvalidData, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { StorageRepository } from 'laikacms/storage';
 
-function failAs<T>(error: LaikaError): LaikaResult<T> {
-  return Result.fail(error);
-}
+/** Lift a LaikaTask into an Effect, forwarding metadata to the outer emit. */
+const runForwarding = <A>(
+  task: LaikaTask.LaikaTask<A>,
+  emit: LaikaTask.LaikaTaskEmit,
+): Effect.Effect<A, LaikaError> => LaikaTask.runValueForwarding(task, emit);
 
-/** Run a LaikaTask and surface the resolved value as a LaikaResult. */
-async function firstResult<T>(task: LaikaTask.LaikaTask<T>): Promise<LaikaResult<T>> {
-  return Effect.runPromise(Effect.result(LaikaTask.runValue(task)));
-}
+/** Lift a LaikaTask into an Effect, discarding metadata. */
+const run = <A>(task: LaikaTask.LaikaTask<A>): Effect.Effect<A, LaikaError> =>
+  LaikaTask.runValue(task);
 
 const startCase = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
@@ -34,7 +35,9 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
     super();
     this.storage = options.storage;
 
-    firstResult(this.storage.getCapabilities()).then(Result.getOrThrow).then(capabilities => {
+    Effect.runPromise(Effect.result(run(this.storage.getCapabilities()))).then(r => {
+      if (Result.isFailure(r)) return;
+      const capabilities = r.success;
       if (!capabilities.fileExtensions.supported) {
         console.warn(
           `Underlying storage repository for contentbase does not support file extensions. Contentbase requires a classic filesystem structure with folders and .json metadata files.`,
@@ -56,141 +59,160 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
    * isn't present in the settings file — the typed getters below synthesize a
    * type-appropriate default for that case.
    */
-  private async getConfiguredCollectionSettings(
+  private getConfiguredCollectionSettings(
     collection: string,
-  ): Promise<LaikaResult<CollectionSettings | null>> {
-    const settings = await this.getSettings();
-    if (Result.isFailure(settings)) return failAs<CollectionSettings | null>(settings.failure);
-    const collections = settings.success.collections ?? {};
-    return Result.succeed(collections[collection] ?? null);
+    emit: LaikaTask.LaikaTaskEmit,
+  ): Effect.Effect<CollectionSettings | null, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const settings = yield* runForwarding(this.getSettings(), emit);
+      const collections = settings.collections ?? {};
+      return collections[collection] ?? null;
+    });
   }
 
-  async getCollectionSettings(collection: string): Promise<LaikaResult<CollectionSettings>> {
-    const configured = await this.getConfiguredCollectionSettings(collection);
-    if (Result.isFailure(configured)) return failAs<CollectionSettings>(configured.failure);
-    return Result.succeed(configured.success ?? defaultDocumentCollectionSettings(collection));
+  getSettings(): LaikaTask.LaikaTask<ContentBaseSettings> {
+    return LaikaTask.make<ContentBaseSettings>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const settingsFile = yield* Effect.result(
+          runForwarding(this.storage.getObject(SETTINGS_KEY), emit),
+        );
+        if (Result.isFailure(settingsFile)) {
+          if (settingsFile.failure.code === NotFoundError.CODE) {
+            const defaultSettings = createDefaultSettingsFile();
+            yield* runForwarding(
+              this.storage.createOrUpdateObject({
+                key: SETTINGS_KEY,
+                type: 'object',
+                content: defaultSettings,
+                metadata: { extension: 'json' },
+              }),
+              emit,
+            );
+            return defaultSettings;
+          }
+          return yield* Effect.fail(settingsFile.failure);
+        }
+        const parsedSettings = parseSettings(settingsFile.success.content);
+        if (Result.isFailure(parsedSettings)) return yield* Effect.fail(parsedSettings.failure);
+        return parsedSettings.success;
+      })
+    );
   }
 
-  async getDocumentCollectionSettings(collection: string): Promise<LaikaResult<DocumentCollectionSettings>> {
-    const configured = await this.getConfiguredCollectionSettings(collection);
-    if (Result.isFailure(configured)) return failAs<DocumentCollectionSettings>(configured.failure);
-    if (configured.success === null) {
-      return Result.succeed(defaultDocumentCollectionSettings(collection));
-    }
-    if (configured.success.type !== 'document') {
-      return Result.fail(
-        new InvalidData(
-          `Settings for document collection '${collection}' are of type '${configured.success.type}' not of type 'document'.`,
-        ),
-      );
-    }
-    return Result.succeed(configured.success);
+  putSettings(settings: ContentBaseSettings): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(emit =>
+      Effect.gen({ self: this }, function*() {
+        yield* runForwarding(
+          this.storage.createOrUpdateObject({
+            key: SETTINGS_KEY,
+            type: 'object',
+            content: settings,
+            metadata: { extension: 'json' },
+          }),
+          emit,
+        );
+      })
+    );
   }
 
-  async getMediaCollectionSettings(collection: string): Promise<LaikaResult<MediaCollectionSettings>> {
-    const configured = await this.getConfiguredCollectionSettings(collection);
-    if (Result.isFailure(configured)) return failAs<MediaCollectionSettings>(configured.failure);
-    if (configured.success === null) {
-      return Result.succeed(defaultMediaCollectionSettings(collection));
-    }
-    if (configured.success.type !== 'media') {
-      return Result.fail(
-        new InvalidData(
-          `Settings for media collection '${collection}' are of type '${configured.success.type}' not of type 'media'.`,
-        ),
-      );
-    }
-    return Result.succeed(configured.success);
+  getDocumentCollectionSettings(collection: string): LaikaTask.LaikaTask<DocumentCollectionSettings> {
+    return LaikaTask.make<DocumentCollectionSettings>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const configured = yield* this.getConfiguredCollectionSettings(collection, emit);
+        if (configured === null) {
+          return defaultDocumentCollectionSettings(collection);
+        }
+        if (configured.type !== 'document') {
+          return yield* Effect.fail(
+            new InvalidData(
+              `Settings for document collection '${collection}' are of type '${configured.type}' not of type 'document'.`,
+            ),
+          );
+        }
+        return configured;
+      })
+    );
   }
 
-  async putCollectionSettings(collection: string, settings: CollectionSettings): Promise<LaikaResult<void>> {
-    const currentSettingsResult = await this.getSettings();
-    if (Result.isFailure(currentSettingsResult)) {
-      return failAs<void>(currentSettingsResult.failure);
-    }
-    const currentSettings = currentSettingsResult.success;
-    const updatedSettings = {
-      ...currentSettings,
-      collections: {
-        ...(currentSettings.collections ?? {}),
-        [collection]: settings,
-      },
-    };
-    const result = await this.putSettings(updatedSettings);
-    if (Result.isFailure(result)) {
-      return failAs<void>(result.failure);
-    }
-    return Result.succeed(undefined);
-  }
-
-  async putMediaCollectionSettings(collection: string, settings: MediaCollectionSettings): Promise<LaikaResult<void>> {
-    const result = this.putCollectionSettings(collection, settings);
-    return result;
-  }
-
-  async putDocumentCollectionSettings(
+  putDocumentCollectionSettings(
     collection: string,
     settings: DocumentCollectionSettings,
-  ): Promise<LaikaResult<void>> {
-    const result = this.putCollectionSettings(collection, settings);
-    return result;
+  ): LaikaTask.LaikaTask<void> {
+    return this.putCollectionSettings(collection, settings);
   }
 
-  async putSettings(settings: ContentBaseSettings): Promise<LaikaResult<void>> {
-    const settingsResult = await firstResult(this.storage.createOrUpdateObject({
-      key: SETTINGS_KEY,
-      type: 'object',
-      content: settings,
-      metadata: { extension: 'json' },
-    }));
-    if (Result.isFailure(settingsResult)) return failAs<void>(settingsResult.failure);
-    return Result.succeed(undefined);
+  getMediaCollectionSettings(collection: string): LaikaTask.LaikaTask<MediaCollectionSettings> {
+    return LaikaTask.make<MediaCollectionSettings>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const configured = yield* this.getConfiguredCollectionSettings(collection, emit);
+        if (configured === null) {
+          return defaultMediaCollectionSettings(collection);
+        }
+        if (configured.type !== 'media') {
+          return yield* Effect.fail(
+            new InvalidData(
+              `Settings for media collection '${collection}' are of type '${configured.type}' not of type 'media'.`,
+            ),
+          );
+        }
+        return configured;
+      })
+    );
   }
 
-  async getCollectionSchema(collection: string): Promise<LaikaResult<JSONSchema7>> {
-    const schema = await firstResult(this.storage.getObject(schemaKey(collection)));
-    if (Result.isFailure(schema)) return failAs<JSONSchema7>(schema.failure);
-    const jsonSchema = schema.success.content as JSONSchema7;
-    return Result.succeed(jsonSchema);
+  putMediaCollectionSettings(
+    collection: string,
+    settings: MediaCollectionSettings,
+  ): LaikaTask.LaikaTask<void> {
+    return this.putCollectionSettings(collection, settings);
   }
 
-  async putCollectionSchema(
+  private putCollectionSettings(
+    collection: string,
+    settings: CollectionSettings,
+  ): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const currentSettings = yield* runForwarding(this.getSettings(), emit);
+        const updatedSettings: ContentBaseSettings = {
+          ...currentSettings,
+          collections: {
+            ...(currentSettings.collections ?? {}),
+            [collection]: settings,
+          },
+        };
+        yield* runForwarding(this.putSettings(updatedSettings), emit);
+      })
+    );
+  }
+
+  getCollectionSchema(collection: string): LaikaTask.LaikaTask<JSONSchema7> {
+    return LaikaTask.make<JSONSchema7>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const schema = yield* runForwarding(this.storage.getObject(schemaKey(collection)), emit);
+        return schema.content as JSONSchema7;
+      })
+    );
+  }
+
+  putCollectionSchema(
     collection: string,
     schema: JSONSchema7,
-  ): Promise<LaikaResult<void>> {
-    const result = await firstResult(this.storage.createOrUpdateObject(
-      {
-        key: schemaKey(collection),
-        type: 'object',
-        content: schema,
-        metadata: { extension: 'json' },
-      },
-    ));
-    if (Result.isFailure(result)) return failAs<void>(result.failure);
-    return Result.succeed(undefined);
+  ): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(emit =>
+      Effect.gen({ self: this }, function*() {
+        yield* runForwarding(
+          this.storage.createOrUpdateObject({
+            key: schemaKey(collection),
+            type: 'object',
+            content: schema,
+            metadata: { extension: 'json' },
+          }),
+          emit,
+        );
+      })
+    );
   }
-
-  override getSettings = async (): Promise<LaikaResult<ContentBaseSettings>> => {
-    const settingsFile = await firstResult(this.storage.getObject(SETTINGS_KEY));
-    if (Result.isFailure(settingsFile)) {
-      if (settingsFile.failure.code === NotFoundError.CODE) {
-        const defaultSettings = createDefaultSettingsFile();
-        const createResult = await firstResult(this.storage.createOrUpdateObject({
-          key: SETTINGS_KEY,
-          type: 'object',
-          content: defaultSettings,
-          metadata: { extension: 'json' },
-        }));
-        if (Result.isFailure(createResult)) return failAs<ContentBaseSettings>(createResult.failure);
-        return Result.succeed(defaultSettings);
-      }
-      return failAs<ContentBaseSettings>(settingsFile.failure);
-    }
-
-    const parsedSettings = parseSettings(settingsFile.success.content);
-    if (Result.isFailure(parsedSettings)) return failAs<ContentBaseSettings>(parsedSettings.failure);
-    return Result.succeed(parsedSettings.success);
-  };
 }
 
 const SETTINGS_KEY = '.contentbase/settings';
