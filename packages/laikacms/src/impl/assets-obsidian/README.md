@@ -23,3 +23,11 @@ const assets = new ObsidianAssetsRepository('/path/to/your/obsidian-vault', {
 Every non-markdown file in the vault (images, PDFs, audio, …) is exposed as an `Asset` keyed by its
 vault-relative path. The implementation is read-oriented — for write-heavy workloads prefer
 `laikacms/assets-r2` or another object-storage backend.
+
+## Limitations
+
+Obsidian vaults store no per-file custom metadata or cache headers, so `updateAsset` is unsupported:
+
+| Method        | Behaviour                                                                       |
+| ------------- | ------------------------------------------------------------------------------- |
+| `updateAsset` | Always throws `BadRequestError`. Use `createAsset` to replace the file instead. |
