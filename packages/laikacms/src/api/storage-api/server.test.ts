@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type {
+  Folder,
+  FolderCreate,
   ListAtomsDone,
   ListAtomsOptions,
   StorageObject,
@@ -275,5 +277,53 @@ describe('storage-api meta.warnings', () => {
     expect(body['atomic:results'][0]?.meta?.deleted).toBe(true);
     expect(body['atomic:results'][0]?.meta?.ref?.id).toBe('notes/a');
     expect(body['atomic:results'][1]?.meta?.ref?.id).toBe('notes/b');
+  });
+});
+
+describe('POST /atoms (create folder)', () => {
+  it('returns 201 with the created folder resource', async () => {
+    const partialRepo = {
+      createFolder: (create: FolderCreate) =>
+        LaikaTask.make<Folder>(() =>
+          Effect.succeed({
+            type: 'folder' as const,
+            key: create.key,
+            createdAt: '2024-01-15T10:30:00Z',
+            updatedAt: '2024-01-15T10:30:00Z',
+          })
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/atoms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: { type: 'folder', id: 'posts/drafts', attributes: {} },
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+
+    const body = await res.json() as {
+      data: { type: string, id: string, attributes: { type: string } },
+    };
+
+    expect(body.data.type).toBe('folder');
+    expect(body.data.id).toBe('posts/drafts');
+    expect(body.data.attributes.type).toBe('folder');
+  });
+
+  it('returns 400 when the request body fails validation', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/atoms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'object' } }),
+      }),
+    );
+    expect(res.status).toBe(400);
   });
 });

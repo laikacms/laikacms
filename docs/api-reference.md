@@ -98,6 +98,58 @@ Returns meta-information about the Storage API and its available endpoints.
 
 ---
 
+#### POST /atoms
+
+Create a new folder.
+
+**Request Headers**
+
+```
+Content-Type: application/vnd.api+json
+```
+
+**Request Body**
+
+```json
+{
+  "data": {
+    "type": "folder",
+    "id": "posts/drafts",
+    "attributes": {}
+  }
+}
+```
+
+| Field             | Type       | Required | Description                      |
+| ----------------- | ---------- | -------- | -------------------------------- |
+| `data.type`       | `"folder"` | yes      | Resource type — must be `folder` |
+| `data.id`         | string     | yes      | Key for the new folder           |
+| `data.attributes` | object     | yes      | Attributes object (may be empty) |
+
+**Response** — `201 Created` with the created folder resource
+
+```json
+{
+  "data": {
+    "type": "folder",
+    "id": "posts/drafts",
+    "attributes": {
+      "type": "folder",
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-15T10:30:00Z"
+    }
+  }
+}
+```
+
+**Error Responses**
+
+| Status | Condition                                                    |
+| ------ | ------------------------------------------------------------ |
+| `400`  | Request body is missing, malformed JSON, or fails validation |
+
+---
+
 #### GET /atoms/:key
 
 List all atoms (objects and folders) under the given key prefix. Returns full content for each atom.

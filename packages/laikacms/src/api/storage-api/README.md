@@ -51,6 +51,7 @@ export default { fetch: api.fetch };
 | ------ | -------------------------- | ----------------------------- |
 | GET    | `/`                        | API info + endpoint discovery |
 | GET    | `/capabilities`            | Repository capabilities       |
+| POST   | `/atoms`                   | Create a folder               |
 | GET    | `/atoms/{folder}`          | List atoms                    |
 | GET    | `/atom-summaries/{folder}` | List atom summaries           |
 | GET    | `/objects/{key}`           | Read a storage object         |
