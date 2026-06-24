@@ -38,7 +38,9 @@ abstract class DocumentsRepository {
 
   // Records (all states)
   abstract listRecords(options: ListRecordsOptions): LaikaStream<Record, ListRecordsDone>;
-  abstract listRecordSummaries(options: ListRecordSummaries): LaikaStream<RecordSummary, ListRecordsDone>;
+  abstract listRecordSummaries(
+    options: ListRecordSummaries,
+  ): LaikaStream<RecordSummary, ListRecordsDone>;
 
   // Documents (published)
   abstract getDocument(key: string): LaikaTask<Document>;

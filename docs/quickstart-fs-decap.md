@@ -1,8 +1,8 @@
 # Self-Hosting Quickstart: FileSystem + Decap CMS
 
-This guide walks you through running LaikaCMS on a plain Node.js server using `@laikacms/storage-fs`
-(local filesystem storage) and `@laikacms/decap-cms-backend-laika` as the Decap CMS backend. It is
-the simplest possible self-hosted setup — no cloud provider account required.
+This guide walks you through running LaikaCMS on a plain Node.js server using filesystem storage
+(`laikacms/storage-fs`) and the Laika backend for Decap CMS (`@laikacms/decap`). It is the simplest
+possible self-hosted setup — no cloud provider account required.
 
 For a broader overview of the system see [architecture](./architecture.md), and for Cloudflare
 Workers or AWS Lambda deployments see [deployment](./deployment.md).
@@ -20,26 +20,29 @@ Workers or AWS Lambda deployments see [deployment](./deployment.md).
 
 ## 1. Install packages
 
-Install the LaikaCMS package and a Node.js server runtime. Storage, API, and serializers are all
-subpath exports of the single `laikacms` package:
+Install the LaikaCMS packages and a Node.js server runtime. Storage repos, document/asset repos, API
+factories, and serializers are all subpath exports of the single `laikacms` package. The Decap
+integration lives in `@laikacms/decap`:
 
 ```bash
 # npm
-npm install laikacms @hono/node-server
+npm install laikacms @laikacms/decap @hono/node-server
 
 # pnpm
-pnpm add laikacms @hono/node-server
+pnpm add laikacms @laikacms/decap @hono/node-server
 ```
 
-| Package             | Purpose                                                            |
-| ------------------- | ------------------------------------------------------------------ |
-| `laikacms`          | Core: storage repos, API factories, serializers (subpath exports). |
-| `@hono/node-server` | Runs the Hono app on Node.js                                       |
+| Package             | Purpose                                                                           |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `laikacms`          | Core: storage repos, document/asset repos, API factories, serializers (subpaths). |
+| `@laikacms/decap`   | Decap-compatible API server + Laika backend for the browser-side Decap CMS admin. |
+| `@hono/node-server` | Runs a Web-standard `fetch` handler on Node.js.                                   |
 
-> **Subpath exports:** the snippet below imports from `laikacms/storage-fs`, `laikacms/storage-api`,
-> and `laikacms/storage-serializers-json`. These are subpath exports of the single `laikacms`
-> package — there is no separate `@laikacms/storage-fs` package on npm. See
-> [packages.md](./packages.md) for the full list of subpaths.
+> **Subpath exports:** the snippet below imports from `laikacms/storage-fs`,
+> `laikacms/documents-contentbase`, `laikacms/assets-contentbase`,
+> `laikacms/contentbase-settings-default`, and `laikacms/storage-serializers-json`. These are
+> subpath exports of the single `laikacms` package — there is no separate `@laikacms/storage-fs`
+> package on npm. See [packages.md](./packages.md) for the full list of subpaths.
 
 > **Other formats:** swap `laikacms/storage-serializers-json` for
 > `laikacms/storage-serializers-yaml` if you prefer YAML files, and change `'json'` to `'yaml'` in
@@ -54,40 +57,72 @@ Create `server.mjs` (or `server.ts` if you have a TypeScript build step):
 ```js
 // server.mjs
 import { serve } from '@hono/node-server';
-import { buildJsonApi } from 'laikacms/storage-api';
+import { decapApi } from '@laikacms/decap/decap-api';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
+
+// Replace this with a real secret in production (e.g. from process.env).
+const DEV_TOKEN = 'dev-secret-change-me';
 
 // 1. Build a serializer registry — maps file extensions to serializers.
 const serializerRegistry = {
   json: jsonSerializer,
 };
 
-// 2. Instantiate the repository.
+// 2. Instantiate the storage repository.
 //    Constructor: new FileSystemStorageRepository(
 //      rootDirectory,        // path to the content folder on disk
 //      serializerRegistry,   // { [extension]: StorageSerializer }
 //      defaultFileExtension, // extension used when creating new objects
 //      ignoreList?           // glob patterns to exclude (optional)
 //    )
-const repo = new FileSystemStorageRepository(
+const storage = new FileSystemStorageRepository(
   './content', // rootDirectory — created automatically on first write
   serializerRegistry,
   'json', // new objects are stored as <key>.json
 );
 
-// 3. Wrap the repository in a JSON:API HTTP server.
-const api = buildJsonApi({ repo });
+// 3. Wrap storage in document/asset repos (ContentBase layer).
+const settings = new DefaultContentBaseSettingsProvider({ storage });
+const documents = new ContentBaseDocumentsRepository(storage, settings);
+const assets = new ContentBaseAssetsRepository(storage, settings);
 
-// 4. Start listening.
+// 4. Build the Decap-compatible API.
+//    basePath '/api' matches the `api_root` in admin/config.yml below.
+//    The handler exposes:
+//      GET  /api/health      — status probe (no auth required)
+//      *    /api/documents/* — documents JSON:API
+//      *    /api/assets/*    — assets JSON:API
+//      *    /api/storage/*   — raw storage JSON:API
+const api = decapApi({
+  documents,
+  storage,
+  assets,
+  basePath: '/api',
+  // For local development: accept a single pre-shared bearer token.
+  // Replace this with a real session/JWT validator before deploying to production.
+  authenticateAccessToken: async token => {
+    if (token !== DEV_TOKEN) throw new Error('Invalid token');
+    return { id: 'dev', email: 'dev@localhost' };
+  },
+});
+
+// 5. Start listening.
 serve({ fetch: api.fetch, port: 3000 }, () => {
-  console.log('LaikaCMS storage API listening on http://localhost:3000');
+  console.log('LaikaCMS API listening on http://localhost:3000');
+  console.log('Health check: http://localhost:3000/api/health');
 });
 ```
 
-> **basePath:** if you mount the storage API under a sub-path (e.g. behind a reverse proxy at
-> `/api/storage`), pass `basePath: '/api/storage'` to `buildJsonApi` so that URL routing is handled
-> correctly.
+> **Production auth:** the `authenticateAccessToken` callback above accepts a hard-coded dev token.
+> For production, replace it with a real validator (JWT verification, database session lookup, etc.)
+> or use the bundled `decapOauth2` helper — see [Decap Integration](./decap-integration.md).
+
+> **Other base paths:** if you mount behind a reverse proxy at a different prefix, change
+> `basePath: '/api'` here and update `api_root` in `admin/config.yml` to match.
 
 ---
 
@@ -110,26 +145,29 @@ Start the server:
 npm start
 ```
 
-The API is now available at `http://localhost:3000`. Verify with:
+The API is now available at `http://localhost:3000`. Verify the health endpoint with:
 
 ```bash
-curl http://localhost:3000
+curl http://localhost:3000/api/health
 ```
 
-You should receive a JSON:API response describing the available endpoints.
+You should receive a JSON response like `{"status":"ok","timestamp":"..."}`. This is the same
+endpoint the Decap `laika` backend pings to confirm the server is reachable.
 
 ---
 
 ## 4. Set up Decap CMS
 
-### 4a. Install the backend
+### 4a. Install the Decap CMS app
+
+`@laikacms/decap` was already installed in §1. Install the Decap CMS browser bundle alongside it:
 
 ```bash
 # npm
-npm install @laikacms/decap decap-cms-app
+npm install decap-cms-app
 
 # pnpm
-pnpm add @laikacms/decap decap-cms-app
+pnpm add decap-cms-app
 ```
 
 > The `laika` backend lives at the `@laikacms/decap/decap-cms-backend-laika` subpath export. There
@@ -142,10 +180,9 @@ pnpm add @laikacms/decap decap-cms-app
 import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 import CMS from 'decap-cms-app';
 
-const LaikaBackend = createLaikaBackend({
-  documentsApiBaseUrl: 'http://localhost:3000',
-  assetsApiBaseUrl: 'http://localhost:3000',
-});
+// No explicit documentsApiBaseUrl / assetsApiBaseUrl needed: the backend
+// derives both from base_url + api_root in config.yml (→ http://localhost:3000/api).
+const LaikaBackend = createLaikaBackend();
 
 CMS.registerBackend('laika', LaikaBackend);
 CMS.init();
@@ -159,6 +196,9 @@ backend:
   name: laika
   base_url: http://localhost:3000
   api_root: /api
+  # dev_token lets the Decap admin authenticate without an OAuth2 flow.
+  # Must match DEV_TOKEN in server.mjs. Remove for production.
+  dev_token: dev-secret-change-me
 
 media_folder: uploads
 public_folder: /uploads
@@ -173,8 +213,16 @@ collections:
       - { name: body,  label: Body,  widget: markdown }
 ```
 
-The `base_url` and `api_root` together tell the backend where the LaikaCMS storage API is running.
-For a production deployment replace `http://localhost:3000` with your public API URL.
+The backend constructs its API URL as `base_url + api_root` → `http://localhost:3000/api`. All
+document, asset, storage, and health endpoints are served under that prefix by the `decapApi` server
+started in §2.
+
+The `dev_token` value is sent as a Bearer token by the Decap admin; the server's
+`authenticateAccessToken` callback checks it. **Never use a dev token in production** — replace it
+with a real OAuth2 flow or JWT validator (see [Decap Integration](./decap-integration.md)).
+
+For a production deployment, replace `http://localhost:3000` with your public API URL and remove the
+`dev_token` line.
 
 See [Decap Integration](./decap-integration.md) for the full integration guide including OAuth2
 setup and available widgets.
@@ -186,7 +234,7 @@ setup and available widgets.
 In two terminals:
 
 ```bash
-# Terminal 1 — storage API
+# Terminal 1 — Decap-compatible API (documents + assets + health at /api/*)
 npm start
 
 # Terminal 2 — your frontend (example using a static file server)
@@ -199,7 +247,8 @@ Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS
 
 ## 6. Production deployment
 
-The storage API is a standard Node.js process and can be deployed anywhere that supports Node.js 22.
+The `decapApi` server is a standard Node.js process and can be deployed anywhere that supports
+Node.js 22.
 
 ### Key requirement
 
@@ -267,12 +316,13 @@ docker run -p 3000:3000 -v $(pwd)/content:/app/content laika-api
 
 ## Environment variables
 
-| Variable | Description                                                       |
-| -------- | ----------------------------------------------------------------- |
-| `PORT`   | Port the server listens on (default: `3000` in the example above) |
+| Variable    | Description                                                                        |
+| ----------- | ---------------------------------------------------------------------------------- |
+| `PORT`      | Port the server listens on (default: `3000` in the example above).                 |
+| `DEV_TOKEN` | Pre-shared bearer token for local dev. Remove entirely for production OAuth2 auth. |
 
-> `buildJsonApi` does not read environment variables directly — pass values from `process.env` when
-> constructing the repository and calling `serve`.
+> `decapApi` does not read environment variables directly — pass values from `process.env` when
+> constructing the repository, the token string, and the `serve` call.
 
 ---
 
