@@ -8,7 +8,7 @@ import {
   BadRequestError,
   EntryAlreadyExistsError,
   InvalidData,
-  type LaikaError,
+  LaikaError,
   type LaikaResult,
   LaikaStream,
   LaikaTask,
@@ -48,6 +48,23 @@ import { FileSystemDataSource } from '../datasources/filesystem-datasource.js';
  */
 const liftResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
   Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
+
+/**
+ * Lift a Promise that may reject with a `LaikaError` (or a plain `Error`)
+ * into a typed `Effect<A, LaikaError>`. Unlike `Effect.promise`, rejections
+ * become typed failures rather than defects — this is essential for keeping
+ * the LaikaTask channel alive when a serializer throws, because defects
+ * bypass `Effect.matchEffect` and leave the task's queue unsignalled (hang).
+ */
+const liftSerialize = <A>(p: Promise<A>): Effect.Effect<A, LaikaError> =>
+  Effect.tryPromise({
+    try: () => p,
+    catch: err => {
+      if (err instanceof LaikaError) return err;
+      if (err instanceof Error) return new BadRequestError(err.message, { cause: err });
+      return new BadRequestError(String(err));
+    },
+  });
 
 export class FileSystemStorageRepository extends StorageRepository {
   private excludeFilter: minimatch.MMRegExp[];
@@ -162,7 +179,7 @@ export class FileSystemStorageRepository extends StorageRepository {
         );
 
         const ext = contents.extension;
-        const content = yield* Effect.promise(() => this.deserialize(ext, contents.content));
+        const content = yield* liftSerialize(this.deserialize(ext, contents.content));
 
         return {
           type: 'object',
@@ -185,7 +202,7 @@ export class FileSystemStorageRepository extends StorageRepository {
         const ext = meta.extension;
 
         if (update.content) {
-          const stringified = yield* Effect.promise(() => this.serialize(ext, update.content!));
+          const stringified = yield* liftSerialize(this.serialize(ext, update.content!));
           yield* liftResult(
             this.fileSystemDataSource.createOrUpdate(this.rootDirectory, update.key, stringified, ext),
           );
@@ -212,7 +229,7 @@ export class FileSystemStorageRepository extends StorageRepository {
           );
         }
         const ext = this.resolveExtension(create.key, create.metadata);
-        const stringified = yield* Effect.promise(() => this.serialize(ext, create.content!));
+        const stringified = yield* liftSerialize(this.serialize(ext, create.content!));
         yield* liftResult(
           this.fileSystemDataSource.createOrUpdate(this.rootDirectory, create.key, stringified, ext),
         );
@@ -229,7 +246,7 @@ export class FileSystemStorageRepository extends StorageRepository {
         );
         const ext = existingExt ?? this.resolveExtension(create.key, create.metadata);
         const stringified = create.content
-          ? yield* Effect.promise(() => this.serialize(ext, create.content!))
+          ? yield* liftSerialize(this.serialize(ext, create.content!))
           : '';
         yield* liftResult(
           this.fileSystemDataSource.createOrUpdate(this.rootDirectory, create.key, stringified, ext),

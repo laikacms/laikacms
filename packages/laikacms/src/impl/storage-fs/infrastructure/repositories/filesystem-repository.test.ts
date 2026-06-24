@@ -1,10 +1,11 @@
 import * as Effect from 'effect/Effect';
 import * as fs from 'fs/promises';
-import { LaikaStream, NotFoundError } from 'laikacms/core';
+import { BadRequestError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
 import { FileSystemStorageRepository } from './filesystem-repository.js';
 
 let tmpDir: string;
@@ -135,5 +136,42 @@ describe('FileSystemStorageRepository listing a missing folder', () => {
     expect(collected.done).toEqual({ total: 0 });
     expect(collected.recoverableErrors).toHaveLength(1);
     expect(collected.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+});
+
+// LCMS-245: rawSerializer throws when content has extra fields beyond 'body'.
+// Before the fix, Effect.promise() treated the thrown rejection as a defect
+// that bypassed Effect.matchEffect, leaving the LaikaTask Queue unsignalled
+// and causing runTaskWithMetadata to hang forever.
+describe('FileSystemStorageRepository rawSerializer extra-field error propagation (LCMS-245)', () => {
+  const makeRawRepo = () => new FileSystemStorageRepository(tmpDir, { raw: rawSerializer }, 'raw');
+
+  it('createObject with extra field returns a typed BadRequestError failure instead of hanging', async () => {
+    const repo = makeRawRepo();
+
+    // Wrap in a race against a short timeout so the test fails fast if we regress to a hang.
+    const settled = await Promise.race([
+      LaikaTask.runPromiseResult(
+        repo.createObject({ key: 'notes/hello', type: 'object', content: { body: 'hi', title: 'dropped' } }),
+      ),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('createObject hung — LCMS-245 regression')), 3000)
+      ),
+    ]);
+
+    // Must be a failure (not a success, not a hang)
+    expect(settled).toMatchObject({ _tag: 'Failure' });
+    const err = (settled as { failure: unknown }).failure;
+    expect(err).toBeInstanceOf(BadRequestError);
+    expect((err as BadRequestError).message).toContain('title');
+  });
+
+  it('createObject with only body field succeeds normally', async () => {
+    const repo = makeRawRepo();
+    const result = await LaikaTask.runPromiseResult(
+      repo.createObject({ key: 'notes/simple', type: 'object', content: { body: 'hello world' } }),
+    );
+    expect(result).toMatchObject({ _tag: 'Success' });
+    expect((result as { success: { content: { body: unknown } } }).success.content.body).toBe('hello world');
   });
 });
