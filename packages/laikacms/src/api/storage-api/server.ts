@@ -260,9 +260,9 @@ const ALLOWED_STORAGE_OBJECT_ATTRIBUTE_KEYS = new Set(['type', 'content']);
  */
 const getUnknownAttributeKey = (rawBody: unknown): string | undefined => {
   if (
-    typeof rawBody !== 'object' || rawBody === null ||
-    !('data' in rawBody) || typeof (rawBody as { data: unknown }).data !== 'object' ||
-    (rawBody as { data: unknown }).data === null
+    typeof rawBody !== 'object' || rawBody === null
+    || !('data' in rawBody) || typeof (rawBody as { data: unknown }).data !== 'object'
+    || (rawBody as { data: unknown }).data === null
   ) return undefined;
 
   const data = (rawBody as { data: Record<string, unknown> }).data;
@@ -500,8 +500,8 @@ export function buildJsonApi(options: StorageApiOptions) {
           return failResponse(
             Result.fail(
               new InvalidData(
-                `Unknown attribute key "${unknownAttrKey}" in data.attributes. ` +
-                  'Only "content" and "type" are allowed — did you mean to nest your data under "content"?',
+                `Unknown attribute key "${unknownAttrKey}" in data.attributes. `
+                  + 'Only "content" and "type" are allowed — did you mean to nest your data under "content"?',
               ),
             ),
             400,
@@ -542,8 +542,8 @@ export function buildJsonApi(options: StorageApiOptions) {
           return failResponse(
             Result.fail(
               new InvalidData(
-                `Unknown attribute key "${unknownAttrKey}" in data.attributes. ` +
-                  'Only "content" and "type" are allowed — did you mean to nest your data under "content"?',
+                `Unknown attribute key "${unknownAttrKey}" in data.attributes. `
+                  + 'Only "content" and "type" are allowed — did you mean to nest your data under "content"?',
               ),
             ),
             400,
@@ -581,15 +581,15 @@ export function buildJsonApi(options: StorageApiOptions) {
       try {
         const rawBody = await request.json();
         if (
-          typeof rawBody === 'object' && rawBody !== null &&
-          'atomic:operations' in rawBody &&
-          Array.isArray((rawBody as { 'atomic:operations': unknown })['atomic:operations'])
+          typeof rawBody === 'object' && rawBody !== null
+          && 'atomic:operations' in rawBody
+          && Array.isArray((rawBody as { 'atomic:operations': unknown })['atomic:operations'])
         ) {
           for (const op of (rawBody as { 'atomic:operations': unknown[] })['atomic:operations']) {
             if (
-              typeof op === 'object' && op !== null &&
-              'op' in op && ((op as { op: unknown }).op === 'add' || (op as { op: unknown }).op === 'update') &&
-              'data' in op
+              typeof op === 'object' && op !== null
+              && 'op' in op && ((op as { op: unknown }).op === 'add' || (op as { op: unknown }).op === 'update')
+              && 'data' in op
             ) {
               const unknownAttrKey = getUnknownAttributeKey(
                 { data: (op as { data: unknown }).data },
@@ -598,8 +598,8 @@ export function buildJsonApi(options: StorageApiOptions) {
                 return failResponse(
                   Result.fail(
                     new InvalidData(
-                      `Unknown attribute key "${unknownAttrKey}" in data.attributes. ` +
-                        'Only "content" and "type" are allowed — did you mean to nest your data under "content"?',
+                      `Unknown attribute key "${unknownAttrKey}" in data.attributes. `
+                        + 'Only "content" and "type" are allowed — did you mean to nest your data under "content"?',
                     ),
                   ),
                   400,
