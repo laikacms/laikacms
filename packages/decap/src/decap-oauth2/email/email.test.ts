@@ -8,7 +8,7 @@
  *    invalid/short token → error; missing token → error
  */
 
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { User } from '../oauth2.js';
 import { requestPasswordReset, resetPassword } from './email.js';
 import type {
@@ -30,7 +30,7 @@ vi.mock('laikacms/crypto', () => ({
   hashPassword: vi.fn().mockImplementation(async (pw: string) => `hashed:${pw}`),
 }));
 
-import { addTimingJitter, generateSecureRandomString, hashPassword } from 'laikacms/crypto';
+import { addTimingJitter, hashPassword } from 'laikacms/crypto';
 
 // ---------------------------------------------------------------------------
 // Shared test fixtures
