@@ -41,17 +41,17 @@
 ```typescript
 // Domain defines the interface
 abstract class StorageRepository {
-  abstract getObject(key: string): LaikaTask<StorageObject>;
-  abstract createObject(create: StorageObjectCreate): LaikaTask<StorageObject>;
+  abstract getObject(key: Key): LaikaTask.LaikaTask<StorageObject>;
+  abstract createObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject>;
   abstract listAtoms(
-    folderKey: string,
+    folderKey: Key,
     options: ListAtomsOptions,
-  ): LaikaStream<Atom, ListAtomsDone>;
+  ): LaikaStream.LaikaStream<Atom, ListAtomsDone>;
 }
 
 // Implementation provides concrete behavior
 class R2StorageRepository extends StorageRepository {
-  getObject(key: string): LaikaTask<StorageObject> {
+  getObject(key: Key): LaikaTask.LaikaTask<StorageObject> {
     return LaikaTask.make(async emit => {
       const object = await this.bucket.get(key);
       if (!object) throw new NotFoundError(`Not found: ${key}`);
