@@ -4,7 +4,9 @@ import { ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
 import type { IconProps } from '@radix-ui/react-icons/dist/types';
 import React, { useEffect, useMemo, useState } from 'react';
 
-export type IconControlProps = CmsWidgetControlProps<string>;
+import type { IconWidgetOptions } from './types';
+
+export type IconControlProps = CmsWidgetControlProps<string> & Pick<IconWidgetOptions, 'filter'>;
 
 export const IconControl: React.FC<IconControlProps> = props => {
   const [isOpen, setIsOpen] = useState(false);
@@ -29,13 +31,19 @@ export const IconControl: React.FC<IconControlProps> = props => {
     setActiveStyle,
     setInactiveStyle,
     t,
+    filter,
   } = props;
 
   const [search, setSearch] = React.useState('');
 
   const icons = useMemo(() => {
-    return Object.keys(allIcons).filter(iconName => iconName.toLowerCase().includes(search.toLowerCase()));
-  }, [search, allIcons]);
+    return Object.keys(allIcons).filter(iconName => {
+      if (!iconName.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filter instanceof RegExp) return filter.test(iconName);
+      if (typeof filter === 'function') return filter(iconName);
+      return true;
+    });
+  }, [search, allIcons, filter]);
 
   const onFocus = () => {
     setIsOpen(true);

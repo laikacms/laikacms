@@ -5,9 +5,11 @@ import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import * as lucideReact from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
+import type { IconWidgetOptions } from './types';
+
 const allIcons = Object.fromEntries(Object.entries(lucideReact.icons));
 
-export type IconControlProps = CmsWidgetControlProps<string>;
+export type IconControlProps = CmsWidgetControlProps<string> & Pick<IconWidgetOptions, 'filter'>;
 
 export const IconControl: React.FC<IconControlProps> = props => {
   const [isOpen, setIsOpen] = useState(false);
@@ -19,13 +21,19 @@ export const IconControl: React.FC<IconControlProps> = props => {
     setActiveStyle,
     setInactiveStyle,
     t,
+    filter,
   } = props;
 
   const [search, setSearch] = React.useState('');
 
   const filteredIcons = useMemo(() => {
-    return Object.keys(allIcons).filter(icon => icon.toLowerCase().includes(search.toLowerCase()));
-  }, [search]);
+    return Object.keys(allIcons).filter(icon => {
+      if (!icon.toLowerCase().includes(search.toLowerCase())) return false;
+      if (filter instanceof RegExp) return filter.test(icon);
+      if (typeof filter === 'function') return filter(icon);
+      return true;
+    });
+  }, [search, filter]);
 
   const onFocus = () => {
     setIsOpen(true);

@@ -1,6 +1,6 @@
 export interface IconWidgetOptions {
   collection?: string;
-  filter?: RegExp;
+  filter?: RegExp | ((id: string) => boolean);
 }
 
 declare module 'decap-cms-core' {
