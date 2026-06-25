@@ -425,7 +425,7 @@ describe('POST /objects — unknown attribute key rejection (LCMS-254)', () => {
     expect(body.errors[0]?.detail).toContain('title');
   });
 
-  it('returns 400 when attributes contains a typo\'d content key', async () => {
+  it("returns 400 when attributes contains a typo'd content key", async () => {
     const api = buildJsonApi({ repo: stubRepo });
     const res = await api.fetch(
       new Request('http://localhost/objects', {

@@ -19,7 +19,8 @@ specification. All responses use the `application/vnd.api+json` content type.
 - Atomic batch operations follow the [JSON:API Atomic Operations](https://jsonapi.org/ext/atomic/)
   extension: request body is `{ "atomic:operations": [ ... ] }`, response is
   `{ "atomic:results": [ ... ] }`.
-- Cursor-based pagination is controlled with `page[after]` (forward) / `page[before]` (backward) and `page[size]` query parameters. Offset-based pagination uses `page[offset]` and `page[limit]`.
+- Cursor-based pagination is controlled with `page[after]` (forward) / `page[before]` (backward) and
+  `page[size]` query parameters. Offset-based pagination uses `page[offset]` and `page[limit]`.
 
 ---
 
@@ -165,12 +166,12 @@ empty key.
 
 **Query Parameters**
 
-| Parameter       | Type   | Default | Description                          |
-| --------------- | ------ | ------- | ------------------------------------ |
-| `page[after]`   | string | —       | Forward cursor for pagination        |
-| `page[before]`  | string | —       | Backward cursor for pagination       |
-| `page[size]`    | number | 10      | Number of items per page             |
-| `filter[depth]` | number | `1`     | Traversal depth (minimum 1)          |
+| Parameter       | Type   | Default | Description                    |
+| --------------- | ------ | ------- | ------------------------------ |
+| `page[after]`   | string | —       | Forward cursor for pagination  |
+| `page[before]`  | string | —       | Backward cursor for pagination |
+| `page[size]`    | number | 10      | Number of items per page       |
+| `filter[depth]` | number | `1`     | Traversal depth (minimum 1)    |
 
 **Response** — collection of `object` and/or `folder` resources
 
@@ -1558,9 +1559,9 @@ List all assets and folders under a given folder prefix.
 | ---------------------------- | ------ | ------- | ------------------------------------------------ |
 | `folder` or `filter[prefix]` | string | `""`    | Folder key prefix to list                        |
 | `filter[depth]` or `depth`   | number | `1`     | Traversal depth (minimum 1)                      |
-| `page[limit]`                | number | `100`   | Items per page                                   |
-| `page[cursor]`               | string | —       | Cursor for pagination                            |
-| `page[direction]`            | string | `forward` | Pagination direction: `forward` or `backward`  |
+| `page[after]`                | string | —       | Forward cursor for pagination                    |
+| `page[before]`               | string | —       | Backward cursor for pagination                   |
+| `page[size]`                 | number | `100`   | Items per page                                   |
 | `include`                    | string | —       | Comma-separated list of related types to include |
 
 **Response** — collection of `asset` and `folder` resources with optional `included`

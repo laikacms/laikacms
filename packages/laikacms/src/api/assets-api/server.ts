@@ -78,17 +78,16 @@ const runStreamWithDone = async <A, D extends LaikaDone>(
     return Result.fail(toLaikaError(err));
   }
 };
+import { buildPaginationLinks, parsePaginationQuery } from 'laikacms/json-api';
 import type { FolderCreate } from 'laikacms/storage';
 import type { JsonApiCollectionResponse, JsonApiResource, JsonApiResponse } from './jsonapi.js';
 import {
   assetToJsonApi,
   assetUrlToJsonApi,
   assetVariationsToJsonApi,
-  buildPaginationLinks,
   folderToJsonApi,
   parseIncludeQuery,
   parseMetaQuery,
-  parsePaginationQuery,
   resourceToJsonApi,
 } from './jsonapi.js';
 
@@ -283,18 +282,21 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       const path = url.pathname;
       const method = request.method.toUpperCase();
 
-      // Parse query parameters
-      const query: Record<string, string | undefined> = {};
+      // Parse query parameters — typed as string | string[] | undefined so the
+      // shared parsePaginationQuery (which handles array values for repeated
+      // params) accepts the map directly. Single-value params are cast inline.
+      const query: Record<string, string | string[] | undefined> = {};
       url.searchParams.forEach((value, key) => {
         query[key] = value;
       });
+      const str = (v: string | string[] | undefined): string | undefined => Array.isArray(v) ? v[0] : v;
 
       // `?include=` only carries actual relationships (urls, variations) per
       // the JSON:API spec. Intrinsic metadata is opted into separately via
       // `?meta=true`, because it's not a related resource — it's a property
       // of the asset that arrives on `data.meta`.
-      const includeHints = parseIncludeQuery(query['include']);
-      const metaHint = parseMetaQuery(query['meta']);
+      const includeHints = parseIncludeQuery(str(query['include']));
+      const metaHint = parseMetaQuery(str(query['meta']));
       const hints: FetchHints = {
         metadata: metaHint.metadata,
         urls: includeHints.urls,
@@ -321,20 +323,40 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       // Route: GET /resources
       // List all resources in a folder
       if (path === `${basePath}/resources` && method === 'GET') {
-        const folderKey = query['folder'] || query['filter[folder]'] || query['filter[prefix]'] || '';
+        const folderKey = str(query['folder']) || str(query['filter[folder]']) || str(query['filter[prefix]']) || '';
         const pagination = parsePaginationQuery(query);
 
         // Parse depth parameter (minimum 1)
-        const depthParam = query['filter[depth]'] || query['depth'];
+        const depthParam = str(query['filter[depth]']) || str(query['depth']);
         const depth = depthParam ? Math.max(1, parseInt(depthParam, 10) || 1) : 1;
 
-        // Build pagination options: forward cursor as `after` when provided so
-        // repository implementations that support cursor-based listing can page
-        // correctly. Fall back to offset 0 when no cursor is present.
+        // Build pagination options from the shared pagination union. Forward
+        // cursor (`after`) maps directly; backward cursor (`before`) is treated
+        // as forward from that point for repository calls that only support
+        // `after`. Page-based and offset-based fall back to offset pagination.
+        //
+        // Note: parsePaginationQuery's default branch (no cursor) ignores
+        // page[size] and returns a hardcoded perPage. We read page[size] directly
+        // from the query so a bare ?page[size]=N request honours the caller's
+        // intent for both pagination options AND link generation.
+        const afterCursor = 'after' in pagination ? pagination.after : undefined;
+        const rawPageSize = str(query['page[size]']);
+        const rawPageSizeNum = rawPageSize ? parseInt(rawPageSize, 10) : undefined;
+        const perPage = rawPageSizeNum
+          ?? ('perPage' in pagination ? pagination.perPage : undefined)
+          ?? ('limit' in pagination ? pagination.limit : undefined)
+          ?? 100;
+        // Build a corrected pagination object that carries the real page size so
+        // buildPaginationLinks emits the correct page[size] on next/prev links.
+        const paginationForLinks = 'after' in pagination
+          ? { after: pagination.after, perPage }
+          : 'before' in pagination
+          ? { before: (pagination as { before?: string }).before, perPage }
+          : pagination;
         const paginationOptions: { offset: number, limit: number } | { after: string | undefined, perPage: number } =
-          pagination.cursor
-            ? { after: pagination.cursor, perPage: pagination.limit || 100 }
-            : { offset: 0, limit: pagination.limit || 100 };
+          afterCursor !== undefined
+            ? { after: afterCursor, perPage }
+            : { offset: 0, limit: perPage };
 
         const included: JsonApiResource[] = [];
         let hasMore = false;
@@ -381,18 +403,27 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           })
         );
 
-        const pageSize = 'limit' in paginationOptions ? paginationOptions.limit : paginationOptions.perPage;
-        if (batchData.length >= pageSize) {
+        const effectivePageSize = 'limit' in paginationOptions ? paginationOptions.limit : paginationOptions.perPage;
+        if (batchData.length >= effectivePageSize) {
           hasMore = true;
           nextCursor = batchData[batchData.length - 1]?.key;
         }
 
+        // firstCursor is the key of the first item in the current page; it is
+        // used by the shared buildPaginationLinks to build the prev link when
+        // navigating forward (page[after] is set).
+        //
+        // buildPaginationLinks expects a clean base URL (no query string) — it
+        // builds the full query string itself from the pagination object.
+        const resourcesBaseUrl = `${url.origin}${url.pathname}`;
+        const firstCursor = batchData[0]?.key;
         const links = buildPaginationLinks(
-          url.toString(),
-          pagination,
+          resourcesBaseUrl,
+          paginationForLinks,
           hasMore,
+          undefined,
+          firstCursor,
           nextCursor,
-          pagination.cursor,
         );
 
         // `meta.page` carries aggregate counts; `meta.warnings` carries
@@ -669,7 +700,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       // Delete a resource
       if (path.startsWith(`${basePath}/resources/`) && method === 'DELETE') {
         const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
-        const recursive = query['recursive'] === 'true';
+        const recursive = str(query['recursive']) === 'true';
 
         // Try to determine if it's an asset or folder
         const resourceResult = await firstResult(repository.getResource(key));

@@ -157,8 +157,8 @@ describe('assets-api meta.warnings', () => {
 
     const api = buildAssetsApi({ repository: partialRepo });
 
-    // Page 1
-    const res1 = await api.fetch(new Request('http://localhost/api/assets/resources?page[limit]=2'));
+    // Page 1 — use shared codec params: page[size] (not the old page[limit])
+    const res1 = await api.fetch(new Request('http://localhost/api/assets/resources?page[size]=2'));
     expect(res1.status).toBe(200);
     const body1 = await res1.json() as {
       data: Array<{ id: string }>,
@@ -185,7 +185,7 @@ describe('assets-api meta.warnings', () => {
       links: { next?: string | null },
     };
     expect(body3.data.map(d => d.id)).toEqual(['e.jpg']);
-    expect(body3.links.next).toBeNull();
+    expect(body3.links.next).toBeFalsy(); // absent on last page (undefined or null)
   });
 
   it('still returns 204 No Content on a clean delete with no warnings', async () => {
@@ -208,6 +208,70 @@ describe('assets-api meta.warnings', () => {
       new Request('http://localhost/api/assets/resources/pic.png', { method: 'DELETE' }),
     );
     expect(res.status).toBe(204);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /resources — shared pagination codec (page[after] / page[before] / page[size])
+// ---------------------------------------------------------------------------
+
+describe('GET /resources — shared JSON:API pagination params', () => {
+  const makeAsset = (key: string): Resource => ({
+    type: 'asset',
+    key,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    content: { size: 1, etag: key },
+  });
+
+  const allResources: Resource[] = ['a.jpg', 'b.jpg', 'c.jpg', 'd.jpg'].map(makeAsset);
+
+  const makeRepo = (): AssetsRepository => ({
+    listResources: (_folderKey: string, options: ListResourcesOptions) =>
+      LaikaStream.make<Resource, ListResourcesDone>(emit =>
+        Effect.gen(function*() {
+          const p = options.pagination as { after?: string, perPage: number } | { offset: number, limit: number };
+          let items: Resource[];
+          if ('after' in p && p.after) {
+            const idx = allResources.findIndex(r => r.key === p.after);
+            items = idx >= 0 ? allResources.slice(idx + 1, idx + 1 + p.perPage) : [];
+          } else {
+            const limit = 'limit' in p ? p.limit : p.perPage;
+            items = allResources.slice(0, limit);
+          }
+          for (const r of items) yield* emit.data(r);
+          return { total: allResources.length };
+        })
+      ),
+  } as unknown as AssetsRepository);
+
+  it('page[size] controls items per page on first page', async () => {
+    const api = buildAssetsApi({ repository: makeRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[size]=2'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: Array<{ id: string }>, links: { next?: string } };
+    expect(body.data.map(d => d.id)).toEqual(['a.jpg', 'b.jpg']);
+    expect(body.links.next).toContain('page[after]=');
+    expect(body.links.next).toContain('page[size]=2');
+  });
+
+  it('page[after] advances to the next cursor page', async () => {
+    const api = buildAssetsApi({ repository: makeRepo() });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources?page[after]=b.jpg&page[size]=2'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: Array<{ id: string }> };
+    expect(body.data.map(d => d.id)).toEqual(['c.jpg', 'd.jpg']);
+  });
+
+  it('links.next carries page[after] pointing to the last item on the page', async () => {
+    const api = buildAssetsApi({ repository: makeRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[size]=2'));
+    const body = await res.json() as { links: { next?: string } };
+    expect(body.links.next).toBeDefined();
+    const nextUrl = new URL(body.links.next!);
+    expect(nextUrl.searchParams.get('page[after]')).toBe('b.jpg');
   });
 });
 

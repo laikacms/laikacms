@@ -49,14 +49,15 @@ serve({ fetch: api.fetch, port: 3000 });
 
 ## Auth and CORS
 
-`buildJsonApi` has no built-in authentication or CORS handling. Add them as middleware around `api.fetch` at the framework level.
+`buildJsonApi` has no built-in authentication or CORS handling. Add them as middleware around
+`api.fetch` at the framework level.
 
 Example with Hono:
 
 ```typescript
 import { Hono } from 'hono';
-import { cors } from 'hono/cors';
 import { bearerAuth } from 'hono/bearer-auth';
+import { cors } from 'hono/cors';
 import { buildJsonApi } from 'laikacms/storage-api';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
@@ -72,7 +73,8 @@ app.all('*', c => api.fetch(c.req.raw));
 
 ## Logger
 
-Pass a `logger` option to `buildJsonApi` to control log verbosity. Any object implementing `Pick<Console, 'error' | 'warn' | 'info' | 'debug'>` works:
+Pass a `logger` option to `buildJsonApi` to control log verbosity. Any object implementing
+`Pick<Console, 'error' | 'warn' | 'info' | 'debug'>` works:
 
 ```typescript
 const api = buildJsonApi({ repo, logger: console });
@@ -81,7 +83,10 @@ const api = buildJsonApi({ repo, logger: console });
 Pass a no-op or filtered logger to suppress output:
 
 ```typescript
-const api = buildJsonApi({ repo, logger: { error: console.error, warn: console.warn, info: () => {}, debug: () => {} } });
+const api = buildJsonApi({
+  repo,
+  logger: { error: console.error, warn: console.warn, info: () => {}, debug: () => {} },
+});
 ```
 
 ## Security Checklist
