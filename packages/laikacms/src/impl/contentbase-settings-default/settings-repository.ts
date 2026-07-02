@@ -19,8 +19,7 @@ const runForwarding = <A>(
 ): Effect.Effect<A, LaikaError> => LaikaTask.runValueForwarding(task, emit);
 
 /** Lift a LaikaTask into an Effect, discarding metadata. */
-const run = <A>(task: LaikaTask.LaikaTask<A>): Effect.Effect<A, LaikaError> =>
-  LaikaTask.runValue(task);
+const run = <A>(task: LaikaTask.LaikaTask<A>): Effect.Effect<A, LaikaError> => LaikaTask.runValue(task);
 
 const startCase = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 

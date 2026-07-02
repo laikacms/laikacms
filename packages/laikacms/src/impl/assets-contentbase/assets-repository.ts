@@ -19,14 +19,16 @@ import {
   type Resource,
 } from 'laikacms/assets';
 import type { ContentBaseSettingsProvider, MediaCollectionSettings } from 'laikacms/contentbase-settings';
-import type { LaikaDone, LaikaError, LaikaResult } from 'laikacms/core';
+import type { LaikaDone, LaikaError } from 'laikacms/core';
 import { BadRequestError, LaikaStream, LaikaTask } from 'laikacms/core';
 import type { Atom, AtomSummary, Folder, FolderCreate, StorageRepository } from 'laikacms/storage';
 import { pathCombine, pathToSegments } from 'laikacms/storage';
 
-/** Lift a Promise<LaikaResult<A>> into Effect<A, LaikaError>. */
-const liftPromiseResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
-  Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
+/** Lift a LaikaTask into an Effect, forwarding metadata to the outer emit. */
+const runForwarding = <A>(
+  task: LaikaTask.LaikaTask<A>,
+  emit: LaikaTask.LaikaMetadataEmit,
+): Effect.Effect<A, LaikaError> => LaikaTask.runValueForwarding(task, emit);
 
 /** Encode a Uint8Array to a base64 string. Works in Node and Workers (no Buffer dep). */
 function bytesToBase64(bytes: Uint8Array): string {
@@ -96,33 +98,39 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   }
 
   /** Resolve a collection name to its underlying directory and settings. */
-  private async resolveCollection(
+  private resolveCollection(
     collection: string,
-  ): Promise<LaikaResult<{ directory: string, settings: MediaCollectionSettings }>> {
-    const settings = await this.settingsProvider.getMediaCollectionSettings(collection);
-    if (Result.isFailure(settings)) return Result.fail(settings.failure);
-    const directory = settings.success.directory ?? collection;
-    return Result.succeed({ directory, settings: settings.success });
+    emit: LaikaTask.LaikaMetadataEmit,
+  ): Effect.Effect<{ directory: string, settings: MediaCollectionSettings }, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const settings = yield* runForwarding(this.settingsProvider.getMediaCollectionSettings(collection), emit);
+      const directory = settings.directory ?? collection;
+      return { directory, settings };
+    });
   }
 
   /** Resolve a logical asset key to its physical storage path plus collection settings. */
-  private async getAssetPath(key: string): Promise<
-    LaikaResult<{
+  private getAssetPath(
+    key: string,
+    emit: LaikaTask.LaikaMetadataEmit,
+  ): Effect.Effect<
+    {
       physical: string,
       directory: string,
       collection: string,
       settings: MediaCollectionSettings,
-    }>
+    },
+    LaikaError
   > {
-    const { collection, remainder } = this.parseKey(key);
-    if (!collection) {
-      return Result.fail(new BadRequestError(`Asset key '${key}' is missing a collection prefix`));
-    }
-    const resolved = await this.resolveCollection(collection);
-    if (Result.isFailure(resolved)) return Result.fail(resolved.failure);
-    const { directory, settings } = resolved.success;
-    const physical = remainder ? pathCombine(directory, remainder) : directory;
-    return Result.succeed({ physical, directory, collection, settings });
+    return Effect.gen({ self: this }, function*() {
+      const { collection, remainder } = this.parseKey(key);
+      if (!collection) {
+        return yield* Effect.fail(new BadRequestError(`Asset key '${key}' is missing a collection prefix`));
+      }
+      const { directory, settings } = yield* this.resolveCollection(collection, emit);
+      const physical = remainder ? pathCombine(directory, remainder) : directory;
+      return { physical, directory, collection, settings };
+    });
   }
 
   /** Convert a physical storage path back to a logical key. */
@@ -202,7 +210,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   ): LaikaTask.LaikaTask<ReadonlyArray<Resource>> {
     return LaikaTask.make<ReadonlyArray<Resource>>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getAssetPath(key));
+        const path = yield* this.getAssetPath(key, emit);
         const atom = yield* LaikaTask.runValueForwarding(this.storageRepository.getAtom(path.physical), emit);
         return [this.atomToResource(atom, path.directory, path.collection)];
       })
@@ -221,7 +229,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
             new BadRequestError(`folderKey '${folderKey}' is missing a collection prefix`),
           );
         }
-        const resolved = yield* liftPromiseResult(this.resolveCollection(collection));
+        const resolved = yield* this.resolveCollection(collection, emit);
         const physicalFolder = remainder ? pathCombine(resolved.directory, remainder) : resolved.directory;
 
         const summaries = yield* Effect.map(
@@ -250,7 +258,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   getAsset(key: string, _options?: GetResourceOptions): LaikaTask.LaikaTask<Asset> {
     return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getAssetPath(key));
+        const path = yield* this.getAssetPath(key, emit);
         const obj = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(path.physical), emit);
         return {
           type: 'asset',
@@ -266,7 +274,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   createAsset(create: AssetCreate): LaikaTask.LaikaTask<Asset> {
     return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getAssetPath(create.key));
+        const path = yield* this.getAssetPath(create.key, emit);
         if (
           path.settings.accept && path.settings.accept.length > 0
           && !path.settings.accept.includes(create.mimeType)
@@ -311,7 +319,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   updateAsset(update: AssetUpdate): LaikaTask.LaikaTask<Asset> {
     return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getAssetPath(update.key));
+        const path = yield* this.getAssetPath(update.key, emit);
         const existing = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(path.physical), emit);
         const merged: Record<string, unknown> = { ...existing.content };
         if (update.mimeType) merged.mimeType = update.mimeType;
@@ -339,7 +347,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   deleteAsset(key: string): LaikaTask.LaikaTask<void> {
     return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getAssetPath(key));
+        const path = yield* this.getAssetPath(key, emit);
         yield* Effect.map(
           LaikaStream.runCollectForwarding(this.storageRepository.removeAtoms([path.physical]), emit),
           r => r.data,
@@ -354,7 +362,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
         const physicalToLogical = new Map<string, string>();
         const physicalKeys: string[] = [];
         for (const key of keys) {
-          const path = yield* Effect.result(liftPromiseResult(this.getAssetPath(key)));
+          const path = yield* Effect.result(this.getAssetPath(key, emit));
           if (Result.isFailure(path)) {
             yield* emit.recoverableError(path.failure);
             continue;
@@ -392,7 +400,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
       Effect.gen({ self: this }, function*() {
         let emitted = 0;
         for (const asset of assets) {
-          const r = yield* Effect.result(liftPromiseResult(this.getAssetPath(asset.key)));
+          const r = yield* Effect.result(this.getAssetPath(asset.key, emit));
           if (Result.isFailure(r)) {
             yield* emit.recoverableError(r.failure);
             continue;
@@ -413,7 +421,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
       Effect.gen({ self: this }, function*() {
         let emitted = 0;
         for (const asset of assets) {
-          const pathR = yield* Effect.result(liftPromiseResult(this.getAssetPath(asset.key)));
+          const pathR = yield* Effect.result(this.getAssetPath(asset.key, emit));
           if (Result.isFailure(pathR)) {
             yield* emit.recoverableError(pathR.failure);
             continue;
@@ -445,7 +453,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   getFolder(key: string): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getAssetPath(key));
+        const path = yield* this.getAssetPath(key, emit);
         const folder = yield* LaikaTask.runValueForwarding(this.storageRepository.getFolder(path.physical), emit);
         return { ...folder, key };
       })
@@ -455,7 +463,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getAssetPath(folderCreate.key));
+        const path = yield* this.getAssetPath(folderCreate.key, emit);
         const folder = yield* LaikaTask.runValueForwarding(
           this.storageRepository.createFolder({
             type: 'folder',
@@ -471,7 +479,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   deleteFolder(key: string, _recursive?: boolean): LaikaTask.LaikaTask<void> {
     return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getAssetPath(key));
+        const path = yield* this.getAssetPath(key, emit);
         yield* Effect.map(
           LaikaStream.runCollectForwarding(this.storageRepository.removeAtoms([path.physical]), emit),
           r => r.data,
