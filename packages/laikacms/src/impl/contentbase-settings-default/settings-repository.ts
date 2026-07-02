@@ -8,7 +8,7 @@ import type {
   MediaCollectionSettings,
 } from 'laikacms/contentbase-settings';
 import { ContentBaseSettingsProvider, createDefaultSettingsFile, parseSettings } from 'laikacms/contentbase-settings';
-import type { LaikaError, LaikaResult } from 'laikacms/core';
+import type { LaikaError } from 'laikacms/core';
 import { InvalidData, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { StorageRepository } from 'laikacms/storage';
 

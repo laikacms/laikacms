@@ -116,29 +116,29 @@ function makeSettingsProvider(overrides?: Partial<DocumentCollectionSettings>): 
   };
 
   return {
-    async getDocumentCollectionSettings(_collection: string) {
-      return Result.succeed(defaults);
+    getDocumentCollectionSettings(_collection: string) {
+      return LaikaTask.succeed(defaults);
     },
-    async getSettings() {
-      return Result.succeed({ collections: {} });
+    getSettings() {
+      return LaikaTask.succeed({ collections: {} });
     },
-    async putSettings() {
-      return Result.succeed(undefined);
+    putSettings() {
+      return LaikaTask.succeed(undefined);
     },
-    async putDocumentCollectionSettings() {
-      return Result.succeed(undefined);
+    putDocumentCollectionSettings() {
+      return LaikaTask.succeed(undefined);
     },
-    async getMediaCollectionSettings() {
-      return Result.fail(new NotFoundError('not found'));
+    getMediaCollectionSettings() {
+      return LaikaTask.fail(new NotFoundError('not found'));
     },
-    async putMediaCollectionSettings() {
-      return Result.succeed(undefined);
+    putMediaCollectionSettings() {
+      return LaikaTask.succeed(undefined);
     },
-    async getCollectionSchema() {
-      return Result.fail(new NotFoundError('no schema'));
+    getCollectionSchema() {
+      return LaikaTask.fail(new NotFoundError('no schema'));
     },
-    async putCollectionSchema() {
-      return Result.succeed(undefined);
+    putCollectionSchema() {
+      return LaikaTask.succeed(undefined);
     },
   } as ContentBaseSettingsProvider;
 }
