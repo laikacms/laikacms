@@ -5,7 +5,13 @@ import * as S from 'effect/Schema';
 import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
 import { BadRequestError, InternalError, LaikaError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { DocumentsRepository } from 'laikacms/documents';
-import type { JsonApiCollectionResponse, JsonApiError, JsonApiResource, JsonApiResponse } from 'laikacms/json-api';
+import type {
+  JsonApiCollectionResponse,
+  JsonApiError,
+  JsonApiLogger,
+  JsonApiResource,
+  JsonApiResponse,
+} from 'laikacms/json-api';
 import {
   buildPaginationLinks,
   errorToJsonApiMapper,
@@ -50,9 +56,9 @@ const json = <
 };
 
 // JSON:API error response
-function respondError(result: LaikaResult<unknown>, status: ErrorStatus = 400) {
+function respondError(result: LaikaResult<unknown>, status: ErrorStatus = 400, logger?: JsonApiLogger) {
   if (Result.isSuccess(result)) throw new Error('respondError called with success result');
-  return json(errorToJsonApiMapper(result), status);
+  return json(errorToJsonApiMapper(result, logger), status);
 }
 
 /**
@@ -99,13 +105,14 @@ function respondResource<T, R extends JsonApiResource>(
   recoverableErrors?: ReadonlyArray<LaikaError>,
   onErrorFn?: ((error: unknown) => void) | undefined,
   status: number = 200,
+  logger?: JsonApiLogger,
 ) {
   if (Result.isFailure(result)) {
     // Check if this is a "not found" error and return 404
     const isNotFound = result.failure.code === NotFoundError.CODE
       || result.failure.message?.toLowerCase().includes('not found');
     onErrorFn?.(result.failure);
-    return respondError(result, isNotFound ? 404 : 400);
+    return respondError(result, isNotFound ? 404 : 400, logger);
   }
   const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
   return json({
@@ -126,10 +133,19 @@ async function respondResourceWithWarnings<T, R extends JsonApiResource>(
   basePath: string,
   onErrorFn?: ((error: unknown) => void) | undefined,
   status: number = 200,
+  logger?: JsonApiLogger,
 ) {
   const r = await firstResultWithMetadata(task);
   if (Result.isFailure(r)) {
-    return respondResource(Result.fail(r.failure) as LaikaResult<T>, transformer, basePath, undefined, onErrorFn);
+    return respondResource(
+      Result.fail(r.failure) as LaikaResult<T>,
+      transformer,
+      basePath,
+      undefined,
+      onErrorFn,
+      undefined,
+      logger,
+    );
   }
   return respondResource(
     Result.succeed(r.success.value),
@@ -138,6 +154,7 @@ async function respondResourceWithWarnings<T, R extends JsonApiResource>(
     r.success.recoverableErrors,
     onErrorFn,
     status,
+    logger,
   );
 }
 
@@ -146,10 +163,11 @@ function respondVoid(
   result: LaikaResult<void>,
   recoverableErrors?: ReadonlyArray<LaikaError>,
   onErrorFn?: ((error: unknown) => void) | undefined,
+  logger?: JsonApiLogger,
 ) {
   if (Result.isFailure(result)) {
     onErrorFn?.(result.failure);
-    return respondError(result);
+    return respondError(result, undefined, logger);
   }
   const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
   return json({ meta: { deleted: true, ...(warnings ? { warnings } : {}) } });
@@ -163,10 +181,13 @@ function respondVoid(
 async function respondVoidWithWarnings(
   task: LaikaTask.LaikaTask<void>,
   onErrorFn?: ((error: unknown) => void) | undefined,
+  logger?: JsonApiLogger,
 ) {
   const r = await firstResultWithMetadata(task);
-  if (Result.isFailure(r)) return respondVoid(Result.fail(r.failure) as LaikaResult<void>, undefined, onErrorFn);
-  return respondVoid(Result.succeed(undefined), r.success.recoverableErrors, onErrorFn);
+  if (Result.isFailure(r)) {
+    return respondVoid(Result.fail(r.failure) as LaikaResult<void>, undefined, onErrorFn, logger);
+  }
+  return respondVoid(Result.succeed(undefined), r.success.recoverableErrors, onErrorFn, logger);
 }
 
 // JSON:API success response for resource collection with pagination
@@ -430,12 +451,12 @@ type RemoveOp = S.Schema.Type<typeof RemoveOpSchema>;
  * and revisions.
  */
 export function buildJsonApi(options: DocumentsApiOptions) {
-  const { repo, basePath = '', onError } = options;
+  const { repo, basePath = '', onError, logger } = options;
 
   /** Notify onError and delegate to respondError. */
   const failResponse = (result: LaikaResult<unknown>, status?: ErrorStatus): Response => {
     if (Result.isFailure(result)) onError?.(result.failure);
-    return respondError(result, status);
+    return respondError(result, status, logger);
   };
 
   return {
@@ -444,7 +465,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         return await fetchInner(request);
       } catch (err) {
         onError?.(err);
-        return respondError(Result.fail(toLaikaError(err)), 400);
+        return respondError(Result.fail(toLaikaError(err)), 400, logger);
       }
     },
   };
@@ -671,6 +692,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         documentToJsonApi,
         basePath,
         onError,
+        undefined,
+        logger,
       );
     }
 
@@ -687,6 +710,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         unpublishedToJsonApi,
         basePath,
         onError,
+        undefined,
+        logger,
       );
     }
 
@@ -704,6 +729,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         basePath,
         onError,
         201,
+        logger,
       );
     }
 
@@ -719,11 +745,13 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         documentToJsonApi,
         basePath,
         onError,
+        undefined,
+        logger,
       );
     }
 
     if (resource === 'published' && request.method === 'DELETE' && key) {
-      return respondVoidWithWarnings(repo.deleteDocument(key), onError);
+      return respondVoidWithWarnings(repo.deleteDocument(key), onError, logger);
     }
 
     if (resource === 'unpublished' && request.method === 'GET' && key) {
@@ -732,6 +760,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         unpublishedToJsonApi,
         basePath,
         onError,
+        undefined,
+        logger,
       );
     }
 
@@ -746,6 +776,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         documentToJsonApi,
         basePath,
         onError,
+        undefined,
+        logger,
       );
     }
 
@@ -763,6 +795,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         basePath,
         onError,
         201,
+        logger,
       );
     }
 
@@ -779,11 +812,13 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         unpublishedToJsonApi,
         basePath,
         onError,
+        undefined,
+        logger,
       );
     }
 
     if (resource === 'unpublished' && request.method === 'DELETE' && key) {
-      return respondVoidWithWarnings(repo.deleteUnpublished(key), onError);
+      return respondVoidWithWarnings(repo.deleteUnpublished(key), onError, logger);
     }
 
     // ===== REVISIONS =====
@@ -801,6 +836,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         basePath,
         onError,
         201,
+        logger,
       );
     }
 
@@ -837,6 +873,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         revisionToJsonApi,
         basePath,
         onError,
+        undefined,
+        logger,
       );
     }
 

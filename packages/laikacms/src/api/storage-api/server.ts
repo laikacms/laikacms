@@ -13,7 +13,7 @@ import {
   LaikaTask,
   NotFoundError,
 } from 'laikacms/core';
-import type { JsonApiError, JsonApiResponse } from 'laikacms/json-api';
+import type { JsonApiError, JsonApiLogger, JsonApiResponse } from 'laikacms/json-api';
 import { errorToJsonApiMapper, recoverableErrorsToWarnings } from 'laikacms/json-api';
 import type {
   Folder,
@@ -62,9 +62,9 @@ const safeDecode = (segment: string): string => {
   }
 };
 
-function respondError(result: LaikaResult<unknown>, status: ErrorStatus = 400) {
+function respondError(result: LaikaResult<unknown>, status: ErrorStatus = 400, logger?: JsonApiLogger) {
   if (Result.isSuccess(result)) throw new InternalError('respondError called with success result');
-  return json(errorToJsonApiMapper(result), status);
+  return json(errorToJsonApiMapper(result, logger), status);
 }
 
 function respondResourceWithConverter<T, R extends JsonApiResource>(
@@ -73,8 +73,9 @@ function respondResourceWithConverter<T, R extends JsonApiResource>(
   basePath: string,
   recoverableErrors?: ReadonlyArray<LaikaError>,
   status: number = 200,
+  logger?: JsonApiLogger,
 ) {
-  if (Result.isFailure(result)) return respondError(result);
+  if (Result.isFailure(result)) return respondError(result, undefined, logger);
   const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
   return json({
     data: withSelfLink(converter(result.success), basePath),
@@ -296,7 +297,7 @@ export interface StorageApiOptions {
  * untrusted network.
  */
 export function buildJsonApi(options: StorageApiOptions) {
-  const { repo, basePath = '', onError } = options;
+  const { repo, basePath = '', onError, logger } = options;
 
   const decodeStorageObjectCreateBody = S.decodeUnknownSync(StorageObjectCreateBodySchema);
   const decodeStorageObjectUpdateBody = S.decodeUnknownSync(StorageObjectUpdateBodySchema);
@@ -306,7 +307,7 @@ export function buildJsonApi(options: StorageApiOptions) {
   /** Notify onError and delegate to respondError. */
   const failResponse = (result: LaikaResult<unknown>, status?: ErrorStatus): Response => {
     if (Result.isFailure(result)) onError?.(result.failure);
-    return respondError(result, status);
+    return respondError(result, status, logger);
   };
 
   return {
@@ -315,7 +316,7 @@ export function buildJsonApi(options: StorageApiOptions) {
         return await fetchInner(request);
       } catch (err) {
         onError?.(err);
-        return respondError(Result.fail(toLaikaError(err)), 500);
+        return respondError(Result.fail(toLaikaError(err)), 500, logger);
       }
     },
   };

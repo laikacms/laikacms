@@ -14,11 +14,35 @@ interface SchemaParseError {
   }>;
 }
 
+/** Subset of `Console` accepted anywhere a diagnostic logger is threaded through the JSON:API layer. */
+export type JsonApiLogger = Pick<Console, 'error' | 'warn' | 'info' | 'debug'>;
+
 export const errorToJsonApiMapper = (
   err: unknown,
+  logger?: JsonApiLogger,
 ): JsonApiError & { status: errors.ErrorStatus } => {
-  console.error('errorToJsonApiMapper():', err);
+  // Unwrap IErrorResult objects (from Result<T> failure cases) first, so the
+  // logging decision below is made once against the underlying error rather
+  // than once per Result wrapper.
+  if (Result.isResult(err) && Result.isFailure(err)) {
+    return errorToJsonApiMapper(err.failure, logger);
+  }
 
+  const mapped = mapErrorToJsonApi(err);
+
+  // Only surface genuinely unexpected (5xx-class) errors. Routine 4xx
+  // responses (404 not-found, 400 validation, ...) are normal control flow —
+  // not something an operator needs to see in the logs, and their messages
+  // can carry internal filesystem paths / stack traces. Diagnostics route
+  // through the caller-supplied `logger`; without one, nothing is logged.
+  if (mapped.status >= 500) {
+    logger?.error('errorToJsonApiMapper():', err);
+  }
+
+  return mapped;
+};
+
+const mapErrorToJsonApi = (err: unknown): JsonApiError & { status: errors.ErrorStatus } => {
   const errorObj = typeof err === 'string'
     ? new errors
       .UnknownError() /* explicitly do not show a message since we dont know if the message is internal or not */
@@ -51,11 +75,6 @@ export const errorToJsonApiMapper = (
       ],
       status: err.status,
     };
-  }
-
-  // Handle IErrorResult objects (from Result<T> failure cases)
-  if (Result.isResult(err) && Result.isFailure(err)) {
-    return errorToJsonApiMapper(err.failure);
   }
 
   // Handle AWS SDK errors
