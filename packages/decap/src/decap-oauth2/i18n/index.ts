@@ -23,6 +23,7 @@
  */
 
 import { en, type Translation } from './translations/en.js';
+import { nl } from './translations/nl.js';
 
 // Re-export the Translation type from en.ts
 export type { Translation };
@@ -45,8 +46,9 @@ export type CommonTranslation = Translation['common'];
  */
 export type OAuthMessages = Translation;
 
-// Export English translations as the default
+// Export English and Dutch translations
 export { en };
+export { nl };
 
 // Default messages (English)
 export const defaultMessages: OAuthMessages = en;
