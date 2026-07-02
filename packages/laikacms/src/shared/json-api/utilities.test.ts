@@ -1,3 +1,4 @@
+import * as Result from 'effect/Result';
 import {
   AuthenticationError,
   AuthorizationError,
@@ -12,7 +13,7 @@ import {
   UnknownError,
   ValidationError,
 } from 'laikacms/core';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   errorFromResponse,
   errorToJsonApiMapper,
@@ -222,6 +223,66 @@ describe('errorToJsonApiMapper', () => {
     };
     const result = errorToJsonApiMapper(parseError);
     expect(result.errors[0]!.source).toBeUndefined();
+  });
+
+  // LCMS-262: errorToJsonApiMapper() unconditionally called console.error on
+  // every mapped error — including routine 4xx — leaking internal stack
+  // traces/paths and ignoring the caller-supplied logger.
+  describe('LCMS-262: logging behaviour', () => {
+    it('does not call console.error for a routine 404, with no logger passed', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      errorToJsonApiMapper(new NotFoundError('notes/nope'));
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('does not call console.error for a routine 400, with no logger passed', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      errorToJsonApiMapper(new BadRequestError('bad input'));
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('never calls console.error directly, even for a 5xx', () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      errorToJsonApiMapper(new InternalError('boom'));
+      expect(consoleSpy).not.toHaveBeenCalled();
+      consoleSpy.mockRestore();
+    });
+
+    it('does not invoke logger.error for a routine 404', () => {
+      const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+      errorToJsonApiMapper(new NotFoundError('notes/nope'), logger);
+      expect(logger.error).not.toHaveBeenCalled();
+    });
+
+    it('invokes logger.error for a genuinely unexpected 5xx error', () => {
+      const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+      const err = new InternalError('disk on fire');
+      errorToJsonApiMapper(err, logger);
+      expect(logger.error).toHaveBeenCalledTimes(1);
+      expect(logger.error).toHaveBeenCalledWith('errorToJsonApiMapper():', err);
+    });
+
+    it('a silent logger suppresses output entirely for a 5xx error', () => {
+      const silentLogger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+      expect(() => errorToJsonApiMapper(new InternalError('boom'), silentLogger)).not.toThrow();
+      expect(silentLogger.error).toHaveBeenCalledTimes(1);
+    });
+
+    it('logs a Result-wrapped 5xx failure exactly once, not once per wrapper layer', () => {
+      const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+      const failure = Result.fail(new InternalError('wrapped boom'));
+      errorToJsonApiMapper(failure, logger);
+      expect(logger.error).toHaveBeenCalledTimes(1);
+    });
+
+    it('does not log a Result-wrapped 404 failure', () => {
+      const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+      const failure = Result.fail(new NotFoundError('notes/nope'));
+      errorToJsonApiMapper(failure, logger);
+      expect(logger.error).not.toHaveBeenCalled();
+    });
   });
 });
 
