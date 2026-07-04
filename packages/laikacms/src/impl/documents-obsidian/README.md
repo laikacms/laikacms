@@ -1,4 +1,4 @@
-# `laikacms/documents-obsidian`
+# `laikacms/documents/obsidian`
 
 A `DocumentsRepository` implementation backed by an [Obsidian](https://obsidian.md/) vault. Each
 markdown note is a document keyed by its vault-relative path; published vs. unpublished state is
@@ -11,9 +11,9 @@ Pair it with a `StorageRepository` pointed at the vault root — typically a
 ## Usage
 
 ```ts
-import { ObsidianDocumentsRepository } from 'laikacms/documents-obsidian';
-import { FileSystemStorageRepository } from 'laikacms/storage-fs';
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { ObsidianDocumentsRepository } from 'laikacms/documents/obsidian';
+import { markdownSerializer } from 'laikacms/serializers/markdown';
+import { FileSystemStorageRepository } from 'laikacms/storage/fs';
 
 const storage = new FileSystemStorageRepository(
   '/path/to/vault',

@@ -1,21 +1,21 @@
-# laikacms/assets-r2
+# laikacms/assets/r2
 
 Cloudflare R2-backed implementation of `AssetsRepository` for Cloudflare Workers.
 
 > **Runtime: Cloudflare Workers only.** This module uses the R2 Workers binding API (`R2Bucket`). It
-> cannot run in Node.js or Bun without a compatible R2 emulator. Use `laikacms/assets-obsidian` or a
+> cannot run in Node.js or Bun without a compatible R2 emulator. Use `laikacms/assets/obsidian` or a
 > filesystem-based repository for local development.
 
 ## Installation
 
 ```bash
-pnpm add laikacms/assets-r2
+pnpm add laikacms/assets/r2
 ```
 
 ## Usage
 
 ```ts
-import { R2AssetsRepository } from 'laikacms/assets-r2';
+import { R2AssetsRepository } from 'laikacms/assets/r2';
 import { FileSanitizerImpl } from 'laikacms/file-sanitizer';
 
 // Recommended: provide a sanitizer to strip privacy-sensitive metadata
@@ -86,5 +86,5 @@ const assets = new R2AssetsRepository({
 The options type is exported for consumers that need to reference it explicitly:
 
 ```ts
-import type { R2AssetsRepositoryOptions } from 'laikacms/assets-r2';
+import type { R2AssetsRepositoryOptions } from 'laikacms/assets/r2';
 ```

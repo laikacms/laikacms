@@ -19,8 +19,8 @@
  *     DeleteObjectCommand,
  *     ListObjectsV2Command,
  *   } from '@aws-sdk/client-s3';
- *   import { createS3Bucket } from 'laikacms/storage-s3';
- *   import { R2StorageRepository } from 'laikacms/storage-r2';
+ *   import { createS3Bucket } from 'laikacms/storage/s3';
+ *   import { R2StorageRepository } from 'laikacms/storage/r2';
  *
  *   const s3 = new S3Client({
  *     region: 'auto',

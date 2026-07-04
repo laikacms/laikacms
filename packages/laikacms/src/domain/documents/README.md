@@ -75,7 +75,7 @@ type aliases for `LaikaDone` (carries pagination and total).
 
 ## Implementations
 
-- `laikacms/documents-drizzle` - SQL via Drizzle ORM
-- `laikacms/documents-contentbase` - ContentBase storage
-- `laikacms/documents-jsonapi-proxy` - JSON:API proxy (remote repository over HTTP)
-- `laikacms/documents-obsidian` - Obsidian vault (published state via frontmatter)
+- `laikacms/documents/drizzle` - SQL via Drizzle ORM
+- `laikacms/documents/contentbase` - ContentBase storage
+- `laikacms/documents/jsonapi-proxy` - JSON:API proxy (remote repository over HTTP)
+- `laikacms/documents/obsidian` - Obsidian vault (published state via frontmatter)

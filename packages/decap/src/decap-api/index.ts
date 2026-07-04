@@ -1,12 +1,12 @@
 import type { AssetsRepository } from 'laikacms/assets';
-import { buildAssetsApi } from 'laikacms/assets-api';
+import { buildAssetsApi } from 'laikacms/assets/api';
 import { AuthenticationError, Header, NotFoundError, TemplateLiteral as TL, Url } from 'laikacms/core';
 import { addTimingJitter } from 'laikacms/crypto';
 import type { DocumentsRepository } from 'laikacms/documents';
-import { buildJsonApi as buildDocumentsApi } from 'laikacms/documents-api';
+import { buildJsonApi as buildDocumentsApi } from 'laikacms/documents/api';
 import { errorToJsonApiMapper, isLaikaError } from 'laikacms/json-api';
 import type { StorageRepository } from 'laikacms/storage';
-import { buildJsonApi as buildStorageApi } from 'laikacms/storage-api';
+import { buildJsonApi as buildStorageApi } from 'laikacms/storage/api';
 
 /**
  * Security constants for the API

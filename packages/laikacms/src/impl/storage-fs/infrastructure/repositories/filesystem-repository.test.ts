@@ -5,7 +5,7 @@ import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
-import { rawSerializer } from 'laikacms/storage-serializers-raw';
+import { rawSerializer } from 'laikacms/serializers/raw';
 import { FileSystemStorageRepository } from './filesystem-repository.js';
 
 let tmpDir: string;

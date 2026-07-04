@@ -24,10 +24,10 @@ route.
 ```ts
 import { decapApi } from '@laikacms/decap/decap-api';
 import { Hono } from 'hono';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { ContentBaseAssetsRepository } from 'laikacms/assets/contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
-import { R2StorageRepository } from 'laikacms/storage-r2';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents/contentbase';
+import { R2StorageRepository } from 'laikacms/storage/r2';
 // …serializers…
 
 const app = new Hono<{ Bindings: Env }>();
@@ -51,11 +51,11 @@ lives:
 
 | Subpath                    | Class                           | Where                           |
 | -------------------------- | ------------------------------- | ------------------------------- |
-| `laikacms/storage-fs`      | `FileSystemStorageRepository`   | Node.js local disk              |
-| `laikacms/storage-r2`      | `R2StorageRepository`           | Cloudflare R2                   |
-| `laikacms/storage-s3`      | S3 shim → `R2StorageRepository` | AWS S3 / MinIO / B2 / DO Spaces |
-| `laikacms/storage-drizzle` | `DrizzleStorageRepository`      | Any SQL DB via Drizzle ORM      |
-| `laikacms/storage-webdav`  | `WebDavStorageRepository`       | Any RFC 4918 WebDAV server      |
+| `laikacms/storage/fs`      | `FileSystemStorageRepository`   | Node.js local disk              |
+| `laikacms/storage/r2`      | `R2StorageRepository`           | Cloudflare R2                   |
+| `laikacms/storage/s3`      | S3 shim → `R2StorageRepository` | AWS S3 / MinIO / B2 / DO Spaces |
+| `laikacms/storage/drizzle` | `DrizzleStorageRepository`      | Any SQL DB via Drizzle ORM      |
+| `laikacms/storage/webdav`  | `WebDavStorageRepository`       | Any RFC 4918 WebDAV server      |
 
 > `FileSystemStorageRepository` requires `node:fs` and a writable local filesystem, so it runs on
 > **Node.js** and **Deno 2** (which supports `node:` built-ins) but not on edge runtimes (Cloudflare
@@ -74,14 +74,14 @@ other `StorageRepository` and pass it to `decapApi(...)`:
 
 ```ts
 import { decapApi } from '@laikacms/decap/decap-api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { ContentBaseAssetsRepository } from 'laikacms/assets/contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
-import { jsonSerializer } from 'laikacms/storage-serializers-json';
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
-import { rawSerializer } from 'laikacms/storage-serializers-raw';
-import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
-import { WebDavStorageRepository } from 'laikacms/storage-webdav';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents/contentbase';
+import { jsonSerializer } from 'laikacms/serializers/json';
+import { markdownSerializer } from 'laikacms/serializers/markdown';
+import { rawSerializer } from 'laikacms/serializers/raw';
+import { yamlSerializer } from 'laikacms/serializers/yaml';
+import { WebDavStorageRepository } from 'laikacms/storage/webdav';
 
 const storage = new WebDavStorageRepository(
   {
@@ -256,10 +256,10 @@ pnpm add @laikacms/decap
 import { decapApi } from '@laikacms/decap/decap-api';
 import { decapOauth2 } from '@laikacms/decap/decap-oauth2';
 import { Hono } from 'hono';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { ContentBaseAssetsRepository } from 'laikacms/assets/contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
-import { R2StorageRepository } from 'laikacms/storage-r2';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents/contentbase';
+import { R2StorageRepository } from 'laikacms/storage/r2';
 
 const CLIENT_ID = process.env.DECAP_CLIENT_ID!;
 const OAUTH_BASE = '/oauth2';
@@ -829,11 +829,11 @@ level, not per-request:
 ```ts
 // src/lib/laika.ts
 import { decapApi } from '@laikacms/decap/decap-api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { ContentBaseAssetsRepository } from 'laikacms/assets/contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
-import { FileSystemStorageRepository } from 'laikacms/storage-fs';
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents/contentbase';
+import { markdownSerializer } from 'laikacms/serializers/markdown';
+import { FileSystemStorageRepository } from 'laikacms/storage/fs';
 import { resolve } from 'node:path';
 
 // Module-level singletons — initialized once, reused across all requests

@@ -96,7 +96,7 @@ Example — point assets at a different origin than documents:
 
 ```typescript
 import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
-import { AssetsJsonApiProxyRepository } from 'laikacms/assets-jsonapi-proxy';
+import { AssetsJsonApiProxyRepository } from 'laikacms/assets/jsonapi-proxy';
 
 const LaikaBackend = createLaikaBackend({
   getAssetsRepository: ({ tokenPromise }) => {

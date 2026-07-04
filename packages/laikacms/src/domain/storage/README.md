@@ -72,9 +72,9 @@ abstract class StorageRepository {
 
 ## Implementations
 
-- `laikacms/storage-r2` - Cloudflare R2
-- `laikacms/storage-fs` - Local filesystem
-- `laikacms/storage-drizzle` - SQL via Drizzle ORM
-- `laikacms/storage-s3` - S3→R2Bucket adapter (pairs with `R2StorageRepository`)
-- `laikacms/storage-webdav` - WebDAV server
-- `laikacms/storage-jsonapi-proxy` - Storage JSON:API proxy
+- `laikacms/storage/r2` - Cloudflare R2
+- `laikacms/storage/fs` - Local filesystem
+- `laikacms/storage/drizzle` - SQL via Drizzle ORM
+- `laikacms/storage/s3` - S3→R2Bucket adapter (pairs with `R2StorageRepository`)
+- `laikacms/storage/webdav` - WebDAV server
+- `laikacms/storage/jsonapi-proxy` - Storage JSON:API proxy

@@ -1,4 +1,4 @@
-# `laikacms/storage-drizzle`
+# `laikacms/storage/drizzle`
 
 A `StorageRepository` implementation backed by any SQL database via
 [Drizzle ORM](https://orm.drizzle.team/). The repository is database-agnostic: you supply
@@ -9,7 +9,7 @@ query-builder callbacks and it handles the Laika storage contract. Tested with S
 
 ```ts
 import { and, eq, like, lte } from 'drizzle-orm';
-import { DrizzleStorageRepository } from 'laikacms/storage-drizzle';
+import { DrizzleStorageRepository } from 'laikacms/storage/drizzle';
 
 import { db, storageTable } from './db'; // your Drizzle db instance and table
 

@@ -23,7 +23,7 @@ import type {
 
 import * as Result from 'effect/Result';
 import type { AssetCreate, AssetsRepository } from 'laikacms/assets';
-import { AssetsJsonApiProxyRepository } from 'laikacms/assets-jsonapi-proxy';
+import { AssetsJsonApiProxyRepository } from 'laikacms/assets/jsonapi-proxy';
 import type { ErrorCode, LaikaResult, LaikaStream, LaikaTask } from 'laikacms/core';
 import {
   errorCode,
@@ -35,7 +35,7 @@ import {
 } from 'laikacms/core';
 import type { Pagination } from 'laikacms/core';
 import type { DocumentsRepository } from 'laikacms/documents';
-import { DocumentsJsonApiProxyRepository } from 'laikacms/documents-jsonapi-proxy';
+import { DocumentsJsonApiProxyRepository } from 'laikacms/documents/jsonapi-proxy';
 
 /**
  * The default recoverable-warning handler: log to console.warn so devtools

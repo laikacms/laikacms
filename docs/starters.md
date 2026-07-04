@@ -9,7 +9,7 @@
 
 Each starter was a small, copy-or-run reference app showing how LaikaCMS is wired into one frontend
 framework, runtime, or storage backend (Next.js, Astro, SvelteKit, Nuxt, Hono, Cloudflare Workers,
-AWS Lambda, and many more). They favored **FileSystem storage** (`laikacms/storage-fs`) so anyone
+AWS Lambda, and many more). They favored **FileSystem storage** (`laikacms/storage/fs`) so anyone
 could run them without a cloud account.
 
 ## Where they are now
@@ -34,8 +34,8 @@ by hand:
 - `@laikacms/decap/decap-cms-backend-laika` — `createLaikaBackend()`, the Decap CMS backend the
   admin UI registers to talk to that API.
 - `@laikacms/decap/decap-oauth2` — `decapOauth2(...)`, an optional PKCE OAuth2 login server.
-- A `StorageRepository` for your runtime — `laikacms/storage-fs` (Node), `laikacms/storage-r2`
-  (Workers / R2), `laikacms/storage-drizzle`, `laikacms/storage-webdav`, etc.
+- A `StorageRepository` for your runtime — `laikacms/storage/fs` (Node), `laikacms/storage/r2`
+  (Workers / R2), `laikacms/storage/drizzle`, `laikacms/storage/webdav`, etc.
 
 Construct a storage repo, wrap it in `ContentBaseDocumentsRepository` /
 `ContentBaseAssetsRepository`, pass them to `decapApi(...)`, and mount `.fetch` from your

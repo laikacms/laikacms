@@ -47,7 +47,7 @@ import {
   unpublishedSummaryFromJsonApi,
   type UnpublishedSummaryJsonApi,
   unpublishedUpdateToJsonApi,
-} from 'laikacms/documents-api';
+} from 'laikacms/documents/api';
 
 import { paginationCodec } from '../../shared/json-api/pagination-codec.js';
 import { warningsFromMeta } from '../../shared/json-api/utilities.js';
