@@ -116,7 +116,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         const posts = result.success.collections?.['posts'];
@@ -134,7 +134,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         const posts = result.success.collections?.['posts'];
@@ -157,7 +157,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         const posts = result.success.collections?.['posts'];
@@ -175,7 +175,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         const posts = result.success.collections?.['posts'];
@@ -193,7 +193,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         const articles = result.success.collections?.['articles'];
@@ -223,7 +223,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         const blog = result.success.collections?.['blog'];
@@ -241,7 +241,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         const col = result.success.collections?.['my_posts'];
@@ -264,7 +264,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         expect(result.success.collections?.['pages']).toBeUndefined();
@@ -280,7 +280,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         for (const key of ['posts', 'events']) {
@@ -305,7 +305,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -330,7 +330,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -350,7 +350,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -379,7 +379,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -400,7 +400,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -418,7 +418,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -436,7 +436,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -454,7 +454,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -472,7 +472,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -490,7 +490,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -514,7 +514,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -541,7 +541,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -560,7 +560,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -580,7 +580,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -606,7 +606,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -633,7 +633,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -652,7 +652,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -670,7 +670,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -695,7 +695,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -714,7 +714,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('nonexistent');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('nonexistent'));
       expect(Result.isFailure(result)).toBe(true);
     });
 
@@ -734,7 +734,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getCollectionSchema('site_settings');
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('site_settings'));
       expect(Result.isFailure(result)).toBe(true);
     });
   });
@@ -742,7 +742,7 @@ describe('DecapContentBaseSettingsProvider', () => {
   describe('readOnly write guards', () => {
     it('putSettings returns failure with InvalidData message', async () => {
       const provider = makeProvider({ collections: [] });
-      const result = await provider.putSettings({ collections: {} });
+      const result = await LaikaTask.runPromiseResult(provider.putSettings({ collections: {} }));
       expect(Result.isFailure(result)).toBe(true);
       if (Result.isFailure(result)) {
         expect(result.failure.message).toContain('putSettings');
@@ -751,12 +751,12 @@ describe('DecapContentBaseSettingsProvider', () => {
 
     it('putDocumentCollectionSettings returns failure', async () => {
       const provider = makeProvider({ collections: [] });
-      const result = await provider.putDocumentCollectionSettings('posts', {
+      const result = await LaikaTask.runPromiseResult(provider.putDocumentCollectionSettings('posts', {
         type: 'document',
         key: 'posts',
         name: 'Posts',
         directory: 'content/posts',
-      });
+      }));
       expect(Result.isFailure(result)).toBe(true);
       if (Result.isFailure(result)) {
         expect(result.failure.message).toContain('putDocumentCollectionSettings');
@@ -765,13 +765,13 @@ describe('DecapContentBaseSettingsProvider', () => {
 
     it('putMediaCollectionSettings returns failure', async () => {
       const provider = makeProvider({ collections: [] });
-      const result = await provider.putMediaCollectionSettings('uploads', {
+      const result = await LaikaTask.runPromiseResult(provider.putMediaCollectionSettings('uploads', {
         type: 'media',
         key: 'uploads',
         name: 'Uploads',
         directory: 'content/uploads',
         recursive: false,
-      });
+      }));
       expect(Result.isFailure(result)).toBe(true);
       if (Result.isFailure(result)) {
         expect(result.failure.message).toContain('putMediaCollectionSettings');
@@ -780,7 +780,7 @@ describe('DecapContentBaseSettingsProvider', () => {
 
     it('putCollectionSchema returns failure', async () => {
       const provider = makeProvider({ collections: [] });
-      const result = await provider.putCollectionSchema('posts', { type: 'object' });
+      const result = await LaikaTask.runPromiseResult(provider.putCollectionSchema('posts', { type: 'object' }));
       expect(Result.isFailure(result)).toBe(true);
       if (Result.isFailure(result)) {
         expect(result.failure.message).toContain('putCollectionSchema');
@@ -801,7 +801,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ],
       });
 
-      const result = await provider.getDocumentCollectionSettings('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getDocumentCollectionSettings('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -813,7 +813,7 @@ describe('DecapContentBaseSettingsProvider', () => {
 
     it('returns default settings for an unknown collection', async () => {
       const provider = makeProvider({ collections: [] });
-      const result = await provider.getDocumentCollectionSettings('nope');
+      const result = await LaikaTask.runPromiseResult(provider.getDocumentCollectionSettings('nope'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -825,7 +825,7 @@ describe('DecapContentBaseSettingsProvider', () => {
   describe('getMediaCollectionSettings', () => {
     it('returns default media settings when no public_folder in config', async () => {
       const provider = makeProvider({ collections: [] });
-      const result = await provider.getMediaCollectionSettings('uploads');
+      const result = await LaikaTask.runPromiseResult(provider.getMediaCollectionSettings('uploads'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -835,7 +835,7 @@ describe('DecapContentBaseSettingsProvider', () => {
 
     it('injects public_folder url template when public_folder is set in config', async () => {
       const provider = makeProvider({ public_folder: '/uploads', collections: [] });
-      const result = await provider.getMediaCollectionSettings('uploads');
+      const result = await LaikaTask.runPromiseResult(provider.getMediaCollectionSettings('uploads'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -844,7 +844,7 @@ describe('DecapContentBaseSettingsProvider', () => {
 
     it('strips trailing slash from public_folder', async () => {
       const provider = makeProvider({ public_folder: '/uploads/', collections: [] });
-      const result = await provider.getMediaCollectionSettings('uploads');
+      const result = await LaikaTask.runPromiseResult(provider.getMediaCollectionSettings('uploads'));
       expect(Result.isSuccess(result)).toBe(true);
       if (!Result.isSuccess(result)) return;
 
@@ -856,7 +856,7 @@ describe('DecapContentBaseSettingsProvider', () => {
     it('returns failure when config file is missing', async () => {
       const storage = makeMemoryStorage(); // empty — no config key
       const provider = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isFailure(result)).toBe(true);
     });
 
@@ -874,7 +874,7 @@ describe('DecapContentBaseSettingsProvider', () => {
         ]),
       );
       const provider = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isFailure(result)).toBe(true);
     });
   });

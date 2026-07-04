@@ -8,24 +8,22 @@ import type {
   MediaCollectionSettings,
 } from 'laikacms/contentbase-settings';
 import { ContentBaseSettingsProvider, defaultUnpublishedStatuses } from 'laikacms/contentbase-settings';
-import type { LaikaError, LaikaResult } from 'laikacms/core';
+import type { LaikaError } from 'laikacms/core';
 import { InvalidData, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { StorageRepository } from 'laikacms/storage';
 
 // ===== Helpers =====
 
-function failAs<T>(error: LaikaError): LaikaResult<T> {
-  return Result.fail(error);
-}
-
-async function firstResult<T>(task: LaikaTask.LaikaTask<T>): Promise<LaikaResult<T>> {
-  return Effect.runPromise(Effect.result(LaikaTask.runValue(task)));
-}
+/** Lift a LaikaTask into an Effect, forwarding metadata to the outer emit. */
+const runForwarding = <A>(
+  task: LaikaTask.LaikaTask<A>,
+  emit: LaikaTask.LaikaTaskEmit,
+): Effect.Effect<A, LaikaError> => LaikaTask.runValueForwarding(task, emit);
 
 const startCase = (str: string) => str.charAt(0).toUpperCase() + str.slice(1);
 
-const readOnly = <T>(op: string): LaikaResult<T> =>
-  Result.fail(
+const readOnly = <T>(op: string): LaikaTask.LaikaTask<T> =>
+  LaikaTask.fail(
     new InvalidData(
       `${op} is not supported by DecapContentBaseSettingsProvider — `
         + `the Decap config is the source of truth; edit it directly.`,
@@ -146,7 +144,7 @@ export class DecapContentBaseSettingsProvider extends ContentBaseSettingsProvide
     this.storage = options.storage;
     this.configKey = options.configKey;
 
-    firstResult(this.storage.getCapabilities()).then(Result.getOrThrow).then(capabilities => {
+    LaikaTask.runPromise(this.storage.getCapabilities()).then(capabilities => {
       if (!capabilities.fileExtensions.supported) {
         console.warn(
           `Underlying storage for DecapContentBaseSettingsProvider does not advertise `
@@ -159,16 +157,17 @@ export class DecapContentBaseSettingsProvider extends ContentBaseSettingsProvide
     });
   }
 
-  private async readDecapConfig(): Promise<LaikaResult<DecapConfig>> {
-    const obj = await firstResult(this.storage.getObject(this.configKey));
-    if (Result.isFailure(obj)) return failAs<DecapConfig>(obj.failure);
-    const content = obj.success.content as unknown;
-    if (content === null || typeof content !== 'object') {
-      return Result.fail(
-        new InvalidData(`Decap config at '${this.configKey}' did not deserialize to an object`),
-      );
-    }
-    return Result.succeed(content as DecapConfig);
+  private readDecapConfig(emit: LaikaTask.LaikaTaskEmit): Effect.Effect<DecapConfig, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const obj = yield* runForwarding(this.storage.getObject(this.configKey), emit);
+      const content = obj.content as unknown;
+      if (content === null || typeof content !== 'object') {
+        return yield* Effect.fail(
+          new InvalidData(`Decap config at '${this.configKey}' did not deserialize to an object`),
+        );
+      }
+      return content as DecapConfig;
+    });
   }
 
   private translateCollection(
@@ -198,98 +197,111 @@ export class DecapContentBaseSettingsProvider extends ContentBaseSettingsProvide
     return { collections };
   }
 
-  override getSettings = async (): Promise<LaikaResult<ContentBaseSettings>> => {
-    const config = await this.readDecapConfig();
-    if (Result.isFailure(config)) return failAs<ContentBaseSettings>(config.failure);
-    return Result.succeed(this.buildSettings(config.success));
-  };
-
-  async getDocumentCollectionSettings(
-    collection: string,
-  ): Promise<LaikaResult<DocumentCollectionSettings>> {
-    const settings = await this.getSettings();
-    if (Result.isFailure(settings)) return failAs<DocumentCollectionSettings>(settings.failure);
-    const found = settings.success.collections?.[collection];
-    if (!found) return Result.succeed(defaultDocumentCollectionSettings(collection));
-    if (found.type !== 'document') {
-      return Result.fail(
-        new InvalidData(
-          `Settings for document collection '${collection}' are of type '${found.type}' not 'document'.`,
-        ),
-      );
-    }
-    return Result.succeed(found);
+  getSettings(): LaikaTask.LaikaTask<ContentBaseSettings> {
+    return LaikaTask.make<ContentBaseSettings>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const config = yield* this.readDecapConfig(emit);
+        return this.buildSettings(config);
+      })
+    );
   }
 
-  async getMediaCollectionSettings(
+  getDocumentCollectionSettings(
     collection: string,
-  ): Promise<LaikaResult<MediaCollectionSettings>> {
-    // Decap collections are documents; media is configured via top-level `media_folder`
-    // and is handled by the assets repo's collection-prefix probe, not by a registered
-    // media collection. Read the Decap config so we can plumb its `public_folder`
-    // into the URL template — without it `getUrls()` falls back to returning the
-    // raw asset key, which is a relative path that browsers can't load as an image
-    // preview (and Decap's per-field media picker hides items it can't preview).
-    const configResult = await this.readDecapConfig();
-    const defaults = defaultMediaCollectionSettings(collection);
-    if (Result.isFailure(configResult)) return Result.succeed(defaults);
-
-    const publicFolder = (configResult.success.public_folder ?? '').replace(/\/+$/, '');
-    if (!publicFolder) return Result.succeed(defaults);
-
-    return Result.succeed({
-      ...defaults,
-      // `{filename}` is the last segment of the asset's logical key (see
-      // `renderUrlTemplate` in assets-contentbase). For an asset stored under
-      // `content/uploads/logo.svg` with `public_folder: /uploads`, this resolves
-      // to `/uploads/logo.svg` — which is exactly the URL the SPA / Vite serves
-      // and what Decap already stores in entry data via `publicPath`.
-      url: `${publicFolder}/{filename}`,
-    });
+  ): LaikaTask.LaikaTask<DocumentCollectionSettings> {
+    return LaikaTask.make<DocumentCollectionSettings>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const settings = yield* runForwarding(this.getSettings(), emit);
+        const found = settings.collections?.[collection];
+        if (!found) return defaultDocumentCollectionSettings(collection);
+        if (found.type !== 'document') {
+          return yield* Effect.fail(
+            new InvalidData(
+              `Settings for document collection '${collection}' are of type '${found.type}' not 'document'.`,
+            ),
+          );
+        }
+        return found;
+      })
+    );
   }
 
-  async getCollectionSchema(collection: string): Promise<LaikaResult<JSONSchema7>> {
-    const config = await this.readDecapConfig();
-    if (Result.isFailure(config)) return failAs<JSONSchema7>(config.failure);
-    const decapCollection = (config.success.collections ?? []).find(c => c.name === collection);
-    if (!decapCollection) {
-      return Result.fail(new NotFoundError(`No Decap collection '${collection}' in config`));
-    }
-    if (!isFolderCollection(decapCollection)) {
-      return Result.fail(
-        new InvalidData(
-          `Decap collection '${collection}' is a 'files' collection — `
-            + `its schema isn't a single JSONSchema7.`,
-        ),
-      );
-    }
-    return Result.succeed(decapFieldsToJsonSchema(decapCollection.fields));
+  getMediaCollectionSettings(
+    collection: string,
+  ): LaikaTask.LaikaTask<MediaCollectionSettings> {
+    return LaikaTask.make<MediaCollectionSettings>(emit =>
+      Effect.gen({ self: this }, function*() {
+        // Decap collections are documents; media is configured via top-level `media_folder`
+        // and is handled by the assets repo's collection-prefix probe, not by a registered
+        // media collection. Read the Decap config so we can plumb its `public_folder`
+        // into the URL template — without it `getUrls()` falls back to returning the
+        // raw asset key, which is a relative path that browsers can't load as an image
+        // preview (and Decap's per-field media picker hides items it can't preview).
+        const configResult = yield* Effect.result(this.readDecapConfig(emit));
+        const defaults = defaultMediaCollectionSettings(collection);
+        if (Result.isFailure(configResult)) return defaults;
+
+        const publicFolder = (configResult.success.public_folder ?? '').replace(/\/+$/, '');
+        if (!publicFolder) return defaults;
+
+        return {
+          ...defaults,
+          // `{filename}` is the last segment of the asset's logical key (see
+          // `renderUrlTemplate` in assets-contentbase). For an asset stored under
+          // `content/uploads/logo.svg` with `public_folder: /uploads`, this resolves
+          // to `/uploads/logo.svg` — which is exactly the URL the SPA / Vite serves
+          // and what Decap already stores in entry data via `publicPath`.
+          url: `${publicFolder}/{filename}`,
+        };
+      })
+    );
+  }
+
+  getCollectionSchema(collection: string): LaikaTask.LaikaTask<JSONSchema7> {
+    return LaikaTask.make<JSONSchema7>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const config = yield* this.readDecapConfig(emit);
+        const decapCollection = (config.collections ?? []).find(c => c.name === collection);
+        if (!decapCollection) {
+          return yield* Effect.fail(new NotFoundError(`No Decap collection '${collection}' in config`));
+        }
+        if (!isFolderCollection(decapCollection)) {
+          return yield* Effect.fail(
+            new InvalidData(
+              `Decap collection '${collection}' is a 'files' collection — `
+                + `its schema isn't a single JSONSchema7.`,
+            ),
+          );
+        }
+        return decapFieldsToJsonSchema(decapCollection.fields);
+      })
+    );
   }
 
   // ===== Read-only writes =====
 
-  async putSettings(_settings: ContentBaseSettings): Promise<LaikaResult<void>> {
+  putSettings(_settings: ContentBaseSettings): LaikaTask.LaikaTask<void> {
     return readOnly<void>('putSettings');
   }
 
-  async putDocumentCollectionSettings(
+  putDocumentCollectionSettings(
     _collection: string,
     _settings: DocumentCollectionSettings,
-  ): Promise<LaikaResult<void>> {
+  ): LaikaTask.LaikaTask<void> {
     return readOnly<void>('putDocumentCollectionSettings');
   }
 
-  async putMediaCollectionSettings(
+  putMediaCollectionSettings(
     _collection: string,
     _settings: MediaCollectionSettings,
-  ): Promise<LaikaResult<void>> {
+  ): LaikaTask.LaikaTask<void> {
     return readOnly<void>('putMediaCollectionSettings');
   }
 
-  async putCollectionSchema(
+  putCollectionSchema(
     _collection: string,
     _schema: JSONSchema7,
-  ): Promise<LaikaResult<void>> {
+  ): LaikaTask.LaikaTask<void> {
     return readOnly<void>('putCollectionSchema');
   }
 }

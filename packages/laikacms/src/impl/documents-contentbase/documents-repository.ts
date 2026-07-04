@@ -2,7 +2,7 @@ import * as Effect from 'effect/Effect';
 import * as Result from 'effect/Result';
 
 import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
-import type { LaikaDone, LaikaError, LaikaResult } from 'laikacms/core';
+import type { LaikaDone, LaikaError } from 'laikacms/core';
 import { BadRequestError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type {
   ListRecordsDone,
@@ -30,12 +30,11 @@ import {
 import type { StorageRepository } from 'laikacms/storage';
 import { basename, pathCombine, pathToSegments } from 'laikacms/storage';
 
-/**
- * Lift a Promise<LaikaResult<A>> into Effect<A, LaikaError> — bridges the
- * private path helpers (which still return Promise<Result>) into Effect.gen.
- */
-const liftPromiseResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
-  Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
+/** Lift a LaikaTask into an Effect, forwarding metadata to the outer emit. */
+const runForwarding = <A>(
+  task: LaikaTask.LaikaTask<A>,
+  emit: LaikaTask.LaikaMetadataEmit,
+): Effect.Effect<A, LaikaError> => LaikaTask.runValueForwarding(task, emit);
 
 /**
  * Run a child LaikaStream and collect data into a flat array, forwarding any
@@ -78,50 +77,71 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     return { collection, remainder: rest.length > 0 ? pathCombine(...rest) : '' };
   }
 
-  private async getDocumentPath(key: string): Promise<LaikaResult<string>> {
-    const { collection, remainder } = this.parseKey(key);
-    if (!collection) {
-      return Result.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
-    }
-    const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
-    if (Result.isFailure(settings)) return Result.fail(settings.failure);
-    const directory = settings.success.directory ?? collection;
-    return Result.succeed(remainder ? pathCombine(directory, remainder) : directory);
-  }
-
-  private async getUnpublishedPath(key: string, status: string): Promise<LaikaResult<string>> {
-    const { collection, remainder } = this.parseKey(key);
-    if (!collection) {
-      return Result.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
-    }
-    const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
-    if (Result.isFailure(settings)) return Result.fail(settings.failure);
-
-    const unpublishedStatuses = settings.success.unpublishedStatuses || {};
-    const statusConfig = unpublishedStatuses[status];
-    if (!statusConfig) {
-      return Result.fail(
-        new BadRequestError(
-          `Unknown unpublished status '${status}' for collection '${collection}'. `
-            + `Available statuses: ${Object.keys(unpublishedStatuses).join(', ')}`,
-        ),
+  private getDocumentPath(
+    key: string,
+    emit: LaikaTask.LaikaMetadataEmit,
+  ): Effect.Effect<string, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const { collection, remainder } = this.parseKey(key);
+      if (!collection) {
+        return yield* Effect.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
+      }
+      const settings = yield* runForwarding(
+        this.settingsProvider.getDocumentCollectionSettings(collection),
+        emit,
       );
-    }
-
-    const basePath = `.contentbase/${collection}/${statusConfig.directory}`;
-    return Result.succeed(remainder ? pathCombine(basePath, remainder) : basePath);
+      const directory = settings.directory ?? collection;
+      return remainder ? pathCombine(directory, remainder) : directory;
+    });
   }
 
-  private async getRevisionPath(key: string, revision?: string): Promise<LaikaResult<string>> {
-    const { collection, remainder } = this.parseKey(key);
-    if (!collection) {
-      return Result.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
-    }
-    const settings = await this.settingsProvider.getDocumentCollectionSettings(collection);
-    if (Result.isFailure(settings)) return Result.fail(settings.failure);
-    const revisionDirectory = settings.success.revisionDirectory || `.contentbase/${collection}/revisions`;
-    const basePath = remainder ? pathCombine(revisionDirectory, remainder) : revisionDirectory;
-    return Result.succeed(revision ? pathCombine(basePath, revision) : basePath);
+  private getUnpublishedPath(
+    key: string,
+    status: string,
+    emit: LaikaTask.LaikaMetadataEmit,
+  ): Effect.Effect<string, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const { collection, remainder } = this.parseKey(key);
+      if (!collection) {
+        return yield* Effect.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
+      }
+      const settings = yield* runForwarding(
+        this.settingsProvider.getDocumentCollectionSettings(collection),
+        emit,
+      );
+      const unpublishedStatuses = settings.unpublishedStatuses || {};
+      const statusConfig = unpublishedStatuses[status];
+      if (!statusConfig) {
+        return yield* Effect.fail(
+          new BadRequestError(
+            `Unknown unpublished status '${status}' for collection '${collection}'. `
+              + `Available statuses: ${Object.keys(unpublishedStatuses).join(', ')}`,
+          ),
+        );
+      }
+      const basePath = `.contentbase/${collection}/${statusConfig.directory}`;
+      return remainder ? pathCombine(basePath, remainder) : basePath;
+    });
+  }
+
+  private getRevisionPath(
+    key: string,
+    emit: LaikaTask.LaikaMetadataEmit,
+    revision?: string,
+  ): Effect.Effect<string, LaikaError> {
+    return Effect.gen({ self: this }, function*() {
+      const { collection, remainder } = this.parseKey(key);
+      if (!collection) {
+        return yield* Effect.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
+      }
+      const settings = yield* runForwarding(
+        this.settingsProvider.getDocumentCollectionSettings(collection),
+        emit,
+      );
+      const revisionDirectory = settings.revisionDirectory || `.contentbase/${collection}/revisions`;
+      const basePath = remainder ? pathCombine(revisionDirectory, remainder) : revisionDirectory;
+      return revision ? pathCombine(basePath, revision) : basePath;
+    });
   }
 
   private extractKeyFromPath(fullPath: string, directory: string, collection: string): string {
@@ -135,7 +155,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   getDocument(key: string): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getDocumentPath(key));
+        const path = yield* this.getDocumentPath(key, emit);
         const obj = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(path), emit);
         return {
           ...obj,
@@ -151,7 +171,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getDocumentPath(create.key));
+        const path = yield* this.getDocumentPath(create.key, emit);
         const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({
             type: 'object',
@@ -177,7 +197,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getDocumentPath(update.key));
+        const path = yield* this.getDocumentPath(update.key, emit);
         const existing = yield* LaikaTask.runValueForwarding(this.getDocument(update.key), emit);
         const newContent = update.content ?? existing.content;
         yield* LaikaTask.runValueForwarding(
@@ -199,7 +219,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   deleteDocument(key: string): LaikaTask.LaikaTask<void> {
     return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getDocumentPath(key));
+        const path = yield* this.getDocumentPath(key, emit);
         yield* collectStreamData(this.storageRepository.removeAtoms([path]), emit);
       })
     );
@@ -214,8 +234,9 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
         if (!collection) {
           return yield* Effect.fail(new BadRequestError(`Document key '${key}' is missing a collection prefix`));
         }
-        const settings = yield* liftPromiseResult(
+        const settings = yield* runForwarding(
           this.settingsProvider.getDocumentCollectionSettings(collection),
+          emit,
         );
         const unpublishedStatuses = settings.unpublishedStatuses || {};
 
@@ -245,7 +266,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getUnpublishedPath(create.key, create.status));
+        const path = yield* this.getUnpublishedPath(create.key, create.status, emit);
         const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({
             type: 'object',
@@ -278,7 +299,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           return yield* LaikaTask.runValueForwarding(this.updateUnpublishedStatus(update.key, update.status), emit);
         }
 
-        const path = yield* liftPromiseResult(this.getUnpublishedPath(update.key, existing.status));
+        const path = yield* this.getUnpublishedPath(update.key, existing.status, emit);
         yield* LaikaTask.runValueForwarding(
           this.storageRepository.updateObject({
             key: path,
@@ -300,8 +321,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
-        const oldPath = yield* liftPromiseResult(this.getUnpublishedPath(key, existing.status));
-        const newPath = yield* liftPromiseResult(this.getUnpublishedPath(key, newStatus));
+        const oldPath = yield* this.getUnpublishedPath(key, existing.status, emit);
+        const newPath = yield* this.getUnpublishedPath(key, newStatus, emit);
 
         yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({
@@ -326,7 +347,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
         const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
-        const path = yield* liftPromiseResult(this.getUnpublishedPath(key, existing.status));
+        const path = yield* this.getUnpublishedPath(key, existing.status, emit);
         yield* collectStreamData(this.storageRepository.removeAtoms([path]), emit);
       })
     );
@@ -336,8 +357,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         const document = yield* LaikaTask.runValueForwarding(this.getDocument(key), emit);
-        const documentPath = yield* liftPromiseResult(this.getDocumentPath(key));
-        const unpublishedPath = yield* liftPromiseResult(this.getUnpublishedPath(key, status));
+        const documentPath = yield* this.getDocumentPath(key, emit);
+        const unpublishedPath = yield* this.getUnpublishedPath(key, status, emit);
 
         yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({
@@ -366,8 +387,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
         const unpublished = yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
-        const unpublishedPath = yield* liftPromiseResult(this.getUnpublishedPath(key, unpublished.status));
-        const documentPath = yield* liftPromiseResult(this.getDocumentPath(key));
+        const unpublishedPath = yield* this.getUnpublishedPath(key, unpublished.status, emit);
+        const documentPath = yield* this.getDocumentPath(key, emit);
 
         yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({
@@ -423,8 +444,9 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
             new BadRequestError(`folder '${options.folder}' is missing a collection prefix`),
           );
         }
-        const settings = yield* liftPromiseResult(
+        const settings = yield* runForwarding(
           this.settingsProvider.getDocumentCollectionSettings(collection),
+          emit,
         );
 
         let total = 0;
@@ -536,7 +558,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   getRevision(key: string, revision: string): LaikaTask.LaikaTask<Revision> {
     return LaikaTask.make<Revision>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getRevisionPath(key, revision));
+        const path = yield* this.getRevisionPath(key, emit, revision);
         const obj = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(path), emit);
         if (!obj.createdAt) {
           return yield* Effect.fail(new InvalidData('Revision is missing createdAt date'));
@@ -556,7 +578,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   createRevision(create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
     return LaikaTask.make<Revision>(emit =>
       Effect.gen({ self: this }, function*() {
-        const path = yield* liftPromiseResult(this.getRevisionPath(create.key, create.revision));
+        const path = yield* this.getRevisionPath(create.key, emit, create.revision);
         const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({
             type: 'object',
@@ -585,7 +607,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   ): LaikaStream.LaikaStream<RevisionSummary, ListRevisionsDone> {
     return LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const revisionDirectory = yield* liftPromiseResult(this.getRevisionPath(key));
+        const revisionDirectory = yield* this.getRevisionPath(key, emit);
         const atoms = yield* collectStreamData(
           this.storageRepository.listAtoms(revisionDirectory, {
             pagination: options.pagination,

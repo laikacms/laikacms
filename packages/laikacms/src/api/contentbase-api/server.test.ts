@@ -1,4 +1,3 @@
-import * as Result from 'effect/Result';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
@@ -7,7 +6,7 @@ import type {
   DocumentCollectionSettings,
   MediaCollectionSettings,
 } from 'laikacms/contentbase-settings';
-import { NotFoundError } from 'laikacms/core';
+import { LaikaTask, NotFoundError } from 'laikacms/core';
 
 import { buildJsonApi } from './server.js';
 
@@ -47,7 +46,7 @@ describe('contentbase-api Cache-Control', () => {
 
   it('sends Cache-Control: no-store on GET /collections', async () => {
     const repo = {
-      getSettings: () => Promise.resolve(Result.succeed({ collections: {} })),
+      getSettings: () => LaikaTask.succeed({ collections: {} }),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -64,7 +63,7 @@ describe('contentbase-api Cache-Control', () => {
 describe('GET /collections', () => {
   it('returns 200 with a data array', async () => {
     const repo = {
-      getSettings: () => Promise.resolve(Result.succeed(settingsWithBoth)),
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -80,7 +79,7 @@ describe('GET /collections', () => {
 
   it('returns 200 with empty data array when no collections', async () => {
     const repo = {
-      getSettings: () => Promise.resolve(Result.succeed({ collections: {} })),
+      getSettings: () => LaikaTask.succeed({ collections: {} }),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -93,7 +92,7 @@ describe('GET /collections', () => {
 
   it('returns JSON:API error shape when repo fails', async () => {
     const repo = {
-      getSettings: () => Promise.resolve(Result.fail(new NotFoundError('settings not found'))),
+      getSettings: () => LaikaTask.fail(new NotFoundError('settings not found')),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -113,8 +112,8 @@ describe('GET /collections', () => {
 describe('GET /collections/:key', () => {
   it('returns 200 with document-collection type for a document collection', async () => {
     const repo = {
-      getSettings: () => Promise.resolve(Result.succeed(settingsWithBoth)),
-      getDocumentCollectionSettings: (_key: string) => Promise.resolve(Result.succeed(docCollection)),
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
+      getDocumentCollectionSettings: (_key: string) => LaikaTask.succeed(docCollection),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -128,8 +127,8 @@ describe('GET /collections/:key', () => {
 
   it('returns 200 with media-collection type for a media collection', async () => {
     const repo = {
-      getSettings: () => Promise.resolve(Result.succeed(settingsWithBoth)),
-      getMediaCollectionSettings: (_key: string) => Promise.resolve(Result.succeed(mediaCollection)),
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
+      getMediaCollectionSettings: (_key: string) => LaikaTask.succeed(mediaCollection),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -143,7 +142,7 @@ describe('GET /collections/:key', () => {
 
   it('returns 404 JSON:API error when collection key does not exist', async () => {
     const repo = {
-      getSettings: () => Promise.resolve(Result.succeed({ collections: {} })),
+      getSettings: () => LaikaTask.succeed({ collections: {} }),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -165,7 +164,7 @@ describe('POST /collections', () => {
   it('returns 201 when creating a document collection', async () => {
     const repo = {
       putDocumentCollectionSettings: (_key: string, _settings: DocumentCollectionSettings) =>
-        Promise.resolve(Result.succeed(undefined)),
+        LaikaTask.succeed(undefined),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -191,8 +190,7 @@ describe('POST /collections', () => {
 
   it('returns 201 when creating a media collection', async () => {
     const repo = {
-      putMediaCollectionSettings: (_key: string, _settings: MediaCollectionSettings) =>
-        Promise.resolve(Result.succeed(undefined)),
+      putMediaCollectionSettings: (_key: string, _settings: MediaCollectionSettings) => LaikaTask.succeed(undefined),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -241,7 +239,7 @@ describe('PATCH /collections/:key', () => {
   it('returns 200 when updating a document collection', async () => {
     const repo = {
       putDocumentCollectionSettings: (_key: string, _settings: DocumentCollectionSettings) =>
-        Promise.resolve(Result.succeed(undefined)),
+        LaikaTask.succeed(undefined),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -267,8 +265,7 @@ describe('PATCH /collections/:key', () => {
 
   it('returns 200 when updating a media collection', async () => {
     const repo = {
-      putMediaCollectionSettings: (_key: string, _settings: MediaCollectionSettings) =>
-        Promise.resolve(Result.succeed(undefined)),
+      putMediaCollectionSettings: (_key: string, _settings: MediaCollectionSettings) => LaikaTask.succeed(undefined),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -316,8 +313,8 @@ describe('PATCH /collections/:key', () => {
 describe('DELETE /collections/:key', () => {
   it('returns 204 with no body on successful delete', async () => {
     const repo = {
-      getSettings: () => Promise.resolve(Result.succeed(settingsWithBoth)),
-      putSettings: (_settings: ContentBaseSettings) => Promise.resolve(Result.succeed(undefined)),
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
+      putSettings: (_settings: ContentBaseSettings) => LaikaTask.succeed(undefined),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -331,7 +328,7 @@ describe('DELETE /collections/:key', () => {
 
   it('returns 404 JSON:API error when deleting a non-existent collection', async () => {
     const repo = {
-      getSettings: () => Promise.resolve(Result.succeed({ collections: {} })),
+      getSettings: () => LaikaTask.succeed({ collections: {} }),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo });
@@ -355,7 +352,7 @@ describe('contentbase-api onError', () => {
   it('calls onError when getSettings fails on GET /collections', async () => {
     const onError = vi.fn();
     const repo = {
-      getSettings: () => Promise.resolve(Result.fail(new NotFoundError('settings unavailable'))),
+      getSettings: () => LaikaTask.fail(new NotFoundError('settings unavailable')),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo, onError });
@@ -369,7 +366,7 @@ describe('contentbase-api onError', () => {
   it('calls onError when getSettings fails on GET /collections/:key', async () => {
     const onError = vi.fn();
     const repo = {
-      getSettings: () => Promise.resolve(Result.fail(new NotFoundError('settings unavailable'))),
+      getSettings: () => LaikaTask.fail(new NotFoundError('settings unavailable')),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo, onError });
@@ -381,7 +378,7 @@ describe('contentbase-api onError', () => {
   it('calls onError when collection is not found (404) on GET /collections/:key', async () => {
     const onError = vi.fn();
     const repo = {
-      getSettings: () => Promise.resolve(Result.succeed({ collections: {} })),
+      getSettings: () => LaikaTask.succeed({ collections: {} }),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo, onError });
@@ -395,7 +392,7 @@ describe('contentbase-api onError', () => {
   it('calls onError when putDocumentCollectionSettings fails on POST /collections', async () => {
     const onError = vi.fn();
     const repo = {
-      putDocumentCollectionSettings: () => Promise.resolve(Result.fail(new NotFoundError('write failed'))),
+      putDocumentCollectionSettings: () => LaikaTask.fail(new NotFoundError('write failed')),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo, onError });
@@ -419,7 +416,7 @@ describe('contentbase-api onError', () => {
   it('calls onError when getSettings fails on DELETE /collections/:key', async () => {
     const onError = vi.fn();
     const repo = {
-      getSettings: () => Promise.resolve(Result.fail(new NotFoundError('settings unavailable'))),
+      getSettings: () => LaikaTask.fail(new NotFoundError('settings unavailable')),
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo, onError });

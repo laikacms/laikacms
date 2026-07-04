@@ -103,7 +103,7 @@ describe('DefaultContentBaseSettingsProvider', () => {
 
   describe('getSettings', () => {
     it('returns default settings when no settings file exists', async () => {
-      const result = await provider.getSettings();
+      const result = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         // default settings file has no collections defined (empty object or undefined)
@@ -133,7 +133,7 @@ describe('DefaultContentBaseSettingsProvider', () => {
         }]]),
       );
       const populatedProvider = new DefaultContentBaseSettingsProvider({ storage: populatedStorage });
-      const result = await populatedProvider.getSettings();
+      const result = await LaikaTask.runPromiseResult(populatedProvider.getSettings());
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         expect(result.success.collections?.['articles']?.name).toBe('Articles');
@@ -154,10 +154,10 @@ describe('DefaultContentBaseSettingsProvider', () => {
         },
       };
 
-      const putResult = await provider.putSettings(settings);
+      const putResult = await LaikaTask.runPromiseResult(provider.putSettings(settings));
       expect(Result.isSuccess(putResult)).toBe(true);
 
-      const getResult = await provider.getSettings();
+      const getResult = await LaikaTask.runPromiseResult(provider.getSettings());
       expect(Result.isSuccess(getResult)).toBe(true);
       if (Result.isSuccess(getResult)) {
         expect(getResult.success.collections?.['blog']?.name).toBe('Blog');
@@ -167,7 +167,7 @@ describe('DefaultContentBaseSettingsProvider', () => {
 
   describe('getDocumentCollectionSettings', () => {
     it('returns default settings for unknown collection', async () => {
-      const result = await provider.getDocumentCollectionSettings('posts');
+      const result = await LaikaTask.runPromiseResult(provider.getDocumentCollectionSettings('posts'));
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         expect(result.success.type).toBe('document');
@@ -176,7 +176,7 @@ describe('DefaultContentBaseSettingsProvider', () => {
     });
 
     it('returns configured settings for known document collection', async () => {
-      await provider.putSettings({
+      await LaikaTask.runPromiseResult(provider.putSettings({
         collections: {
           news: {
             type: 'document',
@@ -185,9 +185,9 @@ describe('DefaultContentBaseSettingsProvider', () => {
             directory: 'news-content',
           },
         },
-      });
+      }));
 
-      const result = await provider.getDocumentCollectionSettings('news');
+      const result = await LaikaTask.runPromiseResult(provider.getDocumentCollectionSettings('news'));
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
         expect(result.success.name).toBe('News Articles');
@@ -196,7 +196,7 @@ describe('DefaultContentBaseSettingsProvider', () => {
     });
 
     it('returns error when collection is of wrong type (media)', async () => {
-      await provider.putSettings({
+      await LaikaTask.runPromiseResult(provider.putSettings({
         collections: {
           images: {
             type: 'media',
@@ -204,9 +204,9 @@ describe('DefaultContentBaseSettingsProvider', () => {
             name: 'Images',
           },
         },
-      });
+      }));
 
-      const result = await provider.getDocumentCollectionSettings('images');
+      const result = await LaikaTask.runPromiseResult(provider.getDocumentCollectionSettings('images'));
       expect(Result.isFailure(result)).toBe(true);
     });
   });
@@ -223,23 +223,15 @@ describe('DefaultContentBaseSettingsProvider', () => {
         },
       };
 
-      const putResult = await provider.putDocumentCollectionSettings('events', collectionSettings);
+      const putResult = await LaikaTask.runPromiseResult(
+        provider.putDocumentCollectionSettings('events', collectionSettings),
+      );
       expect(Result.isSuccess(putResult)).toBe(true);
 
-      const getResult = await provider.getDocumentCollectionSettings('events');
+      const getResult = await LaikaTask.runPromiseResult(provider.getDocumentCollectionSettings('events'));
       expect(Result.isSuccess(getResult)).toBe(true);
       if (Result.isSuccess(getResult)) {
         expect(getResult.success.name).toBe('Events');
-      }
-    });
-  });
-
-  describe('getCollectionSettings', () => {
-    it('returns default document settings for unknown collection', async () => {
-      const result = await provider.getCollectionSettings('anything');
-      expect(Result.isSuccess(result)).toBe(true);
-      if (Result.isSuccess(result)) {
-        expect(result.success.type).toBe('document');
       }
     });
   });

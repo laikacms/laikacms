@@ -4,7 +4,7 @@ import type { Context } from 'hono';
 import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
 import { type CollectionSettings } from 'laikacms/contentbase-settings';
 import type { LaikaResult } from 'laikacms/core';
-import { NotFoundError } from 'laikacms/core';
+import { LaikaTask, NotFoundError } from 'laikacms/core';
 import {
   collectionFromJsonApi,
   type CollectionJsonApi,
@@ -129,7 +129,7 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
 
   // Collections
   app.get('/collections', async c => {
-    const settings = await repo.getSettings();
+    const settings = await LaikaTask.runPromiseResult(repo.getSettings());
     if (Result.isFailure(settings)) {
       return respondError(c, settings, 400, onError);
     }
@@ -140,7 +140,7 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
 
   app.get('/collections/:key', async c => {
     const key = c.req.param('key');
-    const allSettings = await repo.getSettings();
+    const allSettings = await LaikaTask.runPromiseResult(repo.getSettings());
     if (Result.isFailure(allSettings)) {
       return respondError(c, allSettings, 400, onError);
     }
@@ -155,13 +155,13 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
       );
     }
     if (collectionSettings.type === 'document') {
-      const docSettingsResult = await repo.getDocumentCollectionSettings(key);
+      const docSettingsResult = await LaikaTask.runPromiseResult(repo.getDocumentCollectionSettings(key));
       if (Result.isFailure(docSettingsResult)) {
         return respondError(c, docSettingsResult, 400, onError);
       }
       return respondResource(c, docSettingsResult, collectionToJsonApi, onError);
     } else if (collectionSettings.type === 'media') {
-      const mediaSettingsResult = await repo.getMediaCollectionSettings(key);
+      const mediaSettingsResult = await LaikaTask.runPromiseResult(repo.getMediaCollectionSettings(key));
       if (Result.isFailure(mediaSettingsResult)) {
         return respondError(c, mediaSettingsResult, 400, onError);
       }
@@ -177,13 +177,13 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
       const body = collectionFromJsonApi(validatedData as CollectionJsonApi);
 
       if (body.type === 'document') {
-        const result = await repo.putDocumentCollectionSettings(body.key, body);
+        const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(body.key, body));
         if (Result.isFailure(result)) {
           return respondError(c, result, 400, onError);
         }
         return c.json({ data: collectionToJsonApi(body) }, 201);
       } else if (body.type === 'media') {
-        const result = await repo.putMediaCollectionSettings(body.key, body);
+        const result = await LaikaTask.runPromiseResult(repo.putMediaCollectionSettings(body.key, body));
         if (Result.isFailure(result)) {
           return respondError(c, result, 400, onError);
         }
@@ -213,13 +213,13 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
       const bodyWithKey = { ...body, key };
 
       if (bodyWithKey.type === 'document') {
-        const result = await repo.putDocumentCollectionSettings(key, bodyWithKey);
+        const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(key, bodyWithKey));
         if (Result.isFailure(result)) {
           return respondError(c, result, 400, onError);
         }
         return c.json({ data: collectionToJsonApi(bodyWithKey) });
       } else if (bodyWithKey.type === 'media') {
-        const result = await repo.putMediaCollectionSettings(key, bodyWithKey);
+        const result = await LaikaTask.runPromiseResult(repo.putMediaCollectionSettings(key, bodyWithKey));
         if (Result.isFailure(result)) {
           return respondError(c, result, 400, onError);
         }
@@ -240,7 +240,7 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
 
   app.delete('/collections/:key', async c => {
     const key = c.req.param('key');
-    const allSettings = await repo.getSettings();
+    const allSettings = await LaikaTask.runPromiseResult(repo.getSettings());
     if (Result.isFailure(allSettings)) {
       return respondError(c, allSettings, 400, onError);
     }
@@ -260,7 +260,7 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
       ...allSettings.success,
       collections: remainingCollections,
     };
-    const result = await repo.putSettings(updatedSettings);
+    const result = await LaikaTask.runPromiseResult(repo.putSettings(updatedSettings));
     if (Result.isFailure(result)) {
       return respondError(c, result, 400, onError);
     }
