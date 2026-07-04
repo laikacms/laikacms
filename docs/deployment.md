@@ -7,9 +7,9 @@
 
 ```typescript
 // src/index.ts
-import { buildJsonApi } from 'laikacms/storage-api';
-import { R2StorageRepository } from 'laikacms/storage-r2';
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/serializers/markdown';
+import { buildJsonApi } from 'laikacms/storage/api';
+import { R2StorageRepository } from 'laikacms/storage/r2';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -37,9 +37,9 @@ Deploy: `wrangler deploy`
 
 ```typescript
 import { serve } from '@hono/node-server';
-import { buildJsonApi } from 'laikacms/storage-api';
-import { FileSystemStorageRepository } from 'laikacms/storage-fs';
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/serializers/markdown';
+import { buildJsonApi } from 'laikacms/storage/api';
+import { FileSystemStorageRepository } from 'laikacms/storage/fs';
 
 const repo = new FileSystemStorageRepository('./content', { md: markdownSerializer }, 'md');
 const api = buildJsonApi({ repo });
@@ -58,9 +58,9 @@ Example with Hono:
 import { Hono } from 'hono';
 import { bearerAuth } from 'hono/bearer-auth';
 import { cors } from 'hono/cors';
-import { buildJsonApi } from 'laikacms/storage-api';
-import { FileSystemStorageRepository } from 'laikacms/storage-fs';
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
+import { markdownSerializer } from 'laikacms/serializers/markdown';
+import { buildJsonApi } from 'laikacms/storage/api';
+import { FileSystemStorageRepository } from 'laikacms/storage/fs';
 
 const repo = new FileSystemStorageRepository('./content', { md: markdownSerializer }, 'md');
 const api = buildJsonApi({ repo });

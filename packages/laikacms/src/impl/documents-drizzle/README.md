@@ -1,4 +1,4 @@
-# `laikacms/documents-drizzle`
+# `laikacms/documents/drizzle`
 
 A `DocumentsRepository` implementation backed by any SQL database via
 [Drizzle ORM](https://orm.drizzle.team/). The repository is database-agnostic: you supply
@@ -9,7 +9,7 @@ unpublished drafts, and revision history.
 
 ```ts
 import { and, eq, inArray, like, lte, ne } from 'drizzle-orm';
-import { DrizzleDocumentsRepository } from 'laikacms/documents-drizzle';
+import { DrizzleDocumentsRepository } from 'laikacms/documents/drizzle';
 
 import { db, documentsTable, revisionsTable } from './db';
 

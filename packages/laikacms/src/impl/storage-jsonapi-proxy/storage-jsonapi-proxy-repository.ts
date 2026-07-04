@@ -33,7 +33,7 @@ import {
   storageObjectCreateToJsonApi,
   storageObjectFromJsonApi,
   storageObjectUpdateToJsonApi,
-} from 'laikacms/storage-api';
+} from 'laikacms/storage/api';
 
 import { paginationCodec } from '../../shared/json-api/pagination-codec.js';
 import { warningsFromMeta } from '../../shared/json-api/utilities.js';

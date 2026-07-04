@@ -1,8 +1,8 @@
-# laikacms/storage-api
+# laikacms/storage/api
 
-[![npm](https://img.shields.io/npm/v/laikacms/storage-api)](https://www.npmjs.com/package/laikacms/storage-api)
-[![npm](https://img.shields.io/npm/dm/laikacms/storage-api)](https://www.npmjs.com/package/laikacms/storage-api)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/storage-api)](https://bundlephobia.com/result?p=laikacms/storage-api)
+[![npm](https://img.shields.io/npm/v/laikacms/storage/api)](https://www.npmjs.com/package/laikacms/storage/api)
+[![npm](https://img.shields.io/npm/dm/laikacms/storage/api)](https://www.npmjs.com/package/laikacms/storage/api)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/storage/api)](https://bundlephobia.com/result?p=laikacms/storage/api)
 
 JSON:API server for storage operations.
 
@@ -31,13 +31,13 @@ export default {
 ## Installation
 
 ```bash
-pnpm add laikacms/storage-api
+pnpm add laikacms/storage/api
 ```
 
 ## Usage
 
 ```typescript
-import { buildJsonApi } from 'laikacms/storage-api';
+import { buildJsonApi } from 'laikacms/storage/api';
 
 const api = buildJsonApi({ repo: myStorageRepo });
 
@@ -100,6 +100,6 @@ non-2xx status.
 }
 ```
 
-Proxy backends (`@laikacms/storage-jsonapi-proxy` etc.) read `meta.warnings` from the upstream
+Proxy backends (`@laikacms/storage/jsonapi-proxy` etc.) read `meta.warnings` from the upstream
 response and re-emit each entry as a `LaikaTask` / `LaikaStream` `recoverableError`, so warnings
 survive arbitrary proxy chains end-to-end.

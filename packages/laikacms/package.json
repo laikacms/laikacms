@@ -33,7 +33,7 @@
     "CHANGELOG.md"
   ],
   "exports": {
-    "./assets-api": {
+    "./assets/api": {
       "types": "./dist/api/assets-api/index.d.ts",
       "import": "./dist/api/assets-api/index.js",
       "default": "./dist/api/assets-api/index.js"
@@ -43,12 +43,12 @@
       "import": "./dist/api/contentbase-api/index.js",
       "default": "./dist/api/contentbase-api/index.js"
     },
-    "./documents-api": {
+    "./documents/api": {
       "types": "./dist/api/documents-api/index.d.ts",
       "import": "./dist/api/documents-api/index.js",
       "default": "./dist/api/documents-api/index.js"
     },
-    "./storage-api": {
+    "./storage/api": {
       "types": "./dist/api/storage-api/index.d.ts",
       "import": "./dist/api/storage-api/index.js",
       "default": "./dist/api/storage-api/index.js"
@@ -88,22 +88,22 @@
       "import": "./dist/domain/assets/testing/index.js",
       "default": "./dist/domain/assets/testing/index.js"
     },
-    "./assets-contentbase": {
+    "./assets/contentbase": {
       "types": "./dist/impl/assets-contentbase/index.d.ts",
       "import": "./dist/impl/assets-contentbase/index.js",
       "default": "./dist/impl/assets-contentbase/index.js"
     },
-    "./assets-jsonapi-proxy": {
+    "./assets/jsonapi-proxy": {
       "types": "./dist/impl/assets-jsonapi-proxy/index.d.ts",
       "import": "./dist/impl/assets-jsonapi-proxy/index.js",
       "default": "./dist/impl/assets-jsonapi-proxy/index.js"
     },
-    "./assets-obsidian": {
+    "./assets/obsidian": {
       "types": "./dist/impl/assets-obsidian/index.d.ts",
       "import": "./dist/impl/assets-obsidian/index.js",
       "default": "./dist/impl/assets-obsidian/index.js"
     },
-    "./assets-r2": {
+    "./assets/r2": {
       "types": "./dist/impl/assets-r2/index.d.ts",
       "import": "./dist/impl/assets-r2/index.js",
       "default": "./dist/impl/assets-r2/index.js"
@@ -118,72 +118,72 @@
       "import": "./dist/impl/contentbase-settings-default/index.js",
       "default": "./dist/impl/contentbase-settings-default/index.js"
     },
-    "./documents-contentbase": {
+    "./documents/contentbase": {
       "types": "./dist/impl/documents-contentbase/index.d.ts",
       "import": "./dist/impl/documents-contentbase/index.js",
       "default": "./dist/impl/documents-contentbase/index.js"
     },
-    "./documents-drizzle": {
+    "./documents/drizzle": {
       "types": "./dist/impl/documents-drizzle/index.d.ts",
       "import": "./dist/impl/documents-drizzle/index.js",
       "default": "./dist/impl/documents-drizzle/index.js"
     },
-    "./documents-jsonapi-proxy": {
+    "./documents/jsonapi-proxy": {
       "types": "./dist/impl/documents-jsonapi-proxy/index.d.ts",
       "import": "./dist/impl/documents-jsonapi-proxy/index.js",
       "default": "./dist/impl/documents-jsonapi-proxy/index.js"
     },
-    "./documents-obsidian": {
+    "./documents/obsidian": {
       "types": "./dist/impl/documents-obsidian/index.d.ts",
       "import": "./dist/impl/documents-obsidian/index.js",
       "default": "./dist/impl/documents-obsidian/index.js"
     },
-    "./storage-drizzle": {
+    "./storage/drizzle": {
       "types": "./dist/impl/storage-drizzle/index.d.ts",
       "import": "./dist/impl/storage-drizzle/index.js",
       "default": "./dist/impl/storage-drizzle/index.js"
     },
-    "./storage-fs": {
+    "./storage/fs": {
       "types": "./dist/impl/storage-fs/index.d.ts",
       "import": "./dist/impl/storage-fs/index.js",
       "default": "./dist/impl/storage-fs/index.js"
     },
-    "./storage-jsonapi-proxy": {
+    "./storage/jsonapi-proxy": {
       "types": "./dist/impl/storage-jsonapi-proxy/index.d.ts",
       "import": "./dist/impl/storage-jsonapi-proxy/index.js",
       "default": "./dist/impl/storage-jsonapi-proxy/index.js"
     },
-    "./storage-r2": {
+    "./storage/r2": {
       "types": "./dist/impl/storage-r2/index.d.ts",
       "import": "./dist/impl/storage-r2/index.js",
       "default": "./dist/impl/storage-r2/index.js"
     },
-    "./storage-s3": {
+    "./storage/s3": {
       "types": "./dist/impl/storage-s3/index.d.ts",
       "import": "./dist/impl/storage-s3/index.js",
       "default": "./dist/impl/storage-s3/index.js"
     },
-    "./storage-webdav": {
+    "./storage/webdav": {
       "types": "./dist/impl/storage-webdav/index.d.ts",
       "import": "./dist/impl/storage-webdav/index.js",
       "default": "./dist/impl/storage-webdav/index.js"
     },
-    "./storage-serializers-json": {
+    "./serializers/json": {
       "types": "./dist/serializers/storage-serializers-json/index.d.ts",
       "import": "./dist/serializers/storage-serializers-json/index.js",
       "default": "./dist/serializers/storage-serializers-json/index.js"
     },
-    "./storage-serializers-markdown": {
+    "./serializers/markdown": {
       "types": "./dist/serializers/storage-serializers-markdown/index.d.ts",
       "import": "./dist/serializers/storage-serializers-markdown/index.js",
       "default": "./dist/serializers/storage-serializers-markdown/index.js"
     },
-    "./storage-serializers-raw": {
+    "./serializers/raw": {
       "types": "./dist/serializers/storage-serializers-raw/index.d.ts",
       "import": "./dist/serializers/storage-serializers-raw/index.js",
       "default": "./dist/serializers/storage-serializers-raw/index.js"
     },
-    "./storage-serializers-yaml": {
+    "./serializers/yaml": {
       "types": "./dist/serializers/storage-serializers-yaml/index.d.ts",
       "import": "./dist/serializers/storage-serializers-yaml/index.js",
       "default": "./dist/serializers/storage-serializers-yaml/index.js"

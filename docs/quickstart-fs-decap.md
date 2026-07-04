@@ -1,7 +1,7 @@
 # Self-Hosting Quickstart: FileSystem + Decap CMS
 
 This guide walks you through running LaikaCMS on a plain Node.js server using filesystem storage
-(`laikacms/storage-fs`) and the Laika backend for Decap CMS (`@laikacms/decap`). It is the simplest
+(`laikacms/storage/fs`) and the Laika backend for Decap CMS (`@laikacms/decap`). It is the simplest
 possible self-hosted setup — no cloud provider account required.
 
 For a broader overview of the system see [architecture](./architecture.md), and for Cloudflare
@@ -38,15 +38,14 @@ pnpm add laikacms @laikacms/decap @hono/node-server
 | `@laikacms/decap`   | Decap-compatible API server + Laika backend for the browser-side Decap CMS admin. |
 | `@hono/node-server` | Runs a Web-standard `fetch` handler on Node.js.                                   |
 
-> **Subpath exports:** the snippet below imports from `laikacms/storage-fs`,
-> `laikacms/documents-contentbase`, `laikacms/assets-contentbase`,
-> `laikacms/contentbase-settings-default`, and `laikacms/storage-serializers-json`. These are
-> subpath exports of the single `laikacms` package — there is no separate `@laikacms/storage-fs`
-> package on npm. See [packages.md](./packages.md) for the full list of subpaths.
+> **Subpath exports:** the snippet below imports from `laikacms/storage/fs`,
+> `laikacms/documents/contentbase`, `laikacms/assets/contentbase`,
+> `laikacms/contentbase-settings-default`, and `laikacms/serializers/json`. These are subpath
+> exports of the single `laikacms` package — there is no separate `@laikacms/storage/fs` package on
+> npm. See [packages.md](./packages.md) for the full list of subpaths.
 
-> **Other formats:** swap `laikacms/storage-serializers-json` for
-> `laikacms/storage-serializers-yaml` if you prefer YAML files, and change `'json'` to `'yaml'` in
-> the snippet below.
+> **Other formats:** swap `laikacms/serializers/json` for `laikacms/serializers/yaml` if you prefer
+> YAML files, and change `'json'` to `'yaml'` in the snippet below.
 
 ---
 
@@ -58,11 +57,11 @@ Create `server.mjs` (or `server.ts` if you have a TypeScript build step):
 // server.mjs
 import { serve } from '@hono/node-server';
 import { decapApi } from '@laikacms/decap/decap-api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { ContentBaseAssetsRepository } from 'laikacms/assets/contentbase';
 import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
-import { FileSystemStorageRepository } from 'laikacms/storage-fs';
-import { jsonSerializer } from 'laikacms/storage-serializers-json';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents/contentbase';
+import { jsonSerializer } from 'laikacms/serializers/json';
+import { FileSystemStorageRepository } from 'laikacms/storage/fs';
 
 // Replace this with a real secret in production (e.g. from process.env).
 const DEV_TOKEN = 'dev-secret-change-me';

@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import { BadRequestError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { StorageSerializerRegistry } from 'laikacms/storage';
-import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { FileSystemStorageRepository } from 'laikacms/storage/fs';
 import * as os from 'os';
 import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';

@@ -59,7 +59,7 @@ abstract class AssetsRepository {
 
 ## Implementations
 
-- `laikacms/assets-r2` - Cloudflare R2
-- `laikacms/assets-obsidian` - Obsidian vault files (read-oriented)
-- `laikacms/assets-contentbase` - Assets on top of a ContentBase storage backend
-- `laikacms/assets-jsonapi-proxy` - Assets JSON:API proxy
+- `laikacms/assets/r2` - Cloudflare R2
+- `laikacms/assets/obsidian` - Obsidian vault files (read-oriented)
+- `laikacms/assets/contentbase` - Assets on top of a ContentBase storage backend
+- `laikacms/assets/jsonapi-proxy` - Assets JSON:API proxy

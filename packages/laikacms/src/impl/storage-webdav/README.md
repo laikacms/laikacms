@@ -1,4 +1,4 @@
-# `laikacms/storage-webdav`
+# `laikacms/storage/webdav`
 
 A `StorageRepository` implementation backed by any
 [RFC 4918](https://www.rfc-editor.org/rfc/rfc4918) WebDAV server — Nextcloud, ownCloud, Apache
@@ -16,8 +16,8 @@ it without standing up a new backend.
 ## Usage
 
 ```ts
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
-import { WebDavStorageRepository } from 'laikacms/storage-webdav';
+import { markdownSerializer } from 'laikacms/serializers/markdown';
+import { WebDavStorageRepository } from 'laikacms/storage/webdav';
 
 const repo = new WebDavStorageRepository(
   {
@@ -90,9 +90,9 @@ The optional 4th argument overrides how the on-server file extension is chosen w
 object. The default behaviour is `metadata.extension ?? defaultFileExtension`.
 
 ```ts
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
-import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
-import { WebDavStorageRepository } from 'laikacms/storage-webdav';
+import { markdownSerializer } from 'laikacms/serializers/markdown';
+import { yamlSerializer } from 'laikacms/serializers/yaml';
+import { WebDavStorageRepository } from 'laikacms/storage/webdav';
 
 // Always store as .yaml regardless of metadata.extension or defaultFileExtension.
 new WebDavStorageRepository(

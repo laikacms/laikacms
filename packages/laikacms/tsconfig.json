@@ -23,16 +23,16 @@
       "node"
     ],
     "paths": {
-      "laikacms/assets-api": [
+      "laikacms/assets/api": [
         "src/api/assets-api/index.ts"
       ],
       "laikacms/contentbase-api": [
         "src/api/contentbase-api/index.ts"
       ],
-      "laikacms/documents-api": [
+      "laikacms/documents/api": [
         "src/api/documents-api/index.ts"
       ],
-      "laikacms/storage-api": [
+      "laikacms/storage/api": [
         "src/api/storage-api/index.ts"
       ],
       "laikacms/assets": [
@@ -53,16 +53,16 @@
       "laikacms/storage/testing": [
         "src/domain/storage/testing/index.ts"
       ],
-      "laikacms/assets-contentbase": [
+      "laikacms/assets/contentbase": [
         "src/impl/assets-contentbase/index.ts"
       ],
-      "laikacms/assets-jsonapi-proxy": [
+      "laikacms/assets/jsonapi-proxy": [
         "src/impl/assets-jsonapi-proxy/index.ts"
       ],
-      "laikacms/assets-obsidian": [
+      "laikacms/assets/obsidian": [
         "src/impl/assets-obsidian/index.ts"
       ],
-      "laikacms/assets-r2": [
+      "laikacms/assets/r2": [
         "src/impl/assets-r2/index.ts"
       ],
       "laikacms/contentbase-settings-decap": [
@@ -71,46 +71,46 @@
       "laikacms/contentbase-settings-default": [
         "src/impl/contentbase-settings-default/index.ts"
       ],
-      "laikacms/documents-contentbase": [
+      "laikacms/documents/contentbase": [
         "src/impl/documents-contentbase/index.ts"
       ],
-      "laikacms/documents-drizzle": [
+      "laikacms/documents/drizzle": [
         "src/impl/documents-drizzle/index.ts"
       ],
-      "laikacms/documents-jsonapi-proxy": [
+      "laikacms/documents/jsonapi-proxy": [
         "src/impl/documents-jsonapi-proxy/index.ts"
       ],
-      "laikacms/documents-obsidian": [
+      "laikacms/documents/obsidian": [
         "src/impl/documents-obsidian/index.ts"
       ],
-      "laikacms/storage-drizzle": [
+      "laikacms/storage/drizzle": [
         "src/impl/storage-drizzle/index.ts"
       ],
-      "laikacms/storage-fs": [
+      "laikacms/storage/fs": [
         "src/impl/storage-fs/index.ts"
       ],
-      "laikacms/storage-jsonapi-proxy": [
+      "laikacms/storage/jsonapi-proxy": [
         "src/impl/storage-jsonapi-proxy/index.ts"
       ],
-      "laikacms/storage-r2": [
+      "laikacms/storage/r2": [
         "src/impl/storage-r2/index.ts"
       ],
-      "laikacms/storage-s3": [
+      "laikacms/storage/s3": [
         "src/impl/storage-s3/index.ts"
       ],
-      "laikacms/storage-webdav": [
+      "laikacms/storage/webdav": [
         "src/impl/storage-webdav/index.ts"
       ],
-      "laikacms/storage-serializers-json": [
+      "laikacms/serializers/json": [
         "src/serializers/storage-serializers-json/index.ts"
       ],
-      "laikacms/storage-serializers-markdown": [
+      "laikacms/serializers/markdown": [
         "src/serializers/storage-serializers-markdown/index.ts"
       ],
-      "laikacms/storage-serializers-raw": [
+      "laikacms/serializers/raw": [
         "src/serializers/storage-serializers-raw/index.ts"
       ],
-      "laikacms/storage-serializers-yaml": [
+      "laikacms/serializers/yaml": [
         "src/serializers/storage-serializers-yaml/index.ts"
       ],
       "laikacms/core": [
