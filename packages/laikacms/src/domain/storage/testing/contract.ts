@@ -132,6 +132,38 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
       }
     });
 
+    // --- listAtoms done.total reflects full count, not page count ---
+    itOrSkip('listAtoms')('listAtoms done.total equals full matching count across pages', async () => {
+      const prefix = `contract-test/total-count-${Date.now()}`;
+      const totalItems = 7;
+      const keys = Array.from({ length: totalItems }, (_, i) => `${prefix}/${String(i).padStart(2, '0')}`);
+
+      for (const key of keys) {
+        await runTask(repo.createObject({ key, type: 'object', content: { key } }));
+      }
+
+      // Page 1 (limit 3): done.total must reflect full 7-item count, not 3
+      const page1 = await LaikaStream.runPromiseCollect(
+        repo.listAtoms(prefix, { depth: 1, pagination: { limit: 3, offset: 0 } }),
+      );
+      expect(page1.data).toHaveLength(3);
+      expect(page1.done.total).toBe(totalItems);
+
+      // Page 2 (limit 3, offset 3): still full count
+      const page2 = await LaikaStream.runPromiseCollect(
+        repo.listAtoms(prefix, { depth: 1, pagination: { limit: 3, offset: 3 } }),
+      );
+      expect(page2.data).toHaveLength(3);
+      expect(page2.done.total).toBe(totalItems);
+
+      // Last page (limit 3, offset 6): 1 item returned but full count unchanged
+      const page3 = await LaikaStream.runPromiseCollect(
+        repo.listAtoms(prefix, { depth: 1, pagination: { limit: 3, offset: 6 } }),
+      );
+      expect(page3.data).toHaveLength(1);
+      expect(page3.done.total).toBe(totalItems);
+    });
+
     // --- listAtomSummaries after create ---
     itOrSkip('listAtomSummaries')('listAtomSummaries after create: created keys are present', async () => {
       const prefix = `contract-test/list-summaries-${Date.now()}`;

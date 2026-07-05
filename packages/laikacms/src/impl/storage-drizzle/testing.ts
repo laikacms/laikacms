@@ -65,11 +65,16 @@ const makeInMemoryStore = () => {
       }
       return removed;
     },
-    async select({ where, limit }) {
+    async select({ where, limit, offset }) {
       const cond = where as Cond;
       const out = rows.filter(r => matches(r, cond));
       out.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
-      return limit ? out.slice(0, limit) : out;
+      const sliced = offset ? out.slice(offset) : out;
+      return limit ? sliced.slice(0, limit) : sliced;
+    },
+    async count({ where }) {
+      const cond = where as Cond;
+      return rows.filter(r => matches(r, cond)).length;
     },
   };
 
