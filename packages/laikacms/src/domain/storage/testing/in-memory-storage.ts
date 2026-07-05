@@ -13,7 +13,7 @@ import type {
   StorageObjectCreate,
   StorageObjectUpdate,
 } from '../index.js';
-import { CompatibilityDate, StorageRepository } from '../index.js';
+import { applyPagination, CompatibilityDate, StorageRepository } from '../index.js';
 
 /**
  * A `StorageRepository` backed by an in-memory `Map`. Intended for use as the
@@ -139,36 +139,46 @@ export class InMemoryStorageRepository extends StorageRepository {
 
   listAtoms(
     folderKey: string,
-    _options: ListAtomsOptions,
+    options: ListAtomsOptions,
   ): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     const prefix = folderKey ? (folderKey.endsWith('/') ? folderKey : folderKey + '/') : '';
-    const atoms: Atom[] = [];
+    const maxDepth = (folderKey ? folderKey.split('/').length : 0) + options.depth;
+    const all: Atom[] = [];
     for (const [k, v] of this.objects.entries()) {
-      if (!prefix || k.startsWith(prefix)) atoms.push(v as Atom);
+      if (prefix && !k.startsWith(prefix)) continue;
+      if (k.split('/').length > maxDepth) continue;
+      all.push(v as Atom);
     }
-    return atoms.length > 0
-      ? LaikaStream.succeedMany(atoms, { total: atoms.length })
-      : LaikaStream.empty({ total: 0 });
+    all.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    const total = all.length;
+    const page = applyPagination(all, options.pagination);
+    return page.length > 0
+      ? LaikaStream.succeedMany(page, { total })
+      : LaikaStream.empty({ total });
   }
 
   listAtomSummaries(
     folderKey: string,
-    _options: ListAtomsOptions,
+    options: ListAtomsOptions,
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     const prefix = folderKey ? (folderKey.endsWith('/') ? folderKey : folderKey + '/') : '';
-    const summaries: AtomSummary[] = [];
+    const maxDepth = (folderKey ? folderKey.split('/').length : 0) + options.depth;
+    const all: AtomSummary[] = [];
     for (const [k, v] of this.objects.entries()) {
-      if (!prefix || k.startsWith(prefix)) {
-        summaries.push({
-          type: 'object-summary',
-          key: v.key,
-          createdAt: v.createdAt,
-          updatedAt: v.updatedAt,
-        } as AtomSummary);
-      }
+      if (prefix && !k.startsWith(prefix)) continue;
+      if (k.split('/').length > maxDepth) continue;
+      all.push({
+        type: 'object-summary',
+        key: v.key,
+        createdAt: v.createdAt,
+        updatedAt: v.updatedAt,
+      } as AtomSummary);
     }
-    return summaries.length > 0
-      ? LaikaStream.succeedMany(summaries, { total: summaries.length })
-      : LaikaStream.empty({ total: 0 });
+    all.sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
+    const total = all.length;
+    const page = applyPagination(all, options.pagination);
+    return page.length > 0
+      ? LaikaStream.succeedMany(page, { total })
+      : LaikaStream.empty({ total });
   }
 }

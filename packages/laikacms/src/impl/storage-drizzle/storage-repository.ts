@@ -54,6 +54,13 @@ export type DrizzleStorageCallbacks = {
   update: (query: { where: unknown, values: Partial<StorageModel> }) => Promise<StorageModel[]>,
   delete: (query: { where: unknown }) => Promise<StorageModel[]>,
   select: (query: { where: unknown, limit?: number, offset?: number }) => Promise<StorageModel[]>,
+  /**
+   * Optional. Return the total number of rows matching `where` (no LIMIT/OFFSET).
+   * When provided, `listAtoms` / `listAtomSummaries` populate `done.total` with the
+   * full matching count instead of the page count, enabling correct `meta.total` in
+   * JSON:API paginated responses.
+   */
+  count?: (query: { where: unknown }) => Promise<number>,
 };
 
 export interface DrizzleStorageRepositoryOptions {
@@ -321,16 +328,17 @@ export class DrizzleStorageRepository extends StorageRepository {
           offset = 'offset' in options.pagination ? options.pagination.offset : 0;
         }
 
-        const rows = yield* Effect.promise(() =>
-          this.options.callbacks.select({
-            where: this.options.queryBuilders.and(
-              this.options.queryBuilders.keyStartsWith(pattern),
-              this.options.queryBuilders.depthLte(maxDepth),
-            ),
-            limit,
-            offset,
-          })
+        const where = this.options.queryBuilders.and(
+          this.options.queryBuilders.keyStartsWith(pattern),
+          this.options.queryBuilders.depthLte(maxDepth),
         );
+
+        const [rows, fullCount] = yield* Effect.all([
+          Effect.promise(() => this.options.callbacks.select({ where, limit, offset })),
+          this.options.callbacks.count
+            ? Effect.promise(() => this.options.callbacks.count!({ where }))
+            : Effect.succeed(null),
+        ]);
 
         let emitted = 0;
         for (const row of rows) {
@@ -343,7 +351,7 @@ export class DrizzleStorageRepository extends StorageRepository {
             emitted += 1;
           }
         }
-        return { total: emitted };
+        return { total: fullCount ?? emitted };
       })
     );
   }
