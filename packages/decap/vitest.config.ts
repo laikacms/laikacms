@@ -29,7 +29,10 @@ export default defineConfig({
       'laikacms/documents/jsonapi-proxy': path.join(laikacmsSrc, 'impl/documents-jsonapi-proxy/index.ts'),
       'laikacms/documents/api': path.join(laikacmsSrc, 'api/documents-api/index.ts'),
       'laikacms/storage/api': path.join(laikacmsSrc, 'api/storage-api/index.ts'),
+      'laikacms/storage': path.join(laikacmsSrc, 'domain/storage/index.ts'),
+      'laikacms/json-api': path.join(laikacmsSrc, 'shared/json-api/index.ts'),
       'laikacms/assets': path.join(laikacmsSrc, 'domain/assets/index.ts'),
+      'laikacms/documents': path.join(laikacmsSrc, 'domain/documents/index.ts'),
     },
   },
   test: {
