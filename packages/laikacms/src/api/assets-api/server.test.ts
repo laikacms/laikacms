@@ -1,7 +1,10 @@
 import * as Effect from 'effect/Effect';
 import type {
   Asset,
+  AssetMetadata,
   AssetsRepository,
+  AssetUrl,
+  AssetVariations,
   Folder,
   ListResourcesDone,
   ListResourcesOptions,
@@ -537,5 +540,143 @@ describe('DELETE /resources/:key', () => {
       new Request('http://localhost/api/assets/resources/empty-folder/', { method: 'DELETE' }),
     );
     expect(res.status).toBe(204);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// ?include= and ?meta= query parameters (LCMS-181)
+// ---------------------------------------------------------------------------
+
+const singleAsset: Asset = {
+  type: 'asset',
+  key: 'images/hero.jpg',
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+  content: { size: 1024, etag: 'abc' },
+};
+
+const stubAssetUrl: AssetUrl = {
+  key: 'images/hero.jpg',
+  url: 'https://cdn.example.com/images/hero.jpg',
+};
+
+const stubVariations: AssetVariations = {
+  key: 'images/hero.jpg',
+  variations: [{ key: 'thumb', url: 'https://cdn.example.com/images/hero-thumb.jpg' }],
+};
+
+const stubMetadata: AssetMetadata = {
+  key: 'images/hero.jpg',
+  metadata: { mimeType: 'image/jpeg', size: 1024, filename: 'hero.jpg' },
+};
+
+function makeIncludeRepo(): AssetsRepository {
+  return {
+    getResource: (_key: string) => LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.succeed([singleAsset])),
+    getUrls: (_assets: Asset[]) =>
+      LaikaStream.make<AssetUrl>(emit =>
+        Effect.gen(function*() {
+          yield* emit.data(stubAssetUrl);
+        })
+      ),
+    getVariations: (_assets: Asset[]) =>
+      LaikaStream.make<AssetVariations>(emit =>
+        Effect.gen(function*() {
+          yield* emit.data(stubVariations);
+        })
+      ),
+    getMetadata: (_assets: Asset[]) =>
+      LaikaStream.make<AssetMetadata>(emit =>
+        Effect.gen(function*() {
+          yield* emit.data(stubMetadata);
+        })
+      ),
+  } as unknown as AssetsRepository;
+}
+
+describe('GET /resources/:key — ?include=urls sideloads asset-url', () => {
+  it('?include=urls returns asset-url in included[]', async () => {
+    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?include=urls'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      included?: Array<{ type: string, id: string, attributes: { url?: string } }>,
+    };
+    const urlResource = body.included?.find(r => r.type === 'asset-url');
+    expect(urlResource).toBeDefined();
+    expect(urlResource?.id).toBe('images/hero.jpg');
+    expect(urlResource?.attributes.url).toBe('https://cdn.example.com/images/hero.jpg');
+  });
+
+  it('?include=asset-url (long-form alias) also sideloads asset-url', async () => {
+    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?include=asset-url'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      included?: Array<{ type: string }>,
+    };
+    expect(body.included?.some(r => r.type === 'asset-url')).toBe(true);
+  });
+});
+
+describe('GET /resources/:key — ?include=variations sideloads asset-variation', () => {
+  it('?include=variations returns asset-variation in included[]', async () => {
+    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?include=variations'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      included?: Array<{ type: string, id: string }>,
+    };
+    expect(body.included?.some(r => r.type === 'asset-variation')).toBe(true);
+  });
+
+  it('?include=asset-variation (long-form alias) also sideloads asset-variation', async () => {
+    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?include=asset-variation'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      included?: Array<{ type: string }>,
+    };
+    expect(body.included?.some(r => r.type === 'asset-variation')).toBe(true);
+  });
+});
+
+describe('GET /resources/:key — ?meta=true inlines metadata', () => {
+  it('?meta=true inlines asset metadata on data.meta', async () => {
+    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?meta=true'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      data: { meta?: { mimeType?: string } },
+      included?: Array<{ type: string }>,
+    };
+    expect(body.data.meta?.mimeType).toBe('image/jpeg');
+    // metadata does NOT appear in included[] — it's inlined on data.meta
+    expect(body.included?.some(r => r.type === 'asset-metadata')).toBeFalsy();
+  });
+
+  it('?include=asset-metadata alone does NOT produce metadata — must use ?meta=true', async () => {
+    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?include=asset-metadata'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      data: { meta?: Record<string, unknown> },
+      included?: Array<{ type: string }>,
+    };
+    // Neither data.meta nor included contains metadata
+    expect(body.data.meta).toBeUndefined();
+    expect(body.included).toBeUndefined();
   });
 });

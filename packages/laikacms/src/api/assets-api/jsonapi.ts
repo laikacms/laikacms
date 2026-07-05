@@ -192,8 +192,9 @@ export function folderFromJsonApi(jsonApi: JsonApiFolder): Folder {
  * metadata is *not* a relationship, so it's opted into via the separate
  * `?meta=` query parameter (see `parseMetaQuery`).
  *
- * The legacy `asset-url` / `asset-variation` aliases were dropped
- * (alpha-phase cleanup); use the short names.
+ * Short canonical names: `urls`, `variations`.
+ * Long-form aliases (`asset-url`, `asset-variation`) are also accepted for
+ * compatibility with callers following the documented JSON:API type names.
  */
 export type IncludeType = 'urls' | 'variations';
 
@@ -205,8 +206,8 @@ export function parseIncludeQuery(includeParam: string | undefined): {
   if (!includeParam) return { urls: false, variations: false };
   const includes = includeParam.split(',').map(s => s.trim().toLowerCase());
   return {
-    urls: includes.includes('urls'),
-    variations: includes.includes('variations'),
+    urls: includes.includes('urls') || includes.includes('asset-url'),
+    variations: includes.includes('variations') || includes.includes('asset-variation'),
   };
 }
 
