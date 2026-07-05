@@ -1542,13 +1542,16 @@ All routes are mounted under `/resources`.
 ### Included Resources
 
 Pass `?include=<types>` as a comma-separated list to sideload related resources alongside `asset`
-results:
+results. Both the canonical short name and the long-form JSON:API type name are accepted:
 
-| Include value     | Sideloaded type   |
-| ----------------- | ----------------- |
-| `asset-metadata`  | `asset-metadata`  |
-| `asset-url`       | `asset-url`       |
-| `asset-variation` | `asset-variation` |
+| Include value | Alias             | Sideloaded type   |
+| ------------- | ----------------- | ----------------- |
+| `urls`        | `asset-url`       | `asset-url`       |
+| `variations`  | `asset-variation` | `asset-variation` |
+
+> **Note:** Asset metadata (MIME type, size, dimensions, etc.) is **not** sideloaded via
+> `?include=`. Use the separate `?meta=true` query parameter to inline metadata onto the primary
+> resource's `data.meta` field instead.
 
 ### Endpoints
 
@@ -1560,14 +1563,15 @@ List all assets and folders under a given folder prefix.
 
 **Query Parameters**
 
-| Parameter                    | Type   | Default | Description                                      |
-| ---------------------------- | ------ | ------- | ------------------------------------------------ |
-| `folder` or `filter[prefix]` | string | `""`    | Folder key prefix to list                        |
-| `filter[depth]` or `depth`   | number | `1`     | Traversal depth (minimum 1)                      |
-| `page[after]`                | string | —       | Forward cursor for pagination                    |
-| `page[before]`               | string | —       | Backward cursor for pagination                   |
-| `page[size]`                 | number | `100`   | Items per page                                   |
-| `include`                    | string | —       | Comma-separated list of related types to include |
+| Parameter                    | Type   | Default | Description                                                                   |
+| ---------------------------- | ------ | ------- | ----------------------------------------------------------------------------- |
+| `folder` or `filter[prefix]` | string | `""`    | Folder key prefix to list                                                     |
+| `filter[depth]` or `depth`   | number | `1`     | Traversal depth (minimum 1)                                                   |
+| `page[after]`                | string | —       | Forward cursor for pagination                                                 |
+| `page[before]`               | string | —       | Backward cursor for pagination                                                |
+| `page[size]`                 | number | `100`   | Items per page                                                                |
+| `include`                    | string | —       | Comma-separated: `urls` (or `asset-url`), `variations` (or `asset-variation`) |
+| `meta`                       | string | —       | Set `meta=true` to inline asset metadata onto `data.meta`                     |
 
 **Response** — collection of `asset` and `folder` resources with optional `included`
 
@@ -1645,9 +1649,10 @@ Get a single resource (asset or folder) by key. Supports sideloading related dat
 
 **Query Parameters**
 
-| Parameter | Type   | Description                                                       |
-| --------- | ------ | ----------------------------------------------------------------- |
-| `include` | string | Comma-separated: `asset-metadata`, `asset-url`, `asset-variation` |
+| Parameter | Type   | Description                                                                   |
+| --------- | ------ | ----------------------------------------------------------------------------- |
+| `include` | string | Comma-separated: `urls` (or `asset-url`), `variations` (or `asset-variation`) |
+| `meta`    | string | Set `meta=true` to inline asset metadata onto `data.meta`                     |
 
 **Response**
 
