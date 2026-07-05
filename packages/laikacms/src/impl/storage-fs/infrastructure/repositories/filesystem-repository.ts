@@ -43,13 +43,6 @@ import * as minimatch from 'minimatch';
 import { FileSystemDataSource } from '../datasources/filesystem-datasource.js';
 
 /**
- * Lift `Promise<LaikaResult<A>>` into `Effect<A, LaikaError>` — the typical
- * datasource call shape in this implementation.
- */
-const liftResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
-  Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
-
-/**
  * Lift a Promise that may reject with a `LaikaError` (or a plain `Error`)
  * into a typed `Effect<A, LaikaError>`. Unlike `Effect.promise`, rejections
  * become typed failures rather than defects — this is essential for keeping
@@ -140,8 +133,9 @@ export class FileSystemStorageRepository extends StorageRepository {
   getFolder(key: string): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(() =>
       Effect.gen({ self: this }, function*() {
-        const meta = yield* liftResult(
-          this.fileSystemDataSource.getDirMeta(this.rootDirectory, key),
+        const meta = yield* Effect.flatMap(
+          Effect.promise(() => this.fileSystemDataSource.getDirMeta(this.rootDirectory, key)),
+          Effect.fromResult,
         );
         return {
           type: 'folder',
@@ -172,8 +166,14 @@ export class FileSystemStorageRepository extends StorageRepository {
       Effect.gen({ self: this }, function*() {
         const [meta, contents] = yield* Effect.all(
           [
-            liftResult(this.fileSystemDataSource.getFileMeta(this.rootDirectory, key)),
-            liftResult(this.fileSystemDataSource.getFileContents(this.rootDirectory, key)),
+            Effect.flatMap(
+              Effect.promise(() => this.fileSystemDataSource.getFileMeta(this.rootDirectory, key)),
+              Effect.fromResult,
+            ),
+            Effect.flatMap(
+              Effect.promise(() => this.fileSystemDataSource.getFileContents(this.rootDirectory, key)),
+              Effect.fromResult,
+            ),
           ],
           { concurrency: 2 },
         );
@@ -196,15 +196,19 @@ export class FileSystemStorageRepository extends StorageRepository {
   updateObject(update: StorageObjectUpdate): LaikaTask.LaikaTask<StorageObject> {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
-        const meta = yield* liftResult(
-          this.fileSystemDataSource.getFileMeta(this.rootDirectory, update.key),
+        const meta = yield* Effect.flatMap(
+          Effect.promise(() => this.fileSystemDataSource.getFileMeta(this.rootDirectory, update.key)),
+          Effect.fromResult,
         );
         const ext = meta.extension;
 
         if (update.content) {
           const stringified = yield* liftSerialize(this.serialize(ext, update.content!));
-          yield* liftResult(
-            this.fileSystemDataSource.createOrUpdate(this.rootDirectory, update.key, stringified, ext),
+          yield* Effect.flatMap(
+            Effect.promise(() =>
+              this.fileSystemDataSource.createOrUpdate(this.rootDirectory, update.key, stringified, ext)
+            ),
+            Effect.fromResult,
           );
         }
         return yield* LaikaTask.runValue(this.getObject(update.key));
@@ -230,8 +234,11 @@ export class FileSystemStorageRepository extends StorageRepository {
         }
         const ext = this.resolveExtension(create.key, create.metadata);
         const stringified = yield* liftSerialize(this.serialize(ext, create.content!));
-        yield* liftResult(
-          this.fileSystemDataSource.createOrUpdate(this.rootDirectory, create.key, stringified, ext),
+        yield* Effect.flatMap(
+          Effect.promise(() =>
+            this.fileSystemDataSource.createOrUpdate(this.rootDirectory, create.key, stringified, ext)
+          ),
+          Effect.fromResult,
         );
         return yield* LaikaTask.runValue(this.getObject(create.key));
       })
@@ -248,8 +255,11 @@ export class FileSystemStorageRepository extends StorageRepository {
         const stringified = create.content
           ? yield* liftSerialize(this.serialize(ext, create.content!))
           : '';
-        yield* liftResult(
-          this.fileSystemDataSource.createOrUpdate(this.rootDirectory, create.key, stringified, ext),
+        yield* Effect.flatMap(
+          Effect.promise(() =>
+            this.fileSystemDataSource.createOrUpdate(this.rootDirectory, create.key, stringified, ext)
+          ),
+          Effect.fromResult,
         );
         return yield* LaikaTask.runValue(this.getObject(create.key));
       })
@@ -259,13 +269,16 @@ export class FileSystemStorageRepository extends StorageRepository {
   createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(() =>
       Effect.gen({ self: this }, function*() {
-        yield* liftResult(
-          this.fileSystemDataSource.createOrUpdate(
-            this.rootDirectory,
-            pathCombine(folderCreate.key, '.keep'),
-            '',
-            'keep',
+        yield* Effect.flatMap(
+          Effect.promise(() =>
+            this.fileSystemDataSource.createOrUpdate(
+              this.rootDirectory,
+              pathCombine(folderCreate.key, '.keep'),
+              '',
+              'keep',
+            )
           ),
+          Effect.fromResult,
         );
         return yield* LaikaTask.runValue(this.getFolder(folderCreate.key));
       })

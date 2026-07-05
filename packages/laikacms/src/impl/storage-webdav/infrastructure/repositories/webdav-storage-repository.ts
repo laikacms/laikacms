@@ -38,10 +38,6 @@ import {
 
 import { WebDavConfig, WebDavDataSource } from '../datasources/webdav-datasource.js';
 
-/** Lift a `Promise<LaikaResult<A>>` into `Effect<A, LaikaError>`. */
-const liftResult = <A>(promise: Promise<Result.Result<A, LaikaError>>): Effect.Effect<A, LaikaError> =>
-  Effect.flatMap(Effect.promise(() => promise), Effect.fromResult);
-
 /** ISO timestamp from an optional `Date`, or `undefined` when the server gave none. */
 const isoOrUndefined = (date: Date | undefined): string | undefined => date?.toISOString();
 
@@ -122,11 +118,17 @@ export class WebDavStorageRepository extends StorageRepository {
   getObject(key: string): LaikaTask.LaikaTask<StorageObject> {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
-        const resolved = yield* liftResult(this.dataSource.resolveExisting(key));
+        const resolved = yield* Effect.flatMap(
+          Effect.promise(() => this.dataSource.resolveExisting(key)),
+          Effect.fromResult,
+        );
         if (!resolved) {
           return yield* Effect.fail(new NotFoundError(`No object found at key "${key}"`));
         }
-        const raw = yield* liftResult(this.dataSource.readFile(key, resolved.extension));
+        const raw = yield* Effect.flatMap(
+          Effect.promise(() => this.dataSource.readFile(key, resolved.extension)),
+          Effect.fromResult,
+        );
         const content = yield* Effect.promise(() => this.deserialize(resolved.extension, raw));
         return {
           type: 'object',
@@ -143,7 +145,10 @@ export class WebDavStorageRepository extends StorageRepository {
   getFolder(key: string): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(() =>
       Effect.gen({ self: this }, function*() {
-        const resource = yield* liftResult(this.dataSource.statResource(key));
+        const resource = yield* Effect.flatMap(
+          Effect.promise(() => this.dataSource.statResource(key)),
+          Effect.fromResult,
+        );
         if (!resource || !resource.isCollection) {
           return yield* Effect.fail(new NotFoundError(`No folder found at key "${key}"`));
         }
@@ -160,7 +165,10 @@ export class WebDavStorageRepository extends StorageRepository {
   getAtom(key: string): LaikaTask.LaikaTask<Atom> {
     return LaikaTask.make<Atom>(() =>
       Effect.gen({ self: this }, function*() {
-        const resource = yield* liftResult(this.dataSource.statResource(key));
+        const resource = yield* Effect.flatMap(
+          Effect.promise(() => this.dataSource.statResource(key)),
+          Effect.fromResult,
+        );
         if (resource?.isCollection) {
           return yield* LaikaTask.runValue(this.getFolder(key)) as Effect.Effect<Atom, LaikaError>;
         }
@@ -175,7 +183,10 @@ export class WebDavStorageRepository extends StorageRepository {
         if (!create.content) {
           return yield* Effect.fail(new InvalidData('Object content is required for creation'));
         }
-        const existing = yield* liftResult(this.dataSource.resolveExisting(create.key));
+        const existing = yield* Effect.flatMap(
+          Effect.promise(() => this.dataSource.resolveExisting(create.key)),
+          Effect.fromResult,
+        );
         if (existing) {
           return yield* Effect.fail(
             new EntryAlreadyExistsError(
@@ -185,7 +196,10 @@ export class WebDavStorageRepository extends StorageRepository {
         }
         const extension = this.resolveExtension(create.key, create.metadata);
         const serialized = yield* Effect.promise(() => this.serialize(extension, create.content));
-        yield* liftResult(this.dataSource.writeFile(create.key, extension, serialized));
+        yield* Effect.flatMap(
+          Effect.promise(() => this.dataSource.writeFile(create.key, extension, serialized)),
+          Effect.fromResult,
+        );
         return yield* LaikaTask.runValue(this.getObject(create.key));
       })
     );
@@ -194,12 +208,18 @@ export class WebDavStorageRepository extends StorageRepository {
   createOrUpdateObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
-        const existing = yield* liftResult(this.dataSource.resolveExisting(create.key));
+        const existing = yield* Effect.flatMap(
+          Effect.promise(() => this.dataSource.resolveExisting(create.key)),
+          Effect.fromResult,
+        );
         const extension = existing?.extension ?? this.resolveExtension(create.key, create.metadata);
         const serialized = create.content
           ? yield* Effect.promise(() => this.serialize(extension, create.content!))
           : '';
-        yield* liftResult(this.dataSource.writeFile(create.key, extension, serialized));
+        yield* Effect.flatMap(
+          Effect.promise(() => this.dataSource.writeFile(create.key, extension, serialized)),
+          Effect.fromResult,
+        );
         return yield* LaikaTask.runValue(this.getObject(create.key));
       })
     );
@@ -208,13 +228,19 @@ export class WebDavStorageRepository extends StorageRepository {
   updateObject(update: StorageObjectUpdate): LaikaTask.LaikaTask<StorageObject> {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
-        const existing = yield* liftResult(this.dataSource.resolveExisting(update.key));
+        const existing = yield* Effect.flatMap(
+          Effect.promise(() => this.dataSource.resolveExisting(update.key)),
+          Effect.fromResult,
+        );
         if (!existing) {
           return yield* Effect.fail(new NotFoundError(`No object found at key "${update.key}"`));
         }
         if (update.content) {
           const serialized = yield* Effect.promise(() => this.serialize(existing.extension, update.content!));
-          yield* liftResult(this.dataSource.writeFile(update.key, existing.extension, serialized));
+          yield* Effect.flatMap(
+            Effect.promise(() => this.dataSource.writeFile(update.key, existing.extension, serialized)),
+            Effect.fromResult,
+          );
         }
         return yield* LaikaTask.runValue(this.getObject(update.key));
       })
@@ -224,7 +250,10 @@ export class WebDavStorageRepository extends StorageRepository {
   createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(() =>
       Effect.gen({ self: this }, function*() {
-        yield* liftResult(this.dataSource.ensureCollection(folderCreate.key));
+        yield* Effect.flatMap(
+          Effect.promise(() => this.dataSource.ensureCollection(folderCreate.key)),
+          Effect.fromResult,
+        );
         return yield* LaikaTask.runValue(this.getFolder(folderCreate.key));
       })
     );
@@ -237,7 +266,9 @@ export class WebDavStorageRepository extends StorageRepository {
         let skipped = 0;
 
         for (const key of keys) {
-          const statResult = yield* Effect.result(liftResult(this.dataSource.statResource(key)));
+          const statResult = yield* Effect.result(
+            Effect.flatMap(Effect.promise(() => this.dataSource.statResource(key)), Effect.fromResult),
+          );
           if (Result.isFailure(statResult)) {
             yield* emit.recoverableError(statResult.failure);
             skipped += 1;
@@ -246,7 +277,9 @@ export class WebDavStorageRepository extends StorageRepository {
 
           // A collection at `key`: refuse to delete it while it still has children.
           if (statResult.success?.isCollection) {
-            const children = yield* Effect.result(liftResult(this.dataSource.listChildren(key)));
+            const children = yield* Effect.result(
+              Effect.flatMap(Effect.promise(() => this.dataSource.listChildren(key)), Effect.fromResult),
+            );
             if (Result.isFailure(children)) {
               yield* emit.recoverableError(children.failure);
               skipped += 1;
@@ -259,7 +292,9 @@ export class WebDavStorageRepository extends StorageRepository {
               skipped += 1;
               continue;
             }
-            const deleted = yield* Effect.result(liftResult(this.dataSource.deleteResource(key)));
+            const deleted = yield* Effect.result(
+              Effect.flatMap(Effect.promise(() => this.dataSource.deleteResource(key)), Effect.fromResult),
+            );
             if (Result.isFailure(deleted)) {
               yield* emit.recoverableError(deleted.failure);
               skipped += 1;
@@ -271,7 +306,9 @@ export class WebDavStorageRepository extends StorageRepository {
           }
 
           // Otherwise resolve the object's on-server file (key + extension).
-          const resolved = yield* Effect.result(liftResult(this.dataSource.resolveExisting(key)));
+          const resolved = yield* Effect.result(
+            Effect.flatMap(Effect.promise(() => this.dataSource.resolveExisting(key)), Effect.fromResult),
+          );
           if (Result.isFailure(resolved)) {
             yield* emit.recoverableError(resolved.failure);
             skipped += 1;
@@ -283,7 +320,9 @@ export class WebDavStorageRepository extends StorageRepository {
             continue;
           }
           const target = `${key}.${resolved.success.extension}`;
-          const deleted = yield* Effect.result(liftResult(this.dataSource.deleteResource(target)));
+          const deleted = yield* Effect.result(
+            Effect.flatMap(Effect.promise(() => this.dataSource.deleteResource(target)), Effect.fromResult),
+          );
           if (Result.isFailure(deleted)) {
             yield* emit.recoverableError(deleted.failure);
             skipped += 1;

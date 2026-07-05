@@ -38,9 +38,6 @@ import * as minimatch from 'minimatch';
 
 import { R2DataSource } from '../datasources/r2-datasource.js';
 
-const liftResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
-  Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
-
 /**
  * R2StorageRepository implements the StorageRepository interface using Cloudflare R2.
  * R2 is a flat object store, so this implementation simulates a hierarchical file system:
@@ -113,7 +110,10 @@ export class R2StorageRepository extends StorageRepository {
   getFolder(key: string): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(() =>
       Effect.gen({ self: this }, function*() {
-        const meta = yield* liftResult(this.r2DataSource.getFolderMeta(key));
+        const meta = yield* Effect.flatMap(
+          Effect.promise(() => this.r2DataSource.getFolderMeta(key)),
+          Effect.fromResult,
+        );
         return {
           type: 'folder',
           key,
@@ -141,8 +141,8 @@ export class R2StorageRepository extends StorageRepository {
       Effect.gen({ self: this }, function*() {
         const [meta, contents] = yield* Effect.all(
           [
-            liftResult(this.r2DataSource.getObjectMeta(key)),
-            liftResult(this.r2DataSource.getObjectContents(key)),
+            Effect.flatMap(Effect.promise(() => this.r2DataSource.getObjectMeta(key)), Effect.fromResult),
+            Effect.flatMap(Effect.promise(() => this.r2DataSource.getObjectContents(key)), Effect.fromResult),
           ],
           { concurrency: 2 },
         );
@@ -163,11 +163,17 @@ export class R2StorageRepository extends StorageRepository {
   updateObject(update: StorageObjectUpdate): LaikaTask.LaikaTask<StorageObject> {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
-        const meta = yield* liftResult(this.r2DataSource.getObjectMeta(update.key));
+        const meta = yield* Effect.flatMap(
+          Effect.promise(() => this.r2DataSource.getObjectMeta(update.key)),
+          Effect.fromResult,
+        );
         const ext = meta.extension;
         if (update.content) {
           const stringified = yield* Effect.promise(() => this.serialize(ext, update.content!));
-          yield* liftResult(this.r2DataSource.createOrUpdate(update.key, stringified, ext));
+          yield* Effect.flatMap(
+            Effect.promise(() => this.r2DataSource.createOrUpdate(update.key, stringified, ext)),
+            Effect.fromResult,
+          );
         }
         return yield* LaikaTask.runValue(this.getObject(update.key));
       })
@@ -190,7 +196,10 @@ export class R2StorageRepository extends StorageRepository {
         }
         const ext = this.resolveExtension(create.key, create.metadata);
         const stringified = yield* Effect.promise(() => this.serialize(ext, create.content!));
-        yield* liftResult(this.r2DataSource.createOrUpdate(create.key, stringified, ext));
+        yield* Effect.flatMap(
+          Effect.promise(() => this.r2DataSource.createOrUpdate(create.key, stringified, ext)),
+          Effect.fromResult,
+        );
         return yield* this.readbackOrSynthesize(create, ext, emit);
       })
     );
@@ -204,7 +213,10 @@ export class R2StorageRepository extends StorageRepository {
         const stringified = create.content
           ? yield* Effect.promise(() => this.serialize(ext, create.content!))
           : '';
-        yield* liftResult(this.r2DataSource.createOrUpdate(create.key, stringified, ext));
+        yield* Effect.flatMap(
+          Effect.promise(() => this.r2DataSource.createOrUpdate(create.key, stringified, ext)),
+          Effect.fromResult,
+        );
         return yield* this.readbackOrSynthesize(create, ext, emit);
       })
     );
@@ -255,8 +267,9 @@ export class R2StorageRepository extends StorageRepository {
   createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(() =>
       Effect.gen({ self: this }, function*() {
-        yield* liftResult(
-          this.r2DataSource.createOrUpdate(pathCombine(folderCreate.key, '.keep'), '', ''),
+        yield* Effect.flatMap(
+          Effect.promise(() => this.r2DataSource.createOrUpdate(pathCombine(folderCreate.key, '.keep'), '', '')),
+          Effect.fromResult,
         );
         return yield* LaikaTask.runValue(this.getFolder(folderCreate.key));
       })

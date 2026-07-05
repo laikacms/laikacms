@@ -32,9 +32,6 @@ import { applyPagination } from 'laikacms/storage';
 
 import { R2AssetsDataSource } from '../datasources/r2-assets-datasource.js';
 
-const liftResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
-  Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
-
 export interface R2AssetsRepositoryOptions {
   bucket: R2Bucket;
   sanitizer: Sanitizer | { dangerouslyAllowAllFiles: true };
@@ -107,8 +104,9 @@ export class R2AssetsRepository extends AssetsRepository {
 
         const listDirectory = (key: string): Effect.Effect<ReadonlyArray<Resource>, LaikaError> =>
           Effect.gen({ self: this }, function*() {
-            const entries = yield* liftResult(
-              this.datasource.listDirectory(key, { includeMetadata: true }),
+            const entries = yield* Effect.flatMap(
+              Effect.promise(() => this.datasource.listDirectory(key, { includeMetadata: true })),
+              Effect.fromResult,
             );
             return entries.map((entry): Resource => {
               if (entry.type === 'file') {
@@ -165,7 +163,7 @@ export class R2AssetsRepository extends AssetsRepository {
   getAsset(key: string, _options?: GetResourceOptions): LaikaTask.LaikaTask<Asset> {
     return LaikaTask.make<Asset>(() =>
       Effect.gen({ self: this }, function*() {
-        const meta = yield* liftResult(this.datasource.getObjectMeta(key));
+        const meta = yield* Effect.flatMap(Effect.promise(() => this.datasource.getObjectMeta(key)), Effect.fromResult);
         return {
           type: 'asset',
           key: meta.key,
@@ -234,12 +232,15 @@ export class R2AssetsRepository extends AssetsRepository {
           body = sanitizeResult.data;
         }
 
-        yield* liftResult(
-          this.datasource.putObject(create.key, body, {
-            contentType: create.mimeType,
-            cacheControl: create.cacheControl,
-            customMetadata: create.customMetadata,
-          }),
+        yield* Effect.flatMap(
+          Effect.promise(() =>
+            this.datasource.putObject(create.key, body, {
+              contentType: create.mimeType,
+              cacheControl: create.cacheControl,
+              customMetadata: create.customMetadata,
+            })
+          ),
+          Effect.fromResult,
         );
         return yield* this.readbackOrSynthesizeAsset(create.key, body.byteLength, create, emit);
       })
@@ -249,13 +250,19 @@ export class R2AssetsRepository extends AssetsRepository {
   updateAsset(update: AssetUpdate): LaikaTask.LaikaTask<Asset> {
     return LaikaTask.make<Asset>(emit =>
       Effect.gen({ self: this }, function*() {
-        const existing = yield* liftResult(this.datasource.getObjectBody(update.key));
-        yield* liftResult(
-          this.datasource.putObject(update.key, existing.body, {
-            contentType: update.mimeType || existing.meta.contentType || 'application/octet-stream',
-            cacheControl: update.cacheControl,
-            customMetadata: update.customMetadata || existing.meta.customMetadata,
-          }),
+        const existing = yield* Effect.flatMap(
+          Effect.promise(() => this.datasource.getObjectBody(update.key)),
+          Effect.fromResult,
+        );
+        yield* Effect.flatMap(
+          Effect.promise(() =>
+            this.datasource.putObject(update.key, existing.body, {
+              contentType: update.mimeType || existing.meta.contentType || 'application/octet-stream',
+              cacheControl: update.cacheControl,
+              customMetadata: update.customMetadata || existing.meta.customMetadata,
+            })
+          ),
+          Effect.fromResult,
         );
         return yield* this.readbackOrSynthesizeAsset(
           update.key,
@@ -304,7 +311,7 @@ export class R2AssetsRepository extends AssetsRepository {
   deleteAsset(key: string): LaikaTask.LaikaTask<void> {
     return LaikaTask.make<void>(() =>
       Effect.gen({ self: this }, function*() {
-        yield* liftResult(this.datasource.deleteObject(key));
+        yield* Effect.flatMap(Effect.promise(() => this.datasource.deleteObject(key)), Effect.fromResult);
       })
     );
   }
@@ -363,7 +370,9 @@ export class R2AssetsRepository extends AssetsRepository {
       Effect.gen({ self: this }, function*() {
         let emitted = 0;
         for (const asset of assets) {
-          const metaR = yield* Effect.result(liftResult(this.datasource.getObjectMeta(asset.key)));
+          const metaR = yield* Effect.result(
+            Effect.flatMap(Effect.promise(() => this.datasource.getObjectMeta(asset.key)), Effect.fromResult),
+          );
           if (Result.isFailure(metaR)) {
             yield* emit.recoverableError(metaR.failure);
             continue;
@@ -385,7 +394,7 @@ export class R2AssetsRepository extends AssetsRepository {
   getFolder(key: string): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(() =>
       Effect.gen({ self: this }, function*() {
-        const meta = yield* liftResult(this.datasource.getFolderMeta(key));
+        const meta = yield* Effect.flatMap(Effect.promise(() => this.datasource.getFolderMeta(key)), Effect.fromResult);
         return {
           type: 'folder',
           key,
@@ -399,7 +408,7 @@ export class R2AssetsRepository extends AssetsRepository {
   createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(() =>
       Effect.gen({ self: this }, function*() {
-        yield* liftResult(this.datasource.createFolder(folderCreate.key));
+        yield* Effect.flatMap(Effect.promise(() => this.datasource.createFolder(folderCreate.key)), Effect.fromResult);
         return yield* LaikaTask.runValue(this.getFolder(folderCreate.key));
       })
     );
@@ -408,7 +417,7 @@ export class R2AssetsRepository extends AssetsRepository {
   deleteFolder(key: string, recursive?: boolean): LaikaTask.LaikaTask<void> {
     return LaikaTask.make<void>(() =>
       Effect.gen({ self: this }, function*() {
-        yield* liftResult(this.datasource.deleteFolder(key, recursive));
+        yield* Effect.flatMap(Effect.promise(() => this.datasource.deleteFolder(key, recursive)), Effect.fromResult);
       })
     );
   }
