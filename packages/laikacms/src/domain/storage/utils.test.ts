@@ -129,10 +129,19 @@ describe('applyPagination', () => {
     expect(applyPagination(items, { page: 3, perPage: 2 })).toEqual(['e']);
   });
 
-  it('returns a copy for cursor pagination (before/after) since the helper cannot resolve cursors', () => {
+  it('returns a copy for cursor pagination when a real cursor value is provided (cannot resolve)', () => {
     const out = applyPagination(items, { after: 'b', perPage: 2 });
     expect(out).toEqual(items);
     expect(out).not.toBe(items);
+  });
+
+  it('applies perPage as first-page slice when after cursor is absent (standalone page[size] support)', () => {
+    expect(applyPagination(items, { after: undefined, perPage: 3 })).toEqual(['a', 'b', 'c']);
+    expect(applyPagination(items, { after: undefined, perPage: 1 })).toEqual(['a']);
+  });
+
+  it('applies perPage as first-page slice when before cursor is absent', () => {
+    expect(applyPagination(items, { before: undefined, perPage: 2 })).toEqual(['a', 'b']);
   });
 
   it('clamps page=1 with no perPage to the whole list', () => {

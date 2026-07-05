@@ -70,5 +70,15 @@ export const applyPagination = <T>(items: readonly T[], pagination: Pagination |
     const offset = Math.max(0, (pagination.page - 1) * perPage);
     return items.slice(offset, offset + perPage);
   }
+  // Cursor-based: in-memory backends can't resolve opaque cursor values, so
+  // return a full copy when a real cursor is provided. When starting from the
+  // beginning (no cursor) and a page size is requested, honour it — this is
+  // what makes a standalone ?page[size]=N work for FS/R2/WebDAV listings.
+  if ('after' in pagination && pagination.after === undefined && pagination.perPage !== undefined) {
+    return items.slice(0, pagination.perPage);
+  }
+  if ('before' in pagination && pagination.before === undefined && pagination.perPage !== undefined) {
+    return items.slice(0, pagination.perPage);
+  }
   return [...items];
 };

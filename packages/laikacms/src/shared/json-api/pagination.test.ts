@@ -41,6 +41,10 @@ describe('parsePaginationQuery', () => {
     expect(parsePaginationQuery({})).toEqual({ after: undefined, perPage: 10 });
   });
 
+  it('honours a standalone page[size] in the cursor fallthrough', () => {
+    expect(parsePaginationQuery({ 'page[size]': '5' })).toEqual({ after: undefined, perPage: 5 });
+  });
+
   it('takes the first value when a query parameter is repeated', () => {
     expect(parsePaginationQuery({ 'page[after]': ['a', 'b'] })).toEqual({
       after: 'a',
