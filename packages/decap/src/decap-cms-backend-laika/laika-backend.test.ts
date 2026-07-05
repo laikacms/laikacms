@@ -14,7 +14,7 @@
 
 import * as Result from 'effect/Result';
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Mock browser-only deps BEFORE any import that transitively loads them
@@ -54,11 +54,11 @@ vi.mock('decap-cms-ui-default', () => ({
   Icon: () => null,
 }));
 
-vi.mock('@laikacms/documents-jsonapi-proxy', () => ({
+vi.mock('laikacms/documents/jsonapi-proxy', () => ({
   DocumentsJsonApiProxyRepository: class MockDocumentsJsonApiProxyRepository {},
 }));
 
-vi.mock('@laikacms/assets-jsonapi-proxy', () => ({
+vi.mock('laikacms/assets/jsonapi-proxy', () => ({
   AssetsJsonApiProxyRepository: class MockAssetsJsonApiProxyRepository {},
 }));
 
@@ -138,6 +138,8 @@ function makeConfig(overrides: Record<string, unknown> = {}) {
 // ---------------------------------------------------------------------------
 // Import createLaikaBackend (after mocks are in place)
 // ---------------------------------------------------------------------------
+
+import { unsentRequest } from 'decap-cms-lib-util';
 
 import createLaikaBackend from './laika-backend.js';
 
@@ -1582,5 +1584,257 @@ describe('LaikaBackend.persistMedia()', () => {
     await expect(
       backend.persistMedia(makeAssetProxy() as any, {}),
     ).rejects.toMatchObject({ name: 'APIError' });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sessionStorage mock helper (test env is Node — no browser globals)
+// ---------------------------------------------------------------------------
+
+function makeSessionStorageMock() {
+  const store = new Map<string, string>();
+  return {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+    removeItem: (key: string) => {
+      store.delete(key);
+    },
+    clear: () => {
+      store.clear();
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Suite: authenticate()
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.authenticate()', () => {
+  let mockDocRepo: ReturnType<typeof makeMockDocumentsRepository>;
+  let mockAssetsRepo: ReturnType<typeof makeMockAssetsRepository>;
+  let backend: any;
+  let sessionStorageMock: ReturnType<typeof makeSessionStorageMock>;
+
+  beforeEach(() => {
+    sessionStorageMock = makeSessionStorageMock();
+    (globalThis as any).sessionStorage = sessionStorageMock;
+
+    mockDocRepo = makeMockDocumentsRepository();
+    mockAssetsRepo = makeMockAssetsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    vi.mocked(unsentRequest.fetchWithTimeout).mockReset();
+  });
+
+  afterEach(() => {
+    delete (globalThis as any).sessionStorage;
+  });
+
+  it('success: valid token + ok /session response → returns User with correct shape', async () => {
+    vi.mocked(unsentRequest.fetchWithTimeout).mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          data: {
+            attributes: {
+              name: 'Alice',
+              email: 'alice@example.com',
+              avatar_url: 'https://example.com/avatar.png',
+            },
+          },
+        }),
+    } as any);
+
+    const user = await backend.authenticate({ token: 'valid-token-abc' });
+
+    expect(user).toMatchObject({
+      name: 'Alice',
+      login: 'alice@example.com',
+      avatar_url: 'https://example.com/avatar.png',
+    });
+  });
+
+  it('success: repositories are initialized after authenticate()', async () => {
+    vi.mocked(unsentRequest.fetchWithTimeout).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: { attributes: { name: 'Alice', email: 'alice@example.com' } } }),
+    } as any);
+
+    // Before auth: getDocumentsRepo() and getAssetsRepo() throw
+    expect(() => backend.getDocumentsRepo()).toThrow();
+    expect(() => backend.getAssetsRepo()).toThrow();
+
+    await backend.authenticate({ token: 'valid-token-abc' });
+
+    // After auth: repositories are set and getters no longer throw
+    expect(() => backend.getDocumentsRepo()).not.toThrow();
+    expect(() => backend.getAssetsRepo()).not.toThrow();
+  });
+
+  it('success: getToken() resolves to the authenticated token', async () => {
+    vi.mocked(unsentRequest.fetchWithTimeout).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: { attributes: { name: 'Alice', email: 'alice@example.com' } } }),
+    } as any);
+
+    await backend.authenticate({ token: 'my-token-xyz' });
+
+    await expect(backend.getToken()).resolves.toBe('my-token-xyz');
+  });
+
+  it('success: stores token in sessionStorage', async () => {
+    vi.mocked(unsentRequest.fetchWithTimeout).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: { attributes: { name: 'Alice', email: 'alice@example.com' } } }),
+    } as any);
+
+    await backend.authenticate({ token: 'stored-token' });
+
+    expect(sessionStorageMock.getItem('laika_access_token')).toBe('stored-token');
+  });
+
+  it('failure: non-ok /session response → throws APIError', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.mocked(unsentRequest.fetchWithTimeout).mockResolvedValue({
+      ok: false,
+      text: () => Promise.resolve('Unauthorized'),
+    } as any);
+
+    await expect(backend.authenticate({ token: 'bad-token' })).rejects.toMatchObject({
+      name: 'APIError',
+    });
+  });
+
+  it('failure: non-ok response removes token from sessionStorage', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    sessionStorageMock.setItem('laika_access_token', 'old-token');
+
+    vi.mocked(unsentRequest.fetchWithTimeout).mockResolvedValue({
+      ok: false,
+      text: () => Promise.resolve('Unauthorized'),
+    } as any);
+
+    await expect(backend.authenticate({ token: 'bad-token' })).rejects.toBeDefined();
+    expect(sessionStorageMock.getItem('laika_access_token')).toBeNull();
+  });
+
+  it('throws AccessTokenError when credentials has no token', async () => {
+    await expect(backend.authenticate({} as any)).rejects.toMatchObject({
+      name: 'AccessTokenError',
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: restoreUser()
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.restoreUser()', () => {
+  let mockDocRepo: ReturnType<typeof makeMockDocumentsRepository>;
+  let mockAssetsRepo: ReturnType<typeof makeMockAssetsRepository>;
+  let sessionStorageMock: ReturnType<typeof makeSessionStorageMock>;
+
+  const okSessionResponse = {
+    ok: true,
+    json: () =>
+      Promise.resolve({
+        data: { attributes: { name: 'Alice', email: 'alice@example.com' } },
+      }),
+  } as any;
+
+  beforeEach(() => {
+    sessionStorageMock = makeSessionStorageMock();
+    (globalThis as any).sessionStorage = sessionStorageMock;
+
+    mockDocRepo = makeMockDocumentsRepository();
+    mockAssetsRepo = makeMockAssetsRepository();
+    vi.mocked(unsentRequest.fetchWithTimeout).mockReset();
+  });
+
+  afterEach(() => {
+    delete (globalThis as any).sessionStorage;
+  });
+
+  it('with devToken: skips sessionStorage and delegates to authenticate()', async () => {
+    vi.mocked(unsentRequest.fetchWithTimeout).mockResolvedValue(okSessionResponse);
+
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    const backend = new LaikaBackend(
+      makeConfig({
+        backend: {
+          name: 'laika',
+          base_url: 'https://api.example.com',
+          api_root: '',
+          dev_token: 'dev-secret-token',
+        },
+      }),
+    ) as any;
+
+    const user = await backend.restoreUser();
+
+    expect(user).toMatchObject({ name: 'Alice' });
+    expect(vi.mocked(unsentRequest.fetchWithTimeout)).toHaveBeenCalled();
+  });
+
+  it('with devToken: ignores any token in sessionStorage', async () => {
+    sessionStorageMock.setItem('laika_access_token', 'session-token');
+    vi.mocked(unsentRequest.fetchWithTimeout).mockResolvedValue(okSessionResponse);
+
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    const backend = new LaikaBackend(
+      makeConfig({
+        backend: {
+          name: 'laika',
+          base_url: 'https://api.example.com',
+          api_root: '',
+          dev_token: 'dev-secret-token',
+        },
+      }),
+    ) as any;
+
+    const user = await backend.restoreUser();
+
+    expect(user).toMatchObject({ name: 'Alice' });
+    // authenticate() stores dev-secret-token, overwriting the old session-token
+    expect(sessionStorageMock.getItem('laika_access_token')).toBe('dev-secret-token');
+  });
+
+  it('with no stored token and no devToken: rejects with AccessTokenError', async () => {
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    const backend = new LaikaBackend(makeConfig()) as any;
+
+    await expect(backend.restoreUser()).rejects.toMatchObject({
+      name: 'AccessTokenError',
+    });
+  });
+
+  it('with stored sessionStorage token: delegates to authenticate() and returns User', async () => {
+    sessionStorageMock.setItem('laika_access_token', 'stored-valid-token');
+    vi.mocked(unsentRequest.fetchWithTimeout).mockResolvedValue(okSessionResponse);
+
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    const backend = new LaikaBackend(makeConfig()) as any;
+
+    const user = await backend.restoreUser();
+
+    expect(user).toMatchObject({ name: 'Alice' });
+    expect(vi.mocked(unsentRequest.fetchWithTimeout)).toHaveBeenCalled();
   });
 });
