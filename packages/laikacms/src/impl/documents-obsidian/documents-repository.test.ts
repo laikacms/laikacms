@@ -245,6 +245,15 @@ describe('ObsidianDocumentsRepository — revisions', () => {
     if (result._tag === 'Failure') expect(result.failure).toBeInstanceOf(BadRequestError);
   });
 
+  it('createRevision fails because Obsidian has no version history', async () => {
+    const repo = makeRepo();
+    const result = await LaikaTask.runPromiseResult(
+      repo.createRevision({ key: 'a', type: 'revision', content: {}, language: 'und', revision: 'v1' }),
+    );
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') expect(result.failure).toBeInstanceOf(BadRequestError);
+  });
+
   it('listRevisions yields an empty stream', async () => {
     const repo = makeRepo();
     const collected = await LaikaStream.runPromiseCollect(
@@ -252,5 +261,163 @@ describe('ObsidianDocumentsRepository — revisions', () => {
     );
     expect(collected.data).toEqual([]);
     expect(collected.done).toEqual({ total: 0 });
+  });
+});
+
+describe("ObsidianDocumentsRepository — language: 'und' omits language key", () => {
+  it("createDocument with language 'und' stores no language key in frontmatter", async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createDocument({
+      key: 'und-doc',
+      type: 'published',
+      status: 'published',
+      language: 'und',
+      content: { title: 'Undetermined' },
+    }));
+
+    const raw = await fs.readFile(path.join(vaultDir, 'und-doc.md'), 'utf8');
+    expect(raw).not.toContain('language:');
+  });
+
+  it("createUnpublished with language 'und' stores no language key in frontmatter", async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createUnpublished({
+      key: 'und-draft',
+      type: 'unpublished',
+      status: 'draft',
+      language: 'und',
+      content: { title: 'Draft' },
+    }));
+
+    const raw = await fs.readFile(path.join(vaultDir, 'und-draft.md'), 'utf8');
+    expect(raw).not.toContain('language:');
+  });
+});
+
+describe('ObsidianDocumentsRepository — custom publishProperty option', () => {
+  const makeCustomPublishRepo = () =>
+    new ObsidianDocumentsRepository(
+      new FileSystemStorageRepository(vaultDir, registry, 'md'),
+      { publishProperty: 'published' },
+    );
+
+  it('createDocument writes the custom publish key to frontmatter', async () => {
+    const repo = makeCustomPublishRepo();
+    await LaikaTask.runPromise(repo.createDocument({
+      key: 'my-post',
+      type: 'published',
+      status: 'published',
+      language: 'en',
+      content: { title: 'My Post' },
+    }));
+
+    const raw = await fs.readFile(path.join(vaultDir, 'my-post.md'), 'utf8');
+    expect(raw).toContain('published: true');
+    expect(raw).not.toContain('publish:');
+  });
+
+  it('getDocument reads published state from the custom publish key', async () => {
+    const repo = makeCustomPublishRepo();
+    await LaikaTask.runPromise(repo.createDocument({
+      key: 'article',
+      type: 'published',
+      status: 'published',
+      language: 'en',
+      content: { title: 'Article' },
+    }));
+
+    const doc = await LaikaTask.runPromise(repo.getDocument('article'));
+    expect(doc.type).toBe('published');
+  });
+
+  it('unpublish writes the custom publish key as false', async () => {
+    const repo = makeCustomPublishRepo();
+    await LaikaTask.runPromise(repo.createDocument({
+      key: 'post',
+      type: 'published',
+      status: 'published',
+      language: 'und',
+      content: { title: 'Post' },
+    }));
+    await LaikaTask.runPromise(repo.unpublish('post', 'archived'));
+
+    const raw = await fs.readFile(path.join(vaultDir, 'post.md'), 'utf8');
+    expect(raw).toContain('published: false');
+    expect(raw).not.toContain('publish:');
+  });
+
+  it('publish writes the custom publish key as true', async () => {
+    const repo = makeCustomPublishRepo();
+    await LaikaTask.runPromise(repo.createUnpublished({
+      key: 'draft',
+      type: 'unpublished',
+      status: 'draft',
+      language: 'und',
+      content: { title: 'Draft' },
+    }));
+    await LaikaTask.runPromise(repo.publish('draft'));
+
+    const raw = await fs.readFile(path.join(vaultDir, 'draft.md'), 'utf8');
+    expect(raw).toContain('published: true');
+    expect(raw).not.toContain('publish:');
+  });
+});
+
+describe('ObsidianDocumentsRepository — custom statusProperty and defaultStatus options', () => {
+  const makeCustomStatusRepo = (defaultStatus?: string) =>
+    new ObsidianDocumentsRepository(
+      new FileSystemStorageRepository(vaultDir, registry, 'md'),
+      { statusProperty: 'stage', ...(defaultStatus ? { defaultStatus } : {}) },
+    );
+
+  it('createUnpublished writes the custom status key to frontmatter', async () => {
+    const repo = makeCustomStatusRepo();
+    await LaikaTask.runPromise(repo.createUnpublished({
+      key: 'draft-note',
+      type: 'unpublished',
+      status: 'pending_review',
+      language: 'und',
+      content: { title: 'Draft' },
+    }));
+
+    const raw = await fs.readFile(path.join(vaultDir, 'draft-note.md'), 'utf8');
+    expect(raw).toContain('stage: pending_review');
+    expect(raw).not.toContain('status:');
+  });
+
+  it('getUnpublished reads status from the custom status key', async () => {
+    const repo = makeCustomStatusRepo();
+    await LaikaTask.runPromise(repo.createUnpublished({
+      key: 'note',
+      type: 'unpublished',
+      status: 'in_progress',
+      language: 'und',
+      content: { title: 'Note' },
+    }));
+
+    const unpublished = await LaikaTask.runPromise(repo.getUnpublished('note'));
+    expect(unpublished.status).toBe('in_progress');
+  });
+
+  it('defaultStatus is returned when the status property is absent from frontmatter', async () => {
+    const repo = makeCustomStatusRepo('idea');
+    await fs.writeFile(
+      path.join(vaultDir, 'no-stage.md'),
+      '---\npublish: false\ntitle: No Stage\n---\n',
+    );
+
+    const unpublished = await LaikaTask.runPromise(repo.getUnpublished('no-stage'));
+    expect(unpublished.status).toBe('idea');
+  });
+
+  it('defaultStatus falls back to "draft" when not configured and status key is absent', async () => {
+    const repo = makeCustomStatusRepo();
+    await fs.writeFile(
+      path.join(vaultDir, 'no-stage-default.md'),
+      '---\npublish: false\ntitle: No Stage\n---\n',
+    );
+
+    const unpublished = await LaikaTask.runPromise(repo.getUnpublished('no-stage-default'));
+    expect(unpublished.status).toBe('draft');
   });
 });
