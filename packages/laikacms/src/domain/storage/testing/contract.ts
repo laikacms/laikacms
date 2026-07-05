@@ -1,4 +1,5 @@
 import { collectStream, runTask } from 'laikacms/compat';
+import { LaikaStream } from 'laikacms/core';
 import type { Atom, AtomSummary, Folder, StorageObject } from 'laikacms/storage';
 import type { StorageRepository } from 'laikacms/storage';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -159,12 +160,13 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
       await runTask(repo.createFolder({ key: `${prefix}/sub`, type: 'folder' }));
       await runTask(repo.createObject({ key: deepKey, type: 'object', content: { level: 2 } }));
 
-      const { items } = await collectStream(
+      const collected = await LaikaStream.runPromiseCollect(
         repo.listAtoms(prefix, { depth: 2, pagination: DEFAULT_PAGINATION }),
       );
-      const returnedKeys = (items as Atom[]).map(a => a.key);
+      const returnedKeys = collected.data.map(a => a.key);
       expect(returnedKeys).toContain(shallowKey);
       expect(returnedKeys).toContain(deepKey);
+      expect(collected.recoverableErrors).toHaveLength(0);
     });
 
     // --- listAtomSummaries depth > 1 ---
