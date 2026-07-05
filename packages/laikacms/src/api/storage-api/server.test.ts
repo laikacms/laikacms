@@ -478,6 +478,44 @@ describe('POST /objects — unknown attribute key rejection (LCMS-254)', () => {
   });
 });
 
+describe('POST /objects — empty id validation (LCMS-173)', () => {
+  it('returns 400 with a clear id-required message when data.id is empty string', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: { type: 'object', id: '', attributes: { content: { body: 'x' } } },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string, detail: string }> };
+    expect(body.errors[0]?.code).toBe('invalid_data');
+    expect(body.errors[0]?.detail).toContain('data.id is required');
+  });
+});
+
+describe('POST /atoms (create folder) — empty id validation (LCMS-173)', () => {
+  it('returns 400 with a clear id-required message when data.id is empty string', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/atoms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: { type: 'folder', id: '', attributes: {} },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string, detail: string }> };
+    expect(body.errors[0]?.code).toBe('invalid_data');
+    expect(body.errors[0]?.detail).toContain('data.id is required');
+  });
+});
+
 describe('storage-api pagination links (LCMS-170)', () => {
   // Emit exactly perPage items so hasMore=true (items.length === requestedLimit).
   // If the links were built from request.url (which already carries query params),

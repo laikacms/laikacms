@@ -450,6 +450,12 @@ export function buildJsonApi(options: StorageApiOptions) {
       } catch {
         return failResponse(Result.fail(new InvalidData('Invalid request body')), 400);
       }
+      if (!body.data.id) {
+        return failResponse(
+          Result.fail(new InvalidData('data.id is required and must be a non-empty key')),
+          400,
+        );
+      }
       const data: FolderCreate = { key: body.data.id, type: 'folder' };
       const result = await runTaskWithMetadata(repo.createFolder(data));
       if (Result.isFailure(result)) {
@@ -511,6 +517,12 @@ export function buildJsonApi(options: StorageApiOptions) {
         body = decodeStorageObjectCreateBody(rawBody);
       } catch {
         return failResponse(Result.fail(new InvalidData('Invalid request body')), 400);
+      }
+      if (!body.data.id) {
+        return failResponse(
+          Result.fail(new InvalidData('data.id is required and must be a non-empty key')),
+          400,
+        );
       }
       const data: StorageObjectCreate = {
         key: body.data.id,
@@ -631,6 +643,12 @@ export function buildJsonApi(options: StorageApiOptions) {
         .map((operation: AtomicOperation) => {
           switch (operation.op) {
             case 'add':
+              if (!operation.data.id) {
+                return Promise.resolve({
+                  op: Result.fail(new InvalidData('data.id is required and must be a non-empty key')),
+                  operation,
+                });
+              }
               if (operation.data.type === 'object') {
                 const createData: StorageObjectCreate = {
                   key: operation.data.id,
@@ -652,6 +670,12 @@ export function buildJsonApi(options: StorageApiOptions) {
                 operation,
               });
             case 'update':
+              if (!operation.data.id) {
+                return Promise.resolve({
+                  op: Result.fail(new InvalidData('data.id is required and must be a non-empty key')),
+                  operation,
+                });
+              }
               if (operation.data.type === 'object') {
                 const updateData: StorageObjectUpdate = {
                   key: operation.data.id,
