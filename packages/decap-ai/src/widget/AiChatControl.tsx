@@ -420,9 +420,9 @@ const AiChatControl: React.FC<AiChatControlPropsAfterConnect> = props => {
   const welcomeMessage = field.get('welcomeMessage') as string || t.defaultWelcomeMessage;
   const maxHeight = field.get('maxHeight') as string || '500px';
 
-  // The api option should be the base path (e.g., '/api/v1/ai')
+  // The api option should be the base path (e.g., '/api/ai')
   // useChat sends to `${api}` directly, so we need to append /chat
-  const apiBasePath = widget.aiSdk?.api || '/api/v1/ai';
+  const apiBasePath = widget.aiSdk?.api || '/api/ai';
   const chatEndpoint = `${apiBasePath}/chat`;
   const sessionsEndpoint = apiBasePath;
 

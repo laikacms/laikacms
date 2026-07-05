@@ -80,7 +80,7 @@ export type DocumentContext = {
  * AI SDK configuration options for the widget
  */
 export interface AiSdkOptions {
-  /** The API endpoint base path (e.g., '/api/v1/ai') */
+  /** The API endpoint base path. Defaults to `'/api/ai'` — must match the `basePath` option on the server adapter. */
   api?: string;
   /** Custom fetch implementation */
   fetch?: typeof fetch;
