@@ -24,6 +24,7 @@ import type {
   UnpublishedUpdate,
 } from 'laikacms/documents';
 import { DocumentsCompatibilityDate, DocumentsRepository } from 'laikacms/documents';
+import { applyPagination } from 'laikacms/storage';
 import type { Key, StorageObject, StorageObjectContent, StorageRepository } from 'laikacms/storage';
 
 /**
@@ -337,22 +338,26 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
   listRecords(options: ListRecordsOptions): LaikaStream.LaikaStream<Record, ListRecordsDone> {
     return LaikaStream.make<Record, ListRecordsDone>(emit =>
       Effect.gen({ self: this }, function*() {
+        // Fetch ALL atoms before applying pagination so that filtering and the
+        // returned total are computed over the full vault, not just one page.
+        // Passing `{ offset: 0 }` (no limit) tells the storage layer to return
+        // every atom; we then slice the filtered results ourselves.
         const atoms = yield* collectStreamData(
           this.storageRepository.listAtoms(options.folder ?? '', {
-            pagination: options.pagination,
+            pagination: { offset: 0 },
             depth: options.depth,
           }),
           emit,
         );
-        let total = 0;
+        const matched: Record[] = [];
         for (const atom of atoms) {
           if (atom.type !== 'object') continue;
           const record = this.classifyRecord(atom, options);
-          if (!record) continue;
-          yield* emit.data(record);
-          total += 1;
+          if (record) matched.push(record);
         }
-        return { total };
+        const page = applyPagination(matched, options.pagination);
+        for (const record of page) yield* emit.data(record);
+        return { total: matched.length };
       })
     );
   }
@@ -364,20 +369,20 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
       Effect.gen({ self: this }, function*() {
         const atoms = yield* collectStreamData(
           this.storageRepository.listAtoms(options.folder ?? '', {
-            pagination: options.pagination,
+            pagination: { offset: 0 },
             depth: options.depth,
           }),
           emit,
         );
-        let total = 0;
+        const matched: RecordSummary[] = [];
         for (const atom of atoms) {
           if (atom.type !== 'object') continue;
           const summary = this.classifySummary(atom, options);
-          if (!summary) continue;
-          yield* emit.data(summary);
-          total += 1;
+          if (summary) matched.push(summary);
         }
-        return { total };
+        const page = applyPagination(matched, options.pagination);
+        for (const summary of page) yield* emit.data(summary);
+        return { total: matched.length };
       })
     );
   }

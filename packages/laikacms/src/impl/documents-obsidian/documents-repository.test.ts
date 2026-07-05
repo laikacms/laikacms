@@ -120,6 +120,121 @@ describe('ObsidianDocumentsRepository — listing', () => {
     expect(publishedOnly.data).toHaveLength(1);
     expect(publishedOnly.data[0]?.type).toBe('published');
   });
+
+  it('listRecords done.total equals total matching records across all pages (not just current page)', async () => {
+    const repo = makeRepo();
+    // Create 4 published, 2 unpublished — natural-sort puts unpublished first
+    await LaikaTask.runPromise(
+      repo.createUnpublished({
+        key: 'a-draft',
+        type: 'unpublished',
+        status: 'draft',
+        language: 'und',
+        content: { body: 'draft a' },
+      }),
+    );
+    await LaikaTask.runPromise(
+      repo.createUnpublished({
+        key: 'b-draft',
+        type: 'unpublished',
+        status: 'draft',
+        language: 'und',
+        content: { body: 'draft b' },
+      }),
+    );
+    await LaikaTask.runPromise(
+      repo.createDocument({
+        key: 'c-pub',
+        type: 'published',
+        status: 'published',
+        language: 'und',
+        content: { body: 'pub c' },
+      }),
+    );
+    await LaikaTask.runPromise(
+      repo.createDocument({
+        key: 'd-pub',
+        type: 'published',
+        status: 'published',
+        language: 'und',
+        content: { body: 'pub d' },
+      }),
+    );
+    await LaikaTask.runPromise(
+      repo.createDocument({
+        key: 'e-pub',
+        type: 'published',
+        status: 'published',
+        language: 'und',
+        content: { body: 'pub e' },
+      }),
+    );
+    await LaikaTask.runPromise(
+      repo.createDocument({
+        key: 'f-pub',
+        type: 'published',
+        status: 'published',
+        language: 'und',
+        content: { body: 'pub f' },
+      }),
+    );
+
+    // Limit smaller than total published count — natural-sort puts a-draft, b-draft first
+    // so a page[limit=3] starting at offset 0 would only contain the 2 drafts + 1 published
+    // if pagination preceded filtering. The correct total must be 4 (all published docs).
+    const result = await LaikaStream.runPromiseCollect(
+      repo.listRecords({ folder: '', depth: 1, type: 'published', pagination: { offset: 0, limit: 3 } }),
+    );
+    expect(result.data).toHaveLength(3);
+    expect(result.data.every(r => r.type === 'published')).toBe(true);
+    expect(result.done.total).toBe(4);
+  });
+
+  it('listRecordSummaries done.total equals total matching summaries across all pages', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(
+      repo.createUnpublished({
+        key: 'a-draft',
+        type: 'unpublished',
+        status: 'draft',
+        language: 'und',
+        content: { body: 'd' },
+      }),
+    );
+    await LaikaTask.runPromise(
+      repo.createDocument({
+        key: 'b-pub',
+        type: 'published',
+        status: 'published',
+        language: 'und',
+        content: { body: 'p' },
+      }),
+    );
+    await LaikaTask.runPromise(
+      repo.createDocument({
+        key: 'c-pub',
+        type: 'published',
+        status: 'published',
+        language: 'und',
+        content: { body: 'p' },
+      }),
+    );
+    await LaikaTask.runPromise(
+      repo.createDocument({
+        key: 'd-pub',
+        type: 'published',
+        status: 'published',
+        language: 'und',
+        content: { body: 'p' },
+      }),
+    );
+
+    const result = await LaikaStream.runPromiseCollect(
+      repo.listRecordSummaries({ folder: '', depth: 1, type: 'published', pagination: { offset: 0, limit: 2 } }),
+    );
+    expect(result.data).toHaveLength(2);
+    expect(result.done.total).toBe(3);
+  });
 });
 
 describe('ObsidianDocumentsRepository — revisions', () => {
