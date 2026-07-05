@@ -348,3 +348,86 @@ describe('FileSystemDataSource.fsStat (error mapping)', () => {
     }
   });
 });
+
+describe('FileSystemDataSource path-traversal guard (LCMS-199)', () => {
+  it('getFileContents rejects ../ key — returns InvalidData, never reads outside root', async () => {
+    const ds = new FileSystemDataSource(['md'], 'md');
+    // plant a "secret" one level above tmpDir
+    const secretPath = path.join(path.dirname(tmpDir), 'secret-lcms199.md');
+    await fs.writeFile(secretPath, 'TOP SECRET');
+    try {
+      const result = await ds.getFileContents(tmpDir, '../secret-lcms199');
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe('invalid_data');
+      }
+    } finally {
+      await fs.rm(secretPath, { force: true });
+    }
+  });
+
+  it('createOrUpdate rejects ../ key — returns InvalidData, never writes outside root', async () => {
+    const ds = new FileSystemDataSource(['md'], 'md');
+    const escapedPath = path.join(path.dirname(tmpDir), 'escape-lcms199.md');
+    const result = await ds.createOrUpdate(tmpDir, '../escape-lcms199', 'INJECTED', 'md');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('invalid_data');
+    }
+    // File must NOT have been created outside the root
+    await expect(fs.access(escapedPath)).rejects.toThrow();
+  });
+
+  it('getDirectoryContents rejects ../ key — returns InvalidData, never lists outside root', async () => {
+    const ds = new FileSystemDataSource(['md'], 'md');
+    const result = await ds.getDirectoryContents(tmpDir, '..');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('invalid_data');
+    }
+  });
+
+  it('getDirMeta rejects ../ key — returns InvalidData', async () => {
+    const ds = new FileSystemDataSource([], '');
+    const result = await ds.getDirMeta(tmpDir, '..');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('invalid_data');
+    }
+  });
+
+  it('getFileSystemEntry rejects ../ key — returns InvalidData', async () => {
+    const ds = new FileSystemDataSource([], '');
+    const result = await ds.getFileSystemEntry(tmpDir, '..', 'dir');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('invalid_data');
+    }
+  });
+
+  it('isDir rejects ../ key — throws InvalidData', async () => {
+    const ds = new FileSystemDataSource([], '');
+    await expect(ds.isDir(tmpDir, '..')).rejects.toMatchObject({ code: 'invalid_data' });
+  });
+
+  it('findExistingFileExtension rejects ../ key — returns null', async () => {
+    const ds = new FileSystemDataSource(['md'], 'md');
+    const result = await ds.findExistingFileExtension(tmpDir, '../secret-lcms199');
+    expect(result).toBeNull();
+  });
+
+  it('legitimate nested paths are not rejected', async () => {
+    const ds = new FileSystemDataSource(['md'], 'md');
+    await ds.createOrUpdate(tmpDir, 'sub/doc', 'hello', 'md');
+    const result = await ds.getFileContents(tmpDir, 'sub/doc');
+    expect(Result.isSuccess(result)).toBe(true);
+  });
+
+  it('deeply nested path that stays within root is allowed', async () => {
+    const ds = new FileSystemDataSource(['md'], 'md');
+    await fs.mkdir(path.join(tmpDir, 'a/b'), { recursive: true });
+    await fs.writeFile(path.join(tmpDir, 'a/b/doc.md'), 'body');
+    const result = await ds.getFileContents(tmpDir, 'a/b/doc');
+    expect(Result.isSuccess(result)).toBe(true);
+  });
+});

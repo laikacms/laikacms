@@ -3,7 +3,14 @@ import * as Result from 'effect/Result';
 import type { Stats } from 'fs';
 import fs from 'fs/promises';
 import type { LaikaResult } from 'laikacms/core';
-import { DirInsteadOfFile, FileInsteadOfDir, ForbiddenError, InternalError, NotFoundError } from 'laikacms/core';
+import {
+  DirInsteadOfFile,
+  FileInsteadOfDir,
+  ForbiddenError,
+  InternalError,
+  InvalidData,
+  NotFoundError,
+} from 'laikacms/core';
 import { pathCombine, pathToSegments } from 'laikacms/storage';
 import os from 'os';
 import path from 'path';
@@ -13,6 +20,16 @@ import type { DirSub, FileOrDir } from '../../domain/entities/file.js';
 import { mapFsErrorToLaikaError } from './utilities.js';
 
 const ALLOW_RECURSIVE = false;
+
+// Reject keys that resolve outside the configured content root, preventing
+// path-traversal reads/writes via "../" segments in object keys (LCMS-199).
+const isWithinRoot = (basePath: string, fullPath: string): boolean => {
+  const resolvedBase = path.resolve(basePath);
+  const resolvedFull = path.resolve(fullPath);
+  return resolvedFull === resolvedBase || resolvedFull.startsWith(resolvedBase + path.sep);
+};
+
+const TRAVERSAL_ERROR = 'Object key escapes the configured content root';
 
 const get = (obj: unknown, key: string): unknown => {
   if (typeof obj !== 'object' || obj === null) return undefined;
@@ -49,6 +66,10 @@ export class FileSystemDataSource {
     basePath: string,
     relativePath: string,
   ): Promise<string | null> {
+    if (!isWithinRoot(basePath, path.join(basePath, relativePath))) {
+      return null;
+    }
+
     // Strip any extension that user may have mistakenly added
     const pathWithoutExt = this.stripExtension(relativePath);
 
@@ -79,6 +100,10 @@ export class FileSystemDataSource {
     basePath: string,
     relativePath: string,
   ): Promise<string | null> {
+    if (!isWithinRoot(basePath, path.join(basePath, relativePath))) {
+      return null;
+    }
+
     const pathWithoutExt = this.stripExtension(relativePath);
 
     for (const ext of this.availableExtensions) {
@@ -147,6 +172,10 @@ export class FileSystemDataSource {
     const successful: DirSub[] = [];
     for (const entry of entries) {
       const fullPath = path.join(basePath, entry.path);
+      if (!isWithinRoot(basePath, fullPath)) {
+        yield Result.fail(new InvalidData(TRAVERSAL_ERROR));
+        continue;
+      }
       const statResult = await this.fsStat(fullPath);
       if (Result.isFailure(statResult)) {
         yield Result.fail(statResult.failure);
@@ -178,6 +207,9 @@ export class FileSystemDataSource {
     basePath: string,
     relativePath: string,
   ): Promise<LaikaResult<{ content: string, path: string, extension: string }>> => {
+    if (!isWithinRoot(basePath, path.join(basePath, relativePath))) {
+      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+    }
     try {
       const resolvedPath = await this.resolvePathWithExtension(basePath, relativePath);
 
@@ -212,6 +244,9 @@ export class FileSystemDataSource {
     basePath: string,
     relativePath: string,
   ): Promise<LaikaResult<{ size: number, createdAt: Date, updatedAt: Date, path: string, extension: string }>> => {
+    if (!isWithinRoot(basePath, path.join(basePath, relativePath))) {
+      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+    }
     try {
       const resolvedPath = await this.resolvePathWithExtension(basePath, relativePath);
 
@@ -244,8 +279,11 @@ export class FileSystemDataSource {
     basePath: string,
     relativePath: string,
   ): Promise<LaikaResult<{ createdAt: Date, updatedAt: Date }>> => {
+    const fullPath = path.join(basePath, relativePath);
+    if (!isWithinRoot(basePath, fullPath)) {
+      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+    }
     try {
-      const fullPath = path.join(basePath, relativePath);
       const { ctime, mtime } = await fs.stat(fullPath);
       return Result.succeed({ createdAt: ctime, updatedAt: mtime });
     } catch (error) {
@@ -310,6 +348,9 @@ export class FileSystemDataSource {
     relativePath: string,
   ): Promise<LaikaResult<DirSub[]>> => {
     const fullPath = path.join(basePath, relativePath);
+    if (!isWithinRoot(basePath, fullPath)) {
+      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+    }
     try {
       const listing = await this.listDirectory(fullPath);
       if (Result.isFailure(listing)) return listing;
@@ -341,6 +382,9 @@ export class FileSystemDataSource {
     content: string,
     extension: string,
   ): Promise<LaikaResult<{ path: string }>> => {
+    if (!isWithinRoot(basePath, path.join(basePath, relativePath))) {
+      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+    }
     // Strip any extension user may have added and use the provided extension
     const pathWithoutExt = this.stripExtension(relativePath);
     const pathWithExt = extension ? `${pathWithoutExt}.${extension}` : pathWithoutExt;
@@ -367,6 +411,9 @@ export class FileSystemDataSource {
 
   isDir = async (basePath: string, relativePath: string): Promise<boolean> => {
     const fullPath = path.join(basePath, relativePath);
+    if (!isWithinRoot(basePath, fullPath)) {
+      throw new InvalidData(TRAVERSAL_ERROR);
+    }
     try {
       const stat = await fs.stat(fullPath);
       return stat.isDirectory();
@@ -382,6 +429,9 @@ export class FileSystemDataSource {
     type: 'file' | 'dir' | 'both',
   ): Promise<LaikaResult<FileOrDir>> => {
     const fullPath = path.join(basePath, relativePath);
+    if (!isWithinRoot(basePath, fullPath)) {
+      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+    }
 
     try {
       const stat = await fs.stat(fullPath);
