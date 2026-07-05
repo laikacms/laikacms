@@ -66,6 +66,93 @@ lives:
 bypass the authenticated HTTP API), use the `documents` / `assets` / `storage` repos you
 constructed.
 
+### Seeding the server-side Decap config
+
+`DecapContentBaseSettingsProvider` reads your Decap config object from storage on **every** content
+request — it uses the `collections` array to resolve collection → folder mappings, field schemas,
+and media paths. Before any document or asset operation will succeed, seed that config into storage
+once (e.g. in a setup script, a one-time migration, or a first-boot handler):
+
+```ts
+import { runTask } from 'laikacms/compat';
+
+await runTask(
+  storage.createOrUpdateObject({
+    key: 'config', // must match the `configKey` option you passed to DecapContentBaseSettingsProvider
+    content: {
+      collections: [
+        {
+          name: 'posts', // Decap collection name — also used as the storage folder path
+          label: 'Posts',
+          folder: 'posts', // folder inside your storage where documents live
+          create: true,
+          fields: [
+            { name: 'title', widget: 'string' },
+            { name: 'body', widget: 'markdown' },
+          ],
+        },
+        // …more folder collections…
+      ],
+      media_folder: 'uploads', // storage folder where uploaded assets are written
+      public_folder: '/uploads', // URL prefix embedded in content when Decap references an asset
+    },
+  }),
+);
+```
+
+**Serializer requirement.** The config object is structured data. Your storage instance must
+register a serializer that round-trips arbitrary objects — `yamlSerializer`, `jsonSerializer`, or
+`markdownSerializer` all work. Do **not** use `rawSerializer`: it stores only a plain `body` string
+and discards all other fields, so seeding with it silently writes an empty config and every content
+request still fails.
+
+**Server config vs. browser config.** There are two separate copies of your Decap config:
+
+| Copy                 | Where                                 | Used by                                                                                        |
+| -------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **Storage (server)** | Object stored under `configKey`       | `DecapContentBaseSettingsProvider` on every request — maps collection names to storage folders |
+| **Browser**          | Passed to `CMS.init({ config: {…} })` | Decap CMS React app — controls which collections appear and how fields render                  |
+
+Both copies must describe the same collections. The recommended pattern is to keep a single
+`decapConfig` constant and share it:
+
+```ts
+// shared/decap-config.ts — one source of truth for both sides
+export const decapConfig = {
+  backend: { name: 'laika', api_root: '/api/decap' },
+  media_folder: 'uploads',
+  public_folder: '/uploads',
+  collections: [
+    {
+      name: 'posts',
+      label: 'Posts',
+      folder: 'posts',
+      create: true,
+      fields: [{ name: 'title', widget: 'string' }, { name: 'body', widget: 'markdown' }],
+    },
+  ],
+};
+```
+
+Seed it server-side once:
+
+```ts
+import { runTask } from 'laikacms/compat';
+import { decapConfig } from './shared/decap-config.js';
+
+await runTask(storage.createOrUpdateObject({ key: 'config', content: decapConfig }));
+```
+
+Pass it to the browser:
+
+```ts
+window.CMS.init({ config: decapConfig });
+```
+
+> **Skipping this step** is the most common reason a Standalone Worker deployment returns
+> `404 "The file at config does not exist"` on every content request. The storage is simply empty —
+> seed the config object once and all content operations immediately work.
+
 ### WebDAV storage
 
 `WebDavStorageRepository` works with Nextcloud, ownCloud, Apache `mod_dav`, nginx-dav, rclone, and

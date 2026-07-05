@@ -159,7 +159,21 @@ export class DecapContentBaseSettingsProvider extends ContentBaseSettingsProvide
 
   private readDecapConfig(emit: LaikaTask.LaikaTaskEmit): Effect.Effect<DecapConfig, LaikaError> {
     return Effect.gen({ self: this }, function*() {
-      const obj = yield* runForwarding(this.storage.getObject(this.configKey), emit);
+      const objResult = yield* Effect.result(runForwarding(this.storage.getObject(this.configKey), emit));
+      if (Result.isFailure(objResult)) {
+        const err = objResult.failure;
+        return yield* Effect.fail(
+          err.code === NotFoundError.CODE
+            ? new NotFoundError(
+              `Decap config object not found at storage key '${this.configKey}'. `
+                + `Seed it once before any content operation: `
+                + `await runTask(storage.createOrUpdateObject({ key: '${this.configKey}', `
+                + `content: { collections: [...], media_folder: '...', public_folder: '...' } }))`,
+            )
+            : err,
+        );
+      }
+      const obj = objResult.success;
       const content = obj.content as unknown;
       if (content === null || typeof content !== 'object') {
         return yield* Effect.fail(
