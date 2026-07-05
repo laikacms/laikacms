@@ -9,7 +9,7 @@ import type {
 } from 'laikacms/documents';
 import { describe, expect, it, vi } from 'vitest';
 
-import { InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { InternalError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 
 import { buildJsonApi } from './server.js';
 
@@ -669,6 +669,74 @@ describe('GET /record-summaries', () => {
     expect(body.data[0]!.id).toBe('posts/hello');
     expect(body.data[1]!.type).toBe('unpublished-summary');
     expect(body.data[1]!.id).toBe('posts/draft');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /records — error status mapping (LCMS-186)
+// ---------------------------------------------------------------------------
+
+describe('GET /records — error HTTP status', () => {
+  it('returns HTTP 404 (not 400) when the repo raises NotFoundError', async () => {
+    const partialRepo = {
+      listRecords: () => LaikaStream.make(() => Effect.fail(new NotFoundError('config not found'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/records'));
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('404');
+    expect(body.errors[0]!.code).toBe('not_found');
+  });
+
+  it('returns HTTP 500 (not 400) when the repo raises InternalError', async () => {
+    const partialRepo = {
+      listRecords: () => LaikaStream.make(() => Effect.fail(new InternalError('unexpected failure'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/records'));
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('500');
+    expect(body.errors[0]!.code).toBe('internal_error');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /record-summaries — error status mapping (LCMS-186)
+// ---------------------------------------------------------------------------
+
+describe('GET /record-summaries — error HTTP status', () => {
+  it('returns HTTP 404 (not 400) when the repo raises NotFoundError', async () => {
+    const partialRepo = {
+      listRecordSummaries: () => LaikaStream.make(() => Effect.fail(new NotFoundError('config not found'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/record-summaries'));
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('404');
+    expect(body.errors[0]!.code).toBe('not_found');
+  });
+
+  it('returns HTTP 500 (not 400) when the repo raises InternalError', async () => {
+    const partialRepo = {
+      listRecordSummaries: () => LaikaStream.make(() => Effect.fail(new InternalError('unexpected failure'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/record-summaries'));
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('500');
+    expect(body.errors[0]!.code).toBe('internal_error');
   });
 });
 
