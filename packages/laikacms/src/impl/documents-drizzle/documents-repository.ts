@@ -377,15 +377,13 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
 
         let emitted = 0;
         for (const row of rows) {
+          const isPublished = (row.status ?? PUBLISHED_STATUS) === PUBLISHED_STATUS;
           if (summaryOnly) {
             yield* emit.data({
-              type: options.type === 'published'
-                ? 'published'
-                : options.type === 'unpublished'
-                ? 'unpublished'
-                : 'record',
+              type: isPublished ? 'published-summary' : 'unpublished-summary',
               key: row.key,
-              status: PUBLISHED_STATUS,
+              status: row.status ?? PUBLISHED_STATUS,
+              language: row.language ?? 'unk',
               createdAt: row.createdAt,
               updatedAt: row.updatedAt,
             } as T);
@@ -398,13 +396,10 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
             continue;
           }
           yield* emit.data({
-            type: options.type === 'published'
-              ? 'published'
-              : options.type === 'unpublished'
-              ? 'unpublished'
-              : 'record',
+            type: isPublished ? 'published' : 'unpublished',
             key: row.key,
-            status: PUBLISHED_STATUS,
+            status: row.status ?? PUBLISHED_STATUS,
+            language: row.language ?? 'unk',
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
             content: parsed.success,

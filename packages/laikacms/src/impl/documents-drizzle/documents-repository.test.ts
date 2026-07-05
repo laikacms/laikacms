@@ -320,6 +320,58 @@ describe('DrizzleDocumentsRepository', () => {
       expect(docs.length).toBeGreaterThanOrEqual(2);
     });
 
+    it('emits correct type, status, and language for published records', async () => {
+      await resolveTask(
+        repo.createDocument({ key: 'pub-a', type: 'published', status: 'published', content: {}, language: 'en' }),
+      );
+
+      const docs: import('laikacms/documents').Record[] = [];
+      for await (
+        const chunk of repo.listRecords({
+          type: 'published',
+          folder: '',
+          pagination: { offset: 0, limit: 100 },
+          depth: 10,
+        })
+      ) {
+        for (const el of chunk) {
+          if (el._tag === 'Data') docs.push(el.value);
+        }
+      }
+
+      const doc = docs.find(d => d.key === 'pub-a');
+      expect(doc).toBeDefined();
+      expect(doc!.type).toBe('published');
+      expect(doc!.status).toBe('published');
+      expect((doc as import('laikacms/documents').Document).language).toBe('en');
+    });
+
+    it('emits correct type, status, and language for unpublished records', async () => {
+      await resolveTask(
+        repo.createUnpublished({ key: 'draft-x', type: 'unpublished', content: {}, language: 'fr', status: 'draft' }),
+      );
+
+      const docs: import('laikacms/documents').Record[] = [];
+      for await (
+        const chunk of repo.listRecords({
+          type: 'unpublished',
+          folder: '',
+          pagination: { offset: 0, limit: 100 },
+          depth: 10,
+        })
+      ) {
+        for (const el of chunk) {
+          if (el._tag === 'Data') docs.push(el.value);
+        }
+      }
+
+      const doc = docs.find(d => d.key === 'draft-x');
+      expect(doc).toBeDefined();
+      expect(doc!.type).toBe('unpublished');
+      expect(doc!.status).toBe('draft');
+      expect((doc as import('laikacms/documents').Unpublished).language).toBe('fr');
+    });
+
     it('returns the correct page when using page-based pagination', async () => {
       const keys = ['p1', 'p2', 'p3', 'p4', 'p5'];
       for (const key of keys) {
@@ -344,6 +396,66 @@ describe('DrizzleDocumentsRepository', () => {
 
       expect(page2Docs.length).toBe(2);
       expect(page2Docs.map(d => d.key)).toEqual(['p3', 'p4']);
+    });
+  });
+
+  describe('listRecordSummaries', () => {
+    it('emits published-summary type, correct status and language for published records', async () => {
+      await resolveTask(
+        repo.createDocument({ key: 'sum-pub', type: 'published', status: 'published', content: {}, language: 'de' }),
+      );
+
+      const summaries: import('laikacms/documents').RecordSummary[] = [];
+      for await (
+        const chunk of repo.listRecordSummaries({
+          type: 'published',
+          folder: '',
+          pagination: { offset: 0, limit: 100 },
+          depth: 10,
+        })
+      ) {
+        for (const el of chunk) {
+          if (el._tag === 'Data') summaries.push(el.value);
+        }
+      }
+
+      const summary = summaries.find(s => s.key === 'sum-pub');
+      expect(summary).toBeDefined();
+      expect(summary!.type).toBe('published-summary');
+      expect(summary!.status).toBe('published');
+      expect((summary as import('laikacms/documents').DocumentSummary).language).toBe('de');
+    });
+
+    it('emits unpublished-summary type, correct status and language for unpublished records', async () => {
+      await resolveTask(
+        repo.createUnpublished({
+          key: 'sum-draft',
+          type: 'unpublished',
+          content: {},
+          language: 'nl',
+          status: 'pending_review',
+        }),
+      );
+
+      const summaries: import('laikacms/documents').RecordSummary[] = [];
+      for await (
+        const chunk of repo.listRecordSummaries({
+          type: 'unpublished',
+          folder: '',
+          pagination: { offset: 0, limit: 100 },
+          depth: 10,
+        })
+      ) {
+        for (const el of chunk) {
+          if (el._tag === 'Data') summaries.push(el.value);
+        }
+      }
+
+      const summary = summaries.find(s => s.key === 'sum-draft');
+      expect(summary).toBeDefined();
+      expect(summary!.type).toBe('unpublished-summary');
+      expect(summary!.status).toBe('pending_review');
+      expect((summary as import('laikacms/documents').UnpublishedSummary).language).toBe('nl');
     });
   });
 
