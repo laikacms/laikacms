@@ -4,7 +4,7 @@ import { ChevronDownIcon, ChevronUpIcon } from '@radix-ui/react-icons';
 import type { IconProps } from '@radix-ui/react-icons/dist/types';
 import React, { useEffect, useMemo, useState } from 'react';
 
-import type { IconWidgetOptions } from './types';
+import type { IconWidgetOptions } from './types.js';
 
 export type IconControlProps = CmsWidgetControlProps<string> & Pick<IconWidgetOptions, 'filter'>;
 

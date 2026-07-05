@@ -2,8 +2,8 @@ import { AccessTokenError, APIError, unsentRequest } from '@laikacms/decap-cms/l
 
 import React from 'react';
 
-import PKCEAuthenticationPage from './AuthenticationPage';
-import DevAuthenticationPage from './DevAuthenticationPage';
+import PKCEAuthenticationPage from './AuthenticationPage.js';
+import DevAuthenticationPage from './DevAuthenticationPage.js';
 
 import type {
   AssetProxy,

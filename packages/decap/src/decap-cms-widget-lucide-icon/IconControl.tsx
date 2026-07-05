@@ -5,7 +5,7 @@ import { ChevronDownIcon, ChevronUpIcon } from 'lucide-react';
 import * as lucideReact from 'lucide-react';
 import React, { useMemo, useState } from 'react';
 
-import type { IconWidgetOptions } from './types';
+import type { IconWidgetOptions } from './types.js';
 
 const allIcons = Object.fromEntries(Object.entries(lucideReact.icons));
 

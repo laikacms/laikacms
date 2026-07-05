@@ -1,16 +1,16 @@
-import PKCEAuthenticationPage from './AuthenticationPage';
-import DevAuthenticationPage from './DevAuthenticationPage';
-import createLaikaBackend from './laika-backend';
+import PKCEAuthenticationPage from './AuthenticationPage.js';
+import DevAuthenticationPage from './DevAuthenticationPage.js';
+import createLaikaBackend from './laika-backend.js';
 
 // Re-export types separately to avoid runtime re-export warnings (interface erased at compile time)
-export type { PKCEAuthPageProps } from './AuthenticationPage';
-export type { DevAuthPageProps } from './DevAuthenticationPage';
+export type { PKCEAuthPageProps } from './AuthenticationPage.js';
+export type { DevAuthPageProps } from './DevAuthenticationPage.js';
 export type {
   CreateLaikaBackendOptions,
   GetAssetsRepositoryOptions,
   GetDocumentsRepositoryOptions,
   LaikaBackendConfig,
-} from './laika-backend';
+} from './laika-backend.js';
 
 // Laika CMS backend with dependency injection
 export const DecapCmsBackendLaika: {
