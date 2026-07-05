@@ -1,6 +1,7 @@
 import * as Effect from 'effect/Effect';
 
 import {
+  ErrorCodeToClassMap,
   IllegalStateException,
   InternalError,
   InvalidData,
@@ -147,10 +148,18 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
       const json = yield* Effect.promise(() => response.json() as Promise<Record<string, unknown>>);
       if (!response.ok || (Array.isArray(json.errors) && json.errors.length > 0)) {
         const errors = (Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }]) as Array<
-          { detail?: string, title?: string }
+          { detail?: string, title?: string, code?: string }
         >;
+        const detail = errors.map(e => e.detail || e.title || 'Unknown error').join(', ');
+        // Re-hydrate the original typed LaikaError subclass using the code field
+        // so consumers can instanceof-check (e.g. NotFoundError). Falls back to
+        // InvalidData when the code is absent or unknown.
+        const firstCode = errors[0]?.code;
+        const ErrorCtor = firstCode
+          ? (ErrorCodeToClassMap as Record<string, new(msg: string) => LaikaError>)[firstCode]
+          : undefined;
         return yield* Effect.fail(
-          new InvalidData(errors.map(e => e.detail || e.title || 'Unknown error').join(', ')),
+          ErrorCtor ? new ErrorCtor(detail) : new InvalidData(detail),
         );
       }
       return json as { data?: unknown, errors?: unknown[] } & Record<string, unknown>;
