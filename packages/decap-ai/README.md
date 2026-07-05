@@ -57,7 +57,7 @@ API route. It exposes three endpoints:
 | `maxOutputTokens`         | `number`                           | `4096`                       | Maximum number of output tokens per response.                                                     |
 | `temperature`             | `number`                           | `0.7`                        | Sampling temperature for response generation.                                                     |
 | `tools`                   | `ToolSet`                          | `{}`                         | Additional server-side tools (use `tool()` from `@laikacms/decap-ai`).                            |
-| `basePath`                | `string`                           | `'/ai'`                      | Base path for all AI endpoints.                                                                   |
+| `basePath`                | `string`                           | `'/api/ai'`                  | Base path for all AI endpoints.                                                                   |
 | `messages`                | `Translation`                      | English defaults             | Localized error messages and default system prompt. Import from `@laikacms/decap-ai/i18n/en` etc. |
 | `logger`                  | `Logger`                           | no-op                        | Pluggable structured logger (`debug`, `info`, `warn`, `error`).                                   |
 
@@ -118,7 +118,7 @@ export async function POST(request: Request) {
 | `model`                   | `LanguageModel`      | _required_  | Vercel AI SDK language model instance (e.g., `anthropic('claude-3-5-sonnet-20241022')`, `openai('gpt-4o')`).              |
 | `callbacks`               | `AiSessionCallbacks` | _required_  | Session storage implementation: `createSession`, `getSession`, `getSessionsByDocument`, `updateSession`, `deleteSession`. |
 | `tools`                   | `ToolSet`            | `undefined` | Custom server-side tools (use the Vercel AI SDK `tool()` function to define them).                                        |
-| `basePath`                | `string`             | `'/ai'`     | Base path for API endpoints (`/health`, `/chat`, `/sessions`).                                                            |
+| `basePath`                | `string`             | `'/api/ai'` | Base path for API endpoints (`/health`, `/chat`, `/sessions`).                                                            |
 | `maxOutputTokens`         | `number`             | `4096`      | Maximum tokens in the model response.                                                                                     |
 | `temperature`             | `number`             | `0.7`       | Sampling temperature (0–2); higher values increase randomness.                                                            |
 | `systemPrompt`            | `string`             | `undefined` | System prompt prepended to all conversations; overrides the default from `messages` translation.                          |

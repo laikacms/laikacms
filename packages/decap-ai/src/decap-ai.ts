@@ -69,7 +69,7 @@ function getMessageText(message: unknown): string | undefined {
 }
 
 export function decapAi(config: DecapAiConfig): DecapAi {
-  const basePath = normalizePath(config.basePath ?? '/ai');
+  const basePath = normalizePath(config.basePath ?? '/api/ai');
   const t = config.messages ?? en;
   const systemPrompt = config.systemPrompt ?? t.systemPrompt;
   const maxOutputTokens = config.maxOutputTokens ?? 4096;

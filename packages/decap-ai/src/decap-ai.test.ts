@@ -103,6 +103,21 @@ function makeRequest(
 // ---------------------------------------------------------------------------
 
 describe('decapAi()', () => {
+  describe('default basePath', () => {
+    it('defaults to /api/ai — health is reachable without explicit basePath', async () => {
+      const { basePath: _omit, ...baseConfig } = makeConfig();
+      const adapter = decapAi(baseConfig);
+      const res = await adapter.fetch(makeRequest('/api/ai/health', { token: null }));
+      expect(res.status).toBe(200);
+    });
+
+    it('routes to /ai when basePath is set to /ai', async () => {
+      const adapter = decapAi(makeConfig({ basePath: '/ai' }));
+      const res = await adapter.fetch(makeRequest('/ai/health', { token: null }));
+      expect(res.status).toBe(200);
+    });
+  });
+
   describe('authentication', () => {
     it('returns 401 when Authorization header is missing', async () => {
       const adapter = decapAi(makeConfig());
