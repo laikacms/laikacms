@@ -586,7 +586,10 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           depth,
         }),
       );
-      if (Result.isFailure(result)) return failResponse(result);
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return failResponse(result, status);
+      }
       const allResults = result.success.data as ReadonlyArray<{
         type: string,
         key: string,
@@ -633,7 +636,10 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           depth,
         }),
       );
-      if (Result.isFailure(result)) return failResponse(result);
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return failResponse(result, status);
+      }
       const allResults = result.success.data as ReadonlyArray<{
         type: string,
         key: string,
@@ -860,7 +866,10 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       const result = await runStreamWithDone(
         repo.listRevisions(key, { pagination: parsePaginationQuery(queryParams) }),
       );
-      if (Result.isFailure(result)) return failResponse(result);
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return failResponse(result, status);
+      }
 
       return respondCollection(
         request,
