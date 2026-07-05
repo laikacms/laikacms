@@ -260,8 +260,7 @@ describe('GET /capabilities', () => {
 
     const api = buildJsonApi({ repo });
     const res = await api.fetch(new Request('http://localhost/capabilities'));
-    // capabilities route calls failResponse without a status arg — always 400
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
 
     const body = await res.json() as { errors: Array<{ status: string }> };
     expect(body.errors).toHaveLength(1);

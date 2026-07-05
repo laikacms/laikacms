@@ -298,6 +298,20 @@ describe('GET /capabilities', () => {
     expect(body.data.id).toBe('self');
     expect(body.data.attributes.compatibilityDate).toBe('2026-01-01');
   });
+
+  it('returns mapped HTTP status when repo fails', async () => {
+    const partialRepo = {
+      getCapabilities: () => LaikaTask.make(() => Effect.fail(new NotFoundError('capabilities unavailable'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/capabilities'));
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+  });
 });
 
 // ---------------------------------------------------------------------------
