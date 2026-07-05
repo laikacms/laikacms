@@ -122,6 +122,18 @@ const ADMIN_HTML = `<!doctype html>
   <head>
     <meta charset="utf-8" />
     <title>My Admin</title>
+    <!--
+      Import map: resolves the bare @laikacms/decap specifier for the browser.
+      esm.sh re-bundles the package on the fly and handles all transitive imports.
+      Pin to a specific version (e.g. @1.0.1) in production.
+    -->
+    <script type="importmap">
+    {
+      "imports": {
+        "@laikacms/decap/decap-cms-backend-laika": "https://esm.sh/@laikacms/decap/decap-cms-backend-laika"
+      }
+    }
+    </script>
   </head>
   <body>
     <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
