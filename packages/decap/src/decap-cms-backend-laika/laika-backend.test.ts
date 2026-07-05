@@ -420,6 +420,38 @@ describe('LaikaBackend.entriesByFolder()', () => {
     expect(entries).toHaveLength(1);
     expect(entries[0].file.path).toBe('articles/ok');
   });
+
+  it('returns all 110 entries when collection exceeds the 100-entry page size', async () => {
+    const page1 = Array.from({ length: 100 }, (_, i) => ({
+      key: `articles/entry-${i}`,
+      content: { title: `Entry ${i}` },
+      type: 'published' as const,
+    }));
+    const page2 = Array.from({ length: 10 }, (_, i) => ({
+      key: `articles/entry-${100 + i}`,
+      content: { title: `Entry ${100 + i}` },
+      type: 'published' as const,
+    }));
+
+    mockDocRepo.listRecords
+      .mockReturnValueOnce(LaikaStream.succeedMany(page1 as any[], {}))
+      .mockReturnValueOnce(LaikaStream.succeedMany(page2 as any[], {}));
+
+    const entries = await backend.entriesByFolder('articles', 'json', 1);
+
+    expect(entries).toHaveLength(110);
+    expect(entries[0].file.path).toBe('articles/entry-0');
+    expect(entries[100].file.path).toBe('articles/entry-100');
+    expect(mockDocRepo.listRecords).toHaveBeenCalledTimes(2);
+    expect(mockDocRepo.listRecords).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ pagination: { limit: 100, offset: 0 } }),
+    );
+    expect(mockDocRepo.listRecords).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ pagination: { limit: 100, offset: 100 } }),
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
