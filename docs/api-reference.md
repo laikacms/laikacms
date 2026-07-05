@@ -21,6 +21,11 @@ specification. All responses use the `application/vnd.api+json` content type.
   `{ "atomic:results": [ ... ] }`.
 - Cursor-based pagination is controlled with `page[after]` (forward) / `page[before]` (backward) and
   `page[size]` query parameters. Offset-based pagination uses `page[offset]` and `page[limit]`.
+  **Cursor pagination is backend-specific.** Not all storage backends support `page[after]` /
+  `page[before]`; backends like `FileSystemStorageRepository` and `R2StorageRepository` only support
+  offset- and page-based pagination. Sending a cursor param to an unsupported backend returns a
+  `400 Bad Request` with a `invalid_data` error. Inspect `GET /capabilities`
+  (`attributes.pagination.styles.cursor`) to confirm cursor support before using these params.
 
 ---
 
