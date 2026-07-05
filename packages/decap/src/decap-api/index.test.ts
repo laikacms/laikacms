@@ -344,6 +344,27 @@ describe('URL query-string api_key', () => {
     expect(result).toBeInstanceOf(Response);
     expect((result as Response).status).toBe(401);
   });
+
+  it('rejects explicitly even when a valid Bearer token is also present', async () => {
+    // This test proves the 401 is an explicit rejection of ?api_key=, not an
+    // accidental side-effect of missing credentials — a valid Bearer token does
+    // NOT rescue a request that carries an api_key URL parameter.
+    const authenticateAccessToken = vi.fn().mockResolvedValue(MOCK_USER);
+    const authenticateApiToken = vi.fn().mockResolvedValue(MOCK_USER);
+    const api = decapApi(makeOptions({ authenticateAccessToken, authenticateApiToken }));
+
+    const result = await api.authenticateRequest(
+      new Request(`${BASE_URL}/documents?api_key=secret`, {
+        headers: { Authorization: 'Bearer good-token' },
+      }),
+    );
+
+    // Despite a valid Bearer header, the request must be rejected
+    expect(authenticateAccessToken).not.toHaveBeenCalled();
+    expect(authenticateApiToken).not.toHaveBeenCalled();
+    expect(result).toBeInstanceOf(Response);
+    expect((result as Response).status).toBe(401);
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -111,11 +111,25 @@ export const decapApi = (options: DecapOptions): DecapApi => {
     // Bearer credentials must never be accepted via URL query strings
     // (RFC 6750 §2.3, OWASP API Security): they leak through server logs,
     // CDN logs, browser history, and the Referer header. If a caller still
-    // sends `?api_key=…`, surface it as an error rather than honoring it.
+    // sends `?api_key=…`, reject the entire request immediately — do not fall
+    // through to Bearer auth, as that would allow credentials in URLs to
+    // silently succeed when paired with a valid Authorization header.
     if (new URL(request.url).searchParams.has('api_key')) {
       options.logger?.warn(
         'Rejecting api_key supplied via URL query string. Use the X-API-Key header or '
           + 'Authorization: ApiKey <key>.',
+      );
+      await addTimingJitter();
+      return new Response(
+        JSON.stringify(
+          errorToJsonApiMapper(
+            new AuthenticationError(
+              'api_key supplied as a URL query parameter is not accepted. '
+                + 'Use the X-API-Key header or Authorization: ApiKey <key>.',
+            ),
+          ),
+        ),
+        { status: 401, headers: SECURITY_HEADERS },
       );
     }
 
