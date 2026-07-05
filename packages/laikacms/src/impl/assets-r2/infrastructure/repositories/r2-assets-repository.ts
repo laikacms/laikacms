@@ -35,11 +35,9 @@ import { R2AssetsDataSource } from '../datasources/r2-assets-datasource.js';
 const liftResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
   Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
 
-export interface R2AssetsRepositoryOptions {
-  bucket: R2Bucket;
-  sanitizer: Sanitizer | { dangerouslyAllowAllFiles: true };
-  createUrl?: (url: string) => string;
-}
+export type R2AssetsRepositoryOptions =
+  | { bucket: R2Bucket, sanitizer: Sanitizer, createUrl?: (url: string) => string }
+  | { bucket: R2Bucket, dangerouslyAllowAllFiles: true, createUrl?: (url: string) => string };
 
 export class R2AssetsRepository extends AssetsRepository {
   private readonly datasource: R2AssetsDataSource;
@@ -48,21 +46,18 @@ export class R2AssetsRepository extends AssetsRepository {
 
   constructor(options: R2AssetsRepositoryOptions) {
     super();
-    const hasSanitizer = 'sanitizer' in options && options.sanitizer !== undefined;
-    const hasDangerousFlag = 'dangerouslyAllowAllFiles' in options && options.dangerouslyAllowAllFiles === true;
-    if (!hasSanitizer && !hasDangerousFlag) {
+    if (
+      !('sanitizer' in options) && !('dangerouslyAllowAllFiles' in options && options.dangerouslyAllowAllFiles === true)
+    ) {
       throw new Error(
         'R2AssetsRepository requires either a `sanitizer` to strip privacy-sensitive metadata from files, '
           + 'or `dangerouslyAllowAllFiles: true` to explicitly bypass sanitization. '
           + 'See https://docs.laika-cms.com/security/file-sanitization for more information.',
       );
     }
-
     this.datasource = new R2AssetsDataSource(options.bucket);
     this.createUrl = options.createUrl;
-    const noSanitizer = 'dangerouslyAllowAllFiles' in options && options.dangerouslyAllowAllFiles === true;
-    const sanitizer = noSanitizer ? undefined : options.sanitizer as Sanitizer;
-    this.sanitizer = 'sanitizer' in options && !noSanitizer ? sanitizer : undefined;
+    this.sanitizer = 'dangerouslyAllowAllFiles' in options ? undefined : options.sanitizer;
   }
 
   getCapabilities(): LaikaTask.LaikaTask<AssetsCapabilities> {
