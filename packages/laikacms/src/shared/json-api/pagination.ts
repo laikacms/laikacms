@@ -201,9 +201,11 @@ export function parsePaginationQuery(query: Record<string, string | string[] | u
     };
   }
 
-  // Default to cursor-based pagination
+  // Default to cursor-based pagination (no recognised pagination key present).
+  // Honour a standalone page[size] so that ?page[size]=N works without pairing.
+  const sizeStr = pageSize && (Array.isArray(pageSize) ? pageSize[0] : pageSize);
   return {
     after: undefined,
-    perPage: 10,
+    perPage: sizeStr ? parseInt(sizeStr, 10) : 10,
   };
 }
