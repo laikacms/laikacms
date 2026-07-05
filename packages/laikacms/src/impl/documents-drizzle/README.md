@@ -64,7 +64,12 @@ const repo = new DrizzleDocumentsRepository({
 });
 
 const { items } = await collectStream(
-  repo.listRecords({ type: 'published', depth: 1, pagination: { offset: 0, limit: 50 } }),
+  repo.listRecords({
+    folder: 'posts',
+    type: 'published',
+    depth: 1,
+    pagination: { offset: 0, limit: 50 },
+  }),
 );
 ```
 
