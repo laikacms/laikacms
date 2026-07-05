@@ -7,7 +7,7 @@ import { applyPatch, type Operation } from 'fast-json-patch';
 import { fromJS, type List, type Map } from 'immutable';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { connect } from 'react-redux';
-import en from './i18n/nl';
+import en from './i18n/en';
 import type { AiChatWidgetOptions, DocumentContext, SessionSummary } from './types';
 import { changeDraftField, type I18nInfo, selectFields } from './utils';
 import { getI18nInfo } from './utils';
