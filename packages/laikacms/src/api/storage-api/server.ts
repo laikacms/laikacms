@@ -375,8 +375,34 @@ export function buildJsonApi(options: StorageApiOptions) {
     const [resource, rawKey] = path.split('/');
     const key = rawKey === undefined ? undefined : safeDecode(rawKey);
 
+    // Returns a 400 response if the client requested cursor pagination but the
+    // backend has declared it unsupported in its capabilities. Returns null
+    // when cursor pagination is either not requested or is supported.
+    const rejectUnsupportedCursor = async (queryParams: Record<string, string>): Promise<Response | null> => {
+      const hasAfter = queryParams['page[after]'] !== undefined;
+      const hasBefore = queryParams['page[before]'] !== undefined;
+      if (!hasAfter && !hasBefore) return null;
+      const capsResult = await runTask(repo.getCapabilities());
+      if (Result.isFailure(capsResult)) return null; // can't check; let the list proceed
+      const caps = capsResult.success;
+      const cursorSupported = caps.pagination.supported && caps.pagination.styles.cursor;
+      if (cursorSupported) return null;
+      return failResponse(
+        Result.fail(
+          new InvalidData(
+            'Cursor pagination (page[after] / page[before]) is not supported by this storage backend. '
+              + 'Use page[number] / page[size] or page[offset] / page[limit] instead. '
+              + 'Consult GET /capabilities for the pagination modes this backend supports.',
+          ),
+        ),
+        400,
+      );
+    };
+
     const listFullAtoms = async () => {
       const queryParams = Object.fromEntries(url.searchParams.entries());
+      const cursorRejection = await rejectUnsupportedCursor(queryParams);
+      if (cursorRejection) return cursorRejection;
       const hasPaginationParam = Object.keys(queryParams).some(k => k.startsWith('page['));
       const pagination = hasPaginationParam ? parsePaginationQuery(queryParams) : { perPage: 100 };
       const rawDepth = parseInt(queryParams['filter[depth]'] ?? '1', 10);
@@ -400,6 +426,8 @@ export function buildJsonApi(options: StorageApiOptions) {
 
     const listAtomSummaries = async () => {
       const queryParams = Object.fromEntries(url.searchParams.entries());
+      const cursorRejection = await rejectUnsupportedCursor(queryParams);
+      if (cursorRejection) return cursorRejection;
       const hasPaginationParam = Object.keys(queryParams).some(k => k.startsWith('page['));
       const pagination = hasPaginationParam ? parsePaginationQuery(queryParams) : { perPage: 100 };
       const rawDepth = parseInt(queryParams['filter[depth]'] ?? '1', 10);

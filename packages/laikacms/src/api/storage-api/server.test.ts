@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { BadRequestError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type {
+  Capabilities,
   Folder,
   FolderCreate,
   ListAtomsDone,
@@ -11,6 +12,7 @@ import type {
   StorageObjectCreate,
   StorageRepository,
 } from 'laikacms/storage';
+import { CompatibilityDate } from 'laikacms/storage';
 
 import { buildJsonApi } from './server.js';
 
@@ -596,5 +598,130 @@ describe('PATCH /objects — unknown attribute key rejection (LCMS-254)', () => 
     expect(res.status).toBe(400);
     const body = await res.json() as { errors: Array<{ detail: string }> };
     expect(body.errors[0]?.detail).toContain('title');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /capabilities (LCMS-178)
+// ---------------------------------------------------------------------------
+
+const makeStorageCapabilities = (cursorSupported = false): Capabilities => ({
+  compatibilityDate: CompatibilityDate.make('2026-01-01'),
+  fileExtensions: { supported: false, description: 'No file extensions' },
+  pagination: {
+    supported: true,
+    description: 'Offset/page based',
+    styles: { offset: true, page: true, cursor: cursorSupported },
+  },
+});
+
+describe('GET /capabilities (LCMS-178)', () => {
+  it('returns 200 with storage-capabilities resource', async () => {
+    const caps = makeStorageCapabilities();
+    const repo = {
+      getCapabilities: () => LaikaTask.make(() => Effect.succeed(caps)),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/capabilities'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      data: { type: string, id: string, attributes: Capabilities },
+    };
+    expect(body.data.type).toBe('storage-capabilities');
+    expect(body.data.id).toBe('self');
+    expect(body.data.attributes.compatibilityDate).toBe('2026-01-01');
+    expect(body.data.attributes.pagination.supported).toBe(true);
+  });
+
+  it('returns JSON:API error shape (404) when repo.getCapabilities() fails', async () => {
+    const repo = {
+      getCapabilities: () => LaikaTask.make(() => Effect.fail(new NotFoundError('unavailable'))),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/capabilities'));
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Cursor pagination rejection (LCMS-172)
+// ---------------------------------------------------------------------------
+
+describe('GET /atoms — cursor pagination rejection (LCMS-172)', () => {
+  const makeCursorAwareRepo = (cursorSupported: boolean) =>
+    ({
+      getCapabilities: () => LaikaTask.make(() => Effect.succeed(makeStorageCapabilities(cursorSupported))),
+      listAtoms: () =>
+        LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+          emit =>
+            Effect.gen(function*() {
+              yield* emit.data({
+                type: 'folder',
+                key: 'a',
+                createdAt: '2026-01-01T00:00:00Z',
+                updatedAt: '2026-01-01T00:00:00Z',
+              });
+              return {};
+            }),
+        ),
+      listAtomSummaries: () =>
+        LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+          emit =>
+            Effect.gen(function*() {
+              yield* emit.data({
+                type: 'folder',
+                key: 'a',
+                createdAt: '2026-01-01T00:00:00Z',
+                updatedAt: '2026-01-01T00:00:00Z',
+              });
+              return {};
+            }),
+        ),
+    }) as unknown as StorageRepository;
+
+  it('GET /atoms rejects page[after] with 400 when backend has cursor: false', async () => {
+    const api = buildJsonApi({ repo: makeCursorAwareRepo(false) });
+    const res = await api.fetch(new Request('http://localhost/atoms/posts?page[after]=e04&page[size]=5'));
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ detail: string }> };
+    expect(body.errors[0]!.detail).toContain('page[after]');
+    expect(body.errors[0]!.detail).toContain('not supported');
+  });
+
+  it('GET /atoms rejects page[before] with 400 when backend has cursor: false', async () => {
+    const api = buildJsonApi({ repo: makeCursorAwareRepo(false) });
+    const res = await api.fetch(new Request('http://localhost/atoms/posts?page[before]=e10'));
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ detail: string }> };
+    expect(body.errors[0]!.detail).toContain('page[before]');
+    expect(body.errors[0]!.detail).toContain('not supported');
+  });
+
+  it('GET /atoms allows page[after] when backend has cursor: true', async () => {
+    const api = buildJsonApi({ repo: makeCursorAwareRepo(true) });
+    const res = await api.fetch(new Request('http://localhost/atoms/posts?page[after]=e04'));
+    expect(res.status).toBe(200);
+  });
+
+  it('GET /atom-summaries rejects page[after] with 400 when backend has cursor: false', async () => {
+    const api = buildJsonApi({ repo: makeCursorAwareRepo(false) });
+    const res = await api.fetch(new Request('http://localhost/atom-summaries/posts?page[after]=e04&page[size]=5'));
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ detail: string }> };
+    expect(body.errors[0]!.detail).toContain('page[after]');
+    expect(body.errors[0]!.detail).toContain('not supported');
+  });
+
+  it('GET /atom-summaries allows page[after] when backend has cursor: true', async () => {
+    const api = buildJsonApi({ repo: makeCursorAwareRepo(true) });
+    const res = await api.fetch(new Request('http://localhost/atom-summaries/posts?page[after]=e04'));
+    expect(res.status).toBe(200);
   });
 });
