@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { InvalidData, LaikaStream, LaikaTask } from 'laikacms/core';
+import { InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 
 import { DocumentsJsonApiProxyRepository } from './documents-jsonapi-proxy-repository.js';
 
@@ -217,5 +217,89 @@ describe('DocumentsJsonApiProxyRepository.listRevisions', () => {
 
     expect(collected.data).toHaveLength(1);
     expect(collected.done.total).toBe(150);
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository error rehydration', () => {
+  it('getDocument: 404 with code=not_found resolves to NotFoundError, not InvalidData', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          {
+            errors: [
+              {
+                status: '404',
+                code: 'not_found',
+                title: 'Not Found',
+                detail: 'The document at key posts/missing does not exist',
+              },
+            ],
+          },
+          404,
+        )
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const result = await LaikaTask.runPromiseCollect(proxy.getDocument('posts/missing')).catch(
+      e => e,
+    );
+
+    expect(result).toBeInstanceOf(NotFoundError);
+    expect((result as NotFoundError).code).toBe('not_found');
+  });
+
+  it('getUnpublished: 404 with code=not_found resolves to NotFoundError', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          {
+            errors: [
+              {
+                status: '404',
+                code: 'not_found',
+                title: 'Not Found',
+                detail: 'The document at key drafts/missing does not exist',
+              },
+            ],
+          },
+          404,
+        )
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const result = await LaikaTask.runPromiseCollect(proxy.getUnpublished('drafts/missing')).catch(
+      e => e,
+    );
+
+    expect(result).toBeInstanceOf(NotFoundError);
+  });
+
+  it('getDocument: error without code field falls back to InvalidData', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          {
+            errors: [
+              {
+                status: '422',
+                title: 'Unprocessable Entity',
+                detail: 'Some unknown error',
+              },
+            ],
+          },
+          422,
+        )
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const result = await LaikaTask.runPromiseCollect(proxy.getDocument('posts/bad')).catch(e => e);
+
+    expect(result).toBeInstanceOf(InvalidData);
   });
 });
