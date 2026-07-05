@@ -589,24 +589,17 @@ export default function createLaikaBackend(
     async entriesByFolder(folder: string, _extension: string, _depth: number): Promise<ImplementationEntry[]> {
       const repo = this.getDocumentsRepo();
       const entries: ImplementationEntry[] = [];
+      const pageSize = 100;
+      let offset = 0;
 
-      const pagination: Pagination = { limit: 100, offset: 0 };
+      while (true) {
+        const pagination: Pagination = { limit: pageSize, offset };
+        const result = await collectStream(
+          repo.listRecords({ pagination, folder, type: 'published', depth: 10 }),
+        );
+        if (Result.isFailure(result)) throw result.failure;
 
-      for await (
-        const chunk of repo.listRecords({
-          pagination,
-          folder,
-          type: 'published',
-          depth: 10,
-        })
-      ) {
-        for (const el of chunk) {
-          if (el._tag === 'RecoverableError') {
-            console.error('Warning while listing records:', el.error);
-            continue;
-          }
-          if (el._tag !== 'Data') continue;
-          const record = el.value;
+        for (const record of result.success) {
           if (record.type === 'published') {
             const entry: ImplementationEntry = {
               file: { path: record.key, id: record.key },
@@ -616,6 +609,9 @@ export default function createLaikaBackend(
             this.entryCache.set(record.key, entry);
           }
         }
+
+        if (result.success.length < pageSize) break;
+        offset += pageSize;
       }
 
       return entries;
