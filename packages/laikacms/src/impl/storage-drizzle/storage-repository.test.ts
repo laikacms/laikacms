@@ -66,7 +66,7 @@ describe('DrizzleStorageRepository.removeAtoms', () => {
     expect(collected.recoverableErrors[0]!.message).toContain('boom: connection lost');
   });
 
-  it('emits ForbiddenError and counts skipped when delete returns 0 rows and children exist (folder key)', async () => {
+  it('emits ForbiddenError and counts skipped when key has children (folder prefix) — key has no own row', async () => {
     const repo = makeRepo(
       async () => [],
       async () => [row('folder/child')],
@@ -81,6 +81,28 @@ describe('DrizzleStorageRepository.removeAtoms', () => {
     expect(collected.recoverableErrors).toHaveLength(1);
     expect(collected.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
     expect(collected.recoverableErrors[0]!.message).toContain("'folder'");
+  });
+
+  it('emits ForbiddenError and does NOT delete when key has its own DB row AND has children (bypass bug LCMS-204)', async () => {
+    let deleteCalled = false;
+    const repo = makeRepo(
+      async () => {
+        deleteCalled = true;
+        return [row('posts/hello')];
+      },
+      async () => [row('posts/hello/world')],
+    );
+
+    const collected = await Effect.runPromise(
+      LaikaStream.runCollect(repo.removeAtoms(['posts/hello'])),
+    );
+
+    expect(collected.data).toEqual([]);
+    expect(collected.done).toEqual({ removed: 0, skipped: 1 });
+    expect(collected.recoverableErrors).toHaveLength(1);
+    expect(collected.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+    expect(collected.recoverableErrors[0]!.message).toContain("'posts/hello'");
+    expect(deleteCalled).toBe(false);
   });
 
   it('emits NotFoundError and counts skipped when delete returns 0 rows and no children exist (missing key)', async () => {

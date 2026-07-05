@@ -110,6 +110,23 @@ export class DrizzleStorageRepository extends StorageRepository {
         let removed = 0;
         let skipped = 0;
         for (const key of keys) {
+          // Pre-check: refuse to delete if this key is a folder prefix (has children).
+          // Must happen before the DELETE so a key that exists as both a DB row and a
+          // folder prefix is correctly blocked (post-delete check would never fire then).
+          const children = yield* Effect.promise(() =>
+            this.options.callbacks.select({
+              where: this.options.queryBuilders.keyStartsWith(`${key}/`),
+              limit: 1,
+            })
+          );
+          if (children.length > 0) {
+            yield* emit.recoverableError(
+              new ForbiddenError(`Cannot remove folder key via removeAtoms: '${key}'`),
+            );
+            skipped += 1;
+            continue;
+          }
+
           const attempt = yield* Effect.result(
             Effect.tryPromise({
               try: () =>
@@ -129,19 +146,7 @@ export class DrizzleStorageRepository extends StorageRepository {
             continue;
           }
           if (attempt.success.length === 0) {
-            const children = yield* Effect.promise(() =>
-              this.options.callbacks.select({
-                where: this.options.queryBuilders.keyStartsWith(`${key}/`),
-                limit: 1,
-              })
-            );
-            if (children.length > 0) {
-              yield* emit.recoverableError(
-                new ForbiddenError(`Cannot remove folder key via removeAtoms: '${key}'`),
-              );
-            } else {
-              yield* emit.recoverableError(new NotFoundError(`No atom found at key "${key}"`));
-            }
+            yield* emit.recoverableError(new NotFoundError(`No atom found at key "${key}"`));
             skipped += 1;
             continue;
           }
