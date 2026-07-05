@@ -741,6 +741,148 @@ describe('GET /record-summaries — error HTTP status', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /unpublished/:key (LCMS-187)
+// ---------------------------------------------------------------------------
+
+describe('GET /unpublished/:key', () => {
+  it('returns 200 with unpublished resource', async () => {
+    const draft = makeUnpublished('posts/draft');
+    const repo = {
+      getUnpublished: (_key: string) => LaikaTask.make(() => Effect.succeed(draft)),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/unpublished/posts%2Fdraft'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('unpublished');
+    expect(body.data.id).toBe('posts/draft');
+  });
+
+  it('returns 404 JSON:API error when draft not found', async () => {
+    const repo = {
+      getUnpublished: (_key: string) => LaikaTask.make(() => Effect.fail(new NotFoundError('draft not found'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/unpublished/posts%2Fmissing'));
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /unpublished/:key (LCMS-187)
+// ---------------------------------------------------------------------------
+
+describe('PATCH /unpublished/:key', () => {
+  it('returns 200 with updated unpublished resource', async () => {
+    const draft = makeUnpublished('posts/draft');
+    const repo = {
+      updateUnpublished: vi.fn(() => LaikaTask.make(() => Effect.succeed(draft))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fdraft', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'unpublished',
+            id: 'posts/draft',
+            attributes: { status: 'draft', content: { title: 'Updated Draft' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('unpublished');
+    expect(body.data.id).toBe('posts/draft');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /unpublished/:key (LCMS-187)
+// ---------------------------------------------------------------------------
+
+describe('DELETE /unpublished/:key', () => {
+  it('returns 200 with meta.deleted on successful delete', async () => {
+    const repo = {
+      deleteUnpublished: vi.fn((_key: string) => LaikaTask.make(() => Effect.succeed(undefined))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fdraft', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { meta: { deleted: boolean } };
+    expect(body.meta.deleted).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /published/:key/unpublish (LCMS-187)
+// ---------------------------------------------------------------------------
+
+describe('POST /published/:key/unpublish', () => {
+  it('returns 200 with unpublished resource after unpublishing', async () => {
+    const draft = makeUnpublished('posts/hello');
+    const repo = {
+      unpublish: vi.fn((_key: string, _status: string) => LaikaTask.make(() => Effect.succeed(draft))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fhello/unpublish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: { type: 'unpublished', attributes: { status: 'draft' } },
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('unpublished');
+    expect(body.data.id).toBe('posts/hello');
+  });
+
+  it('returns 404 JSON:API error when published document not found', async () => {
+    const repo = {
+      unpublish: vi.fn((_key: string, _status: string) =>
+        LaikaTask.make(() => Effect.fail(new NotFoundError('document not found')))
+      ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fmissing/unpublish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: { type: 'unpublished', attributes: { status: 'draft' } },
+        }),
+      }),
+    );
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+  });
+});
+
+// ---------------------------------------------------------------------------
 
 describe('404 on unknown routes', () => {
   it('returns 404 JSON:API error shape on unknown path', async () => {
