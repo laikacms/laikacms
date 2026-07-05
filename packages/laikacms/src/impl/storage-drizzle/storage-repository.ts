@@ -273,7 +273,7 @@ export class DrizzleStorageRepository extends StorageRepository {
             values: {
               key: keepKey,
               type: 'keep-file',
-              content: '',
+              content: 'null',
               depth: this.calculateDepth(keepKey),
               createdAt: now,
               updatedAt: now,
@@ -334,6 +334,7 @@ export class DrizzleStorageRepository extends StorageRepository {
 
         let emitted = 0;
         for (const row of rows) {
+          if (row.type === 'keep-file') continue;
           const parsed = yield* Effect.result(this.parseObjectRow(row));
           if (parsed._tag === 'Failure') {
             yield* emit.recoverableError(parsed.failure);
