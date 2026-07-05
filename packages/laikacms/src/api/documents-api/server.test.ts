@@ -5,6 +5,7 @@ import type {
   DocumentsRepository,
   ListRecordsDone,
   ListRecordsOptions,
+  ListRecordSummaries,
 } from 'laikacms/documents';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -570,6 +571,108 @@ describe('POST /revisions', () => {
 
 // ---------------------------------------------------------------------------
 // 404 on unknown endpoint
+// ---------------------------------------------------------------------------
+
+// ---------------------------------------------------------------------------
+
+describe('GET /record-summaries', () => {
+  it('returns 200 with published-summary and unpublished-summary types from correct backends', async () => {
+    const partialRepo = {
+      listRecordSummaries: (_options: ListRecordSummaries) =>
+        LaikaStream.make<
+          {
+            type: 'published-summary' | 'unpublished-summary',
+            key: string,
+            status: string,
+            language: string,
+            createdAt: string,
+            updatedAt: string,
+          },
+          ListRecordsDone
+        >(emit =>
+          Effect.gen(function*() {
+            yield* emit.data({
+              type: 'published-summary',
+              key: 'posts/hello',
+              status: 'published',
+              language: 'en',
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+            });
+            yield* emit.data({
+              type: 'unpublished-summary',
+              key: 'posts/draft',
+              status: 'draft',
+              language: 'en',
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+            });
+            return { total: 2 };
+          })
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/record-summaries'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: Array<{ id: string, type: string }> };
+    expect(body.data).toHaveLength(2);
+    expect(body.data[0]!.type).toBe('published-summary');
+    expect(body.data[0]!.id).toBe('posts/hello');
+    expect(body.data[1]!.type).toBe('unpublished-summary');
+    expect(body.data[1]!.id).toBe('posts/draft');
+  });
+
+  it('returns 200 with published/unpublished types from drizzle-shaped backends (backward compat)', async () => {
+    const partialRepo = {
+      listRecordSummaries: (_options: ListRecordSummaries) =>
+        LaikaStream.make<
+          {
+            type: 'published' | 'unpublished',
+            key: string,
+            status: string,
+            language: string,
+            createdAt: string,
+            updatedAt: string,
+          },
+          ListRecordsDone
+        >(emit =>
+          Effect.gen(function*() {
+            yield* emit.data({
+              type: 'published',
+              key: 'posts/hello',
+              status: 'published',
+              language: 'en',
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+            });
+            yield* emit.data({
+              type: 'unpublished',
+              key: 'posts/draft',
+              status: 'draft',
+              language: 'en',
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+            });
+            return { total: 2 };
+          })
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/record-summaries'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: Array<{ id: string, type: string }> };
+    expect(body.data).toHaveLength(2);
+    expect(body.data[0]!.type).toBe('published-summary');
+    expect(body.data[0]!.id).toBe('posts/hello');
+    expect(body.data[1]!.type).toBe('unpublished-summary');
+    expect(body.data[1]!.id).toBe('posts/draft');
+  });
+});
+
 // ---------------------------------------------------------------------------
 
 describe('404 on unknown routes', () => {

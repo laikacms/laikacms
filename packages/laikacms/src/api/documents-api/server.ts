@@ -635,10 +635,12 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       const transformedResults = allResults.map(entry => {
         switch (entry.type) {
           case 'published':
+          case 'published-summary':
             return documentSummaryToJsonApi(
               { ...entry, type: 'published-summary' } as Parameters<typeof documentSummaryToJsonApi>[0],
             );
           case 'unpublished':
+          case 'unpublished-summary':
             return unpublishedSummaryToJsonApi(
               { ...entry, type: 'unpublished-summary' } as Parameters<typeof unpublishedSummaryToJsonApi>[0],
             );
