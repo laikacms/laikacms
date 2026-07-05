@@ -4,6 +4,25 @@ import { InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/cor
 
 import { DocumentsJsonApiProxyRepository } from './documents-jsonapi-proxy-repository.js';
 
+// Minimal valid JSON:API resource shapes reused across tests
+const publishedDoc = (id = 'posts/hello') => ({
+  type: 'published',
+  id,
+  attributes: { type: 'published', status: 'published', language: 'en', content: { title: 'Hello' } },
+});
+
+const unpublishedDoc = (id = 'drafts/hello', status = 'draft') => ({
+  type: 'unpublished',
+  id,
+  attributes: { type: 'unpublished', status, language: 'en', content: { title: 'Draft' } },
+});
+
+const revisionDoc = (id = 'posts/hello', revision = 'rev-abc') => ({
+  type: 'revision',
+  id,
+  attributes: { type: 'revision', revision, language: 'en', content: {}, createdAt: '2026-01-01T00:00:00Z' },
+});
+
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -217,6 +236,370 @@ describe('DocumentsJsonApiProxyRepository.listRevisions', () => {
 
     expect(collected.data).toHaveLength(1);
     expect(collected.done.total).toBe(150);
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.getCapabilities', () => {
+  it('returns capabilities from the remote /capabilities endpoint', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          data: {
+            attributes: {
+              compatibilityDate: '2026-05-11',
+              pagination: {
+                supported: true,
+                description: 'forwarded',
+                styles: { offset: true, page: true, cursor: true },
+              },
+            },
+          },
+        })
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const caps = await LaikaTask.runPromise(proxy.getCapabilities());
+    expect(caps.compatibilityDate).toBe('2026-05-11');
+    expect(caps.pagination?.supported).toBe(true);
+  });
+
+  it('returns the conservative fallback when /capabilities is not available (404)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          { errors: [{ status: '404', code: 'not_found', title: 'Not Found' }] },
+          404,
+        )
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const caps = await LaikaTask.runPromise(proxy.getCapabilities());
+    expect(caps.pagination?.supported).toBe(true);
+  });
+
+  it('caches capabilities after the first successful call (fetch called only once)', async () => {
+    const mockFetch = vi.fn(async () =>
+      jsonResponse({
+        data: {
+          attributes: {
+            compatibilityDate: '2026-05-11',
+            pagination: { supported: true, styles: { offset: true, page: true, cursor: true } },
+          },
+        },
+      })
+    );
+    vi.stubGlobal('fetch', mockFetch);
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await LaikaTask.runPromise(proxy.getCapabilities());
+    await LaikaTask.runPromise(proxy.getCapabilities());
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.getDocument', () => {
+  it('returns a Document with the correct key', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ data: publishedDoc('posts/hello') })),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const doc = await LaikaTask.runPromise(proxy.getDocument('posts/hello'));
+    expect(doc.key).toBe('posts/hello');
+    expect(doc.type).toBe('published');
+    expect(doc.content).toEqual({ title: 'Hello' });
+  });
+
+  it('URL-encodes the key in the request path', async () => {
+    let capturedUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        capturedUrl = url;
+        return jsonResponse({ data: publishedDoc('posts/hello world') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await LaikaTask.runPromise(proxy.getDocument('posts/hello world'));
+    expect(capturedUrl).toContain('/published/posts%2Fhello%20world');
+  });
+
+  it('re-emits meta.warnings from the response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          data: publishedDoc(),
+          meta: {
+            warnings: [
+              { code: 'invalid_data', status: '400', title: 'Invalid Data', detail: 'stale revision ref' },
+            ],
+          },
+        })
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaTask.runPromiseCollect(proxy.getDocument('posts/hello'));
+    expect(collected.recoverableErrors).toHaveLength(1);
+    expect(collected.recoverableErrors[0]!.message).toContain('stale revision ref');
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.createDocument', () => {
+  it('POSTs to /published and returns the created Document', async () => {
+    let capturedInit: RequestInit | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (_url: string, init: RequestInit) => {
+        capturedInit = init;
+        return jsonResponse({ data: publishedDoc('posts/new') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const doc = await LaikaTask.runPromise(
+      proxy.createDocument({
+        key: 'posts/new',
+        type: 'published',
+        status: 'published',
+        language: 'en',
+        content: { body: 'Hi' },
+      }),
+    );
+    expect(doc.key).toBe('posts/new');
+    expect(capturedInit?.method).toBe('POST');
+    const body = JSON.parse(capturedInit?.body as string);
+    expect(body.data.type).toBe('published');
+    expect(body.data.id).toBe('posts/new');
+  });
+
+  it('re-emits meta.warnings from the POST response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          data: publishedDoc('posts/new'),
+          meta: {
+            warnings: [{ code: 'invalid_data', status: '400', title: 'Warning', detail: 'normalised key' }],
+          },
+        })
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaTask.runPromiseCollect(
+      proxy.createDocument({ key: 'posts/new', type: 'published', status: 'published', language: 'en', content: {} }),
+    );
+    expect(collected.recoverableErrors).toHaveLength(1);
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.updateDocument', () => {
+  it('PATCHes /published/:key and returns the updated Document', async () => {
+    let capturedUrl = '';
+    let capturedInit: RequestInit | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        capturedUrl = url;
+        capturedInit = init;
+        return jsonResponse({ data: publishedDoc('posts/hello') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const doc = await LaikaTask.runPromise(
+      proxy.updateDocument({ key: 'posts/hello', content: { title: 'Updated' } }),
+    );
+    expect(doc.key).toBe('posts/hello');
+    expect(capturedUrl).toContain('/published/posts%2Fhello');
+    expect(capturedInit?.method).toBe('PATCH');
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.getUnpublished', () => {
+  it('GETs /unpublished/:key and returns an Unpublished document', async () => {
+    let capturedUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        capturedUrl = url;
+        return jsonResponse({ data: unpublishedDoc('drafts/hello') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const doc = await LaikaTask.runPromise(proxy.getUnpublished('drafts/hello'));
+    expect(doc.key).toBe('drafts/hello');
+    expect(doc.type).toBe('unpublished');
+    expect(capturedUrl).toContain('/unpublished/drafts%2Fhello');
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.createUnpublished', () => {
+  it('POSTs to /unpublished and returns the created Unpublished document', async () => {
+    let capturedUrl = '';
+    let capturedInit: RequestInit | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        capturedUrl = url;
+        capturedInit = init;
+        return jsonResponse({ data: unpublishedDoc('drafts/new', 'draft') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const doc = await LaikaTask.runPromise(
+      proxy.createUnpublished({ key: 'drafts/new', type: 'unpublished', status: 'draft', language: 'en', content: {} }),
+    );
+    expect(doc.key).toBe('drafts/new');
+    expect(doc.status).toBe('draft');
+    expect(capturedUrl).toContain('/unpublished');
+    expect(capturedInit?.method).toBe('POST');
+    const body = JSON.parse(capturedInit?.body as string);
+    expect(body.data.type).toBe('unpublished');
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.updateUnpublished', () => {
+  it('PATCHes /unpublished/:key and returns the updated Unpublished document', async () => {
+    let capturedUrl = '';
+    let capturedInit: RequestInit | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        capturedUrl = url;
+        capturedInit = init;
+        return jsonResponse({ data: unpublishedDoc('drafts/hello', 'pending_review') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const doc = await LaikaTask.runPromise(
+      proxy.updateUnpublished({ key: 'drafts/hello', status: 'pending_review' }),
+    );
+    expect(doc.status).toBe('pending_review');
+    expect(capturedUrl).toContain('/unpublished/drafts%2Fhello');
+    expect(capturedInit?.method).toBe('PATCH');
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.deleteUnpublished', () => {
+  it('DELETEs /unpublished/:key and re-emits meta.warnings', async () => {
+    let capturedUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        capturedUrl = url;
+        return jsonResponse({
+          meta: {
+            deleted: true,
+            warnings: [{ code: 'invalid_data', status: '400', title: 'Warning', detail: 'sidecar left behind' }],
+          },
+        });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaTask.runPromiseCollect(proxy.deleteUnpublished('drafts/hello'));
+    expect(capturedUrl).toContain('/unpublished/drafts%2Fhello');
+    expect(collected.recoverableErrors).toHaveLength(1);
+    expect(collected.recoverableErrors[0]!.message).toContain('sidecar left behind');
+  });
+
+  it('returns cleanly when no warnings are present', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse({ meta: { deleted: true } })));
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaTask.runPromiseCollect(proxy.deleteUnpublished('drafts/clean'));
+    expect(collected.recoverableErrors).toEqual([]);
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.publish', () => {
+  it('POSTs to /unpublished/:key/publish and returns the published Document', async () => {
+    let capturedUrl = '';
+    let capturedInit: RequestInit | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        capturedUrl = url;
+        capturedInit = init;
+        return jsonResponse({ data: publishedDoc('posts/hello') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const doc = await LaikaTask.runPromise(proxy.publish('posts/hello'));
+    expect(doc.key).toBe('posts/hello');
+    expect(doc.type).toBe('published');
+    expect(capturedUrl).toContain('/unpublished/posts%2Fhello/publish');
+    expect(capturedInit?.method).toBe('POST');
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.unpublish', () => {
+  it('POSTs to /published/:key/unpublish with the status in the body', async () => {
+    let capturedUrl = '';
+    let capturedInit: RequestInit | undefined;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        capturedUrl = url;
+        capturedInit = init;
+        return jsonResponse({ data: unpublishedDoc('posts/hello', 'archived') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const doc = await LaikaTask.runPromise(proxy.unpublish('posts/hello', 'archived'));
+    expect(doc.key).toBe('posts/hello');
+    expect(doc.status).toBe('archived');
+    expect(capturedUrl).toContain('/published/posts%2Fhello/unpublish');
+    expect(capturedInit?.method).toBe('POST');
+    const body = JSON.parse(capturedInit?.body as string);
+    expect(body.data.attributes.status).toBe('archived');
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository.getRevision', () => {
+  it('GETs /revisions/:key/:revision and returns the Revision', async () => {
+    let capturedUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        capturedUrl = url;
+        return jsonResponse({ data: revisionDoc('posts/hello', 'rev-abc') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const rev = await LaikaTask.runPromise(proxy.getRevision('posts/hello', 'rev-abc'));
+    expect(rev.key).toBe('posts/hello');
+    expect(rev.revision).toBe('rev-abc');
+    expect(capturedUrl).toContain('/revisions/posts%2Fhello/rev-abc');
+  });
+
+  it('URL-encodes both key and revision in the request path', async () => {
+    let capturedUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        capturedUrl = url;
+        return jsonResponse({ data: revisionDoc('posts/a b', 'rev 1') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await LaikaTask.runPromise(proxy.getRevision('posts/a b', 'rev 1'));
+    expect(capturedUrl).toContain('/revisions/posts%2Fa%20b/rev%201');
   });
 });
 
