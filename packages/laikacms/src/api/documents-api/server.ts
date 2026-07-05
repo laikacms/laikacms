@@ -3,7 +3,15 @@ import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
 
 import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
-import { BadRequestError, InternalError, LaikaError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import {
+  BadRequestError,
+  ErrorCodeToStatusMap,
+  InternalError,
+  LaikaError,
+  LaikaStream,
+  LaikaTask,
+  NotFoundError,
+} from 'laikacms/core';
 import type { DocumentsRepository } from 'laikacms/documents';
 import type {
   JsonApiCollectionResponse,
@@ -666,7 +674,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     if (resource === 'capabilities' && request.method === 'GET') {
       const result = await firstResult(repo.getCapabilities());
       if (Result.isFailure(result)) {
-        return failResponse(result);
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return failResponse(result, status);
       }
       return json({
         data: {

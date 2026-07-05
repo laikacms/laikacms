@@ -4,7 +4,15 @@ import * as S from 'effect/Schema';
 
 import type { Asset, AssetCreate, AssetMetadata, AssetsRepository, AssetUpdate, FetchHints } from 'laikacms/assets';
 import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
-import { BadRequestError, errorStatus, InternalError, LaikaError, LaikaStream, LaikaTask } from 'laikacms/core';
+import {
+  BadRequestError,
+  ErrorCodeToStatusMap,
+  errorStatus,
+  InternalError,
+  LaikaError,
+  LaikaStream,
+  LaikaTask,
+} from 'laikacms/core';
 import { recoverableErrorsToWarnings } from 'laikacms/json-api';
 
 /** Convert any caught throw into a LaikaError, preserving LaikaError instances and wrapping defects in InternalError. */
@@ -310,7 +318,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       if (path === `${basePath}/capabilities` && method === 'GET') {
         const result = await firstResult(repository.getCapabilities());
         if (Result.isFailure(result)) {
-          return respondError(result.failure, errorStatus.INTERNAL_ERROR);
+          const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+          return respondError(result.failure, status);
         }
         return respondResource({
           type: 'assets-capabilities',
