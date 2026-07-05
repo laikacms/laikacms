@@ -83,6 +83,39 @@ app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 app.get('/admin', c => c.html(ADMIN_HTML)); // see docs/decap-integration.md → "Serving the Decap admin shell"
 ```
 
+> **Before any content operation: seed the Decap config into storage once.**
+> `DecapContentBaseSettingsProvider` reads the Decap config object from `storage[configKey]` on
+> every request. If the key is missing, every document and asset operation throws
+> `"Decap config object not found at storage key 'config'"`. Run this once (setup script, migration,
+> or first-boot handler):
+>
+> ```ts
+> import { runTask } from 'laikacms/compat';
+>
+> await runTask(
+>   storage.createOrUpdateObject({
+>     key: 'config', // must match the `configKey` you passed to DecapContentBaseSettingsProvider
+>     content: {
+>       collections: [
+>         {
+>           name: 'posts',
+>           label: 'Posts',
+>           folder: 'posts',
+>           create: true,
+>           fields: [{ name: 'title', widget: 'string' }, { name: 'body', widget: 'markdown' }],
+>         },
+>       ],
+>       media_folder: 'uploads',
+>       public_folder: '/uploads',
+>     },
+>   }),
+> );
+> ```
+>
+> See
+> [docs/decap-integration.md → "Seeding the server-side Decap config"](./docs/decap-integration.md#seeding-the-server-side-decap-config)
+> for the full pattern (shared config constant, serializer requirements, server-vs-browser copies).
+
 ### b) Render content server-side in a framework page (Next/SvelteKit/Astro/Nuxt/Remix/etc.)
 
 ```ts
@@ -322,6 +355,20 @@ These are the things that consistently bite first-time integrators:
     pnpm run typecheck              # builds all packages, then type-checks everything
     pnpm run typecheck --filter ... # scoped to specific packages
     ```
+
+13. **Seed the Decap config object before the first content operation.** If you use
+    `DecapContentBaseSettingsProvider`, it reads your Decap config from `storage[configKey]` on
+    every request. On an empty storage directory the key does not exist, and every call to
+    `documents.*` or `assets.*` throws `"Decap config object not found at storage key 'config'"`.
+    Seed it once:
+    ```ts
+    import { runTask } from 'laikacms/compat';
+    await runTask(storage.createOrUpdateObject({ key: 'config', content: yourDecapConfig }));
+    ```
+    The serializer registry must support structured data — `markdownSerializer`, `yamlSerializer`,
+    or `jsonSerializer` all work; `rawSerializer` silently drops the `collections` field. See the
+    callout in task (a) above and
+    [docs/decap-integration.md → "Seeding the server-side Decap config"](./docs/decap-integration.md#seeding-the-server-side-decap-config).
 
 ---
 
