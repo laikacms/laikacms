@@ -997,6 +997,208 @@ describe('GET /revisions/:key/:revisionId', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /records — filter param forwarding (LCMS-196)
+// ---------------------------------------------------------------------------
+
+describe('GET /records — filter param forwarding', () => {
+  const makeListRecordsRepo = (spy: ReturnType<typeof vi.fn>) =>
+    ({
+      listRecords: spy,
+    }) as unknown as DocumentsRepository;
+
+  const makeRecordsStream = (entries: Array<ReturnType<typeof makeDocument> | ReturnType<typeof makeUnpublished>>) =>
+    LaikaStream.make<
+      {
+        type: string,
+        key: string,
+        status: string,
+        language: string,
+        content: object,
+        createdAt: string,
+        updatedAt: string,
+      },
+      ListRecordsDone
+    >(emit =>
+      Effect.gen(function*() {
+        for (const e of entries) yield* emit.data(e);
+        return { total: entries.length };
+      })
+    );
+
+  it('forwards filter[type]=unpublished to the repo and returns unpublished entries', async () => {
+    const spy = vi.fn((_opts: ListRecordsOptions) => makeRecordsStream([makeUnpublished('posts/draft')]));
+    const api = buildJsonApi({ repo: makeListRecordsRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/records?filter%5Btype%5D=unpublished'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0].type).toBe('unpublished');
+
+    const body = await res.json() as { data: Array<{ type: string, id: string }> };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]!.type).toBe('unpublished');
+    expect(body.data[0]!.id).toBe('posts/draft');
+  });
+
+  it('forwards filter[type]=all as undefined type to the repo', async () => {
+    const spy = vi.fn((_opts: ListRecordsOptions) =>
+      makeRecordsStream([makeDocument('posts/hello'), makeUnpublished('posts/draft')])
+    );
+    const api = buildJsonApi({ repo: makeListRecordsRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/records?filter%5Btype%5D=all'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0].type).toBeUndefined();
+
+    const body = await res.json() as { data: Array<{ type: string }> };
+    expect(body.data).toHaveLength(2);
+  });
+
+  it('forwards filter[folder]=posts to the repo', async () => {
+    const spy = vi.fn((_opts: ListRecordsOptions) => makeRecordsStream([makeDocument('posts/hello')]));
+    const api = buildJsonApi({ repo: makeListRecordsRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/records?filter%5Bfolder%5D=posts'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0].folder).toBe('posts');
+  });
+
+  it('parses filter[depth]=2 as a number and forwards it to the repo', async () => {
+    const spy = vi.fn((_opts: ListRecordsOptions) => makeRecordsStream([]));
+    const api = buildJsonApi({ repo: makeListRecordsRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/records?filter%5Bdepth%5D=2'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0].depth).toBe(2);
+    expect(typeof spy.mock.calls[0]![0].depth).toBe('number');
+  });
+
+  it('returns correct JSON:API shape for an unpublished entry in /records', async () => {
+    const spy = vi.fn((_opts: ListRecordsOptions) => makeRecordsStream([makeUnpublished('posts/draft')]));
+    const api = buildJsonApi({ repo: makeListRecordsRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/records?filter%5Btype%5D=unpublished'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      data: Array<{ type: string, id: string, attributes: { status: string, content: object } }>,
+    };
+    expect(body.data[0]!.type).toBe('unpublished');
+    expect(body.data[0]!.id).toBe('posts/draft');
+    expect(body.data[0]!.attributes).toMatchObject({ status: 'draft', content: { title: 'Draft' } });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /record-summaries — filter param forwarding (LCMS-196)
+// ---------------------------------------------------------------------------
+
+describe('GET /record-summaries — filter param forwarding', () => {
+  const makeListSummariesRepo = (spy: ReturnType<typeof vi.fn>) =>
+    ({
+      listRecordSummaries: spy,
+    }) as unknown as DocumentsRepository;
+
+  const makeSummariesStream = (
+    entries: Array<
+      {
+        type: 'published-summary' | 'unpublished-summary',
+        key: string,
+        status: string,
+        language: string,
+        createdAt: string,
+        updatedAt: string,
+      }
+    >,
+  ) =>
+    LaikaStream.make<
+      { type: string, key: string, status: string, language: string, createdAt: string, updatedAt: string },
+      ListRecordsDone
+    >(emit =>
+      Effect.gen(function*() {
+        for (const e of entries) yield* emit.data(e);
+        return { total: entries.length };
+      })
+    );
+
+  const makeSummary = (type: 'published-summary' | 'unpublished-summary', key: string) => ({
+    type,
+    key,
+    status: type === 'published-summary' ? 'published' : 'draft',
+    language: 'en' as const,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  });
+
+  it('forwards filter[type]=unpublished to the repo for /record-summaries', async () => {
+    const spy = vi.fn((_opts: ListRecordsOptions) =>
+      makeSummariesStream([makeSummary('unpublished-summary', 'posts/draft')])
+    );
+    const api = buildJsonApi({ repo: makeListSummariesRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Btype%5D=unpublished'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0].type).toBe('unpublished');
+
+    const body = await res.json() as { data: Array<{ type: string, id: string }> };
+    expect(body.data[0]!.type).toBe('unpublished-summary');
+  });
+
+  it('forwards filter[type]=all as undefined type to the repo for /record-summaries', async () => {
+    const spy = vi.fn((_opts: ListRecordsOptions) =>
+      makeSummariesStream([
+        makeSummary('published-summary', 'posts/hello'),
+        makeSummary('unpublished-summary', 'posts/draft'),
+      ])
+    );
+    const api = buildJsonApi({ repo: makeListSummariesRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Btype%5D=all'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0].type).toBeUndefined();
+
+    const body = await res.json() as { data: Array<{ type: string }> };
+    expect(body.data).toHaveLength(2);
+  });
+
+  it('forwards filter[folder]=posts to the repo for /record-summaries', async () => {
+    const spy = vi.fn((_opts: ListRecordsOptions) =>
+      makeSummariesStream([makeSummary('published-summary', 'posts/hello')])
+    );
+    const api = buildJsonApi({ repo: makeListSummariesRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Bfolder%5D=posts'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0].folder).toBe('posts');
+  });
+
+  it('parses filter[depth]=2 as a number and forwards it for /record-summaries', async () => {
+    const spy = vi.fn((_opts: ListRecordsOptions) => makeSummariesStream([]));
+    const api = buildJsonApi({ repo: makeListSummariesRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Bdepth%5D=2'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0].depth).toBe(2);
+    expect(typeof spy.mock.calls[0]![0].depth).toBe('number');
+  });
+});
+
+// ---------------------------------------------------------------------------
 
 describe('404 on unknown routes', () => {
   it('returns 404 JSON:API error shape on unknown path', async () => {
