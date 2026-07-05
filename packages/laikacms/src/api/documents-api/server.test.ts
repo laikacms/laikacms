@@ -6,6 +6,8 @@ import type {
   ListRecordsDone,
   ListRecordsOptions,
   ListRecordSummaries,
+  ListRevisionsDone,
+  RevisionSummary,
 } from 'laikacms/documents';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -879,6 +881,118 @@ describe('POST /published/:key/unpublish', () => {
     const body = await res.json() as { errors: Array<{ status: string }> };
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /revisions/:key (LCMS-188)
+// ---------------------------------------------------------------------------
+
+const makeRevisionSummary = (key = 'posts/hello', revision = 'rev-1'): RevisionSummary => ({
+  type: 'revision-summary' as const,
+  key,
+  revision,
+  language: 'en' as const,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+});
+
+describe('GET /revisions/:key', () => {
+  it('returns 200 with revision-summary collection and meta.page.total', async () => {
+    const summaries = [makeRevisionSummary('posts/hello', 'rev-1'), makeRevisionSummary('posts/hello', 'rev-2')];
+    const repo = {
+      listRevisions: (_key: string, _options: unknown) =>
+        LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
+          Effect.gen(function*() {
+            for (const s of summaries) yield* emit.data(s);
+            return { total: 2 };
+          })
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      data: Array<{ type: string, id: string }>,
+      meta: { page: { total: number } },
+    };
+    expect(body.data).toHaveLength(2);
+    expect(body.data[0]!.type).toBe('revision-summary');
+    expect(body.data[0]!.id).toBe('posts/hello');
+    expect(body.data[1]!.id).toBe('posts/hello');
+    expect(body.meta.page.total).toBe(2);
+  });
+
+  it('returns 200 with empty data array when no revisions exist', async () => {
+    const repo = {
+      listRevisions: (_key: string, _options: unknown) =>
+        LaikaStream.make<RevisionSummary, ListRevisionsDone>(_emit => Effect.succeed({ total: 0 })),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fempty'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: unknown[], meta: { page: { total: number } } };
+    expect(body.data).toHaveLength(0);
+    expect(body.meta.page.total).toBe(0);
+  });
+
+  it('returns 404 when the repo raises NotFoundError', async () => {
+    const repo = {
+      listRevisions: (_key: string, _options: unknown) =>
+        LaikaStream.make<RevisionSummary, ListRevisionsDone>(() =>
+          Effect.fail(new NotFoundError('document not found'))
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fmissing'));
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('404');
+    expect(body.errors[0]!.code).toBe('not_found');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /revisions/:key/:revisionId (LCMS-188)
+// ---------------------------------------------------------------------------
+
+describe('GET /revisions/:key/:revisionId', () => {
+  it('returns 200 with revision resource', async () => {
+    const rev = makeRevision('posts/hello', 'rev-1');
+    const repo = {
+      getRevision: (_key: string, _revisionId: string) => LaikaTask.make(() => Effect.succeed(rev)),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello/rev-1'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: { type: string, id: string, attributes: { revision: string } } };
+    expect(body.data.type).toBe('revision');
+    expect(body.data.id).toBe('posts/hello');
+    expect(body.data.attributes.revision).toBe('rev-1');
+  });
+
+  it('returns 404 JSON:API error when revision not found', async () => {
+    const repo = {
+      getRevision: (_key: string, _revisionId: string) =>
+        LaikaTask.make(() => Effect.fail(new NotFoundError('revision not found'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello/missing-rev'));
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+    expect(body.errors[0]!.code).toBe('not_found');
   });
 });
 
