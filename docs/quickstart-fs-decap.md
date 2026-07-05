@@ -159,23 +159,45 @@ endpoint the Decap `laika` backend pings to confirm the server is reachable.
 
 ### 4a. Install the Decap CMS app
 
-`@laikacms/decap` was already installed in §1. Install the Decap CMS browser bundle alongside it:
+`@laikacms/decap` was already installed in §1. Install the Decap CMS browser bundle and esbuild
+(used to compile the TypeScript entry file into a browser bundle):
 
 ```bash
 # npm
 npm install decap-cms-app
+npm install --save-dev esbuild
 
 # pnpm
 pnpm add decap-cms-app
+pnpm add -D esbuild
 ```
 
 > The `laika` backend lives at the `@laikacms/decap/decap-cms-backend-laika` subpath export. There
 > is no separate `@laikacms/decap-cms-backend-laika` package on npm.
 
-### 4b. Register the backend
+### 4b. Create the HTML entry point
+
+The static file server needs an `index.html` to load your compiled bundle:
+
+```html
+<!-- admin/index.html -->
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Admin — LaikaCMS</title>
+  </head>
+  <body>
+    <!-- esbuild compiles admin/index.ts → admin/bundle.js (see §5) -->
+    <script src="bundle.js"></script>
+  </body>
+</html>
+```
+
+### 4c. Register the backend
 
 ```typescript
-// admin/index.ts (or admin/index.js)
+// admin/index.ts
 import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 import CMS from 'decap-cms-app';
 
@@ -187,7 +209,7 @@ CMS.registerBackend('laika', LaikaBackend);
 CMS.init();
 ```
 
-### 4c. Write the Decap config
+### 4d. Write the Decap config
 
 ```yaml
 # admin/config.yml
@@ -236,11 +258,21 @@ In two terminals:
 # Terminal 1 — Decap-compatible API (documents + assets + health at /api/*)
 npm start
 
-# Terminal 2 — your frontend (example using a static file server)
+# Terminal 2 — compile the admin bundle, then serve it
+npx esbuild admin/index.ts --bundle --outfile=admin/bundle.js --format=iife --target=es2020
 npx serve admin/
 ```
 
+esbuild bundles `admin/index.ts` together with `decap-cms-app` and
+`@laikacms/decap/decap-cms-backend-laika` into a single `admin/bundle.js` that the browser can load
+directly. The `serve` step then hosts `admin/index.html` (and `bundle.js`) at
+`http://localhost:5000`.
+
 Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS admin UI.
+
+> **Rebuild after changes:** re-run the `npx esbuild …` command whenever you edit `admin/index.ts`
+> or `admin/config.yml`. For a faster inner loop, append `--watch` to the esbuild command and open a
+> third terminal for `npx serve admin/`.
 
 ---
 
