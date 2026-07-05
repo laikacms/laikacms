@@ -1,8 +1,8 @@
 import React from 'react';
 
-import { IconControl } from './IconControl';
-import { IconPreview } from './IconPreview';
-import type { IconWidgetOptions } from './types';
+import { IconControl } from './IconControl.js';
+import { IconPreview } from './IconPreview.js';
+import type { IconWidgetOptions } from './types.js';
 
 function Widget(opts: IconWidgetOptions = {}) {
   return {
