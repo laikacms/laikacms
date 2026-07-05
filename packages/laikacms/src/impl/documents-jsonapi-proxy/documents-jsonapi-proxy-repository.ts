@@ -223,7 +223,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
     return LaikaStream.make<DocumentRecord, ListRecordsDone>(emit =>
       Effect.gen({ self: this }, function*() {
         const params = paginationCodec.encode(options.pagination);
-        if (options.type) params.set('filter[type]', options.type);
+        params.set('filter[type]', options.type ?? 'all');
         params.set('filter[depth]', '' + options.depth);
         params.set('filter[folder]', options.folder);
 
@@ -271,7 +271,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
     return LaikaStream.make<RecordSummary, ListRecordsDone>(emit =>
       Effect.gen({ self: this }, function*() {
         const params = paginationCodec.encode(options.pagination);
-        if (options.type) params.set('filter[type]', options.type);
+        params.set('filter[type]', options.type ?? 'all');
         params.set('filter[depth]', '' + options.depth);
         params.set('filter[folder]', options.folder);
 

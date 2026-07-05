@@ -82,6 +82,42 @@ describe('DocumentsJsonApiProxyRepository.listRecords', () => {
     expect(collected.data).toHaveLength(1);
     expect(collected.done.total).toBe(150);
   });
+
+  it('sends filter[type]=all when type is undefined (not omitted silently)', async () => {
+    let capturedUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        capturedUrl = url;
+        return jsonResponse({ data: [], meta: { page: { total: 0 } } });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await LaikaStream.runPromiseCollect(
+      proxy.listRecords({ folder: '', depth: 1, pagination: { offset: 0, limit: 10 } }),
+    );
+
+    expect(capturedUrl).toContain('filter%5Btype%5D=all');
+  });
+
+  it('sends filter[type]=published when type is explicitly published', async () => {
+    let capturedUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        capturedUrl = url;
+        return jsonResponse({ data: [], meta: { page: { total: 0 } } });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await LaikaStream.runPromiseCollect(
+      proxy.listRecords({ folder: '', depth: 1, type: 'published', pagination: { offset: 0, limit: 10 } }),
+    );
+
+    expect(capturedUrl).toContain('filter%5Btype%5D=published');
+  });
 });
 
 describe('DocumentsJsonApiProxyRepository.listRecordSummaries', () => {
@@ -113,6 +149,42 @@ describe('DocumentsJsonApiProxyRepository.listRecordSummaries', () => {
 
     expect(collected.data).toHaveLength(1);
     expect(collected.done.total).toBe(150);
+  });
+
+  it('sends filter[type]=all when type is undefined (not omitted silently)', async () => {
+    let capturedUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        capturedUrl = url;
+        return jsonResponse({ data: [], meta: { page: { total: 0 } } });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await LaikaStream.runPromiseCollect(
+      proxy.listRecordSummaries({ folder: '', depth: 1, pagination: { offset: 0, limit: 10 } }),
+    );
+
+    expect(capturedUrl).toContain('filter%5Btype%5D=all');
+  });
+
+  it('sends filter[type]=unpublished when type is explicitly unpublished', async () => {
+    let capturedUrl = '';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        capturedUrl = url;
+        return jsonResponse({ data: [], meta: { page: { total: 0 } } });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await LaikaStream.runPromiseCollect(
+      proxy.listRecordSummaries({ folder: '', depth: 1, type: 'unpublished', pagination: { offset: 0, limit: 10 } }),
+    );
+
+    expect(capturedUrl).toContain('filter%5Btype%5D=unpublished');
   });
 });
 
