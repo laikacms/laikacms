@@ -478,6 +478,67 @@ describe('POST /objects — unknown attribute key rejection (LCMS-254)', () => {
   });
 });
 
+describe('storage-api pagination links (LCMS-170)', () => {
+  // Emit exactly perPage items so hasMore=true (items.length === requestedLimit).
+  // If the links were built from request.url (which already carries query params),
+  // buildPaginationLinks would append ?page[...] a second time, producing ??
+  it('GET /atoms with page params returns links.next without double "?"', async () => {
+    const page = Array.from({ length: 5 }, (_, i) => ({
+      type: 'folder' as const,
+      key: `folder-${i}`,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    }));
+    const partialRepo = {
+      listAtoms: (_folderKey: string, _options: ListAtomsOptions) =>
+        LaikaStream.make<typeof page[0], ListAtomsDone>(emit =>
+          Effect.gen(function*() {
+            for (const atom of page) yield* emit.data(atom);
+            return { total: 10 };
+          })
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/atoms/root?page[number]=1&page[size]=5'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { links?: { next?: string, first?: string } };
+    expect(body.links?.next).toBeDefined();
+    expect(body.links?.next).not.toContain('??');
+    expect(body.links?.first).toBeDefined();
+    expect(body.links?.first).not.toContain('??');
+  });
+
+  it('GET /atom-summaries with page params returns links without double "?"', async () => {
+    const page = Array.from({ length: 5 }, (_, i) => ({
+      type: 'folder' as const,
+      key: `folder-${i}`,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+    }));
+    const partialRepo = {
+      listAtomSummaries: (_folderKey: string, _options: ListAtomsOptions) =>
+        LaikaStream.make<typeof page[0], ListAtomsDone>(emit =>
+          Effect.gen(function*() {
+            for (const s of page) yield* emit.data(s);
+            return { total: 10 };
+          })
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/atom-summaries/root?page[number]=1&page[size]=5'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { links?: { next?: string } };
+    expect(body.links?.next).toBeDefined();
+    expect(body.links?.next).not.toContain('??');
+  });
+});
+
 describe('PATCH /objects — unknown attribute key rejection (LCMS-254)', () => {
   it('returns 400 when attributes contains top-level keys instead of a content wrapper', async () => {
     const api = buildJsonApi({ repo: stubRepo });
