@@ -280,12 +280,12 @@ describe('R2DataSource.listDirectory', () => {
     }
   });
 
-  it('returns an empty list for a prefix with no objects', async () => {
+  it('returns NotFoundError for a prefix with no objects (non-existent folder)', async () => {
     const ds = makeDS();
     const result = await ds.listDirectory('empty');
-    expect(Result.isSuccess(result)).toBe(true);
-    if (Result.isSuccess(result)) {
-      expect(result.success).toEqual([]);
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('not_found');
     }
   });
 });

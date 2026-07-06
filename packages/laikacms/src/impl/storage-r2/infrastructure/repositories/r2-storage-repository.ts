@@ -294,7 +294,8 @@ export class R2StorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, total } = yield* this.collectFilteredSummaries(folderKey, options);
+        const { summaries, total, missingFolder } = yield* this.collectFilteredSummaries(folderKey, options);
+        if (missingFolder) yield* emit.recoverableError(missingFolder);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
         return { total };
       })
@@ -307,7 +308,8 @@ export class R2StorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, total } = yield* this.collectFilteredSummaries(folderKey, options);
+        const { summaries, total, missingFolder } = yield* this.collectFilteredSummaries(folderKey, options);
+        if (missingFolder) yield* emit.recoverableError(missingFolder);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
             const r = yield* Effect.result(LaikaTask.runValueForwarding(this.getObject(summary.key), emit));
@@ -327,16 +329,23 @@ export class R2StorageRepository extends StorageRepository {
   /**
    * Recursively collect R2 entries under `folderKey` up to `maxRelativeDepth`
    * levels below the starting folder. Depth=1 lists direct children only.
-   * Each recursive level calls `listDirectory` with an additional prefix to
-   * navigate into sub-directories.
+   *
+   * Mirrors the FS collectEntriesRecursively contract: a NotFoundError from
+   * the root-level listing is surfaced as `missingFolder` rather than silently
+   * returning an empty array, so callers can emit a recoverableError.
    */
   private async collectR2EntriesRecursively(
     folderKey: string,
     maxRelativeDepth: number,
     currentRelativeDepth: number = 1,
-  ): Promise<Array<{ key: string, type: string }>> {
+  ): Promise<{ entries: Array<{ key: string, type: string }>, missingFolder?: LaikaError }> {
     const result = await this.r2DataSource.listDirectory(folderKey);
-    if (Result.isFailure(result)) return [];
+    if (Result.isFailure(result)) {
+      if (currentRelativeDepth === 1) {
+        return { entries: [], missingFolder: result.failure };
+      }
+      return { entries: [] };
+    }
     const entries: Array<{ key: string, type: string }> = [];
     for (const entry of result.success) {
       entries.push(entry);
@@ -346,18 +355,23 @@ export class R2StorageRepository extends StorageRepository {
           maxRelativeDepth,
           currentRelativeDepth + 1,
         );
-        entries.push(...child);
+        entries.push(...child.entries);
       }
     }
-    return entries;
+    return { entries };
   }
 
   private collectFilteredSummaries(
     folderKey: string,
     options: ListAtomsOptions,
-  ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, total: number }, LaikaError> {
+  ): Effect.Effect<{ summaries: ReadonlyArray<AtomSummary>, total: number, missingFolder?: LaikaError }, LaikaError> {
     return Effect.gen({ self: this }, function*() {
-      const entries = yield* Effect.promise(() => this.collectR2EntriesRecursively(folderKey, options.depth));
+      const { entries, missingFolder } = yield* Effect.promise(() =>
+        this.collectR2EntriesRecursively(folderKey, options.depth)
+      );
+      if (missingFolder) {
+        return { summaries: [] as ReadonlyArray<AtomSummary>, total: 0, missingFolder };
+      }
       const availableExtensions = Object.keys(this.serializerRegistry);
       const filtered = entries
         .filter((entry: { key: string, type: string }) => this.excludeFilter.every(pattern => !pattern.test(entry.key)))
