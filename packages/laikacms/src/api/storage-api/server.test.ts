@@ -810,6 +810,32 @@ describe('DELETE /objects/:key', () => {
     );
     expect(res.status).toBe(400);
   });
+
+  // Regression test for LCMS-216: FS repo resolves extension-less keys to their
+  // on-disk path with extension (e.g. "del-test" → "del-test.md"), so the emitted
+  // data item never equals the raw input key. The handler must use done.removed,
+  // not data.includes(key), to detect success.
+  it('returns 200 when removeAtoms emits the extension-resolved path rather than the raw key (LCMS-216)', async () => {
+    const extensionResolvingRepo = {
+      removeAtoms: (keys: readonly string[]) =>
+        LaikaStream.make<string, { removed: number, skipped: number }>(emit =>
+          Effect.gen(function*() {
+            // Mirror what the FS backend does: emit the resolved on-disk path with extension,
+            // not the original extension-less key supplied by the caller.
+            for (const k of keys) yield* emit.data(`${k}.md`);
+            return { removed: keys.length, skipped: 0 };
+          })
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: extensionResolvingRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/del-test', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { meta: { deleted: boolean } };
+    expect(body.meta.deleted).toBe(true);
+  });
 });
 
 // ---------------------------------------------------------------------------
