@@ -566,6 +566,24 @@ describe('DrizzleDocumentsRepository', () => {
       expect(summaries.map(s => s.revision)).toContain('v1');
       expect(summaries.map(s => s.revision)).toContain('v2');
     });
+
+    it('done.total — returns full count, not page count', async () => {
+      const revisionIds = ['r1', 'r2', 'r3', 'r4', 'r5'];
+      for (const revision of revisionIds) {
+        await resolveTask(
+          repo.createRevision({ key: 'rev-doc', type: 'revision', revision, content: {}, language: 'en' }),
+        );
+      }
+
+      const collected = await Effect.runPromise(
+        LaikaStream.runCollect(
+          repo.listRevisions('rev-doc', { pagination: { limit: 2, offset: 0 } }),
+        ),
+      );
+
+      expect(collected.data.length).toBe(2);
+      expect(collected.done.total).toBe(5);
+    });
   });
 });
 

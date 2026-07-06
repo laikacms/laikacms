@@ -503,7 +503,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
             updatedAt: row.updatedAt,
           });
         }
-        return { total: page.length };
+        return { total: rows.length };
       })
     );
   }
