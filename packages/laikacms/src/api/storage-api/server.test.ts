@@ -10,6 +10,7 @@ import type {
   ListAtomsOptions,
   StorageObject,
   StorageObjectCreate,
+  StorageObjectUpdate,
   StorageRepository,
 } from 'laikacms/storage';
 import { CompatibilityDate } from 'laikacms/storage';
@@ -861,5 +862,150 @@ describe('405 Method Not Allowed on /objects/{key}', () => {
       new Request('http://localhost/objects/hello.md', { method: 'PUT' }),
     );
     expect(res.headers.get('Cache-Control')).toBe('no-store');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /objects/:key (LCMS-218)
+// ---------------------------------------------------------------------------
+
+const makeUpdateObjectRepo = (resultKey: string) =>
+  ({
+    updateObject: (update: StorageObjectUpdate) =>
+      LaikaTask.make<StorageObject>(() =>
+        Effect.succeed(
+          {
+            type: 'object',
+            key: resultKey,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-06-01T00:00:00Z',
+            content: update.content ?? {},
+            metadata: { extension: 'json' },
+          } satisfies StorageObject,
+        )
+      ),
+  }) as unknown as StorageRepository;
+
+describe('PATCH /objects/:key (LCMS-218)', () => {
+  it('returns 200 with updated object resource on valid matching body', async () => {
+    const api = buildJsonApi({ repo: makeUpdateObjectRepo('posts/hello') });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/posts%2Fhello', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'object',
+            id: 'posts/hello',
+            attributes: { content: { title: 'Updated Title' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      data: { type: string, id: string, attributes: { content: Record<string, unknown> } },
+    };
+    expect(body.data.type).toBe('object');
+    expect(body.data.id).toBe('posts/hello');
+    expect(body.data.attributes.content).toEqual({ title: 'Updated Title' });
+  });
+
+  it('returns 400 when URL key does not match body data.id', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/posts%2Fhello', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'object',
+            id: 'posts/different',
+            attributes: { content: { title: 'Mismatch' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ detail: string }> };
+    expect(body.errors[0]!.detail).toContain('URL');
+  });
+
+  it('returns 404 when repo.updateObject fails with NotFoundError', async () => {
+    const notFoundRepo = {
+      updateObject: () => LaikaTask.make<StorageObject>(() => Effect.fail(new NotFoundError('not found'))),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: notFoundRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/posts%2Fmissing', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'object',
+            id: 'posts/missing',
+            attributes: { content: {} },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(404);
+    const body = await res.json() as { errors: Array<{ code: string }> };
+    expect(body.errors[0]!.code).toBe('not_found');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /folders/:key (LCMS-218)
+// ---------------------------------------------------------------------------
+
+const makeFolderRepo = (existingKeys: string[]) =>
+  ({
+    getFolder: (key: string) =>
+      LaikaTask.make<Folder>(() =>
+        existingKeys.includes(key)
+          ? Effect.succeed(
+            {
+              type: 'folder',
+              key,
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+            } satisfies Folder,
+          )
+          : Effect.fail(new NotFoundError(`Folder not found: ${key}`))
+      ),
+  }) as unknown as StorageRepository;
+
+describe('GET /folders/:key (LCMS-218)', () => {
+  it('returns 200 with folder resource for an existing folder key', async () => {
+    const api = buildJsonApi({ repo: makeFolderRepo(['posts']) });
+    const res = await api.fetch(new Request('http://localhost/folders/posts'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('folder');
+    expect(body.data.id).toBe('posts');
+  });
+
+  it('decodes %2F-encoded folder keys', async () => {
+    const api = buildJsonApi({ repo: makeFolderRepo(['posts/2026']) });
+    const res = await api.fetch(new Request('http://localhost/folders/posts%2F2026'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { id: string } };
+    expect(body.data.id).toBe('posts/2026');
+  });
+
+  it('returns 404 when repo.getFolder fails with NotFoundError', async () => {
+    const api = buildJsonApi({ repo: makeFolderRepo([]) });
+    const res = await api.fetch(new Request('http://localhost/folders/missing'));
+    expect(res.status).toBe(404);
+    const body = await res.json() as { errors: Array<{ code: string }> };
+    expect(body.errors[0]!.code).toBe('not_found');
+  });
+
+  it('returns 400 when no key segment is provided (GET /folders)', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/folders'));
+    expect(res.status).toBe(400);
   });
 });
