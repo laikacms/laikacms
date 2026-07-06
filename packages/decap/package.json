@@ -106,14 +106,11 @@
   "peerDependencies": {
     "@emotion/css": "catalog:legacy",
     "@emotion/react": "catalog:legacy",
+    "@laikacms/decap-cms": "catalog:decap",
     "@octokit/rest": "catalog:octokit",
     "@radix-ui/react-icons": "catalog:icons",
     "decap-cms-backend-github": "catalog:decap",
     "decap-cms-core": "catalog:decap",
-    "decap-cms-lib-auth": "catalog:decap",
-    "decap-cms-lib-util": "catalog:decap",
-    "decap-cms-ui-auth": "catalog:decap",
-    "decap-cms-ui-default": "catalog:decap",
     "lucide-react": "catalog:icons",
     "react": "catalog:react",
     "react-dom": "catalog:react",
@@ -126,6 +123,9 @@
     "@emotion/react": {
       "optional": true
     },
+    "@laikacms/decap-cms": {
+      "optional": true
+    },
     "@octokit/rest": {
       "optional": true
     },
@@ -136,18 +136,6 @@
       "optional": true
     },
     "decap-cms-core": {
-      "optional": true
-    },
-    "decap-cms-lib-auth": {
-      "optional": true
-    },
-    "decap-cms-lib-util": {
-      "optional": true
-    },
-    "decap-cms-ui-auth": {
-      "optional": true
-    },
-    "decap-cms-ui-default": {
       "optional": true
     },
     "lucide-react": {
@@ -164,6 +152,7 @@
     }
   },
   "devDependencies": {
+    "@laikacms/decap-cms": "catalog:decap",
     "@types/jsonwebtoken": "catalog:types",
     "@types/jwt-decode": "catalog:types",
     "@types/node": "catalog:types",

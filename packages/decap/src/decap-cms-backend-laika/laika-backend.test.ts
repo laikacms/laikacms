@@ -6,10 +6,9 @@
  * can be exercised by injecting mock DocumentsRepository / AssetsRepository
  * implementations.
  *
- * Browser-only Decap CMS packages (decap-cms-lib-util, decap-cms-lib-auth,
- * decap-cms-ui-default) are mocked because they call `window` at module load
- * time. We do NOT test the authentication flow because that requires a running
- * server.
+ * Browser-only Decap CMS packages (@laikacms/decap-cms/lib-util, lib-auth,
+ * ui-default) are mocked because they call `window` at module load time.
+ * We do NOT test the authentication flow because that requires a running server.
  */
 
 import * as Result from 'effect/Result';
@@ -17,10 +16,12 @@ import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ---------------------------------------------------------------------------
-// Mock browser-only deps BEFORE any import that transitively loads them
+// Mock browser-only deps BEFORE any import that transitively loads them.
+// The source imports @laikacms/decap-cms/* (scoped monolith), not the
+// legacy unscoped decap-cms-lib-* siblings — mock the same specifiers.
 // ---------------------------------------------------------------------------
 
-vi.mock('decap-cms-lib-util', () => ({
+vi.mock('@laikacms/decap-cms/lib-util', () => ({
   AccessTokenError: class AccessTokenError extends Error {
     constructor(msg: string) {
       super(msg);
@@ -42,14 +43,14 @@ vi.mock('decap-cms-lib-util', () => ({
   },
 }));
 
-vi.mock('decap-cms-lib-auth', () => ({
+vi.mock('@laikacms/decap-cms/lib-auth', () => ({
   PkceAuthenticator: class PkceAuthenticator {
     completeAuth = vi.fn();
     authenticate = vi.fn();
   },
 }));
 
-vi.mock('decap-cms-ui-default', () => ({
+vi.mock('@laikacms/decap-cms/ui-default', () => ({
   AuthenticationPage: () => null,
   Icon: () => null,
 }));
@@ -139,7 +140,7 @@ function makeConfig(overrides: Record<string, unknown> = {}) {
 // Import createLaikaBackend (after mocks are in place)
 // ---------------------------------------------------------------------------
 
-import { unsentRequest } from 'decap-cms-lib-util';
+import { unsentRequest } from '@laikacms/decap-cms/lib-util';
 
 import createLaikaBackend from './laika-backend.js';
 

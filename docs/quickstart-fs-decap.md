@@ -159,21 +159,28 @@ endpoint the Decap `laika` backend pings to confirm the server is reachable.
 
 ### 4a. Install the Decap CMS app
 
-`@laikacms/decap` was already installed in §1. Install the Decap CMS browser bundle and esbuild
-(used to compile the TypeScript entry file into a browser bundle):
+`@laikacms/decap` was already installed in §1. Install the Decap CMS browser bundle, the
+`@laikacms/decap-cms` peer (provides the `lib-util`, `lib-auth`, `ui-default`, and `core` subpaths
+that the Laika backend imports at bundle time), and esbuild (used to compile the TypeScript entry
+file into a browser bundle):
 
 ```bash
 # npm
-npm install decap-cms-app
+npm install decap-cms-app @laikacms/decap-cms
 npm install --save-dev esbuild
 
 # pnpm
-pnpm add decap-cms-app
+pnpm add decap-cms-app @laikacms/decap-cms
 pnpm add -D esbuild
 ```
 
 > The `laika` backend lives at the `@laikacms/decap/decap-cms-backend-laika` subpath export. There
 > is no separate `@laikacms/decap-cms-backend-laika` package on npm.
+>
+> `@laikacms/decap-cms` is the scoped Decap CMS fork that provides the
+> `@laikacms/decap-cms/lib-util`, `/lib-auth`, `/ui-default`, and `/core` subpaths required by the
+> Laika backend. Without it the esbuild step will fail with "Could not resolve
+> `@laikacms/decap-cms/…`" errors and produce no `admin/bundle.js`.
 
 ### 4b. Create the HTML entry point
 
