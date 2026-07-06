@@ -919,6 +919,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       && key
       && !action
     ) {
+      const cursorRejection = await rejectUnsupportedCursor();
+      if (cursorRejection) return cursorRejection;
       const result = await runStreamWithDone(
         repo.listRevisions(key, { pagination: parsePaginationQuery(queryParams) }),
       );

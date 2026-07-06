@@ -1013,6 +1013,84 @@ describe('GET /revisions/:key', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /revisions/:key — cursor capability guard (LCMS-266)
+// ---------------------------------------------------------------------------
+
+describe('GET /revisions/:key — cursor capability guard', () => {
+  it('forwards page[after] to repo pagination.after when backend supports cursor', async () => {
+    const spy = vi.fn((_key: string, _options: unknown) =>
+      LaikaStream.make<RevisionSummary, ListRevisionsDone>(_emit => Effect.succeed({ total: 0 }))
+    );
+    const repo = {
+      listRevisions: spy,
+      getCapabilities: () =>
+        LaikaTask.succeed<DocumentsCapabilities>({
+          compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+          pagination: {
+            supported: true,
+            description: 'cursor supported',
+            styles: { offset: false, page: false, cursor: true },
+          },
+        }),
+    } as unknown as DocumentsRepository;
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello?page%5Bafter%5D=cursor-abc'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    const pagination = spy.mock.calls[0]![1] as { pagination?: { after?: string } };
+    expect(pagination.pagination?.after).toBe('cursor-abc');
+  });
+
+  it('returns 400 for page[after] when backend does not support cursor', async () => {
+    const listSpy = vi.fn();
+    const repo = {
+      listRevisions: listSpy,
+      getCapabilities: () =>
+        LaikaTask.succeed<DocumentsCapabilities>({
+          compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+          pagination: {
+            supported: true,
+            description: 'offset only',
+            styles: { offset: true, page: true, cursor: false },
+          },
+        }),
+    } as unknown as DocumentsRepository;
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello?page%5Bafter%5D=cursor-abc'));
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string, detail: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.detail).toContain('Cursor pagination');
+    expect(listSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for page[before] when backend does not support cursor', async () => {
+    const listSpy = vi.fn();
+    const repo = {
+      listRevisions: listSpy,
+      getCapabilities: () =>
+        LaikaTask.succeed<DocumentsCapabilities>({
+          compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+          pagination: {
+            supported: true,
+            description: 'offset only',
+            styles: { offset: true, page: true, cursor: false },
+          },
+        }),
+    } as unknown as DocumentsRepository;
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello?page%5Bbefore%5D=cursor-abc'));
+    expect(res.status).toBe(400);
+    expect(listSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /revisions/:key/:revisionId (LCMS-188)
 // ---------------------------------------------------------------------------
 
