@@ -255,7 +255,7 @@ export class ObsidianAssetsRepository extends AssetsRepository {
         const sorted = [...resources].sort((a, b) => naturalCompare(a.key, b.key));
         const page = applyPagination(sorted, options.pagination);
         for (const resource of page) yield* emit.data(resource);
-        return { total: page.length };
+        return { total: sorted.length };
       })
     );
   }

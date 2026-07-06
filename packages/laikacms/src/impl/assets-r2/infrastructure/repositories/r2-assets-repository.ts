@@ -152,7 +152,7 @@ export class R2AssetsRepository extends AssetsRepository {
         const all = yield* listRecursive(folderKey, 1);
         const paginated = applyPagination(all, options.pagination);
         for (const r of paginated) yield* emit.data(r);
-        return { total: paginated.length };
+        return { total: all.length };
       })
     );
   }
