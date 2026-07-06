@@ -252,8 +252,10 @@ export interface OAuthConfig {
   refreshTokenExpiration?: number;
   // Authorization code expiration in seconds (default: 600 = 10 minutes)
   authCodeExpiration?: number;
-  authorizeEndpoint?: string; // default: /oauth2/authorize
-  tokenEndpoint?: string; // default: /oauth2/token
+  /** Override the authorize endpoint path. Defaults to `<basePath>/authorize`. */
+  authorizeEndpoint?: string;
+  /** Override the token endpoint path. Defaults to `<basePath>/token`. */
+  tokenEndpoint?: string;
 
   // Optional security features
   /** Passkey (WebAuthn) configuration - if provided, enables passkey authentication */
@@ -1124,8 +1126,12 @@ export interface DecapOauth2 {
 export function decapOauth2(
   options: OAuthConfig,
 ): DecapOauth2 {
-  const authorizeEndpoint = TL.url`${options.basePath}/authorize`;
-  const tokenEndpoint = TL.url`${options.basePath}/token`;
+  const authorizeEndpoint = options.authorizeEndpoint
+    ? Url.normalize(options.authorizeEndpoint)
+    : TL.url`${options.basePath}/authorize`;
+  const tokenEndpoint = options.tokenEndpoint
+    ? Url.normalize(options.tokenEndpoint)
+    : TL.url`${options.basePath}/token`;
   const totpSetupEndpoint = TL.url`${options.basePath}/setup/totp`;
   const totpSetupVerifyEndpoint = TL.url`${options.basePath}/setup/totp/verify`;
   const passkeySetupEndpoint = TL.url`${options.basePath}/setup/passkey`;
