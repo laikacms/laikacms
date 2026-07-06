@@ -577,8 +577,8 @@ Content-Type: application/vnd.api+json
 
 **Response**
 
-Results are returned in the same order as the input operations. Remove operations produce no result
-entry.
+Results are returned in the same order as the input operations. Remove operations return a `meta`
+entry (same as the Documents API).
 
 ```json
 {
@@ -615,6 +615,15 @@ entry.
           "content": { "title": "Updated Title" },
           "createdAt": "2024-01-15T10:30:00Z",
           "updatedAt": "2024-01-16T08:00:00Z"
+        }
+      }
+    },
+    {
+      "meta": {
+        "deleted": true,
+        "ref": {
+          "type": "atom",
+          "id": "posts/old-post"
         }
       }
     }
