@@ -1,5 +1,6 @@
+import * as Effect from 'effect/Effect';
 import * as Result from 'effect/Result';
-import { LaikaTask, NotFoundError } from 'laikacms/core';
+import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { LaikaError } from 'laikacms/core';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { DrizzleDocumentsRepository } from './documents-repository.js';
@@ -74,6 +75,9 @@ function makeInMemoryOptions(): DrizzleDocumentsRepositoryOptions<
           const filtered = documents.filter(where);
           const sliced = filtered.slice(offset, limit !== undefined ? offset + limit : undefined);
           return sliced;
+        },
+        async count({ where }) {
+          return documents.filter(where).length;
         },
       },
       revisions: {
@@ -396,6 +400,64 @@ describe('DrizzleDocumentsRepository', () => {
 
       expect(page2Docs.length).toBe(2);
       expect(page2Docs.map(d => d.key)).toEqual(['p3', 'p4']);
+    });
+  });
+
+  describe('listRecords done.total', () => {
+    it('returns the full matching count in done.total, not just the page size', async () => {
+      const keys = ['t1', 't2', 't3', 't4', 't5'];
+      for (const key of keys) {
+        await resolveTask(
+          repo.createDocument({ key, type: 'published', status: 'published', content: {}, language: 'en' }),
+        );
+      }
+
+      const collected = await Effect.runPromise(
+        LaikaStream.runCollect(
+          repo.listRecords({ type: 'published', folder: '', pagination: { limit: 2, offset: 0 }, depth: 10 }),
+        ),
+      );
+
+      expect(collected.data.length).toBe(2);
+      expect(collected.done.total).toBeGreaterThanOrEqual(5);
+    });
+
+    it('returns full count with page-based pagination', async () => {
+      const keys = ['pg1', 'pg2', 'pg3', 'pg4', 'pg5'];
+      for (const key of keys) {
+        await resolveTask(
+          repo.createDocument({ key, type: 'published', status: 'published', content: {}, language: 'en' }),
+        );
+      }
+
+      const collected = await Effect.runPromise(
+        LaikaStream.runCollect(
+          repo.listRecords({ type: 'published', folder: '', pagination: { page: 1, perPage: 2 }, depth: 10 }),
+        ),
+      );
+
+      expect(collected.data.length).toBe(2);
+      expect(collected.done.total).toBeGreaterThanOrEqual(5);
+    });
+  });
+
+  describe('listRecordSummaries done.total', () => {
+    it('returns the full matching count in done.total, not just the page size', async () => {
+      const keys = ['st1', 'st2', 'st3', 'st4', 'st5'];
+      for (const key of keys) {
+        await resolveTask(
+          repo.createDocument({ key, type: 'published', status: 'published', content: {}, language: 'en' }),
+        );
+      }
+
+      const collected = await Effect.runPromise(
+        LaikaStream.runCollect(
+          repo.listRecordSummaries({ type: 'published', folder: '', pagination: { limit: 2, offset: 0 }, depth: 10 }),
+        ),
+      );
+
+      expect(collected.data.length).toBe(2);
+      expect(collected.done.total).toBeGreaterThanOrEqual(5);
     });
   });
 

@@ -89,6 +89,13 @@ export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CD
         limit?: number,
         offset?: number,
       }) => Promise<DocumentModel[]>,
+      /**
+       * Optional. Return the total number of rows matching `where` (no LIMIT/OFFSET).
+       * When provided, `listRecords` / `listRecordSummaries` populate `done.total` with the
+       * full matching count instead of the page count, enabling correct `meta.page.total`
+       * in the Documents JSON:API.
+       */
+      count?: (query: { where: CKE | CSNE | CSE | CKSW | CSI | CDLTE | CA }) => Promise<number>,
     },
     revisions: {
       insert: (query: { values: RevisionModelStrict }) => Promise<RevisionModel[]>,
@@ -350,30 +357,35 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
     return LaikaStream.make<T, ListRecordsDone>(emit =>
       Effect.gen({ self: this }, function*() {
         const qb = this.options.documentQueryBuilders;
-        const rows = yield* Effect.promise(() =>
-          this.options.callbacks.documents.select({
-            excludeContent: summaryOnly,
-            where: qb.and(...[
-              options.type === 'published' ? qb.statusEquals(PUBLISHED_STATUS) : undefined,
-              options.type === 'unpublished' ? qb.statusNotEquals(PUBLISHED_STATUS) : undefined,
-              options.statuses ? qb.statusIn(options.statuses) : undefined,
-              options.folder ? qb.keyStartsWith(options.folder + '/') : undefined,
-              options.folder
-                ? qb.depthLte(pathToSegments(options.folder).length + options.depth)
-                : undefined,
-            ].filter((x): x is NonNullable<typeof x> => x !== undefined)),
-            offset: 'offset' in options.pagination
-              ? options.pagination.offset
-              : 'page' in options.pagination
-              ? (options.pagination.page - 1) * (options.pagination.perPage ?? 100)
-              : 0,
-            limit: 'offset' in options.pagination
-              ? (options.pagination.limit ?? 100)
-              : 'page' in options.pagination
-              ? (options.pagination.perPage ?? 100)
-              : 100,
-          })
-        );
+        const where = qb.and(...[
+          options.type === 'published' ? qb.statusEquals(PUBLISHED_STATUS) : undefined,
+          options.type === 'unpublished' ? qb.statusNotEquals(PUBLISHED_STATUS) : undefined,
+          options.statuses ? qb.statusIn(options.statuses) : undefined,
+          options.folder ? qb.keyStartsWith(options.folder + '/') : undefined,
+          options.folder
+            ? qb.depthLte(pathToSegments(options.folder).length + options.depth)
+            : undefined,
+        ].filter((x): x is NonNullable<typeof x> => x !== undefined));
+
+        const offset = 'offset' in options.pagination
+          ? options.pagination.offset
+          : 'page' in options.pagination
+          ? (options.pagination.page - 1) * (options.pagination.perPage ?? 100)
+          : 0;
+        const limit = 'offset' in options.pagination
+          ? (options.pagination.limit ?? 100)
+          : 'page' in options.pagination
+          ? (options.pagination.perPage ?? 100)
+          : 100;
+
+        const [rows, fullCount] = yield* Effect.all([
+          Effect.promise(() =>
+            this.options.callbacks.documents.select({ excludeContent: summaryOnly, where, offset, limit })
+          ),
+          this.options.callbacks.documents.count
+            ? Effect.promise(() => this.options.callbacks.documents.count!({ where }))
+            : Effect.succeed(null),
+        ]);
 
         let emitted = 0;
         for (const row of rows) {
@@ -406,7 +418,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
           } as T);
           emitted += 1;
         }
-        return { total: emitted };
+        return { total: fullCount ?? emitted };
       })
     );
   }
