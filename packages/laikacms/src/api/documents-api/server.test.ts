@@ -10,7 +10,7 @@ import type {
 } from 'laikacms/documents';
 import { describe, expect, it, vi } from 'vitest';
 
-import { InternalError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { BadRequestError, InternalError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 
 import { buildJsonApi } from './server.js';
 
@@ -759,6 +759,77 @@ describe('GET /records — error HTTP status', () => {
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
     expect(body.errors[0]!.status).toBe('500');
     expect(body.errors[0]!.code).toBe('internal_error');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /records — missing filter[folder] (LCMS-268)
+// ---------------------------------------------------------------------------
+
+describe('GET /records — missing filter[folder]', () => {
+  it('returns 400 bad_request when repo raises BadRequestError for empty folder', async () => {
+    const partialRepo = {
+      listRecords: () =>
+        LaikaStream.make(() =>
+          Effect.fail(
+            new BadRequestError(
+              'listRecords requires `folder` (the collection name) to identify which collection to list',
+            ),
+          )
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/records'));
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('bad_request');
+  });
+
+  it('returns 400 bad_request when repo raises BadRequestError for empty filter[folder]=""', async () => {
+    const partialRepo = {
+      listRecords: () =>
+        LaikaStream.make(() =>
+          Effect.fail(
+            new BadRequestError('listRecords requires `folder`'),
+          )
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/records?filter%5Bfolder%5D='));
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('bad_request');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /record-summaries — missing filter[folder] (LCMS-268)
+// ---------------------------------------------------------------------------
+
+describe('GET /record-summaries — missing filter[folder]', () => {
+  it('returns 400 bad_request when repo raises BadRequestError for empty folder', async () => {
+    const partialRepo = {
+      listRecordSummaries: () =>
+        LaikaStream.make(() =>
+          Effect.fail(
+            new BadRequestError('listRecords requires `folder`'),
+          )
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/record-summaries'));
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('bad_request');
   });
 });
 

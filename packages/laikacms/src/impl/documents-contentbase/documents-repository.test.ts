@@ -1,7 +1,7 @@
 import * as Result from 'effect/Result';
 import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
 import type { DocumentCollectionSettings } from 'laikacms/contentbase-settings';
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { BadRequestError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { LaikaError } from 'laikacms/core';
 import type { StorageRepository } from 'laikacms/storage';
 import type {
@@ -337,6 +337,16 @@ describe('ContentBaseDocumentsRepository', () => {
       expect(data.length).toBeLessThanOrEqual(5);
       expect(done.total).toBe(5);
     });
+
+    it('returns BadRequestError when folder is empty (LCMS-268)', async () => {
+      const result = await LaikaStream.runPromiseResult(
+        repo.listRecords({ folder: '', pagination: { offset: 0, limit: 100 }, depth: 1 }),
+      );
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe(BadRequestError.CODE);
+      }
+    });
   });
 
   describe('listRecordSummaries', () => {
@@ -351,6 +361,16 @@ describe('ContentBaseDocumentsRepository', () => {
         repo.listRecordSummaries({ folder: 'posts', pagination: { offset: 0, limit: 2 }, depth: 1 }),
       );
       expect(done.total).toBe(3);
+    });
+
+    it('returns BadRequestError when folder is empty (LCMS-268)', async () => {
+      const result = await LaikaStream.runPromiseResult(
+        repo.listRecordSummaries({ folder: '', pagination: { offset: 0, limit: 100 }, depth: 1 }),
+      );
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe(BadRequestError.CODE);
+      }
     });
   });
 
