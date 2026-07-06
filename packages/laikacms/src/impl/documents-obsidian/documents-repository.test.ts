@@ -421,3 +421,16 @@ describe('ObsidianDocumentsRepository — custom statusProperty and defaultStatu
     expect(unpublished.status).toBe('draft');
   });
 });
+
+describe('ObsidianDocumentsRepository — getCapabilities', () => {
+  it('returns a compatibilityDate string and forwards pagination from the underlying storage', async () => {
+    const repo = makeRepo();
+    const caps = await LaikaTask.runPromise(repo.getCapabilities());
+    expect(typeof caps.compatibilityDate).toBe('string');
+    expect(caps.compatibilityDate.length).toBeGreaterThan(0);
+    // Pagination is forwarded from FileSystemStorageRepository
+    expect(caps.pagination).toBeDefined();
+    expect(caps.pagination.supported).toBe(true);
+    expect(caps.pagination.styles).toBeDefined();
+  });
+});

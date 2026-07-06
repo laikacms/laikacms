@@ -220,3 +220,18 @@ describe('R2AssetsRepository.listResources', () => {
     expect(collected.recoverableErrors.length).toBeGreaterThan(0);
   });
 });
+
+describe('R2AssetsRepository — getCapabilities', () => {
+  it('returns a compatibilityDate string and a pagination object', async () => {
+    const bucket = makeBucket();
+    const repo = new R2AssetsRepository({
+      bucket: bucket as unknown as R2Bucket,
+      dangerouslyAllowAllFiles: true,
+    });
+    const caps = await LaikaTask.runPromise(repo.getCapabilities());
+    expect(typeof caps.compatibilityDate).toBe('string');
+    expect(caps.compatibilityDate.length).toBeGreaterThan(0);
+    expect(caps.pagination).toBeDefined();
+    expect(caps.pagination.supported).toBe(true);
+  });
+});

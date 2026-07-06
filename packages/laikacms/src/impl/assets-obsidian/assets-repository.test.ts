@@ -175,3 +175,14 @@ describe('ObsidianAssetsRepository — urls & metadata', () => {
     expect(metadata.data[0]?.metadata.mimeType).toBe('image/png');
   });
 });
+
+describe('ObsidianAssetsRepository — getCapabilities', () => {
+  it('returns a compatibilityDate string and a pagination object', async () => {
+    const repo = new ObsidianAssetsRepository(vaultDir);
+    const caps = await LaikaTask.runPromise(repo.getCapabilities());
+    expect(typeof caps.compatibilityDate).toBe('string');
+    expect(caps.compatibilityDate.length).toBeGreaterThan(0);
+    expect(caps.pagination).toBeDefined();
+    expect(caps.pagination.supported).toBe(true);
+  });
+});

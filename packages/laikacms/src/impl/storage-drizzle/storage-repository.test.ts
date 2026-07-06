@@ -1,7 +1,7 @@
 import * as Effect from 'effect/Effect';
 import { describe, expect, it } from 'vitest';
 
-import { ForbiddenError, InternalError, LaikaStream, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, InternalError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 
 import {
   type DrizzleStorageCallbacks,
@@ -120,5 +120,16 @@ describe('DrizzleStorageRepository.removeAtoms', () => {
     expect(collected.recoverableErrors).toHaveLength(1);
     expect(collected.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
     expect(collected.recoverableErrors[0]!.message).toContain('"missing"');
+  });
+});
+
+describe('DrizzleStorageRepository — getCapabilities', () => {
+  it('returns a compatibilityDate string and a pagination object', async () => {
+    const repo = makeRepo(async () => []);
+    const caps = await LaikaTask.runPromise(repo.getCapabilities());
+    expect(typeof caps.compatibilityDate).toBe('string');
+    expect(caps.compatibilityDate.length).toBeGreaterThan(0);
+    expect(caps.pagination).toBeDefined();
+    expect(caps.pagination.supported).toBe(true);
   });
 });

@@ -160,3 +160,19 @@ describe('R2StorageRepository.createObject', () => {
     expect(collected.recoverableErrors).toEqual([]);
   });
 });
+
+describe('R2StorageRepository — getCapabilities', () => {
+  it('returns a compatibilityDate string and a pagination object', async () => {
+    const bucket = makeBucket();
+    const repo = new R2StorageRepository(
+      bucket as unknown as R2Bucket,
+      { json: jsonSerializer },
+      'json',
+    );
+    const caps = await LaikaTask.runPromise(repo.getCapabilities());
+    expect(typeof caps.compatibilityDate).toBe('string');
+    expect(caps.compatibilityDate.length).toBeGreaterThan(0);
+    expect(caps.pagination).toBeDefined();
+    expect(caps.pagination.supported).toBe(true);
+  });
+});

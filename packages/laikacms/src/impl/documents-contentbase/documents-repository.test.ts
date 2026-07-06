@@ -97,7 +97,14 @@ function makeMemoryStorage(): StorageRepository {
     },
 
     getCapabilities(): LaikaTask.LaikaTask<object> {
-      return LaikaTask.succeed({});
+      return LaikaTask.succeed({
+        compatibilityDate: '2026-05-11',
+        pagination: {
+          supported: true,
+          description: 'In-memory mock storage.',
+          styles: { offset: true, page: true, cursor: false },
+        },
+      });
     },
   } as unknown as StorageRepository;
 }
@@ -355,5 +362,19 @@ describe('ContentBaseDocumentsRepository', () => {
         expect(getResult.success.content).toEqual({ text: 'original' });
       }
     });
+  });
+});
+
+describe('ContentBaseDocumentsRepository — getCapabilities', () => {
+  it('returns a compatibilityDate string and forwards pagination from the underlying storage mock', async () => {
+    const storage = makeMemoryStorage();
+    const repo = new ContentBaseDocumentsRepository(storage, makeSettingsProvider());
+    const caps = await LaikaTask.runPromise(repo.getCapabilities());
+    expect(typeof caps.compatibilityDate).toBe('string');
+    expect(caps.compatibilityDate.length).toBeGreaterThan(0);
+    // Pagination is forwarded from the underlying storage mock
+    expect(caps.pagination).toBeDefined();
+    expect(caps.pagination.supported).toBe(true);
+    expect(caps.pagination.styles).toBeDefined();
   });
 });
