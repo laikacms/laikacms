@@ -201,11 +201,14 @@ export function parsePaginationQuery(query: Record<string, string | string[] | u
     };
   }
 
-  // Default to cursor-based pagination (no recognised pagination key present).
-  // Honour a standalone page[size] so that ?page[size]=N works without pairing.
+  // Default to page-based pagination (page 1) when no recognised pagination key is present.
+  // A standalone page[size]=N means "first page of N items"; page-based links (page[number])
+  // work on every backend, whereas cursor links (page[after]) are rejected by FS/R2 backends
+  // that declare pagination.styles.cursor:false — which would make the server's own next links
+  // self-reject with 400 (LCMS-277).
   const sizeStr = pageSize && (Array.isArray(pageSize) ? pageSize[0] : pageSize);
   return {
-    after: undefined,
+    page: 1,
     perPage: sizeStr ? parseInt(sizeStr, 10) : 10,
   };
 }

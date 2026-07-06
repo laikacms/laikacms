@@ -375,10 +375,10 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       // as forward from that point for repository calls that only support
       // `after`. Page-based and offset-based fall back to offset pagination.
       //
-      // Note: parsePaginationQuery's default branch (no cursor) ignores
-      // page[size] and returns a hardcoded perPage. We read page[size] directly
-      // from the query so a bare ?page[size]=N request honours the caller's
-      // intent for both pagination options AND link generation.
+      // parsePaginationQuery now defaults to page-based (page: 1) for a bare
+      // page[size]=N request (LCMS-277). We still read page[size] directly from
+      // the query as a belt-and-suspenders guard for the perPage value, and
+      // the paginationForLinks derivation below remains correct for all shapes.
       const afterCursor = 'after' in pagination ? pagination.after : undefined;
       const rawPageSize = str(query['page[size]']);
       const rawPageSizeNum = rawPageSize ? parseInt(rawPageSize, 10) : undefined;
@@ -393,10 +393,13 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         : 'before' in pagination
         ? { before: (pagination as { before?: string }).before, perPage }
         : pagination;
+      // Convert page-based pagination to offset for the backend call.
+      // page[number]=N → offset=(N-1)*perPage so page advances correctly.
+      const pageNum = 'page' in pagination && typeof pagination.page === 'number' ? pagination.page : undefined;
       const paginationOptions: { offset: number, limit: number } | { after: string | undefined, perPage: number } =
         afterCursor !== undefined
           ? { after: afterCursor, perPage }
-          : { offset: 0, limit: perPage };
+          : { offset: pageNum && pageNum > 1 ? (pageNum - 1) * perPage : 0, limit: perPage };
 
       const included: JsonApiResource[] = [];
       let hasMore = false;

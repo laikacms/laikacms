@@ -727,6 +727,77 @@ describe('GET /atoms — cursor pagination rejection (LCMS-172)', () => {
   });
 });
 
+// Standalone page[size] self-reject regression (LCMS-277)
+// ---------------------------------------------------------------------------
+
+describe('GET /atoms — standalone page[size] emits followable next link (LCMS-277)', () => {
+  // A cursor:false backend (FS/R2) that returns exactly 1 item per call with
+  // done.total=2. This gives respondCollectionWithConverter enough info to set
+  // hasMore=true: items.length(1) === requestedLimit(1) AND done.total is known.
+  const makeTwoItemRepo = () =>
+    ({
+      getCapabilities: () => LaikaTask.make(() => Effect.succeed(makeStorageCapabilities(false))),
+      listAtoms: () =>
+        LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+          emit =>
+            Effect.gen(function*() {
+              yield* emit.data({
+                type: 'folder',
+                key: 'posts/drafts',
+                createdAt: '2026-01-01T00:00:00Z',
+                updatedAt: '2026-01-01T00:00:00Z',
+              });
+              return { total: 2 };
+            }),
+        ),
+      listAtomSummaries: () =>
+        LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+          emit =>
+            Effect.gen(function*() {
+              yield* emit.data({
+                type: 'folder',
+                key: 'posts/drafts',
+                createdAt: '2026-01-01T00:00:00Z',
+                updatedAt: '2026-01-01T00:00:00Z',
+              });
+              return { total: 2 };
+            }),
+        ),
+    }) as unknown as StorageRepository;
+
+  it('GET /atoms?page[size]=1 emits a page[number]-based next link, not page[after]', async () => {
+    const api = buildJsonApi({ repo: makeTwoItemRepo() });
+    const res = await api.fetch(new Request('http://localhost/atoms/posts?page[size]=1'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { links?: { next?: string } };
+    expect(body.links?.next).toBeDefined();
+    expect(body.links?.next).toContain('page[number]');
+    expect(body.links?.next).not.toContain('page[after]');
+  });
+
+  it('following the next link from GET /atoms?page[size]=1 returns 200, not 400', async () => {
+    const api = buildJsonApi({ repo: makeTwoItemRepo() });
+    // Get page 1 to obtain the next link
+    const res1 = await api.fetch(new Request('http://localhost/atoms/posts?page[size]=1'));
+    const body1 = await res1.json() as { links?: { next?: string } };
+    const nextUrl = body1.links?.next;
+    expect(nextUrl).toBeDefined();
+    // Follow the next link — must not be rejected with 400
+    const res2 = await api.fetch(new Request(nextUrl!));
+    expect(res2.status).toBe(200);
+  });
+
+  it('GET /atom-summaries?page[size]=1 emits a page[number]-based next link, not page[after]', async () => {
+    const api = buildJsonApi({ repo: makeTwoItemRepo() });
+    const res = await api.fetch(new Request('http://localhost/atom-summaries/posts?page[size]=1'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { links?: { next?: string } };
+    expect(body.links?.next).toBeDefined();
+    expect(body.links?.next).toContain('page[number]');
+    expect(body.links?.next).not.toContain('page[after]');
+  });
+});
+
 // ---------------------------------------------------------------------------
 // DELETE /objects/:key (LCMS-205)
 // ---------------------------------------------------------------------------
