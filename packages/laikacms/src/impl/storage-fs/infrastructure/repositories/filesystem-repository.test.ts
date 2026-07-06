@@ -139,6 +139,51 @@ describe('FileSystemStorageRepository listing a missing folder', () => {
   });
 });
 
+describe('FileSystemStorageRepository listAtomSummaries timestamps (LCMS-278)', () => {
+  it('populates createdAt and updatedAt on object-summary entries', async () => {
+    const before = new Date();
+    await fs.writeFile(path.join(tmpDir, 'post.md'), 'hello');
+    const after = new Date();
+
+    const repo = makeRepo();
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+    );
+
+    expect(collected.data).toHaveLength(1);
+    const summary = collected.data[0];
+    expect(summary.type).toBe('object-summary');
+    expect(summary.createdAt).toBeDefined();
+    expect(summary.updatedAt).toBeDefined();
+    const createdAt = new Date(summary.createdAt!);
+    const updatedAt = new Date(summary.updatedAt!);
+    expect(createdAt.getTime()).toBeGreaterThanOrEqual(before.getTime() - 1000);
+    expect(createdAt.getTime()).toBeLessThanOrEqual(after.getTime() + 1000);
+    expect(updatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime() - 1000);
+    expect(updatedAt.getTime()).toBeLessThanOrEqual(after.getTime() + 1000);
+  });
+
+  it('populates createdAt and updatedAt on folder-summary entries', async () => {
+    const before = new Date();
+    await fs.mkdir(path.join(tmpDir, 'drafts'));
+    await fs.writeFile(path.join(tmpDir, 'drafts', '.keep'), '');
+    const after = new Date();
+
+    const repo = makeRepo();
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+    );
+
+    const folderSummary = collected.data.find(s => s.type === 'folder-summary');
+    expect(folderSummary).toBeDefined();
+    expect(folderSummary!.createdAt).toBeDefined();
+    expect(folderSummary!.updatedAt).toBeDefined();
+    const updatedAt = new Date(folderSummary!.updatedAt!);
+    expect(updatedAt.getTime()).toBeGreaterThanOrEqual(before.getTime() - 1000);
+    expect(updatedAt.getTime()).toBeLessThanOrEqual(after.getTime() + 1000);
+  });
+});
+
 // LCMS-245: rawSerializer throws when content has extra fields beyond 'body'.
 // Before the fix, Effect.promise() treated the thrown rejection as a defect
 // that bypassed Effect.matchEffect, leaving the LaikaTask Queue unsignalled

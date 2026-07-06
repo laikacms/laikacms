@@ -448,7 +448,25 @@ export class FileSystemStorageRepository extends StorageRepository {
         });
       const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
       const total = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), total };
+      const page = applyPagination(sorted, options.pagination);
+      // Stat each page entry to populate createdAt/updatedAt; stat failures are
+      // silently ignored so a single unreadable entry doesn't break the listing.
+      const summaries = yield* Effect.promise(() =>
+        Promise.all(
+          page.map(async (summary): Promise<AtomSummary> => {
+            const metaResult = summary.type === 'object-summary'
+              ? await this.fileSystemDataSource.getFileMeta(this.rootDirectory, summary.key)
+              : await this.fileSystemDataSource.getDirMeta(this.rootDirectory, summary.key);
+            if (Result.isFailure(metaResult)) return summary;
+            return {
+              ...summary,
+              createdAt: metaResult.success.createdAt.toISOString(),
+              updatedAt: metaResult.success.updatedAt.toISOString(),
+            };
+          }),
+        )
+      );
+      return { summaries, total };
     });
   }
 

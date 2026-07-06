@@ -242,6 +242,9 @@ Same as `GET /atoms/:key`.
 
 **Response** — collection of `object-summary` and/or `folder-summary` resources
 
+`createdAt` and `updatedAt` are optional — all built-in backends populate them, but a custom backend
+may omit them.
+
 ```json
 {
   "data": [
