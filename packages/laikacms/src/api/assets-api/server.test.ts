@@ -139,6 +139,12 @@ describe('assets-api meta.warnings', () => {
 
     // Stub repo: honours `after` cursor by slicing from the item after the cursor
     const partialRepo = {
+      getCapabilities: () =>
+        LaikaTask.succeed({
+          compatibilityDate:
+            '2026-01-01' as unknown as import('laikacms/assets').AssetsCapabilities['compatibilityDate'],
+          pagination: { supported: true, description: 'cursor', styles: { offset: false, page: false, cursor: true } },
+        }),
       listResources: (_folderKey: string, options: ListResourcesOptions) =>
         LaikaStream.make<Resource, ListResourcesDone>(emit =>
           Effect.gen(function*() {
@@ -230,6 +236,15 @@ describe('GET /resources — shared JSON:API pagination params', () => {
   const allResources: Resource[] = ['a.jpg', 'b.jpg', 'c.jpg', 'd.jpg'].map(makeAsset);
 
   const makeRepo = (): AssetsRepository => ({
+    getCapabilities: () =>
+      LaikaTask.succeed({
+        compatibilityDate: '2026-01-01' as unknown as import('laikacms/assets').AssetsCapabilities['compatibilityDate'],
+        pagination: {
+          supported: true,
+          description: 'cursor+offset',
+          styles: { offset: true, page: false, cursor: true },
+        },
+      }),
     listResources: (_folderKey: string, options: ListResourcesOptions) =>
       LaikaStream.make<Resource, ListResourcesDone>(emit =>
         Effect.gen(function*() {
@@ -314,6 +329,95 @@ describe('GET /capabilities', () => {
     const body = await res.json() as { errors: Array<{ status: string }> };
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /resources — cursor capability guard (LCMS-264)
+// ---------------------------------------------------------------------------
+
+describe('GET /resources — cursor capability guard', () => {
+  const makeAsset = (key: string): Resource => ({
+    type: 'asset',
+    key,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    content: { size: 1, etag: key },
+  });
+
+  const noCursorCaps = {
+    compatibilityDate: '2026-01-01' as unknown as import('laikacms/assets').AssetsCapabilities['compatibilityDate'],
+    pagination: {
+      supported: true as const,
+      description: 'offset-only',
+      styles: { offset: true, page: true, cursor: false },
+    },
+  };
+
+  const cursorCaps = {
+    compatibilityDate: '2026-01-01' as unknown as import('laikacms/assets').AssetsCapabilities['compatibilityDate'],
+    pagination: {
+      supported: true as const,
+      description: 'cursor+offset',
+      styles: { offset: true, page: false, cursor: true },
+    },
+  };
+
+  const makeNoCursorRepo = (): AssetsRepository => ({
+    getCapabilities: () => LaikaTask.succeed(noCursorCaps),
+    listResources: () =>
+      LaikaStream.make<Resource, ListResourcesDone>(emit =>
+        Effect.gen(function*() {
+          yield* emit.data(makeAsset('a.jpg'));
+          return { total: 1 };
+        })
+      ),
+  } as unknown as AssetsRepository);
+
+  const makeCursorRepo = (): AssetsRepository => ({
+    getCapabilities: () => LaikaTask.succeed(cursorCaps),
+    listResources: (_folderKey: string, options: ListResourcesOptions) =>
+      LaikaStream.make<Resource, ListResourcesDone>(emit =>
+        Effect.gen(function*() {
+          const p = options.pagination as { after?: string, perPage: number } | { offset: number, limit: number };
+          const items = [makeAsset('a.jpg'), makeAsset('b.jpg')];
+          for (const r of items) yield* emit.data(r);
+          void p;
+          return { total: items.length };
+        })
+      ),
+  } as unknown as AssetsRepository);
+
+  it('page[after] on a cursor:false backend → 400 JSON:API error', async () => {
+    const api = buildAssetsApi({ repository: makeNoCursorRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[after]=photo.jpg'));
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('invalid_data');
+  });
+
+  it('page[before] on a cursor:false backend → 400 JSON:API error', async () => {
+    const api = buildAssetsApi({ repository: makeNoCursorRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[before]=photo.jpg'));
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('invalid_data');
+  });
+
+  it('page[size] without cursor params on cursor:false backend → 200 unaffected', async () => {
+    const api = buildAssetsApi({ repository: makeNoCursorRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[size]=10'));
+    expect(res.status).toBe(200);
+  });
+
+  it('page[after] on a cursor:true backend → 200', async () => {
+    const api = buildAssetsApi({ repository: makeCursorRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[after]=a.jpg&page[size]=2'));
+    expect(res.status).toBe(200);
   });
 });
 

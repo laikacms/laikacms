@@ -345,6 +345,27 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       const folderKey = str(query['folder']) || str(query['filter[folder]']) || str(query['filter[prefix]']) || '';
       const pagination = parsePaginationQuery(query);
 
+      // Reject cursor params when the backend has declared cursor:false.
+      // Mirrors storage-api's rejectUnsupportedCursor guard. When getCapabilities
+      // fails we cannot verify support, so we let the list proceed (fail-open).
+      if (str(query['page[after]']) !== undefined || str(query['page[before]']) !== undefined) {
+        const capsResult = await firstResult(repository.getCapabilities());
+        if (Result.isSuccess(capsResult)) {
+          const caps = capsResult.success;
+          const cursorSupported = caps.pagination.supported && caps.pagination.styles.cursor;
+          if (!cursorSupported) {
+            return respondError(
+              new InvalidData(
+                'Cursor pagination (page[after] / page[before]) is not supported by this assets backend. '
+                  + 'Use page[size] (offset-based) instead. '
+                  + 'Consult GET /capabilities for the pagination modes this backend supports.',
+              ),
+              400,
+            );
+          }
+        }
+      }
+
       // Parse depth parameter (minimum 1)
       const depthParam = str(query['filter[depth]']) || str(query['depth']);
       const depth = depthParam ? Math.max(1, parseInt(depthParam, 10) || 1) : 1;
