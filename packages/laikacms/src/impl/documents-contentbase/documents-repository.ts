@@ -463,10 +463,11 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           const listOptions = { pagination: options.pagination, depth: options.depth };
 
           if (mode === 'full') {
-            const atoms = yield* collectStreamData(
+            const { data: atoms, done } = yield* LaikaStream.runCollectForwarding(
               this.storageRepository.listAtoms(folderPath, listOptions),
               emit,
             );
+            let emitted = 0;
             for (const atom of atoms) {
               if (atom.type !== 'object') continue;
               const k = this.extractKeyFromPath(atom.key, directory, collection);
@@ -476,13 +477,15 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
                 type: 'published' as const,
                 status: 'published' as const,
               } as unknown as T);
-              total += 1;
+              emitted += 1;
             }
+            total += done.total ?? emitted;
           } else {
-            const summaries = yield* collectStreamData(
+            const { data: summaries, done } = yield* LaikaStream.runCollectForwarding(
               this.storageRepository.listAtomSummaries(folderPath, listOptions),
               emit,
             );
+            let emitted = 0;
             for (const atom of summaries) {
               if (atom.type !== 'object-summary') continue;
               const k = this.extractKeyFromPath(atom.key, directory, collection);
@@ -492,8 +495,9 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
                 type: 'published-summary' as const,
                 status: 'published' as const,
               } as unknown as T);
-              total += 1;
+              emitted += 1;
             }
+            total += done.total ?? emitted;
           }
         }
 
@@ -512,14 +516,18 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
             if (mode === 'full') {
               const r = yield* Effect.result(
-                collectStreamData(this.storageRepository.listAtoms(folderPath, listOptions), emit),
+                LaikaStream.runCollectForwarding(
+                  this.storageRepository.listAtoms(folderPath, listOptions),
+                  emit,
+                ),
               );
               if (Result.isFailure(r)) {
                 // Ignore NotFound for status dirs that don't exist yet.
                 if (r.failure.code !== NotFoundError.CODE) yield* emit.recoverableError(r.failure);
                 continue;
               }
-              for (const atom of r.success) {
+              let emitted = 0;
+              for (const atom of r.success.data) {
                 if (atom.type !== 'object') continue;
                 const k = this.extractKeyFromPath(atom.key, basePath, collection);
                 yield* emit.data({
@@ -528,17 +536,22 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
                   type: 'unpublished' as const,
                   status,
                 } as unknown as T);
-                total += 1;
+                emitted += 1;
               }
+              total += r.success.done.total ?? emitted;
             } else {
               const r = yield* Effect.result(
-                collectStreamData(this.storageRepository.listAtomSummaries(folderPath, listOptions), emit),
+                LaikaStream.runCollectForwarding(
+                  this.storageRepository.listAtomSummaries(folderPath, listOptions),
+                  emit,
+                ),
               );
               if (Result.isFailure(r)) {
                 if (r.failure.code !== NotFoundError.CODE) yield* emit.recoverableError(r.failure);
                 continue;
               }
-              for (const atom of r.success) {
+              let emitted = 0;
+              for (const atom of r.success.data) {
                 if (atom.type !== 'object-summary') continue;
                 const k = this.extractKeyFromPath(atom.key, basePath, collection);
                 yield* emit.data({
@@ -547,8 +560,9 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
                   type: 'unpublished-summary' as const,
                   status,
                 } as unknown as T);
-                total += 1;
+                emitted += 1;
               }
+              total += r.success.done.total ?? emitted;
             }
           }
         }
@@ -613,7 +627,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     return LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
       Effect.gen({ self: this }, function*() {
         const revisionDirectory = yield* this.getRevisionPath(key, emit);
-        const atoms = yield* collectStreamData(
+        const { data: atoms, done } = yield* LaikaStream.runCollectForwarding(
           this.storageRepository.listAtoms(revisionDirectory, {
             pagination: options.pagination,
             depth: 1,
@@ -635,7 +649,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           );
           emitted += 1;
         }
-        return { total: emitted };
+        return { total: done.total ?? emitted };
       })
     );
   }
