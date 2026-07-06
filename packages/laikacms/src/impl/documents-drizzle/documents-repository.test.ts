@@ -258,6 +258,77 @@ describe('DrizzleDocumentsRepository', () => {
     });
   });
 
+  describe('updateUnpublished', () => {
+    it('updates content and status of an existing draft', async () => {
+      await resolveTask(
+        repo.createUnpublished({
+          key: 'upd-draft',
+          type: 'unpublished',
+          content: { v: 1 },
+          language: 'en',
+          status: 'draft',
+        }),
+      );
+      const result = await resolveTask(
+        repo.updateUnpublished({
+          key: 'upd-draft',
+          type: 'unpublished',
+          content: { v: 2 },
+          language: 'en',
+          status: 'pending_review',
+        }),
+      );
+      expect(Result.isSuccess(result)).toBe(true);
+      if (Result.isSuccess(result)) {
+        expect(result.success.content).toEqual({ v: 2 });
+        expect(result.success.status).toBe('pending_review');
+      }
+    });
+
+    it('returns NotFoundError when the key does not exist', async () => {
+      const result = await resolveTask(
+        repo.updateUnpublished({
+          key: 'no-such-draft',
+          type: 'unpublished',
+          content: { v: 1 },
+          language: 'en',
+          status: 'draft',
+        }),
+      );
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe(NotFoundError.CODE);
+      }
+    });
+  });
+
+  describe('deleteUnpublished', () => {
+    it('removes a draft so subsequent getUnpublished returns NotFoundError', async () => {
+      await resolveTask(
+        repo.createUnpublished({
+          key: 'del-draft',
+          type: 'unpublished',
+          content: { x: 1 },
+          language: 'en',
+          status: 'draft',
+        }),
+      );
+      const deleteResult = await resolveTask(repo.deleteUnpublished('del-draft'));
+      expect(Result.isSuccess(deleteResult)).toBe(true);
+
+      const getResult = await resolveTask(repo.getUnpublished('del-draft'));
+      expect(Result.isFailure(getResult)).toBe(true);
+      if (Result.isFailure(getResult)) {
+        expect(getResult.failure.code).toBe(NotFoundError.CODE);
+      }
+    });
+
+    it('succeeds silently when the key does not exist', async () => {
+      const result = await resolveTask(repo.deleteUnpublished('ghost-draft'));
+      expect(Result.isSuccess(result)).toBe(true);
+    });
+  });
+
   describe('publish workflow', () => {
     it('publishes an unpublished document', async () => {
       await resolveTask(
