@@ -107,6 +107,11 @@ const api = decapApi({
     if (token !== DEV_TOKEN) throw new Error('Invalid token');
     return { id: 'dev', email: 'dev@localhost' };
   },
+  // CORS: required when the Decap admin is served from a different origin than this
+  // API (e.g. `npx serve admin/` on :5000 while the API runs on :3000).
+  // Without this the browser blocks every API call with a CORS error before the
+  // Decap admin can authenticate.  In production, list only your actual admin origin.
+  cors: { origins: ['http://localhost:5000'] },
 });
 
 // 5. Start listening.
@@ -276,6 +281,14 @@ directly. The `serve` step then hosts `admin/index.html` (and `bundle.js`) at
 `http://localhost:5000`.
 
 Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS admin UI.
+
+> **Why `cors` is required here:** the admin at `:5000` and the API at `:3000` are different
+> origins. Without the `cors` option the browser's CORS preflight (`OPTIONS /api/session`) would be
+> answered with a 401 and the Decap admin would show an endless stream of "Authentication failed:
+> Failed to fetch" errors — no login form, no collections. The
+> `cors: { origins: ['http://localhost:5000'] }` added to `server.mjs` in §2 enables cross-origin
+> requests from the admin. In production, replace the origin list with your deployed admin URL (or
+> serve the admin and API from the same origin to drop the `cors` option entirely).
 
 > **Rebuild after changes:** re-run the `npx esbuild …` command whenever you edit `admin/index.ts`
 > or `admin/config.yml`. For a faster inner loop, append `--watch` to the esbuild command and open a
