@@ -1,5 +1,4 @@
 import * as Effect from 'effect/Effect';
-import * as Result from 'effect/Result';
 import type {
   DocumentsCapabilities,
   DocumentsRepository,
@@ -337,7 +336,7 @@ describe('POST /published', () => {
     expect(body.data.id).toBe('posts/new');
   });
 
-  it('returns 400 JSON:API error on invalid body', async () => {
+  it('returns 400 invalid_data on wrong data.type', async () => {
     const api = buildJsonApi({ repo: stubRepo });
     const res = await api.fetch(
       new Request('http://localhost/published', {
@@ -346,13 +345,25 @@ describe('POST /published', () => {
         body: JSON.stringify({ data: { type: 'wrong-type', id: 'x', attributes: {} } }),
       }),
     );
-    // Schema decode throws; outer catch wraps as InternalError — HTTP 400 response
     expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('invalid_data');
+  });
 
-    const body = await res.json() as { errors: Array<{ status: string }> };
-    expect(body.errors).toHaveLength(1);
-    // InternalError maps to status 500 in the JSON:API error body
-    expect(body.errors[0]!.status).toBe('500');
+  it('returns 400 invalid_data on malformed JSON body', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/published', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: '{bad',
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('invalid_data');
   });
 });
 
@@ -386,6 +397,21 @@ describe('PATCH /published/:key', () => {
     const body = await res.json() as { data: { type: string, id: string } };
     expect(body.data.type).toBe('published');
     expect(body.data.id).toBe('posts/hello');
+  });
+
+  it('returns 400 invalid_data on malformed JSON body', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fhello', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: '{bad',
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('invalid_data');
   });
 });
 
@@ -500,7 +526,7 @@ describe('POST /unpublished', () => {
     expect(body.data.id).toBe('posts/draft');
   });
 
-  it('returns 400 JSON:API error on invalid body', async () => {
+  it('returns 400 invalid_data on wrong data.type', async () => {
     const api = buildJsonApi({ repo: stubRepo });
     const res = await api.fetch(
       new Request('http://localhost/unpublished', {
@@ -509,13 +535,25 @@ describe('POST /unpublished', () => {
         body: JSON.stringify({ data: { type: 'published', id: 'x', attributes: {} } }),
       }),
     );
-    // Schema decode throws; outer catch wraps as InternalError — HTTP 400 response
     expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('invalid_data');
+  });
 
-    const body = await res.json() as { errors: Array<{ status: string }> };
-    expect(body.errors).toHaveLength(1);
-    // InternalError maps to status 500 in the JSON:API error body
-    expect(body.errors[0]!.status).toBe('500');
+  it('returns 400 invalid_data on malformed JSON body', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: '{bad',
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('invalid_data');
   });
 });
 
@@ -551,7 +589,7 @@ describe('POST /revisions', () => {
     expect(body.data.id).toBe('posts/hello');
   });
 
-  it('returns 400 JSON:API error on invalid body', async () => {
+  it('returns 400 invalid_data on wrong data.type', async () => {
     const api = buildJsonApi({ repo: stubRepo });
     const res = await api.fetch(
       new Request('http://localhost/revisions', {
@@ -560,13 +598,25 @@ describe('POST /revisions', () => {
         body: JSON.stringify({ data: { type: 'published', id: 'x', attributes: {} } }),
       }),
     );
-    // Schema decode throws; outer catch wraps as InternalError — HTTP 400 response
     expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('invalid_data');
+  });
 
-    const body = await res.json() as { errors: Array<{ status: string }> };
-    expect(body.errors).toHaveLength(1);
-    // InternalError maps to status 500 in the JSON:API error body
-    expect(body.errors[0]!.status).toBe('500');
+  it('returns 400 invalid_data on malformed JSON body', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/revisions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: '{bad',
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('invalid_data');
   });
 });
 

@@ -7,6 +7,7 @@ import {
   BadRequestError,
   ErrorCodeToStatusMap,
   InternalError,
+  InvalidData,
   LaikaError,
   LaikaStream,
   LaikaTask,
@@ -242,6 +243,22 @@ function toLaikaError(err: unknown): LaikaError {
   if (err instanceof LaikaError) return err;
   if (err instanceof Error) return new InternalError(err.message, { cause: err });
   return new InternalError(String(err));
+}
+
+/**
+ * Safely parse the JSON request body and decode it with the given function.
+ * Both `request.json()` failures (SyntaxError on malformed JSON) and schema
+ * decode failures are client input errors — they return InvalidData (400)
+ * rather than leaking as InternalError (500) through the outer fetch catch.
+ */
+async function parseBody<T>(request: Request, decode: (raw: unknown) => T): Promise<LaikaResult<T>> {
+  try {
+    const raw = await request.json();
+    return Result.succeed(decode(raw));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Invalid request body';
+    return Result.fail(new InvalidData(msg));
+  }
 }
 
 /**
@@ -720,8 +737,9 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       && request.method === 'POST'
       && key
     ) {
-      const body = await request.json();
-      const { data } = decodeUnpublishBody(body);
+      const bodyResult = await parseBody(request, decodeUnpublishBody);
+      if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
+      const { data } = bodyResult.success;
       return respondResourceWithWarnings(
         repo.unpublish(key, data.attributes.status),
         unpublishedToJsonApi,
@@ -733,8 +751,9 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     }
 
     if (resource === 'published' && request.method === 'POST') {
-      const body = await request.json();
-      const { data } = decodeDocumentCreateBody(body);
+      const bodyResult = await parseBody(request, decodeDocumentCreateBody);
+      if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
+      const { data } = bodyResult.success;
       const createData = documentCreateFromJsonApi({
         type: 'published',
         id: data.id ?? '',
@@ -751,8 +770,9 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     }
 
     if (resource === 'published' && request.method === 'PATCH' && key) {
-      const body = await request.json();
-      const { data } = decodeDocumentCreateBody(body);
+      const bodyResult = await parseBody(request, decodeDocumentCreateBody);
+      if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
+      const { data } = bodyResult.success;
       const updateData = {
         key,
         ...data.attributes,
@@ -799,8 +819,9 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     }
 
     if (resource === 'unpublished' && request.method === 'POST') {
-      const body = await request.json();
-      const { data } = decodeUnpublishedCreateBody(body);
+      const bodyResult = await parseBody(request, decodeUnpublishedCreateBody);
+      if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
+      const { data } = bodyResult.success;
       const createData = unpublishedCreateFromJsonApi({
         type: 'unpublished',
         id: data.id ?? '',
@@ -817,8 +838,9 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     }
 
     if (resource === 'unpublished' && request.method === 'PATCH' && key) {
-      const body = await request.json();
-      const { data: bodyData } = decodeUnpublishedUpdateBody(body);
+      const bodyResult = await parseBody(request, decodeUnpublishedUpdateBody);
+      if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
+      const { data: bodyData } = bodyResult.success;
       const updateData = unpublishedUpdateFromJsonApi({
         type: 'unpublished',
         id: bodyData.id,
@@ -840,8 +862,9 @@ export function buildJsonApi(options: DocumentsApiOptions) {
 
     // ===== REVISIONS =====
     if (resource === 'revisions' && request.method === 'POST') {
-      const body = await request.json();
-      const { data } = decodeRevisionCreateBody(body);
+      const bodyResult = await parseBody(request, decodeRevisionCreateBody);
+      if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
+      const { data } = bodyResult.success;
       const createData = revisionCreateFromJsonApi({
         type: 'revision',
         id: data.id ?? '',
@@ -900,8 +923,9 @@ export function buildJsonApi(options: DocumentsApiOptions) {
 
     // ===== ATOMIC OPERATIONS =====
     if (resource === 'operations' && request.method === 'POST') {
-      const body = await request.json();
-      const parsedBody = decodeOperations(body);
+      const bodyResult = await parseBody(request, decodeOperations);
+      if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
+      const parsedBody = bodyResult.success;
 
       const atomicOperations = parsedBody['atomic:operations'].map(
         async (operation: AtomicOperation) => {
