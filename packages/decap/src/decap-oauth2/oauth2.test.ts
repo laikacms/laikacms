@@ -9,7 +9,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { handleAuthorize, handleToken } from './oauth2.js';
+import { decapOauth2, handleAuthorize, handleToken } from './oauth2.js';
 import type { AuthorizationCode, OAuthCallbacks, OAuthConfig, OAuthSession, User } from './oauth2.js';
 
 // ---------------------------------------------------------------------------
@@ -726,5 +726,65 @@ describe('handleToken — refresh_token grant', () => {
     await handleToken(refreshRequest(expiredSession.refreshToken), config);
 
     expect(logoutFn).toHaveBeenCalledWith(expiredSession.id);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// decapOauth2 — custom authorizeEndpoint / tokenEndpoint routing (LCMS-280)
+// ---------------------------------------------------------------------------
+
+describe('decapOauth2 custom endpoint routing', () => {
+  it('routes to default <basePath>/authorize when authorizeEndpoint is not set', async () => {
+    const callbacks = makeCallbacks();
+    const handler = decapOauth2(makeConfig(callbacks));
+    const request = new Request(
+      `https://auth.example.com/${BASE_PATH}/authorize?response_type=code&client_id=${CLIENT_ID}&redirect_uri=https://app.example.com/cb&code_challenge=abc&code_challenge_method=S256`,
+      { method: 'GET' },
+    );
+    const response = await handler.fetch(request);
+    // handleAuthorize is invoked — it returns 200 HTML, not a 404
+    expect(response.status).not.toBe(404);
+  });
+
+  it('routes to custom authorizeEndpoint when provided', async () => {
+    const callbacks = makeCallbacks();
+    const handler = decapOauth2(makeConfig(callbacks, { authorizeEndpoint: '/custom/auth' }));
+
+    // A request to the default basePath/authorize path should now 404
+    const defaultRequest = new Request(
+      `https://auth.example.com/${BASE_PATH}/authorize?response_type=code&client_id=${CLIENT_ID}&redirect_uri=https://app.example.com/cb&code_challenge=abc&code_challenge_method=S256`,
+    );
+    const defaultResponse = await handler.fetch(defaultRequest);
+    expect(defaultResponse.status).toBe(404);
+
+    // A request to the custom path should be handled (200 HTML login form)
+    const customRequest = new Request(
+      `https://auth.example.com/custom/auth?response_type=code&client_id=${CLIENT_ID}&redirect_uri=https://app.example.com/cb&code_challenge=abc&code_challenge_method=S256`,
+    );
+    const customResponse = await handler.fetch(customRequest);
+    expect(customResponse.status).not.toBe(404);
+  });
+
+  it('routes to custom tokenEndpoint when provided', async () => {
+    const callbacks = makeCallbacks();
+    const handler = decapOauth2(makeConfig(callbacks, { tokenEndpoint: '/custom/token' }));
+
+    // A POST to the default basePath/token should now 404
+    const defaultRequest = new Request(`https://auth.example.com/${BASE_PATH}/token`, {
+      method: 'POST',
+      body: new URLSearchParams({ grant_type: 'authorization_code' }),
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    const defaultResponse = await handler.fetch(defaultRequest);
+    expect(defaultResponse.status).toBe(404);
+
+    // A POST to the custom path should be handled (token error, not 404)
+    const customRequest = new Request('https://auth.example.com/custom/token', {
+      method: 'POST',
+      body: new URLSearchParams({ grant_type: 'authorization_code' }),
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+    });
+    const customResponse = await handler.fetch(customRequest);
+    expect(customResponse.status).not.toBe(404);
   });
 });
