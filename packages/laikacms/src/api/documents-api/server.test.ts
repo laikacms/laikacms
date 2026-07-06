@@ -1482,6 +1482,274 @@ describe('GET /record-summaries — pagination forwarding', () => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /operations — atomic operations
+// ---------------------------------------------------------------------------
+
+type AtomicResultData = { data: { type: string, id: string, attributes: Record<string, unknown> } };
+type AtomicResultMeta = { meta: { deleted: boolean, ref: { type: string, id: string } } };
+type AtomicResultError = { errors: Array<{ status: string, title: string, detail?: string }> };
+type AtomicBody = { 'atomic:results': Array<AtomicResultData | AtomicResultMeta | AtomicResultError> };
+
+const postOperations = (api: ReturnType<typeof buildJsonApi>, operations: unknown[]) =>
+  api.fetch(
+    new Request('http://localhost/operations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/vnd.api+json' },
+      body: JSON.stringify({ 'atomic:operations': operations }),
+    }),
+  );
+
+describe('POST /operations — add/unpublished', () => {
+  it('calls repo.createUnpublished and returns data.type === "unpublished"', async () => {
+    const repo = {
+      createUnpublished: (_data: unknown) => LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/new-draft'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      { op: 'add', data: { type: 'unpublished', attributes: { title: 'New draft', status: 'draft' } } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(1);
+    const result = body['atomic:results'][0] as AtomicResultData;
+    expect(result.data.type).toBe('unpublished');
+    expect(result.data.id).toBe('posts/new-draft');
+  });
+});
+
+describe('POST /operations — add/published', () => {
+  it('calls repo.createDocument and returns data.type === "published"', async () => {
+    const repo = {
+      createDocument: (_data: unknown) => LaikaTask.make(() => Effect.succeed(makeDocument('posts/hello'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      { op: 'add', data: { type: 'published', attributes: { title: 'Hello', status: 'published' } } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(1);
+    const result = body['atomic:results'][0] as AtomicResultData;
+    expect(result.data.type).toBe('published');
+    expect(result.data.id).toBe('posts/hello');
+  });
+});
+
+describe('POST /operations — update/publish', () => {
+  it('calls repo.publish and returns data.type === "published"', async () => {
+    const repo = {
+      publish: (_key: string) => LaikaTask.make(() => Effect.succeed(makeDocument('posts/now-live'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      { op: 'update', href: '/publish', ref: { type: 'unpublished', id: 'posts/now-live' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(1);
+    const result = body['atomic:results'][0] as AtomicResultData;
+    expect(result.data.type).toBe('published');
+    expect(result.data.id).toBe('posts/now-live');
+  });
+
+  it('returns error result when ref.type is not "unpublished"', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await postOperations(api, [
+      { op: 'update', href: '/publish', ref: { type: 'document', id: 'posts/x' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    const result = body['atomic:results'][0] as AtomicResultError;
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]!.status).toBe('400');
+  });
+});
+
+describe('POST /operations — update/unpublish', () => {
+  it('calls repo.unpublish and returns data.type === "unpublished"', async () => {
+    const repo = {
+      unpublish: (_key: string, _status: string) =>
+        LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/now-draft'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      {
+        op: 'update',
+        href: '/unpublish',
+        ref: { type: 'document', id: 'posts/now-draft' },
+        data: { type: 'unpublished', attributes: { status: 'draft' } },
+      },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(1);
+    const result = body['atomic:results'][0] as AtomicResultData;
+    expect(result.data.type).toBe('unpublished');
+    expect(result.data.id).toBe('posts/now-draft');
+  });
+
+  it('returns error result when data is missing', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await postOperations(api, [
+      { op: 'update', href: '/unpublish', ref: { type: 'document', id: 'posts/x' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    const result = body['atomic:results'][0] as AtomicResultError;
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]!.status).toBe('400');
+  });
+
+  it('returns error result when ref.type is not "document"', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await postOperations(api, [
+      {
+        op: 'update',
+        href: '/unpublish',
+        ref: { type: 'unpublished', id: 'posts/x' },
+        data: { type: 'unpublished', attributes: { status: 'draft' } },
+      },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    const result = body['atomic:results'][0] as AtomicResultError;
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]!.status).toBe('400');
+  });
+});
+
+describe('POST /operations — update/content (updateUnpublished)', () => {
+  it('calls repo.updateUnpublished and returns data.type === "unpublished"', async () => {
+    const updated = { ...makeUnpublished('posts/draft'), content: { title: 'Updated title' } };
+    const repo = {
+      updateUnpublished: (_data: unknown) => LaikaTask.make(() => Effect.succeed(updated)),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      {
+        op: 'update',
+        data: { type: 'unpublished', id: 'posts/draft', attributes: { title: 'Updated title', status: 'draft' } },
+      },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(1);
+    const result = body['atomic:results'][0] as AtomicResultData;
+    expect(result.data.type).toBe('unpublished');
+    expect(result.data.id).toBe('posts/draft');
+  });
+});
+
+describe('POST /operations — remove/document', () => {
+  it('calls repo.deleteDocument and returns meta.deleted true with ref.type "document"', async () => {
+    const repo = {
+      deleteDocument: (_key: string) => LaikaTask.make<void>(() => Effect.succeed(undefined)),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      { op: 'remove', ref: { type: 'document', id: 'posts/old' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(1);
+    const result = body['atomic:results'][0] as AtomicResultMeta;
+    expect(result.meta.deleted).toBe(true);
+    expect(result.meta.ref.type).toBe('document');
+    expect(result.meta.ref.id).toBe('posts/old');
+    expect((result as unknown as { data?: unknown }).data).toBeUndefined();
+  });
+});
+
+describe('POST /operations — remove/unpublished', () => {
+  it('calls repo.deleteUnpublished and returns meta.deleted true with ref.type "unpublished"', async () => {
+    const repo = {
+      deleteUnpublished: (_key: string) => LaikaTask.make<void>(() => Effect.succeed(undefined)),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      { op: 'remove', ref: { type: 'unpublished', id: 'posts/draft' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(1);
+    const result = body['atomic:results'][0] as AtomicResultMeta;
+    expect(result.meta.deleted).toBe(true);
+    expect(result.meta.ref.type).toBe('unpublished');
+    expect(result.meta.ref.id).toBe('posts/draft');
+    expect((result as unknown as { data?: unknown }).data).toBeUndefined();
+  });
+});
+
+describe('POST /operations — malformed body', () => {
+  it('returns 400 when atomic:operations key is missing', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ notOperations: [] }),
+      }),
+    );
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+  });
+
+  it('returns 400 when body is not valid JSON', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: 'not-json',
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /operations — multi-operation batch', () => {
+  it('processes multiple operations in a single request and returns all results', async () => {
+    const repo = {
+      createUnpublished: (_data: unknown) => LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/batch-draft'))),
+      deleteDocument: (_key: string) => LaikaTask.make<void>(() => Effect.succeed(undefined)),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      { op: 'add', data: { type: 'unpublished', attributes: { title: 'Batch draft', status: 'draft' } } },
+      { op: 'remove', ref: { type: 'document', id: 'posts/old' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(2);
+    const addResult = body['atomic:results'][0] as AtomicResultData;
+    const removeResult = body['atomic:results'][1] as AtomicResultMeta;
+    expect(addResult.data.type).toBe('unpublished');
+    expect(removeResult.meta.deleted).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 
 describe('404 on unknown routes', () => {
   it('returns 404 JSON:API error shape on unknown path', async () => {
