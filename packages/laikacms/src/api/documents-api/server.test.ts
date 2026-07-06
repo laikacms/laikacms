@@ -52,7 +52,11 @@ const makeRevision = (key = 'posts/hello', revision = 'rev-1') => ({
 
 const makeCapabilities = (): DocumentsCapabilities => ({
   compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
-  pagination: { cursor: true, offset: false },
+  pagination: {
+    supported: true,
+    description: 'cursor-only for tests',
+    styles: { offset: false, page: false, cursor: true },
+  },
 });
 
 describe('documents-api Cache-Control', () => {
@@ -1247,11 +1251,23 @@ describe('GET /records — pagination forwarding', () => {
     expect(pagination.perPage).toBe(5);
   });
 
-  it('forwards page[after] to repo pagination.after', async () => {
+  it('forwards page[after] to repo pagination.after when backend supports cursor', async () => {
     const spy = vi.fn((_opts: ListRecordsOptions) =>
       LaikaStream.make<never, ListRecordsDone>(_emit => Effect.succeed({ total: 0 }))
     );
-    const api = buildJsonApi({ repo: makeRepo(spy) });
+    const repo = {
+      listRecords: spy,
+      getCapabilities: () =>
+        LaikaTask.succeed<DocumentsCapabilities>({
+          compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+          pagination: {
+            supported: true,
+            description: 'cursor supported',
+            styles: { offset: false, page: false, cursor: true },
+          },
+        }),
+    } as unknown as DocumentsRepository;
+    const api = buildJsonApi({ repo });
 
     const res = await api.fetch(new Request('http://localhost/records?page%5Bafter%5D=cursor-abc'));
     expect(res.status).toBe(200);
@@ -1259,6 +1275,73 @@ describe('GET /records — pagination forwarding', () => {
     expect(spy).toHaveBeenCalledOnce();
     const pagination = spy.mock.calls[0]![0].pagination as { after?: string };
     expect(pagination.after).toBe('cursor-abc');
+  });
+
+  it('returns 400 for page[after] when backend does not support cursor', async () => {
+    const listSpy = vi.fn();
+    const repo = {
+      listRecords: listSpy,
+      getCapabilities: () =>
+        LaikaTask.succeed<DocumentsCapabilities>({
+          compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+          pagination: {
+            supported: true,
+            description: 'offset only',
+            styles: { offset: true, page: true, cursor: false },
+          },
+        }),
+    } as unknown as DocumentsRepository;
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/records?page%5Bafter%5D=cursor-abc'));
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string, detail: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.detail).toContain('Cursor pagination');
+    expect(listSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for page[before] when backend does not support cursor', async () => {
+    const repo = {
+      listRecords: vi.fn(),
+      getCapabilities: () =>
+        LaikaTask.succeed<DocumentsCapabilities>({
+          compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+          pagination: {
+            supported: true,
+            description: 'offset only',
+            styles: { offset: true, page: true, cursor: false },
+          },
+        }),
+    } as unknown as DocumentsRepository;
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/records?page%5Bbefore%5D=cursor-abc'));
+    expect(res.status).toBe(400);
+  });
+
+  it('page[size] without cursor params is unaffected by capability guard', async () => {
+    const spy = vi.fn((_opts: ListRecordsOptions) =>
+      LaikaStream.make<never, ListRecordsDone>(_emit => Effect.succeed({ total: 0 }))
+    );
+    const repo = {
+      listRecords: spy,
+      getCapabilities: () =>
+        LaikaTask.succeed<DocumentsCapabilities>({
+          compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+          pagination: {
+            supported: true,
+            description: 'offset only',
+            styles: { offset: true, page: true, cursor: false },
+          },
+        }),
+    } as unknown as DocumentsRepository;
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/records?page%5Bsize%5D=10'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
   });
 });
 
@@ -1466,11 +1549,23 @@ describe('GET /record-summaries — pagination forwarding', () => {
     expect(pagination.perPage).toBe(5);
   });
 
-  it('forwards page[after] to repo pagination.after', async () => {
+  it('forwards page[after] to repo pagination.after when backend supports cursor', async () => {
     const spy = vi.fn((_opts: ListRecordSummaries) =>
       LaikaStream.make<never, ListRecordsDone>(_emit => Effect.succeed({ total: 0 }))
     );
-    const api = buildJsonApi({ repo: makeRepo(spy) });
+    const repo = {
+      listRecordSummaries: spy,
+      getCapabilities: () =>
+        LaikaTask.succeed<DocumentsCapabilities>({
+          compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+          pagination: {
+            supported: true,
+            description: 'cursor supported',
+            styles: { offset: false, page: false, cursor: true },
+          },
+        }),
+    } as unknown as DocumentsRepository;
+    const api = buildJsonApi({ repo });
 
     const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bafter%5D=cursor-abc'));
     expect(res.status).toBe(200);
@@ -1478,6 +1573,50 @@ describe('GET /record-summaries — pagination forwarding', () => {
     expect(spy).toHaveBeenCalledOnce();
     const pagination = spy.mock.calls[0]![0].pagination as { after?: string };
     expect(pagination.after).toBe('cursor-abc');
+  });
+
+  it('returns 400 for page[after] when backend does not support cursor', async () => {
+    const listSpy = vi.fn();
+    const repo = {
+      listRecordSummaries: listSpy,
+      getCapabilities: () =>
+        LaikaTask.succeed<DocumentsCapabilities>({
+          compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+          pagination: {
+            supported: true,
+            description: 'offset only',
+            styles: { offset: true, page: true, cursor: false },
+          },
+        }),
+    } as unknown as DocumentsRepository;
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bafter%5D=cursor-abc'));
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string, detail: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.detail).toContain('Cursor pagination');
+    expect(listSpy).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 for page[before] when backend does not support cursor', async () => {
+    const repo = {
+      listRecordSummaries: vi.fn(),
+      getCapabilities: () =>
+        LaikaTask.succeed<DocumentsCapabilities>({
+          compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+          pagination: {
+            supported: true,
+            description: 'offset only',
+            styles: { offset: true, page: true, cursor: false },
+          },
+        }),
+    } as unknown as DocumentsRepository;
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bbefore%5D=cursor-abc'));
+    expect(res.status).toBe(400);
   });
 });
 

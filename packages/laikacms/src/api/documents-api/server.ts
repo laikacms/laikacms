@@ -13,7 +13,7 @@ import {
   LaikaTask,
   NotFoundError,
 } from 'laikacms/core';
-import type { DocumentsRepository } from 'laikacms/documents';
+import type { DocumentsCapabilities, DocumentsRepository } from 'laikacms/documents';
 import type {
   JsonApiCollectionResponse,
   JsonApiError,
@@ -589,7 +589,38 @@ export function buildJsonApi(options: DocumentsApiOptions) {
 
     const queryParams = Object.fromEntries(url.searchParams.entries());
 
+    // Returns a 400 response if the client requested cursor pagination but the
+    // backend has declared it unsupported in its capabilities. Returns null
+    // when cursor pagination is either not requested or is supported.
+    const rejectUnsupportedCursor = async (): Promise<Response | null> => {
+      const hasAfter = queryParams['page[after]'] !== undefined;
+      const hasBefore = queryParams['page[before]'] !== undefined;
+      if (!hasAfter && !hasBefore) return null;
+      let capsResult: LaikaResult<DocumentsCapabilities>;
+      try {
+        capsResult = await firstResult(repo.getCapabilities());
+      } catch {
+        return null; // can't check; let the list proceed
+      }
+      if (Result.isFailure(capsResult)) return null; // can't check; let the list proceed
+      const caps = capsResult.success;
+      const cursorSupported = caps.pagination.supported && caps.pagination.styles.cursor;
+      if (cursorSupported) return null;
+      return failResponse(
+        Result.fail(
+          new InvalidData(
+            'Cursor pagination (page[after] / page[before]) is not supported by this documents backend. '
+              + 'Use page[number] / page[size] or page[offset] / page[limit] instead. '
+              + 'Consult GET /capabilities for the pagination modes this backend supports.',
+          ),
+        ),
+        400,
+      );
+    };
+
     const listFullRecords = async () => {
+      const cursorRejection = await rejectUnsupportedCursor();
+      if (cursorRejection) return cursorRejection;
       const parsed = decodeRecordsQuery(queryParams);
       const type = parsed['filter[type]'] === 'all' ? undefined : (parsed['filter[type]'] ?? 'published');
       const folder = parsed['filter[folder]'] ?? '';
@@ -640,6 +671,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     };
 
     const listRecordSummaries = async () => {
+      const cursorRejection = await rejectUnsupportedCursor();
+      if (cursorRejection) return cursorRejection;
       const parsed = decodeRecordsQuery(queryParams);
       const type = parsed['filter[type]'] === 'all' ? undefined : (parsed['filter[type]'] ?? 'published');
       const folder = parsed['filter[folder]'] ?? '';
