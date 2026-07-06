@@ -175,3 +175,14 @@ describe('FileSystemStorageRepository rawSerializer extra-field error propagatio
     expect((result as { success: { content: { body: unknown } } }).success.content.body).toBe('hello world');
   });
 });
+
+describe('FileSystemStorageRepository — getCapabilities', () => {
+  it('returns a compatibilityDate string and a pagination object', async () => {
+    const repo = makeRepo();
+    const caps = await LaikaTask.runPromise(repo.getCapabilities());
+    expect(typeof caps.compatibilityDate).toBe('string');
+    expect(caps.compatibilityDate.length).toBeGreaterThan(0);
+    expect(caps.pagination).toBeDefined();
+    expect(caps.pagination.supported).toBe(true);
+  });
+});

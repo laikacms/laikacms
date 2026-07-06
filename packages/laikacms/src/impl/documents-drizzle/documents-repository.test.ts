@@ -568,3 +568,14 @@ describe('DrizzleDocumentsRepository', () => {
     });
   });
 });
+
+describe('DrizzleDocumentsRepository — getCapabilities', () => {
+  it('returns a compatibilityDate string and a pagination object', async () => {
+    const repo = new DrizzleDocumentsRepository(makeInMemoryOptions());
+    const caps = await LaikaTask.runPromise(repo.getCapabilities());
+    expect(typeof caps.compatibilityDate).toBe('string');
+    expect(caps.compatibilityDate.length).toBeGreaterThan(0);
+    expect(caps.pagination).toBeDefined();
+    expect(caps.pagination.supported).toBe(true);
+  });
+});
