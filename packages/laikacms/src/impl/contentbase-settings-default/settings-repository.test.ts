@@ -175,6 +175,18 @@ describe('DefaultContentBaseSettingsProvider', () => {
       }
     });
 
+    it('includes unpublishedStatuses with standard statuses by default (LCMS-267)', async () => {
+      const result = await LaikaTask.runPromiseResult(provider.getDocumentCollectionSettings('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (Result.isSuccess(result)) {
+        const statuses = result.success.unpublishedStatuses;
+        expect(statuses).toBeDefined();
+        expect(Object.keys(statuses!)).toContain('draft');
+        expect(Object.keys(statuses!)).toContain('archived');
+        expect(Object.keys(statuses!)).toContain('trash');
+      }
+    });
+
     it('returns configured settings for known document collection', async () => {
       await LaikaTask.runPromiseResult(provider.putSettings({
         collections: {

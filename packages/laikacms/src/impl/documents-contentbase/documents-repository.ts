@@ -112,10 +112,14 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       const unpublishedStatuses = settings.unpublishedStatuses || {};
       const statusConfig = unpublishedStatuses[status];
       if (!statusConfig) {
+        const available = Object.keys(unpublishedStatuses).join(', ');
+        const hint = available
+          ? ''
+          : ' Configure unpublishedStatuses in your ContentBaseSettingsProvider (see DocumentCollectionSettings.unpublishedStatuses).';
         return yield* Effect.fail(
           new BadRequestError(
             `Unknown unpublished status '${status}' for collection '${collection}'. `
-              + `Available statuses: ${Object.keys(unpublishedStatuses).join(', ')}`,
+              + `Available statuses: ${available}.${hint}`,
           ),
         );
       }
