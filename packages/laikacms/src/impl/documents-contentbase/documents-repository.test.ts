@@ -184,7 +184,27 @@ describe('ContentBaseDocumentsRepository', () => {
         expect(result.success.type).toBe('published');
         expect(result.success.status).toBe('published');
         expect(result.success.language).toBe('en');
-        expect(result.success.content).toEqual({ title: 'Hello World' });
+        // language is embedded in content so create↔read agree (LCMS-222)
+        expect(result.success.content).toEqual({ title: 'Hello World', language: 'en' });
+      }
+    });
+
+    it('language persists through create→get roundtrip (LCMS-222 regression)', async () => {
+      await resolveTask(
+        repo.createDocument({
+          key: 'posts/lang-test',
+          type: 'published',
+          status: 'published',
+          content: { title: 'Lang Test' },
+          language: 'nl',
+        }),
+      );
+
+      const getResult = await resolveTask(repo.getDocument('posts/lang-test'));
+      expect(Result.isSuccess(getResult)).toBe(true);
+      if (Result.isSuccess(getResult)) {
+        expect(getResult.success.language).toBe('nl');
+        expect(getResult.success.content.language).toBe('nl');
       }
     });
   });
@@ -206,7 +226,8 @@ describe('ContentBaseDocumentsRepository', () => {
       if (Result.isSuccess(result)) {
         expect(result.success.key).toBe('my-doc');
         expect(result.success.type).toBe('published');
-        expect(result.success.content).toEqual({ body: 'test' });
+        expect(result.success.language).toBe('en');
+        expect(result.success.content).toMatchObject({ body: 'test' });
       }
     });
 
@@ -236,7 +257,9 @@ describe('ContentBaseDocumentsRepository', () => {
       );
       expect(Result.isSuccess(result)).toBe(true);
       if (Result.isSuccess(result)) {
-        expect(result.success.content).toEqual({ v: 2 });
+        // language is preserved from the original document (LCMS-222)
+        expect(result.success.content).toMatchObject({ v: 2 });
+        expect(result.success.language).toBe('en');
       }
     });
   });
@@ -359,7 +382,8 @@ describe('ContentBaseDocumentsRepository', () => {
       expect(Result.isSuccess(getResult)).toBe(true);
       if (Result.isSuccess(getResult)) {
         expect(getResult.success.revision).toBe('v1');
-        expect(getResult.success.content).toEqual({ text: 'original' });
+        expect(getResult.success.language).toBe('en');
+        expect(getResult.success.content).toMatchObject({ text: 'original' });
       }
     });
   });
