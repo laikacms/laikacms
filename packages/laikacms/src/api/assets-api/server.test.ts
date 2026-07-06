@@ -680,3 +680,67 @@ describe('GET /resources/:key — ?meta=true inlines metadata', () => {
     expect(body.included).toBeUndefined();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Malformed JSON body — fetch() must never throw, always return a Response
+// ---------------------------------------------------------------------------
+
+describe('malformed JSON body — never throws, always returns a Response', () => {
+  const api = buildAssetsApi({ repository: stubRepo });
+
+  it('POST /resources with malformed JSON returns JSON:API 400, not a throw', async () => {
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: '{bad',
+      }),
+    );
+    expect(res).toBeInstanceOf(Response);
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('400');
+    expect(body.errors[0]?.code).toBe('invalid_data');
+  });
+
+  it('POST /resources with malformed JSON returns correct Content-Type', async () => {
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: 'not-json-at-all',
+      }),
+    );
+    expect(res).toBeInstanceOf(Response);
+    expect(res.status).toBe(400);
+    expect(res.headers.get('Content-Type')).toContain('application/vnd.api+json');
+  });
+
+  it('PATCH /resources/:key with malformed JSON returns JSON:API 400, not a throw', async () => {
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/photo.jpg', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: '{bad',
+      }),
+    );
+    expect(res).toBeInstanceOf(Response);
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('400');
+    expect(body.errors[0]?.code).toBe('invalid_data');
+  });
+
+  it('PATCH /resources/:key body status matches HTTP transport status', async () => {
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/photo.jpg', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: 'totally-invalid',
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors[0]?.status).toBe('400');
+  });
+});

@@ -9,6 +9,7 @@ import {
   ErrorCodeToStatusMap,
   errorStatus,
   InternalError,
+  InvalidData,
   LaikaError,
   LaikaStream,
   LaikaTask,
@@ -286,281 +287,378 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
 
   return {
     async fetch(request: Request): Promise<Response> {
-      const url = new URL(request.url);
-      const path = url.pathname;
-      const method = request.method.toUpperCase();
+      try {
+        return await fetchInner(request);
+      } catch (err) {
+        return respondError(toLaikaError(err), 500);
+      }
+    },
+  };
 
-      // Parse query parameters — typed as string | string[] | undefined so the
-      // shared parsePaginationQuery (which handles array values for repeated
-      // params) accepts the map directly. Single-value params are cast inline.
-      const query: Record<string, string | string[] | undefined> = {};
-      url.searchParams.forEach((value, key) => {
-        query[key] = value;
+  async function fetchInner(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    const path = url.pathname;
+    const method = request.method.toUpperCase();
+
+    // Parse query parameters — typed as string | string[] | undefined so the
+    // shared parsePaginationQuery (which handles array values for repeated
+    // params) accepts the map directly. Single-value params are cast inline.
+    const query: Record<string, string | string[] | undefined> = {};
+    url.searchParams.forEach((value, key) => {
+      query[key] = value;
+    });
+    const str = (v: string | string[] | undefined): string | undefined => Array.isArray(v) ? v[0] : v;
+
+    // `?include=` only carries actual relationships (urls, variations) per
+    // the JSON:API spec. Intrinsic metadata is opted into separately via
+    // `?meta=true`, because it's not a related resource — it's a property
+    // of the asset that arrives on `data.meta`.
+    const includeHints = parseIncludeQuery(str(query['include']));
+    const metaHint = parseMetaQuery(str(query['meta']));
+    const hints: FetchHints = {
+      metadata: metaHint.metadata,
+      urls: includeHints.urls,
+      variations: includeHints.variations,
+    };
+
+    // Route: GET /capabilities
+    // Surface the underlying assets repository's `Capabilities` so the
+    // proxy client can introspect what the upstream actually supports
+    // instead of guessing.
+    if (path === `${basePath}/capabilities` && method === 'GET') {
+      const result = await firstResult(repository.getCapabilities());
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return respondError(result.failure, status);
+      }
+      return respondResource({
+        type: 'assets-capabilities',
+        id: 'self',
+        attributes: result.success,
+        links: { self: `${basePath}/capabilities` },
       });
-      const str = (v: string | string[] | undefined): string | undefined => Array.isArray(v) ? v[0] : v;
+    }
 
-      // `?include=` only carries actual relationships (urls, variations) per
-      // the JSON:API spec. Intrinsic metadata is opted into separately via
-      // `?meta=true`, because it's not a related resource — it's a property
-      // of the asset that arrives on `data.meta`.
-      const includeHints = parseIncludeQuery(str(query['include']));
-      const metaHint = parseMetaQuery(str(query['meta']));
-      const hints: FetchHints = {
-        metadata: metaHint.metadata,
-        urls: includeHints.urls,
-        variations: includeHints.variations,
-      };
+    // Route: GET /resources
+    // List all resources in a folder
+    if (path === `${basePath}/resources` && method === 'GET') {
+      const folderKey = str(query['folder']) || str(query['filter[folder]']) || str(query['filter[prefix]']) || '';
+      const pagination = parsePaginationQuery(query);
 
-      // Route: GET /capabilities
-      // Surface the underlying assets repository's `Capabilities` so the
-      // proxy client can introspect what the upstream actually supports
-      // instead of guessing.
-      if (path === `${basePath}/capabilities` && method === 'GET') {
-        const result = await firstResult(repository.getCapabilities());
-        if (Result.isFailure(result)) {
-          const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
-          return respondError(result.failure, status);
+      // Parse depth parameter (minimum 1)
+      const depthParam = str(query['filter[depth]']) || str(query['depth']);
+      const depth = depthParam ? Math.max(1, parseInt(depthParam, 10) || 1) : 1;
+
+      // Build pagination options from the shared pagination union. Forward
+      // cursor (`after`) maps directly; backward cursor (`before`) is treated
+      // as forward from that point for repository calls that only support
+      // `after`. Page-based and offset-based fall back to offset pagination.
+      //
+      // Note: parsePaginationQuery's default branch (no cursor) ignores
+      // page[size] and returns a hardcoded perPage. We read page[size] directly
+      // from the query so a bare ?page[size]=N request honours the caller's
+      // intent for both pagination options AND link generation.
+      const afterCursor = 'after' in pagination ? pagination.after : undefined;
+      const rawPageSize = str(query['page[size]']);
+      const rawPageSizeNum = rawPageSize ? parseInt(rawPageSize, 10) : undefined;
+      const perPage = rawPageSizeNum
+        ?? ('perPage' in pagination ? pagination.perPage : undefined)
+        ?? ('limit' in pagination ? pagination.limit : undefined)
+        ?? 100;
+      // Build a corrected pagination object that carries the real page size so
+      // buildPaginationLinks emits the correct page[size] on next/prev links.
+      const paginationForLinks = 'after' in pagination
+        ? { after: pagination.after, perPage }
+        : 'before' in pagination
+        ? { before: (pagination as { before?: string }).before, perPage }
+        : pagination;
+      const paginationOptions: { offset: number, limit: number } | { after: string | undefined, perPage: number } =
+        afterCursor !== undefined
+          ? { after: afterCursor, perPage }
+          : { offset: 0, limit: perPage };
+
+      const included: JsonApiResource[] = [];
+      let hasMore = false;
+      let nextCursor: string | undefined;
+
+      const batch = await runStreamWithDone(
+        repository.listResources(folderKey, {
+          pagination: paginationOptions,
+          depth,
+          hints,
+        }),
+      );
+      if (Result.isFailure(batch)) {
+        return respondError(batch.failure, errorStatus.BAD_REQUEST);
+      }
+      const batchData = batch.success.data;
+      const batchDone = batch.success.done;
+      const assets = batchData.filter((r): r is Asset => r.type === 'asset');
+
+      // Fetch metadata up front so we can inline it onto each asset's `meta`.
+      const metadataByKey = new Map<string, AssetMetadata['metadata']>();
+      if (hints.metadata) {
+        const metas = await runStream(repository.getMetadata(assets));
+        if (Result.isSuccess(metas)) {
+          for (const m of metas.success) metadataByKey.set(m.key, m.metadata);
         }
-        return respondResource({
-          type: 'assets-capabilities',
-          id: 'self',
-          attributes: result.success,
-          links: { self: `${basePath}/capabilities` },
-        });
+      }
+      if (hints.urls) {
+        const urls = await runStream(repository.getUrls(assets));
+        if (Result.isSuccess(urls)) {
+          for (const u of urls.success) included.push(assetUrlToJsonApi(u));
+        }
+      }
+      if (hints.variations) {
+        const variations = await runStream(repository.getVariations(assets));
+        if (Result.isSuccess(variations)) {
+          for (const v of variations.success) included.push(assetVariationsToJsonApi(v));
+        }
+      }
+      const resources: JsonApiResource[] = batchData.map(r =>
+        resourceToJsonApi(r, {
+          metadata: r.type === 'asset' ? metadataByKey.get(r.key) : undefined,
+          advertiseRelationships: { urls: hints.urls, variations: hints.variations },
+        })
+      );
+
+      const effectivePageSize = 'limit' in paginationOptions ? paginationOptions.limit : paginationOptions.perPage;
+      if (batchData.length >= effectivePageSize) {
+        hasMore = true;
+        nextCursor = batchData[batchData.length - 1]?.key;
       }
 
-      // Route: GET /resources
-      // List all resources in a folder
-      if (path === `${basePath}/resources` && method === 'GET') {
-        const folderKey = str(query['folder']) || str(query['filter[folder]']) || str(query['filter[prefix]']) || '';
-        const pagination = parsePaginationQuery(query);
+      // firstCursor is the key of the first item in the current page; it is
+      // used by the shared buildPaginationLinks to build the prev link when
+      // navigating forward (page[after] is set).
+      //
+      // buildPaginationLinks expects a clean base URL (no query string) — it
+      // builds the full query string itself from the pagination object.
+      const resourcesBaseUrl = `${url.origin}${url.pathname}`;
+      const firstCursor = batchData[0]?.key;
+      const links = buildPaginationLinks(
+        resourcesBaseUrl,
+        paginationForLinks,
+        hasMore,
+        undefined,
+        firstCursor,
+        nextCursor,
+      );
 
-        // Parse depth parameter (minimum 1)
-        const depthParam = str(query['filter[depth]']) || str(query['depth']);
-        const depth = depthParam ? Math.max(1, parseInt(depthParam, 10) || 1) : 1;
+      // `meta.page` carries aggregate counts; `meta.warnings` carries
+      // per-item recoverable errors collected during the walk (an
+      // unreadable subfolder, a missing variation, etc.).
+      const warnings = recoverableErrorsToWarnings(batch.success.recoverableErrors);
+      const page = typeof batchDone.total === 'number' ? { total: batchDone.total } : undefined;
+      const meta: Record<string, unknown> | undefined = page || warnings
+        ? { ...(page ? { page } : {}), ...(warnings ? { warnings } : {}) }
+        : undefined;
 
-        // Build pagination options from the shared pagination union. Forward
-        // cursor (`after`) maps directly; backward cursor (`before`) is treated
-        // as forward from that point for repository calls that only support
-        // `after`. Page-based and offset-based fall back to offset pagination.
-        //
-        // Note: parsePaginationQuery's default branch (no cursor) ignores
-        // page[size] and returns a hardcoded perPage. We read page[size] directly
-        // from the query so a bare ?page[size]=N request honours the caller's
-        // intent for both pagination options AND link generation.
-        const afterCursor = 'after' in pagination ? pagination.after : undefined;
-        const rawPageSize = str(query['page[size]']);
-        const rawPageSizeNum = rawPageSize ? parseInt(rawPageSize, 10) : undefined;
-        const perPage = rawPageSizeNum
-          ?? ('perPage' in pagination ? pagination.perPage : undefined)
-          ?? ('limit' in pagination ? pagination.limit : undefined)
-          ?? 100;
-        // Build a corrected pagination object that carries the real page size so
-        // buildPaginationLinks emits the correct page[size] on next/prev links.
-        const paginationForLinks = 'after' in pagination
-          ? { after: pagination.after, perPage }
-          : 'before' in pagination
-          ? { before: (pagination as { before?: string }).before, perPage }
-          : pagination;
-        const paginationOptions: { offset: number, limit: number } | { after: string | undefined, perPage: number } =
-          afterCursor !== undefined
-            ? { after: afterCursor, perPage }
-            : { offset: 0, limit: perPage };
+      return respondCollection(resources, included, links, meta, basePath);
+    }
 
-        const included: JsonApiResource[] = [];
-        let hasMore = false;
-        let nextCursor: string | undefined;
+    // Route: GET /resources/:key
+    // Get a single resource by key
+    if (path.startsWith(`${basePath}/resources/`) && method === 'GET') {
+      const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
 
-        const batch = await runStreamWithDone(
-          repository.listResources(folderKey, {
-            pagination: paginationOptions,
-            depth,
-            hints,
-          }),
-        );
-        if (Result.isFailure(batch)) {
-          return respondError(batch.failure, errorStatus.BAD_REQUEST);
-        }
-        const batchData = batch.success.data;
-        const batchDone = batch.success.done;
-        const assets = batchData.filter((r): r is Asset => r.type === 'asset');
+      const result = await firstResultWithMetadata(repository.getResource(key, { hints }));
+      if (Result.isFailure(result)) {
+        return respondError(result.failure, errorStatus.NOT_FOUND);
+      }
+      const resourceData = result.success.value[0];
+      if (!resourceData) {
+        return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
+      }
 
-        // Fetch metadata up front so we can inline it onto each asset's `meta`.
-        const metadataByKey = new Map<string, AssetMetadata['metadata']>();
+      const included: JsonApiResource[] = [];
+      let inlineMetadata: AssetMetadata['metadata'] | undefined;
+
+      if (resourceData.type === 'asset') {
         if (hints.metadata) {
-          const metas = await runStream(repository.getMetadata(assets));
-          if (Result.isSuccess(metas)) {
-            for (const m of metas.success) metadataByKey.set(m.key, m.metadata);
+          const metas = await runStream(repository.getMetadata([resourceData]));
+          if (Result.isSuccess(metas) && metas.success[0]) {
+            inlineMetadata = metas.success[0].metadata;
           }
         }
         if (hints.urls) {
-          const urls = await runStream(repository.getUrls(assets));
-          if (Result.isSuccess(urls)) {
-            for (const u of urls.success) included.push(assetUrlToJsonApi(u));
+          const urls = await runStream(repository.getUrls([resourceData]));
+          if (Result.isSuccess(urls) && urls.success[0]) {
+            included.push(assetUrlToJsonApi(urls.success[0]));
           }
         }
         if (hints.variations) {
-          const variations = await runStream(repository.getVariations(assets));
-          if (Result.isSuccess(variations)) {
-            for (const v of variations.success) included.push(assetVariationsToJsonApi(v));
+          const variations = await runStream(repository.getVariations([resourceData]));
+          if (Result.isSuccess(variations) && variations.success[0]) {
+            included.push(assetVariationsToJsonApi(variations.success[0]));
           }
         }
-        const resources: JsonApiResource[] = batchData.map(r =>
-          resourceToJsonApi(r, {
-            metadata: r.type === 'asset' ? metadataByKey.get(r.key) : undefined,
-            advertiseRelationships: { urls: hints.urls, variations: hints.variations },
-          })
-        );
-
-        const effectivePageSize = 'limit' in paginationOptions ? paginationOptions.limit : paginationOptions.perPage;
-        if (batchData.length >= effectivePageSize) {
-          hasMore = true;
-          nextCursor = batchData[batchData.length - 1]?.key;
-        }
-
-        // firstCursor is the key of the first item in the current page; it is
-        // used by the shared buildPaginationLinks to build the prev link when
-        // navigating forward (page[after] is set).
-        //
-        // buildPaginationLinks expects a clean base URL (no query string) — it
-        // builds the full query string itself from the pagination object.
-        const resourcesBaseUrl = `${url.origin}${url.pathname}`;
-        const firstCursor = batchData[0]?.key;
-        const links = buildPaginationLinks(
-          resourcesBaseUrl,
-          paginationForLinks,
-          hasMore,
-          undefined,
-          firstCursor,
-          nextCursor,
-        );
-
-        // `meta.page` carries aggregate counts; `meta.warnings` carries
-        // per-item recoverable errors collected during the walk (an
-        // unreadable subfolder, a missing variation, etc.).
-        const warnings = recoverableErrorsToWarnings(batch.success.recoverableErrors);
-        const page = typeof batchDone.total === 'number' ? { total: batchDone.total } : undefined;
-        const meta: Record<string, unknown> | undefined = page || warnings
-          ? { ...(page ? { page } : {}), ...(warnings ? { warnings } : {}) }
-          : undefined;
-
-        return respondCollection(resources, included, links, meta, basePath);
       }
 
-      // Route: GET /resources/:key
-      // Get a single resource by key
-      if (path.startsWith(`${basePath}/resources/`) && method === 'GET') {
-        const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
+      const resource = resourceToJsonApi(resourceData, {
+        metadata: inlineMetadata,
+        advertiseRelationships: { urls: hints.urls, variations: hints.variations },
+      });
 
-        const result = await firstResultWithMetadata(repository.getResource(key, { hints }));
-        if (Result.isFailure(result)) {
-          return respondError(result.failure, errorStatus.NOT_FOUND);
-        }
-        const resourceData = result.success.value[0];
-        if (!resourceData) {
-          return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
-        }
+      return respondResource(resource, included, basePath, result.success.recoverableErrors);
+    }
 
-        const included: JsonApiResource[] = [];
-        let inlineMetadata: AssetMetadata['metadata'] | undefined;
+    // Route: POST /resources
+    // Create a new resource (asset or folder)
+    if (path === `${basePath}/resources` && method === 'POST') {
+      const contentType = request.headers.get('Content-Type') || '';
 
-        if (resourceData.type === 'asset') {
-          if (hints.metadata) {
-            const metas = await runStream(repository.getMetadata([resourceData]));
-            if (Result.isSuccess(metas) && metas.success[0]) {
-              inlineMetadata = metas.success[0].metadata;
-            }
-          }
-          if (hints.urls) {
-            const urls = await runStream(repository.getUrls([resourceData]));
-            if (Result.isSuccess(urls) && urls.success[0]) {
-              included.push(assetUrlToJsonApi(urls.success[0]));
-            }
-          }
-          if (hints.variations) {
-            const variations = await runStream(repository.getVariations([resourceData]));
-            if (Result.isSuccess(variations) && variations.success[0]) {
-              included.push(assetVariationsToJsonApi(variations.success[0]));
-            }
-          }
+      // Handle multipart form data for asset uploads
+      if (contentType.includes('multipart/form-data')) {
+        const formData = await request.formData();
+        const file = formData.get('file') as File | null;
+        const metadataJson = formData.get('metadata') as string | null;
+
+        // Also check for individual form fields (alternative to metadata JSON)
+        const keyField = formData.get('key') as string | null;
+        const mimeTypeField = formData.get('mimeType') as string | null;
+        const filenameField = formData.get('filename') as string | null;
+        const cacheControlField = formData.get('cacheControl') as string | null;
+        const customMetadataField = formData.get('customMetadata') as string | null;
+
+        if (!file) {
+          return respondError(
+            new BadRequestError('Missing file in multipart form data'),
+            errorStatus.BAD_REQUEST,
+          );
         }
 
-        const resource = resourceToJsonApi(resourceData, {
-          metadata: inlineMetadata,
-          advertiseRelationships: { urls: hints.urls, variations: hints.variations },
-        });
-
-        return respondResource(resource, included, basePath, result.success.recoverableErrors);
-      }
-
-      // Route: POST /resources
-      // Create a new resource (asset or folder)
-      if (path === `${basePath}/resources` && method === 'POST') {
-        const contentType = request.headers.get('Content-Type') || '';
-
-        // Handle multipart form data for asset uploads
-        if (contentType.includes('multipart/form-data')) {
-          const formData = await request.formData();
-          const file = formData.get('file') as File | null;
-          const metadataJson = formData.get('metadata') as string | null;
-
-          // Also check for individual form fields (alternative to metadata JSON)
-          const keyField = formData.get('key') as string | null;
-          const mimeTypeField = formData.get('mimeType') as string | null;
-          const filenameField = formData.get('filename') as string | null;
-          const cacheControlField = formData.get('cacheControl') as string | null;
-          const customMetadataField = formData.get('customMetadata') as string | null;
-
-          if (!file) {
+        let metadata: {
+          key?: string,
+          mimeType?: string,
+          filename?: string,
+          customMetadata?: Record<string, string>,
+          cacheControl?: string,
+        } | undefined;
+        if (metadataJson) {
+          try {
+            metadata = JSON.parse(metadataJson);
+          } catch {
             return respondError(
-              new BadRequestError('Missing file in multipart form data'),
+              new BadRequestError('Invalid metadata JSON'),
+              errorStatus.BAD_REQUEST,
+            );
+          }
+        }
+
+        // Parse customMetadata from individual field if provided
+        let customMetadata: Record<string, string> | undefined = metadata?.customMetadata;
+        if (customMetadataField) {
+          try {
+            customMetadata = JSON.parse(customMetadataField);
+          } catch {
+            // Ignore invalid JSON
+          }
+        }
+
+        // Priority: individual fields > metadata JSON > file properties
+        const assetKey = keyField || metadata?.key || file.name;
+        const mimeType = mimeTypeField || metadata?.mimeType || file.type || 'application/octet-stream';
+        const filename = filenameField || metadata?.filename || file.name;
+        const cacheControl = cacheControlField || metadata?.cacheControl;
+        const content = await file.arrayBuffer();
+
+        const result = await firstResultWithMetadata(repository.createAsset({
+          key: assetKey,
+          mimeType,
+          content,
+          filename,
+          customMetadata,
+          cacheControl,
+        }));
+        if (Result.isFailure(result)) {
+          return respondError(result.failure, errorStatus.BAD_REQUEST);
+        }
+        return respondResource(
+          assetToJsonApi(result.success.value),
+          undefined,
+          basePath,
+          result.success.recoverableErrors,
+          201,
+        );
+      }
+
+      // Handle JSON:API request for folder creation
+      if (contentType.includes('application/vnd.api+json') || contentType.includes('application/json')) {
+        let body: { data: unknown };
+        try {
+          body = await request.json() as { data: unknown };
+        } catch {
+          return respondError(new InvalidData('Invalid request body'), errorStatus.BAD_REQUEST);
+        }
+        const data = body.data as { type?: string };
+
+        if (data.type === 'folder') {
+          let parsed: JsonApiFolderCreateData;
+          try {
+            parsed = decodeFolderCreate(data);
+          } catch {
+            return respondValidationError(
+              [{ message: 'Invalid folder create data' }],
               errorStatus.BAD_REQUEST,
             );
           }
 
-          let metadata: {
-            key?: string,
-            mimeType?: string,
-            filename?: string,
-            customMetadata?: Record<string, string>,
-            cacheControl?: string,
-          } | undefined;
-          if (metadataJson) {
-            try {
-              metadata = JSON.parse(metadataJson);
-            } catch {
-              return respondError(
-                new BadRequestError('Invalid metadata JSON'),
-                errorStatus.BAD_REQUEST,
-              );
-            }
+          const folderCreate: FolderCreate = {
+            key: parsed.id,
+            type: 'folder',
+          };
+          const result = await firstResultWithMetadata(repository.createFolder(folderCreate));
+          if (Result.isFailure(result)) {
+            return respondError(result.failure, errorStatus.BAD_REQUEST);
+          }
+          return respondResource(
+            folderToJsonApi(result.success.value),
+            undefined,
+            basePath,
+            result.success.recoverableErrors,
+            201,
+          );
+        }
+
+        // Asset creation via JSON (content must be base64 encoded)
+        if (data.type === 'asset') {
+          let parsed: JsonApiAssetCreateData;
+          try {
+            parsed = decodeAssetCreate(data);
+          } catch {
+            return respondValidationError(
+              [{ message: 'Invalid asset create data' }],
+              errorStatus.BAD_REQUEST,
+            );
           }
 
-          // Parse customMetadata from individual field if provided
-          let customMetadata: Record<string, string> | undefined = metadata?.customMetadata;
-          if (customMetadataField) {
-            try {
-              customMetadata = JSON.parse(customMetadataField);
-            } catch {
-              // Ignore invalid JSON
-            }
+          // Get base64 content from attributes
+          const base64Content = parsed.attributes.content;
+          if (!base64Content) {
+            return respondError(
+              new BadRequestError('Missing content in asset creation. Use multipart/form-data for binary uploads.'),
+              errorStatus.BAD_REQUEST,
+            );
           }
 
-          // Priority: individual fields > metadata JSON > file properties
-          const assetKey = keyField || metadata?.key || file.name;
-          const mimeType = mimeTypeField || metadata?.mimeType || file.type || 'application/octet-stream';
-          const filename = filenameField || metadata?.filename || file.name;
-          const cacheControl = cacheControlField || metadata?.cacheControl;
-          const content = await file.arrayBuffer();
+          // Decode base64 to ArrayBuffer
+          const binaryString = atob(base64Content);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
 
-          const result = await firstResultWithMetadata(repository.createAsset({
-            key: assetKey,
-            mimeType,
-            content,
-            filename,
-            customMetadata,
-            cacheControl,
-          }));
+          const assetCreate: AssetCreate = {
+            key: parsed.id,
+            mimeType: parsed.attributes.mimeType || 'application/octet-stream',
+            filename: parsed.attributes.filename,
+            cacheControl: parsed.attributes.cacheControl,
+            customMetadata: parsed.attributes.customMetadata,
+            content: bytes.buffer,
+          };
+
+          const result = await firstResultWithMetadata(repository.createAsset(assetCreate));
           if (Result.isFailure(result)) {
             return respondError(result.failure, errorStatus.BAD_REQUEST);
           }
@@ -573,183 +671,104 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           );
         }
 
-        // Handle JSON:API request for folder creation
-        if (contentType.includes('application/vnd.api+json') || contentType.includes('application/json')) {
-          const body = await request.json() as { data: unknown };
-          const data = body.data as { type?: string };
-
-          if (data.type === 'folder') {
-            let parsed: JsonApiFolderCreateData;
-            try {
-              parsed = decodeFolderCreate(data);
-            } catch {
-              return respondValidationError(
-                [{ message: 'Invalid folder create data' }],
-                errorStatus.BAD_REQUEST,
-              );
-            }
-
-            const folderCreate: FolderCreate = {
-              key: parsed.id,
-              type: 'folder',
-            };
-            const result = await firstResultWithMetadata(repository.createFolder(folderCreate));
-            if (Result.isFailure(result)) {
-              return respondError(result.failure, errorStatus.BAD_REQUEST);
-            }
-            return respondResource(
-              folderToJsonApi(result.success.value),
-              undefined,
-              basePath,
-              result.success.recoverableErrors,
-              201,
-            );
-          }
-
-          // Asset creation via JSON (content must be base64 encoded)
-          if (data.type === 'asset') {
-            let parsed: JsonApiAssetCreateData;
-            try {
-              parsed = decodeAssetCreate(data);
-            } catch {
-              return respondValidationError(
-                [{ message: 'Invalid asset create data' }],
-                errorStatus.BAD_REQUEST,
-              );
-            }
-
-            // Get base64 content from attributes
-            const base64Content = parsed.attributes.content;
-            if (!base64Content) {
-              return respondError(
-                new BadRequestError('Missing content in asset creation. Use multipart/form-data for binary uploads.'),
-                errorStatus.BAD_REQUEST,
-              );
-            }
-
-            // Decode base64 to ArrayBuffer
-            const binaryString = atob(base64Content);
-            const bytes = new Uint8Array(binaryString.length);
-            for (let i = 0; i < binaryString.length; i++) {
-              bytes[i] = binaryString.charCodeAt(i);
-            }
-
-            const assetCreate: AssetCreate = {
-              key: parsed.id,
-              mimeType: parsed.attributes.mimeType || 'application/octet-stream',
-              filename: parsed.attributes.filename,
-              cacheControl: parsed.attributes.cacheControl,
-              customMetadata: parsed.attributes.customMetadata,
-              content: bytes.buffer,
-            };
-
-            const result = await firstResultWithMetadata(repository.createAsset(assetCreate));
-            if (Result.isFailure(result)) {
-              return respondError(result.failure, errorStatus.BAD_REQUEST);
-            }
-            return respondResource(
-              assetToJsonApi(result.success.value),
-              undefined,
-              basePath,
-              result.success.recoverableErrors,
-              201,
-            );
-          }
-
-          return respondError(
-            new BadRequestError('Invalid resource type. Must be "asset" or "folder".'),
-            errorStatus.BAD_REQUEST,
-          );
-        }
-
         return respondError(
-          new BadRequestError('Unsupported Content-Type. Use multipart/form-data or application/vnd.api+json.'),
+          new BadRequestError('Invalid resource type. Must be "asset" or "folder".'),
           errorStatus.BAD_REQUEST,
         );
       }
 
-      // Route: PATCH /resources/:key
-      // Update an asset
-      if (path.startsWith(`${basePath}/resources/`) && method === 'PATCH') {
-        const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
-        const body = await request.json() as { data: Record<string, unknown> };
+      return respondError(
+        new BadRequestError('Unsupported Content-Type. Use multipart/form-data or application/vnd.api+json.'),
+        errorStatus.BAD_REQUEST,
+      );
+    }
 
-        // Add the key as id for validation
-        const dataWithId = { ...body.data, id: key };
-        let parsed: JsonApiAssetUpdateData;
-        try {
-          parsed = decodeAssetUpdate(dataWithId);
-        } catch {
-          return respondValidationError(
-            [{ message: 'Invalid asset update data' }],
-            errorStatus.BAD_REQUEST,
-          );
-        }
+    // Route: PATCH /resources/:key
+    // Update an asset
+    if (path.startsWith(`${basePath}/resources/`) && method === 'PATCH') {
+      const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
+      let body: { data: Record<string, unknown> };
+      try {
+        body = await request.json() as { data: Record<string, unknown> };
+      } catch {
+        return respondError(new InvalidData('Invalid request body'), errorStatus.BAD_REQUEST);
+      }
 
-        const assetUpdate: AssetUpdate = {
-          key: parsed.id,
-          mimeType: parsed.attributes.mimeType,
-          cacheControl: parsed.attributes.cacheControl,
-          customMetadata: parsed.attributes.customMetadata,
-        };
-
-        const result = await firstResultWithMetadata(repository.updateAsset(assetUpdate));
-        if (Result.isFailure(result)) {
-          return respondError(result.failure, errorStatus.BAD_REQUEST);
-        }
-        return respondResource(
-          assetToJsonApi(result.success.value),
-          undefined,
-          basePath,
-          result.success.recoverableErrors,
+      // Add the key as id for validation
+      const dataWithId = { ...body.data, id: key };
+      let parsed: JsonApiAssetUpdateData;
+      try {
+        parsed = decodeAssetUpdate(dataWithId);
+      } catch {
+        return respondValidationError(
+          [{ message: 'Invalid asset update data' }],
+          errorStatus.BAD_REQUEST,
         );
       }
 
-      // Route: DELETE /resources/:key
-      // Delete a resource
-      if (path.startsWith(`${basePath}/resources/`) && method === 'DELETE') {
-        const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
-        const recursive = str(query['recursive']) === 'true';
+      const assetUpdate: AssetUpdate = {
+        key: parsed.id,
+        mimeType: parsed.attributes.mimeType,
+        cacheControl: parsed.attributes.cacheControl,
+        customMetadata: parsed.attributes.customMetadata,
+      };
 
-        // Try to determine if it's an asset or folder
-        const resourceResult = await firstResult(repository.getResource(key));
-        if (Result.isFailure(resourceResult)) {
-          return respondError(resourceResult.failure, errorStatus.NOT_FOUND);
-        }
-        const firstResource = resourceResult.success[0];
-        if (!firstResource) {
-          return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
-        }
-        const resourceType = firstResource.type;
-
-        const deleteTask = resourceType === 'folder'
-          ? repository.deleteFolder(key, recursive)
-          : repository.deleteAsset(key);
-        const r = await firstResultWithMetadata(deleteTask);
-        if (Result.isFailure(r)) {
-          return respondError(r.failure, errorStatus.BAD_REQUEST);
-        }
-        // Clean success → 204 No Content (back-compat). Partial success with
-        // recoverable warnings → 200 + a small body so the warnings can ride
-        // along; HTTP 204 forbids a response body.
-        const warnings = recoverableErrorsToWarnings(r.success.recoverableErrors);
-        if (!warnings) {
-          return new Response(null, { status: 204 });
-        }
-        return json({ meta: { deleted: true, warnings } });
+      const result = await firstResultWithMetadata(repository.updateAsset(assetUpdate));
+      if (Result.isFailure(result)) {
+        return respondError(result.failure, errorStatus.BAD_REQUEST);
       }
-
-      // 404 Not Found
-      return json(
-        {
-          errors: [{
-            status: '404',
-            code: 'not_found',
-            detail: `Route not found: ${method} ${path}`,
-          }],
-        },
-        404,
+      return respondResource(
+        assetToJsonApi(result.success.value),
+        undefined,
+        basePath,
+        result.success.recoverableErrors,
       );
-    },
-  };
+    }
+
+    // Route: DELETE /resources/:key
+    // Delete a resource
+    if (path.startsWith(`${basePath}/resources/`) && method === 'DELETE') {
+      const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
+      const recursive = str(query['recursive']) === 'true';
+
+      // Try to determine if it's an asset or folder
+      const resourceResult = await firstResult(repository.getResource(key));
+      if (Result.isFailure(resourceResult)) {
+        return respondError(resourceResult.failure, errorStatus.NOT_FOUND);
+      }
+      const firstResource = resourceResult.success[0];
+      if (!firstResource) {
+        return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
+      }
+      const resourceType = firstResource.type;
+
+      const deleteTask = resourceType === 'folder'
+        ? repository.deleteFolder(key, recursive)
+        : repository.deleteAsset(key);
+      const r = await firstResultWithMetadata(deleteTask);
+      if (Result.isFailure(r)) {
+        return respondError(r.failure, errorStatus.BAD_REQUEST);
+      }
+      // Clean success → 204 No Content (back-compat). Partial success with
+      // recoverable warnings → 200 + a small body so the warnings can ride
+      // along; HTTP 204 forbids a response body.
+      const warnings = recoverableErrorsToWarnings(r.success.recoverableErrors);
+      if (!warnings) {
+        return new Response(null, { status: 204 });
+      }
+      return json({ meta: { deleted: true, warnings } });
+    }
+
+    // 404 Not Found
+    return json(
+      {
+        errors: [{
+          status: '404',
+          code: 'not_found',
+          detail: `Route not found: ${method} ${path}`,
+        }],
+      },
+      404,
+    );
+  }
 }
