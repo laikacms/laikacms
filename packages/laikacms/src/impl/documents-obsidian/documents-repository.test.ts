@@ -434,3 +434,244 @@ describe('ObsidianDocumentsRepository — getCapabilities', () => {
     expect(caps.pagination.styles).toBeDefined();
   });
 });
+
+describe('ObsidianDocumentsRepository — updateDocument', () => {
+  it('updates content and reads back the new value', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createDocument({
+      key: 'post',
+      type: 'published',
+      status: 'published',
+      language: 'en',
+      content: { title: 'Original', body: 'original body' },
+    }));
+
+    const updated = await LaikaTask.runPromise(repo.updateDocument({
+      key: 'post',
+      content: { title: 'Updated', body: 'new body' },
+    }));
+
+    expect(updated.content.title).toBe('Updated');
+    expect(String(updated.content.body).trim()).toBe('new body');
+    expect(updated.language).toBe('en');
+  });
+
+  it('preserves existing content when update.content is omitted', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createDocument({
+      key: 'article',
+      type: 'published',
+      status: 'published',
+      language: 'fr',
+      content: { title: 'Keep me', body: 'keep body' },
+    }));
+
+    const updated = await LaikaTask.runPromise(repo.updateDocument({
+      key: 'article',
+      language: 'de',
+    }));
+
+    expect(updated.content.title).toBe('Keep me');
+    expect(String(updated.content.body).trim()).toBe('keep body');
+    expect(updated.language).toBe('de');
+  });
+
+  it('updates language while preserving existing content', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createDocument({
+      key: 'doc',
+      type: 'published',
+      status: 'published',
+      language: 'en',
+      content: { title: 'Doc', body: 'content' },
+    }));
+
+    const updated = await LaikaTask.runPromise(repo.updateDocument({
+      key: 'doc',
+      language: 'nl',
+    }));
+
+    expect(updated.language).toBe('nl');
+    expect(updated.content.title).toBe('Doc');
+
+    const raw = await fs.readFile(path.join(vaultDir, 'doc.md'), 'utf8');
+    expect(raw).toContain('language: nl');
+  });
+
+  it('throws NotFoundError for a non-existent key', async () => {
+    const repo = makeRepo();
+    const result = await LaikaTask.runPromiseResult(repo.updateDocument({
+      key: 'does-not-exist',
+      content: { title: 'Ghost' },
+    }));
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') expect(result.failure).toBeInstanceOf(NotFoundError);
+  });
+
+  it('throws NotFoundError when the key is an unpublished draft (published-only guard)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createUnpublished({
+      key: 'my-draft',
+      type: 'unpublished',
+      status: 'draft',
+      language: 'und',
+      content: { title: 'Draft' },
+    }));
+
+    const result = await LaikaTask.runPromiseResult(repo.updateDocument({
+      key: 'my-draft',
+      content: { title: 'Attempted update' },
+    }));
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') expect(result.failure).toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('ObsidianDocumentsRepository — deleteDocument', () => {
+  it('removes a published document; subsequent getDocument throws NotFoundError', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createDocument({
+      key: 'to-delete',
+      type: 'published',
+      status: 'published',
+      language: 'en',
+      content: { title: 'Delete me' },
+    }));
+
+    await LaikaTask.runPromise(repo.deleteDocument('to-delete'));
+
+    const result = await LaikaTask.runPromiseResult(repo.getDocument('to-delete'));
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') expect(result.failure).toBeInstanceOf(NotFoundError);
+  });
+
+  it('throws NotFoundError when key is an unpublished draft (published-only guard)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createUnpublished({
+      key: 'draft-node',
+      type: 'unpublished',
+      status: 'draft',
+      language: 'und',
+      content: { title: 'Draft' },
+    }));
+
+    const result = await LaikaTask.runPromiseResult(repo.deleteDocument('draft-node'));
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') expect(result.failure).toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('ObsidianDocumentsRepository — updateUnpublished', () => {
+  it('updates status and reads back the new value', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createUnpublished({
+      key: 'draft',
+      type: 'unpublished',
+      status: 'draft',
+      language: 'en',
+      content: { title: 'Draft', body: 'original' },
+    }));
+
+    const updated = await LaikaTask.runPromise(repo.updateUnpublished({
+      key: 'draft',
+      status: 'pending_review',
+    }));
+
+    expect(updated.status).toBe('pending_review');
+    expect(updated.content.title).toBe('Draft');
+    expect(String(updated.content.body).trim()).toBe('original');
+    expect(updated.language).toBe('en');
+  });
+
+  it('updates content while preserving existing status and language', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createUnpublished({
+      key: 'draft',
+      type: 'unpublished',
+      status: 'wip',
+      language: 'fr',
+      content: { title: 'Old title' },
+    }));
+
+    const updated = await LaikaTask.runPromise(repo.updateUnpublished({
+      key: 'draft',
+      content: { title: 'New title', body: 'New body' },
+    }));
+
+    expect(updated.content.title).toBe('New title');
+    expect(updated.status).toBe('wip');
+    expect(updated.language).toBe('fr');
+  });
+
+  it('updates language while preserving existing content and status', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createUnpublished({
+      key: 'draft',
+      type: 'unpublished',
+      status: 'draft',
+      language: 'en',
+      content: { title: 'Hello' },
+    }));
+
+    const updated = await LaikaTask.runPromise(repo.updateUnpublished({
+      key: 'draft',
+      language: 'nl',
+    }));
+
+    expect(updated.language).toBe('nl');
+    expect(updated.content.title).toBe('Hello');
+    expect(updated.status).toBe('draft');
+  });
+
+  it('throws NotFoundError when key is a published document (draft-only guard)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createDocument({
+      key: 'published-doc',
+      type: 'published',
+      status: 'published',
+      language: 'en',
+      content: { title: 'Published' },
+    }));
+
+    const result = await LaikaTask.runPromiseResult(repo.updateUnpublished({
+      key: 'published-doc',
+      status: 'draft',
+    }));
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') expect(result.failure).toBeInstanceOf(NotFoundError);
+  });
+});
+
+describe('ObsidianDocumentsRepository — deleteUnpublished', () => {
+  it('removes a draft; subsequent getUnpublished throws NotFoundError', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createUnpublished({
+      key: 'to-delete',
+      type: 'unpublished',
+      status: 'draft',
+      language: 'und',
+      content: { title: 'Delete me' },
+    }));
+
+    await LaikaTask.runPromise(repo.deleteUnpublished('to-delete'));
+
+    const result = await LaikaTask.runPromiseResult(repo.getUnpublished('to-delete'));
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') expect(result.failure).toBeInstanceOf(NotFoundError);
+  });
+
+  it('throws NotFoundError when key is a published document (draft-only guard)', async () => {
+    const repo = makeRepo();
+    await LaikaTask.runPromise(repo.createDocument({
+      key: 'published-node',
+      type: 'published',
+      status: 'published',
+      language: 'en',
+      content: { title: 'Published' },
+    }));
+
+    const result = await LaikaTask.runPromiseResult(repo.deleteUnpublished('published-node'));
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') expect(result.failure).toBeInstanceOf(NotFoundError);
+  });
+});
