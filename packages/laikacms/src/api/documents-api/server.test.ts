@@ -1,5 +1,4 @@
 import * as Effect from 'effect/Effect';
-import * as Result from 'effect/Result';
 import type {
   DocumentsCapabilities,
   DocumentsRepository,
