@@ -740,19 +740,22 @@ Returns meta-information about the Documents API and its available endpoints.
 
 #### GET /records
 
-List all records (published and/or unpublished) with full content. Supports filtering by type,
-folder, and depth.
+List records (published and/or unpublished) with full content for a given collection folder.
 
 **Query Parameters**
 
-| Parameter        | Type                                        | Default       | Description                    |
-| ---------------- | ------------------------------------------- | ------------- | ------------------------------ |
-| `filter[type]`   | `"published"` \| `"unpublished"` \| `"all"` | `"published"` | Filter by document state       |
-| `filter[folder]` | string                                      | `""`          | Folder path to list from       |
-| `filter[depth]`  | number                                      | `1`           | Traversal depth (minimum 1)    |
-| `page[after]`    | string                                      | —             | Forward cursor for pagination  |
-| `page[before]`   | string                                      | —             | Backward cursor for pagination |
-| `page[size]`     | number                                      | —             | Items per page                 |
+| Parameter        | Type                                        | Required | Default       | Description                                                      |
+| ---------------- | ------------------------------------------- | -------- | ------------- | ---------------------------------------------------------------- |
+| `filter[folder]` | string                                      | **yes**  | —             | Collection (folder) to list from, e.g. `posts` or `posts/drafts` |
+| `filter[type]`   | `"published"` \| `"unpublished"` \| `"all"` | no       | `"published"` | Filter by document state                                         |
+| `filter[depth]`  | number                                      | no       | `1`           | Traversal depth (minimum 1)                                      |
+| `page[after]`    | string                                      | no       | —             | Forward cursor for pagination                                    |
+| `page[before]`   | string                                      | no       | —             | Backward cursor for pagination                                   |
+| `page[size]`     | number                                      | no       | —             | Items per page                                                   |
+
+> **Note:** `filter[folder]` is required and identifies the collection to list. Omitting it or
+> passing an empty string returns `400 bad_request`. To list documents across multiple collections,
+> make one request per collection.
 
 **Response** — mixed array of `published` and `unpublished` resources
 
@@ -797,7 +800,8 @@ folder, and depth.
 
 #### GET /record-summaries
 
-List all record summaries (without content). Accepts the same query parameters as `GET /records`.
+List record summaries (without content) for a given collection folder. Accepts the same query
+parameters as `GET /records`, including the required `filter[folder]`.
 
 **Response** — mixed array of `published-summary` and `unpublished-summary` resources
 
