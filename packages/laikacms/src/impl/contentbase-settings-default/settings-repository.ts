@@ -7,7 +7,12 @@ import type {
   DocumentCollectionSettings,
   MediaCollectionSettings,
 } from 'laikacms/contentbase-settings';
-import { ContentBaseSettingsProvider, createDefaultSettingsFile, parseSettings } from 'laikacms/contentbase-settings';
+import {
+  ContentBaseSettingsProvider,
+  createDefaultSettingsFile,
+  defaultUnpublishedStatuses,
+  parseSettings,
+} from 'laikacms/contentbase-settings';
 import type { LaikaError } from 'laikacms/core';
 import { InvalidData, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { StorageRepository } from 'laikacms/storage';
@@ -222,9 +227,7 @@ const defaultDocumentCollectionSettings = (collection: string): DocumentCollecti
   type: 'document',
   name: startCase(collection),
   directory: collection,
-  trashDirectory: `.contentbase/trash/${collection}`,
-  draftDirectory: `.contentbase/drafts/${collection}`,
-  archiveDirectory: `.contentbase/archive/${collection}`,
+  unpublishedStatuses: defaultUnpublishedStatuses,
   revisionDirectory: `.contentbase/revisions/${collection}`,
   recursive: true,
 });
