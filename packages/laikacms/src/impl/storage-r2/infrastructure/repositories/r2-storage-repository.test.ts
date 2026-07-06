@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { LaikaStream, LaikaTask } from 'laikacms/core';
+import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 
 import { jsonSerializer } from '../../../../serializers/storage-serializers-json/index.js';
 import { R2StorageRepository } from './r2-storage-repository.js';
@@ -158,6 +158,61 @@ describe('R2StorageRepository.createObject', () => {
 
     expect(collected.value.content).toEqual({ body: 'ok' });
     expect(collected.recoverableErrors).toEqual([]);
+  });
+});
+
+describe('R2StorageRepository — missing folder recoverableError', () => {
+  it('listAtomSummaries emits a NotFoundError recoverableError for a non-existent folder', async () => {
+    const bucket = makeListableBucket(['other-collection/a.json', 'other-collection/b.json']);
+    const repo = new R2StorageRepository(
+      bucket as unknown as R2Bucket,
+      { json: jsonSerializer },
+      'json',
+    );
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('nonexistent-folder', { pagination: {}, depth: 1 }),
+    );
+
+    expect(collected.data).toHaveLength(0);
+    expect(collected.done).toEqual({ total: 0 });
+    expect(collected.recoverableErrors).toHaveLength(1);
+    expect(collected.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('listAtoms emits a NotFoundError recoverableError for a non-existent folder', async () => {
+    const bucket = makeListableBucket(['other-collection/a.json']);
+    const repo = new R2StorageRepository(
+      bucket as unknown as R2Bucket,
+      { json: jsonSerializer },
+      'json',
+    );
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtoms('nonexistent-folder', { pagination: {}, depth: 1 }),
+    );
+
+    expect(collected.data).toHaveLength(0);
+    expect(collected.done).toEqual({ total: 0 });
+    expect(collected.recoverableErrors).toHaveLength(1);
+    expect(collected.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+  });
+
+  it('listAtomSummaries does NOT emit a recoverableError for an existing empty folder (.keep only)', async () => {
+    const bucket = makeListableBucket(['my-collection/.keep']);
+    const repo = new R2StorageRepository(
+      bucket as unknown as R2Bucket,
+      { json: jsonSerializer },
+      'json',
+    );
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('my-collection', { pagination: {}, depth: 1 }),
+    );
+
+    expect(collected.data).toHaveLength(0);
+    expect(collected.done).toEqual({ total: 0 });
+    expect(collected.recoverableErrors).toHaveLength(0);
   });
 });
 

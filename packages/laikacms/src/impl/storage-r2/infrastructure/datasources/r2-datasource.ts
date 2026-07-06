@@ -223,6 +223,7 @@ export class R2DataSource {
     try {
       const entries: R2Entry[] = [];
       let cursor: string | undefined;
+      let hasAnyListing = false;
 
       do {
         const listed = await this.bucket.list({
@@ -231,9 +232,13 @@ export class R2DataSource {
           cursor,
         });
 
+        if (listed.objects.length > 0 || listed.delimitedPrefixes.length > 0) {
+          hasAnyListing = true;
+        }
+
         // Add files (objects)
         for (const object of listed.objects) {
-          // Skip the prefix itself if it's a .keep file
+          // Skip .keep files — they mark empty folders but are not real entries
           if (object.key.endsWith('/.keep') || object.key === '.keep') {
             continue;
           }
@@ -256,6 +261,13 @@ export class R2DataSource {
 
         cursor = listed.truncated ? listed.cursor : undefined;
       } while (cursor);
+
+      // R2 has no real concept of a folder — an empty prefix is indistinguishable
+      // from a non-existent one. If nothing was listed (not even a .keep marker),
+      // treat the folder as missing so callers get the same contract as FS/WebDAV.
+      if (!hasAnyListing) {
+        return Result.fail(new NotFoundError(`Folder at ${prefix} does not exist`));
+      }
 
       return Result.succeed(entries);
     } catch (error) {
