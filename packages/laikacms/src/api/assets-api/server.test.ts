@@ -294,6 +294,64 @@ describe('GET /resources — shared JSON:API pagination params', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /resources — meta.page.total (LCMS-215)
+// ---------------------------------------------------------------------------
+
+describe('GET /resources — meta.page.total', () => {
+  const makeAsset = (key: string): Resource => ({
+    type: 'asset',
+    key,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    content: { size: 1, etag: key },
+  });
+
+  it('meta.page.total equals the total emitted by the stream done value', async () => {
+    const partialRepo = {
+      listResources: (_folderKey: string, _options: ListResourcesOptions) =>
+        LaikaStream.make<Resource, ListResourcesDone>(emit =>
+          Effect.gen(function*() {
+            yield* emit.data(makeAsset('a.jpg'));
+            return { total: 42 };
+          })
+        ),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      data: Array<{ id: string }>,
+      meta?: { page?: { total: number } },
+    };
+    expect(body.meta?.page?.total).toBe(42);
+  });
+
+  it('meta.page is absent when stream done has no total field', async () => {
+    const partialRepo = {
+      listResources: (_folderKey: string, _options: ListResourcesOptions) =>
+        LaikaStream.make<Resource, ListResourcesDone>(emit =>
+          Effect.gen(function*() {
+            yield* emit.data(makeAsset('b.jpg'));
+            return {} as ListResourcesDone;
+          })
+        ),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      data: Array<{ id: string }>,
+      meta?: { page?: unknown },
+    };
+    expect(body.meta?.page).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /capabilities
 // ---------------------------------------------------------------------------
 
