@@ -62,16 +62,18 @@ function makeMemoryStorage(): StorageRepository {
       return LaikaStream.empty({ removed: keys.length, skipped: 0 });
     },
 
-    listAtoms(folderKey: string, _options: unknown): LaikaStream.LaikaStream<Atom, object> {
+    listAtoms(folderKey: string, _options: unknown): LaikaStream.LaikaStream<Atom, { total: number }> {
       const prefix = folderKey.endsWith('/') ? folderKey : folderKey + '/';
       const atoms: Atom[] = [];
       for (const [k, v] of store.entries()) {
         if (k.startsWith(prefix) || k === folderKey) atoms.push(v as Atom);
       }
-      return atoms.length > 0 ? LaikaStream.succeedMany(atoms as Atom[], {}) : LaikaStream.empty({});
+      return atoms.length > 0
+        ? LaikaStream.succeedMany(atoms as Atom[], { total: atoms.length })
+        : LaikaStream.empty({ total: 0 });
     },
 
-    listAtomSummaries(folderKey: string, _options: unknown): LaikaStream.LaikaStream<AtomSummary, object> {
+    listAtomSummaries(folderKey: string, _options: unknown): LaikaStream.LaikaStream<AtomSummary, { total: number }> {
       const prefix = folderKey.endsWith('/') ? folderKey : folderKey + '/';
       const atoms: AtomSummary[] = [];
       for (const [k, v] of store.entries()) {
@@ -79,7 +81,9 @@ function makeMemoryStorage(): StorageRepository {
           atoms.push({ ...v, type: 'object-summary' } as AtomSummary);
         }
       }
-      return atoms.length > 0 ? LaikaStream.succeedMany(atoms, {}) : LaikaStream.empty({});
+      return atoms.length > 0
+        ? LaikaStream.succeedMany(atoms, { total: atoms.length })
+        : LaikaStream.empty({ total: 0 });
     },
 
     getFolder(_key: string): LaikaTask.LaikaTask<Folder> {
@@ -152,6 +156,12 @@ function makeSettingsProvider(overrides?: Partial<DocumentCollectionSettings>): 
 
 async function resolveTask<T>(task: LaikaTask.LaikaTask<T>): Promise<Result.Result<T, LaikaError>> {
   return LaikaTask.runPromiseResult(task);
+}
+
+async function collectStream<A, D extends object>(
+  stream: LaikaStream.LaikaStream<A, D>,
+): Promise<{ data: A[], done: D }> {
+  return LaikaStream.runPromiseCollect(stream).then(r => ({ data: [...r.data], done: r.done }));
 }
 
 // ---- tests ----
@@ -312,6 +322,36 @@ describe('ContentBaseDocumentsRepository', () => {
       expect(keys).toContain('posts/doc-a');
       expect(keys).toContain('posts/doc-b');
     });
+
+    it('done.total reflects pre-pagination full count, not page count (LCMS-219)', async () => {
+      for (const key of ['posts/a', 'posts/b', 'posts/c', 'posts/d', 'posts/e']) {
+        await resolveTask(
+          repo.createDocument({ key, type: 'published', status: 'published', content: {}, language: 'en' }),
+        );
+      }
+
+      const { data, done } = await collectStream(
+        repo.listRecords({ folder: 'posts', pagination: { offset: 0, limit: 2 }, depth: 1 }),
+      );
+      // Only 2 items on the page, but total should be 5
+      expect(data.length).toBeLessThanOrEqual(5);
+      expect(done.total).toBe(5);
+    });
+  });
+
+  describe('listRecordSummaries', () => {
+    it('done.total reflects pre-pagination full count, not page count (LCMS-219)', async () => {
+      for (const key of ['posts/s1', 'posts/s2', 'posts/s3']) {
+        await resolveTask(
+          repo.createDocument({ key, type: 'published', status: 'published', content: {}, language: 'en' }),
+        );
+      }
+
+      const { done } = await collectStream(
+        repo.listRecordSummaries({ folder: 'posts', pagination: { offset: 0, limit: 2 }, depth: 1 }),
+      );
+      expect(done.total).toBe(3);
+    });
   });
 
   describe('createUnpublished / getUnpublished', () => {
@@ -365,7 +405,7 @@ describe('ContentBaseDocumentsRepository', () => {
     });
   });
 
-  describe('createRevision / getRevision', () => {
+  describe('createRevision / getRevision / listRevisions', () => {
     it('creates and retrieves a revision', async () => {
       const createResult = await resolveTask(
         repo.createRevision({
@@ -385,6 +425,19 @@ describe('ContentBaseDocumentsRepository', () => {
         expect(getResult.success.language).toBe('en');
         expect(getResult.success.content).toMatchObject({ text: 'original' });
       }
+    });
+
+    it('listRevisions done.total reflects pre-pagination full count (LCMS-219)', async () => {
+      for (const rev of ['r1', 'r2', 'r3', 'r4']) {
+        await resolveTask(
+          repo.createRevision({ key: 'rev-doc', type: 'revision', revision: rev, content: {}, language: 'en' }),
+        );
+      }
+
+      const { done } = await collectStream(
+        repo.listRevisions('rev-doc', { pagination: { offset: 0, limit: 2 } }),
+      );
+      expect(done.total).toBe(4);
     });
   });
 });
