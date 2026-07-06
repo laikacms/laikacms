@@ -9,6 +9,39 @@ import type { StorageRepository } from 'laikacms/storage';
 import { buildJsonApi as buildStorageApi } from 'laikacms/storage/api';
 
 /**
+ * CORS configuration for `decapApi`.
+ *
+ * Required when the Decap admin is served from a different origin than the API
+ * (e.g. `npx serve admin/` on :5000 while the API runs on :3000).
+ *
+ * @example
+ * ```ts
+ * decapApi({
+ *   // …
+ *   cors: { origins: ['http://localhost:5000'] },
+ * });
+ * ```
+ *
+ * Use `origins: '*'` to allow any origin (convenient for local dev, not for production):
+ * ```ts
+ * cors: { origins: '*' }
+ * ```
+ */
+export interface CorsOptions {
+  /**
+   * Allowed origins. Either an explicit list of origin strings
+   * (e.g. `['http://localhost:5000', 'https://admin.example.com']`)
+   * or the string `'*'` to allow any origin.
+   */
+  origins: string[] | '*';
+  /**
+   * Preflight cache lifetime in seconds sent via `Access-Control-Max-Age`.
+   * Defaults to `86400` (24 h).
+   */
+  maxAge?: number;
+}
+
+/**
  * Security constants for the API
  * These can be used by consumers to configure their implementations
  */
@@ -62,6 +95,12 @@ export interface DecapOptions {
    */
   authenticateApiToken?: (token: string) => Promise<User>;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
+  /**
+   * Optional CORS configuration. Required when the Decap admin UI is served
+   * from a different origin than this API server (common in local development).
+   * When omitted, no CORS headers are emitted and OPTIONS preflights return 404.
+   */
+  cors?: CorsOptions | undefined;
 }
 
 export interface DecapApi {
@@ -83,6 +122,41 @@ function validateTokenInput(token: string | null | undefined): string | null {
 }
 
 /**
+ * Return CORS headers for `origin` if the origin is permitted by `corsOptions`,
+ * or `null` if CORS is unconfigured or the origin is not allowed.
+ */
+function resolveCorsHeaders(
+  origin: string | null,
+  corsOptions: CorsOptions | undefined,
+): Record<string, string> | null {
+  if (!corsOptions || !origin) return null;
+  const allowed = corsOptions.origins === '*'
+    || (corsOptions.origins as string[]).includes(origin);
+  if (!allowed) return null;
+  const allowOrigin = corsOptions.origins === '*' ? '*' : origin;
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Authorization, Content-Type, X-API-Key',
+    'Access-Control-Max-Age': String(corsOptions.maxAge ?? 86400),
+    ...(corsOptions.origins !== '*' ? { Vary: 'Origin' } : {}),
+  };
+}
+
+/**
+ * Clone a Response and merge extra headers into it.
+ */
+function withHeaders(response: Response, extra: Record<string, string>): Response {
+  const merged = new Headers(response.headers);
+  for (const [k, v] of Object.entries(extra)) merged.set(k, v);
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: merged,
+  });
+}
+
+/**
  * Security headers for API responses
  */
 const SECURITY_HEADERS = {
@@ -93,7 +167,7 @@ const SECURITY_HEADERS = {
 } as const;
 
 export const decapApi = (options: DecapOptions): DecapApi => {
-  const { documents, storage, assets, authenticateAccessToken, authenticateApiToken, basePath } = options;
+  const { documents, storage, assets, authenticateAccessToken, authenticateApiToken, basePath, cors } = options;
 
   const base = Url.normalize(basePath ?? '');
 
@@ -178,20 +252,34 @@ export const decapApi = (options: DecapOptions): DecapApi => {
     async fetch(request: Request): Promise<Response> {
       const url = new URL(request.url);
       const pathname = Url.normalize(url.pathname);
+      const origin = request.headers.get('Origin');
+      const corsHeaders = resolveCorsHeaders(origin, cors);
+
+      // CORS preflight — must be answered before any auth check.
+      // Browsers send OPTIONS with no credentials; running it through the auth
+      // path would return 401 and the browser would never issue the real request.
+      if (request.method === 'OPTIONS' && corsHeaders) {
+        return new Response(null, { status: 204, headers: corsHeaders });
+      }
+
+      // Helper: attach CORS headers to every outgoing response when configured.
+      const respond = (res: Response): Response => corsHeaders ? withHeaders(res, corsHeaders) : res;
 
       // Health endpoint (no authentication required)
       if (pathname === healthEndpoint) {
         options.logger?.debug('Health check endpoint');
-        return new Response(
-          JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }),
-          { status: 200, headers: { ...SECURITY_HEADERS, 'Content-Type': 'application/json' } },
+        return respond(
+          new Response(
+            JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }),
+            { status: 200, headers: { ...SECURITY_HEADERS, 'Content-Type': 'application/json' } },
+          ),
         );
       }
 
       // All other endpoints require authentication
       const authenticated = await authenticateRequest(request);
       if (authenticated instanceof Response) {
-        return authenticated;
+        return respond(authenticated);
       }
       const user = authenticated;
 
@@ -202,36 +290,40 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         // The user is responsible for not passing in sensitive data, except for the passwordHash
         const { passwordHash: _passwordHash, ...safeUserData } = user;
 
-        return new Response(
-          JSON.stringify({
-            data: {
-              type: 'session',
-              id: user.id || user.email,
-              attributes: {
-                ...safeUserData,
+        return respond(
+          new Response(
+            JSON.stringify({
+              data: {
+                type: 'session',
+                id: user.id || user.email,
+                attributes: {
+                  ...safeUserData,
+                },
               },
-            },
-          }),
-          { status: 200, headers: SECURITY_HEADERS },
+            }),
+            { status: 200, headers: SECURITY_HEADERS },
+          ),
         );
       } else if (pathname.startsWith(storageEndpoint)) {
         const storageApi = buildStorageApi({ repo: storage, basePath: `${base}/storage`, logger: options.logger });
-        return storageApi.fetch(request);
+        return respond(await storageApi.fetch(request));
       } else if (pathname.startsWith(documentsEndpoint)) {
         const documentsApi = buildDocumentsApi({
           repo: documents,
           basePath: `${base}/documents`,
           logger: options.logger,
         });
-        return documentsApi.fetch(request);
+        return respond(await documentsApi.fetch(request));
       } else if (assets && pathname.startsWith(assetsEndpoint)) {
         const assetsApi = buildAssetsApi({ repository: assets, basePath: `${base}/assets` });
-        return assetsApi.fetch(request);
+        return respond(await assetsApi.fetch(request));
       } else {
         options.logger?.debug('Endpoint not found:', pathname);
-        return new Response(
-          JSON.stringify(errorToJsonApiMapper(new NotFoundError('Endpoint not found'))),
-          { status: 404, headers: SECURITY_HEADERS },
+        return respond(
+          new Response(
+            JSON.stringify(errorToJsonApiMapper(new NotFoundError('Endpoint not found'))),
+            { status: 404, headers: SECURITY_HEADERS },
+          ),
         );
       }
     },

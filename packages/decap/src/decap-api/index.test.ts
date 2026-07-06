@@ -460,3 +460,209 @@ describe('basePath option', () => {
     expect(res.status).toBe(404);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Suite: CORS — OPTIONS preflight and header injection
+// ---------------------------------------------------------------------------
+
+describe('cors option — OPTIONS preflight', () => {
+  it('returns 204 for OPTIONS preflight from an allowed origin (no auth required)', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      new Request(`${BASE_URL}/session`, {
+        method: 'OPTIONS',
+        headers: {
+          Origin: 'http://localhost:5000',
+          'Access-Control-Request-Method': 'GET',
+          'Access-Control-Request-Headers': 'authorization',
+        },
+      }),
+    );
+
+    expect(res.status).toBe(204);
+  });
+
+  it('OPTIONS preflight carries Access-Control-Allow-Origin from the allowed origin', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      new Request(`${BASE_URL}/session`, {
+        method: 'OPTIONS',
+        headers: { Origin: 'http://localhost:5000', 'Access-Control-Request-Method': 'GET' },
+      }),
+    );
+
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5000');
+  });
+
+  it('OPTIONS preflight carries Access-Control-Allow-Methods', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      new Request(`${BASE_URL}/session`, {
+        method: 'OPTIONS',
+        headers: { Origin: 'http://localhost:5000', 'Access-Control-Request-Method': 'GET' },
+      }),
+    );
+
+    expect(res.headers.get('Access-Control-Allow-Methods')).toContain('GET');
+  });
+
+  it('OPTIONS preflight carries Access-Control-Allow-Headers', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      new Request(`${BASE_URL}/session`, {
+        method: 'OPTIONS',
+        headers: { Origin: 'http://localhost:5000', 'Access-Control-Request-Method': 'GET' },
+      }),
+    );
+
+    expect(res.headers.get('Access-Control-Allow-Headers')).toContain('Authorization');
+  });
+
+  it('does NOT call authenticateAccessToken for an OPTIONS preflight', async () => {
+    const authenticateAccessToken = vi.fn().mockResolvedValue(MOCK_USER);
+    const api = decapApi(makeOptions({
+      authenticateAccessToken,
+      cors: { origins: ['http://localhost:5000'] },
+    }));
+
+    await api.fetch(
+      new Request(`${BASE_URL}/session`, {
+        method: 'OPTIONS',
+        headers: { Origin: 'http://localhost:5000', 'Access-Control-Request-Method': 'GET' },
+      }),
+    );
+
+    expect(authenticateAccessToken).not.toHaveBeenCalled();
+  });
+
+  it('OPTIONS from a disallowed origin passes through (no CORS headers, not 204)', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      new Request(`${BASE_URL}/session`, {
+        method: 'OPTIONS',
+        headers: { Origin: 'http://evil.example.com', 'Access-Control-Request-Method': 'GET' },
+      }),
+    );
+
+    // Not a CORS preflight response — falls through to normal routing (401 without auth)
+    expect(res.status).not.toBe(204);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  });
+
+  it('OPTIONS with cors: { origins: "*" } responds 204 for any origin', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: '*' } }));
+    const res = await api.fetch(
+      new Request(`${BASE_URL}/health`, {
+        method: 'OPTIONS',
+        headers: { Origin: 'http://any.example.com', 'Access-Control-Request-Method': 'GET' },
+      }),
+    );
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+  });
+
+  it('Access-Control-Max-Age defaults to 86400', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      new Request(`${BASE_URL}/health`, {
+        method: 'OPTIONS',
+        headers: { Origin: 'http://localhost:5000', 'Access-Control-Request-Method': 'GET' },
+      }),
+    );
+
+    expect(res.headers.get('Access-Control-Max-Age')).toBe('86400');
+  });
+
+  it('Access-Control-Max-Age uses the configured maxAge', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'], maxAge: 300 } }));
+    const res = await api.fetch(
+      new Request(`${BASE_URL}/health`, {
+        method: 'OPTIONS',
+        headers: { Origin: 'http://localhost:5000', 'Access-Control-Request-Method': 'GET' },
+      }),
+    );
+
+    expect(res.headers.get('Access-Control-Max-Age')).toBe('300');
+  });
+});
+
+describe('cors option — CORS headers on regular responses', () => {
+  it('GET /health includes Access-Control-Allow-Origin when cors is configured', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      makeRequest('/health', { Origin: 'http://localhost:5000' }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5000');
+  });
+
+  it('GET /session includes Access-Control-Allow-Origin when cors is configured', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      makeRequest('/session', {
+        Authorization: 'Bearer good-token',
+        Origin: 'http://localhost:5000',
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5000');
+  });
+
+  it('401 responses also include Access-Control-Allow-Origin (browser must read error body)', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      makeRequest('/session', { Origin: 'http://localhost:5000' }),
+    );
+
+    expect(res.status).toBe(401);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5000');
+  });
+
+  it('responses from a disallowed origin carry no Access-Control-Allow-Origin', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      makeRequest('/health', { Origin: 'http://other.example.com' }),
+    );
+
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  });
+
+  it('responses with no Origin header carry no Access-Control-Allow-Origin', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(makeRequest('/health'));
+
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  });
+
+  it('no cors option → no CORS headers on any response', async () => {
+    const api = decapApi(makeOptions());
+    const res = await api.fetch(
+      makeRequest('/health', { Origin: 'http://localhost:5000' }),
+    );
+
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBeNull();
+  });
+
+  it('Vary: Origin is set when origins is an explicit list (not wildcard)', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      makeRequest('/health', { Origin: 'http://localhost:5000' }),
+    );
+
+    expect(res.headers.get('Vary')).toContain('Origin');
+  });
+
+  it('Vary header is absent when origins is "*"', async () => {
+    const api = decapApi(makeOptions({ cors: { origins: '*' } }));
+    const res = await api.fetch(
+      makeRequest('/health', { Origin: 'http://anywhere.example.com' }),
+    );
+
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+    // Vary: Origin is not meaningful with wildcard — browser caching not affected by origin
+    expect(res.headers.get('Vary') ?? '').not.toContain('Origin');
+  });
+});
