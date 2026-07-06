@@ -425,6 +425,147 @@ describe('ContentBaseDocumentsRepository', () => {
     });
   });
 
+  describe('updateUnpublished', () => {
+    it('updates content of an existing unpublished document', async () => {
+      await resolveTask(
+        repo.createUnpublished({
+          key: 'posts/draft-update',
+          type: 'unpublished',
+          content: { title: 'Original' },
+          language: 'en',
+          status: 'draft',
+        }),
+      );
+
+      const result = await resolveTask(
+        repo.updateUnpublished({ key: 'posts/draft-update', content: { title: 'Updated' } }),
+      );
+      expect(Result.isSuccess(result)).toBe(true);
+      if (Result.isSuccess(result)) {
+        expect(result.success.key).toBe('posts/draft-update');
+        expect(result.success.type).toBe('unpublished');
+        expect(result.success.content).toMatchObject({ title: 'Updated' });
+        expect(result.success.language).toBe('en');
+        expect(result.success.status).toBe('draft');
+      }
+    });
+
+    it('updates language of an existing unpublished document', async () => {
+      await resolveTask(
+        repo.createUnpublished({
+          key: 'posts/draft-lang',
+          type: 'unpublished',
+          content: { title: 'Bonjour' },
+          language: 'en',
+          status: 'draft',
+        }),
+      );
+
+      const result = await resolveTask(
+        repo.updateUnpublished({ key: 'posts/draft-lang', language: 'fr' }),
+      );
+      expect(Result.isSuccess(result)).toBe(true);
+      if (Result.isSuccess(result)) {
+        expect(result.success.language).toBe('fr');
+      }
+    });
+
+    it('returns NotFoundError when updating a non-existent unpublished document', async () => {
+      const result = await resolveTask(
+        repo.updateUnpublished({ key: 'posts/no-such-draft', content: { x: 1 } }),
+      );
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe(NotFoundError.CODE);
+      }
+    });
+  });
+
+  describe('deleteUnpublished', () => {
+    it('removes an existing draft document', async () => {
+      await resolveTask(
+        repo.createUnpublished({
+          key: 'posts/to-delete-draft',
+          type: 'unpublished',
+          content: { title: 'Bye' },
+          language: 'en',
+          status: 'draft',
+        }),
+      );
+
+      const deleteResult = await resolveTask(repo.deleteUnpublished('posts/to-delete-draft'));
+      expect(Result.isSuccess(deleteResult)).toBe(true);
+
+      // Confirm the document is gone
+      const getResult = await resolveTask(repo.getUnpublished('posts/to-delete-draft'));
+      expect(Result.isFailure(getResult)).toBe(true);
+      if (Result.isFailure(getResult)) {
+        expect(getResult.failure.code).toBe(NotFoundError.CODE);
+      }
+    });
+
+    it('returns NotFoundError when deleting a non-existent unpublished document', async () => {
+      const result = await resolveTask(repo.deleteUnpublished('posts/ghost-draft'));
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe(NotFoundError.CODE);
+      }
+    });
+  });
+
+  describe('unpublish workflow', () => {
+    it('moves a published document to unpublished with a known status', async () => {
+      await resolveTask(
+        repo.createDocument({
+          key: 'posts/published-to-draft',
+          type: 'published',
+          status: 'published',
+          content: { title: 'Published' },
+          language: 'en',
+        }),
+      );
+
+      const unpublishResult = await resolveTask(repo.unpublish('posts/published-to-draft', 'draft'));
+      expect(Result.isSuccess(unpublishResult)).toBe(true);
+      if (Result.isSuccess(unpublishResult)) {
+        expect(unpublishResult.success.type).toBe('unpublished');
+        expect(unpublishResult.success.status).toBe('draft');
+        expect(unpublishResult.success.key).toBe('posts/published-to-draft');
+        expect(unpublishResult.success.content).toMatchObject({ title: 'Published' });
+      }
+
+      // The original published document should be gone
+      const getPublishedResult = await resolveTask(repo.getDocument('posts/published-to-draft'));
+      expect(Result.isFailure(getPublishedResult)).toBe(true);
+    });
+
+    it('returns BadRequestError for an unknown unpublished status', async () => {
+      await resolveTask(
+        repo.createDocument({
+          key: 'posts/another-doc',
+          type: 'published',
+          status: 'published',
+          content: { title: 'To Unpublish' },
+          language: 'en',
+        }),
+      );
+
+      const result = await resolveTask(repo.unpublish('posts/another-doc', 'nonexistent-status'));
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe(BadRequestError.CODE);
+      }
+    });
+
+    it('returns NotFoundError when trying to unpublish a non-existent document', async () => {
+      const result = await resolveTask(repo.unpublish('posts/no-such-doc', 'draft'));
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe(NotFoundError.CODE);
+      }
+    });
+  });
+
   describe('createRevision / getRevision / listRevisions', () => {
     it('creates and retrieves a revision', async () => {
       const createResult = await resolveTask(
