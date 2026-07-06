@@ -686,3 +686,95 @@ describe('DocumentsJsonApiProxyRepository error rehydration', () => {
     expect(result).toBeInstanceOf(InvalidData);
   });
 });
+
+describe('DocumentsJsonApiProxyRepository.createRevision', () => {
+  it('POSTs to /revisions with correct JSON:API body and returns a Revision', async () => {
+    let capturedUrl = '';
+    let capturedInit: RequestInit | undefined;
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string, init: RequestInit) => {
+        capturedUrl = url;
+        capturedInit = init;
+        return jsonResponse({ data: revisionDoc('posts/hello', 'rev-new') });
+      }),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const create = {
+      key: 'posts/hello',
+      type: 'revision' as const,
+      revision: 'rev-new',
+      language: 'en',
+      content: { title: 'Hello' },
+    };
+    const rev = await LaikaTask.runPromise(proxy.createRevision(create));
+
+    expect(rev.key).toBe('posts/hello');
+    expect(rev.revision).toBe('rev-new');
+    expect(capturedUrl).toContain('/revisions');
+    expect(capturedInit?.method).toBe('POST');
+
+    const body = JSON.parse(capturedInit?.body as string);
+    expect(body.data.type).toBe('revision');
+    expect(body.data.id).toBe('posts/hello');
+    expect(body.data.attributes.revision).toBe('rev-new');
+  });
+
+  it('re-emits meta.warnings from the POST response as local recoverableErrors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          data: revisionDoc('posts/hello', 'rev-warn'),
+          meta: {
+            warnings: [
+              {
+                code: 'invalid_data',
+                status: '400',
+                title: 'Invalid Data',
+                detail: 'revision content had an unrecognised field',
+              },
+            ],
+          },
+        })
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const create = {
+      key: 'posts/hello',
+      type: 'revision' as const,
+      revision: 'rev-warn',
+      language: 'en',
+      content: { title: 'Hello' },
+    };
+    const collected = await LaikaTask.runPromiseCollect(proxy.createRevision(create));
+
+    expect(collected.value.key).toBe('posts/hello');
+    expect(collected.recoverableErrors).toHaveLength(1);
+    expect(collected.recoverableErrors[0]).toBeInstanceOf(InvalidData);
+    expect(collected.recoverableErrors[0]!.message).toContain('unrecognised field');
+  });
+
+  it('returns cleanly when the POST response has no warnings', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ data: revisionDoc('posts/clean', 'rev-clean') })),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const create = {
+      key: 'posts/clean',
+      type: 'revision' as const,
+      revision: 'rev-clean',
+      language: 'en',
+      content: {},
+    };
+    const collected = await LaikaTask.runPromiseCollect(proxy.createRevision(create));
+
+    expect(collected.value.key).toBe('posts/clean');
+    expect(collected.recoverableErrors).toEqual([]);
+  });
+});
