@@ -1249,6 +1249,123 @@ describe('GET /record-summaries — filter param forwarding', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /record-summaries — meta.page.total and pagination forwarding (LCMS-207)
+// ---------------------------------------------------------------------------
+
+describe('GET /record-summaries — meta.page.total', () => {
+  const makeSummary = (type: 'published-summary' | 'unpublished-summary', key: string) => ({
+    type,
+    key,
+    status: type === 'published-summary' ? 'published' : 'draft',
+    language: 'en' as const,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  });
+
+  it('surfaces done.total as meta.page.total in the response', async () => {
+    const repo = {
+      listRecordSummaries: (_options: ListRecordSummaries) =>
+        LaikaStream.make<
+          {
+            type: 'published-summary',
+            key: string,
+            status: string,
+            language: string,
+            createdAt: string,
+            updatedAt: string,
+          },
+          ListRecordsDone
+        >(emit =>
+          Effect.gen(function*() {
+            yield* emit.data(makeSummary('published-summary', 'posts/a'));
+            yield* emit.data(makeSummary('published-summary', 'posts/b'));
+            return { total: 42 };
+          })
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/record-summaries'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: unknown[], meta: { page: { total: number } } };
+    expect(body.data).toHaveLength(2);
+    expect(body.meta.page.total).toBe(42);
+  });
+
+  it('surfaces meta.page.total = 0 when no summaries exist', async () => {
+    const repo = {
+      listRecordSummaries: (_options: ListRecordSummaries) =>
+        LaikaStream.make<never, ListRecordsDone>(_emit => Effect.succeed({ total: 0 })),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/record-summaries'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: unknown[], meta: { page: { total: number } } };
+    expect(body.data).toHaveLength(0);
+    expect(body.meta.page.total).toBe(0);
+  });
+});
+
+describe('GET /record-summaries — pagination forwarding', () => {
+  const makeSummary = (key: string) => ({
+    type: 'published-summary' as const,
+    key,
+    status: 'published',
+    language: 'en' as const,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  });
+
+  const makeRepo = (spy: ReturnType<typeof vi.fn>) => ({ listRecordSummaries: spy }) as unknown as DocumentsRepository;
+
+  it('forwards page[size] to repo pagination.perPage', async () => {
+    const spy = vi.fn((_opts: ListRecordSummaries) =>
+      LaikaStream.make<
+        {
+          type: 'published-summary',
+          key: string,
+          status: string,
+          language: string,
+          createdAt: string,
+          updatedAt: string,
+        },
+        ListRecordsDone
+      >(emit =>
+        Effect.gen(function*() {
+          yield* emit.data(makeSummary('posts/a'));
+          return { total: 1 };
+        })
+      )
+    );
+    const api = buildJsonApi({ repo: makeRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bsize%5D=5'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    const pagination = spy.mock.calls[0]![0].pagination as { perPage?: number };
+    expect(pagination.perPage).toBe(5);
+  });
+
+  it('forwards page[after] to repo pagination.after', async () => {
+    const spy = vi.fn((_opts: ListRecordSummaries) =>
+      LaikaStream.make<never, ListRecordsDone>(_emit => Effect.succeed({ total: 0 }))
+    );
+    const api = buildJsonApi({ repo: makeRepo(spy) });
+
+    const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bafter%5D=cursor-abc'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    const pagination = spy.mock.calls[0]![0].pagination as { after?: string };
+    expect(pagination.after).toBe('cursor-abc');
+  });
+});
+
+// ---------------------------------------------------------------------------
 
 describe('404 on unknown routes', () => {
   it('returns 404 JSON:API error shape on unknown path', async () => {
