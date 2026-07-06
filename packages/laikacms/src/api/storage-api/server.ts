@@ -628,7 +628,7 @@ export function buildJsonApi(options: StorageApiOptions) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 400;
         return failResponse(result, status);
       }
-      if (!result.success.data.includes(pathKey)) {
+      if (result.success.done.removed === 0) {
         return failResponse(Result.fail(new NotFoundError(`Object not found: ${pathKey}`)), 404);
       }
       const warnings = result.success.recoverableErrors.length > 0
