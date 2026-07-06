@@ -87,8 +87,8 @@ Returns meta-information about the Storage API and its available endpoints.
         },
         {
           "path": "/objects/{key}",
-          "methods": ["GET", "PATCH"],
-          "description": "Read or update a storage object"
+          "methods": ["GET", "PATCH", "DELETE"],
+          "description": "Read, update, or delete a storage object"
         },
         { "path": "/folders/{key}", "methods": ["GET"], "description": "Read a folder" },
         {
@@ -442,6 +442,39 @@ Content-Type: application/vnd.api+json
   }
 }
 ```
+
+---
+
+#### DELETE /objects/:key
+
+Delete a storage object by key. Equivalent to using the `remove` operation in `POST /operations`.
+
+**Path Parameters**
+
+| Parameter | Type   | Description                                                                      |
+| --------- | ------ | -------------------------------------------------------------------------------- |
+| `key`     | string | Key of the object (slashes must be encoded as `%2F`, e.g. `posts%2Fhello-world`) |
+
+**Example**
+
+```
+DELETE /objects/posts%2Fhello-world
+```
+
+**Response** — on success
+
+```json
+{
+  "meta": {
+    "deleted": true
+  }
+}
+```
+
+Returns `404` if the object does not exist.
+
+> **Note:** Unsupported methods (e.g. `PUT`) on `/objects/{key}` return `405 Method Not Allowed`
+> with an `Allow: GET, PATCH, DELETE` header.
 
 ---
 

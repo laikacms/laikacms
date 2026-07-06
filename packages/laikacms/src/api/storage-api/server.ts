@@ -355,8 +355,8 @@ export function buildJsonApi(options: StorageApiOptions) {
               },
               {
                 path: '/objects/{key}',
-                methods: ['GET', 'PATCH'],
-                description: 'Read or update a storage object',
+                methods: ['GET', 'PATCH', 'DELETE'],
+                description: 'Read, update, or delete a storage object',
               },
               { path: '/folders/{key}', methods: ['GET'], description: 'Read a folder' },
               {
@@ -616,6 +616,48 @@ export function buildJsonApi(options: StorageApiOptions) {
         storageObjectToJsonApi,
         basePath,
         result.success.recoverableErrors,
+      );
+    } else if (path.startsWith('objects') && request.method === 'DELETE') {
+      const [, rawPathKey] = path.split('/');
+      const pathKey = rawPathKey === undefined ? undefined : safeDecode(rawPathKey);
+      if (!pathKey) {
+        return failResponse(Result.fail(new InvalidData('Missing object key')), 400);
+      }
+      const result = await runStream(repo.removeAtoms([pathKey]));
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 400;
+        return failResponse(result, status);
+      }
+      if (!result.success.data.includes(pathKey)) {
+        return failResponse(Result.fail(new NotFoundError(`Object not found: ${pathKey}`)), 404);
+      }
+      const warnings = result.success.recoverableErrors.length > 0
+        ? recoverableErrorsToWarnings(result.success.recoverableErrors)
+        : undefined;
+      return json(
+        { meta: { deleted: true, ...(warnings ? { warnings } : {}) } } as unknown as JsonApiResponse,
+      );
+    } else if (path.startsWith('objects/')) {
+      // Known path, unsupported method (e.g. PUT) — 405 is more accurate than 404.
+      return new Response(
+        JSON.stringify({
+          errors: [
+            {
+              status: '405',
+              code: 'method_not_allowed',
+              title: 'Method Not Allowed',
+              detail: `${request.method} is not supported on /objects/{key}. Allowed: GET, PATCH, DELETE.`,
+            },
+          ],
+        }),
+        {
+          status: 405,
+          headers: {
+            Allow: 'GET, PATCH, DELETE',
+            'Content-Type': 'application/vnd.api+json',
+            'Cache-Control': 'no-store',
+          },
+        },
       );
     } else if (path === 'operations' && request.method === 'POST') {
       let body: AtomicOperationsRequest;

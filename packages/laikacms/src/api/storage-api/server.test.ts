@@ -725,3 +725,115 @@ describe('GET /atoms — cursor pagination rejection (LCMS-172)', () => {
     expect(res.status).toBe(200);
   });
 });
+
+// ---------------------------------------------------------------------------
+// DELETE /objects/:key (LCMS-205)
+// ---------------------------------------------------------------------------
+
+describe('DELETE /objects/:key', () => {
+  const makeDeleteRepo = (keysThatExist: string[]) =>
+    ({
+      removeAtoms: (keys: readonly string[]) =>
+        LaikaStream.make<string, { removed: number, skipped: number }>(emit =>
+          Effect.gen(function*() {
+            let removed = 0;
+            for (const k of keys) {
+              if (keysThatExist.includes(k)) {
+                yield* emit.data(k);
+                removed++;
+              }
+            }
+            return { removed, skipped: keys.length - removed };
+          })
+        ),
+    }) as unknown as StorageRepository;
+
+  it('returns 200 with meta.deleted=true when the key exists', async () => {
+    const api = buildJsonApi({ repo: makeDeleteRepo(['hello.md']) });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/hello.md', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { meta: { deleted: boolean } };
+    expect(body.meta.deleted).toBe(true);
+  });
+
+  it('returns 404 when the key does not exist', async () => {
+    const api = buildJsonApi({ repo: makeDeleteRepo([]) });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/missing.md', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(404);
+    const body = await res.json() as { errors: Array<{ code: string }> };
+    expect(body.errors[0]!.code).toBe('not_found');
+  });
+
+  it('decodes %2F-encoded keys before passing to removeAtoms', async () => {
+    const api = buildJsonApi({ repo: makeDeleteRepo(['posts/hello-world.md']) });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/posts%2Fhello-world.md', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { meta: { deleted: boolean } };
+    expect(body.meta.deleted).toBe(true);
+  });
+
+  it('surfaces recoverableErrors from removeAtoms as meta.warnings', async () => {
+    const partialRepo = {
+      removeAtoms: (keys: readonly string[]) =>
+        LaikaStream.make<string, { removed: number, skipped: number }>(emit =>
+          Effect.gen(function*() {
+            for (const k of keys) yield* emit.data(k);
+            yield* emit.recoverableError(new NotFoundError('side-effect removal warning'));
+            return { removed: keys.length, skipped: 0 };
+          })
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/hello.md', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      meta: { deleted: boolean, warnings?: Array<{ code: string }> },
+    };
+    expect(body.meta.deleted).toBe(true);
+    expect(body.meta.warnings).toHaveLength(1);
+    expect(body.meta.warnings?.[0]?.code).toBe('not_found');
+  });
+
+  it('returns 400 when no key is provided (DELETE /objects)', async () => {
+    const api = buildJsonApi({ repo: makeDeleteRepo([]) });
+    const res = await api.fetch(
+      new Request('http://localhost/objects', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(400);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 405 Method Not Allowed for unsupported verbs on /objects/{key} (LCMS-205)
+// ---------------------------------------------------------------------------
+
+describe('405 Method Not Allowed on /objects/{key}', () => {
+  it('returns 405 with Allow header for PUT on /objects/{key}', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/hello.md', { method: 'PUT' }),
+    );
+    expect(res.status).toBe(405);
+    expect(res.headers.get('Allow')).toBe('GET, PATCH, DELETE');
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('405');
+    expect(body.errors[0]!.code).toBe('method_not_allowed');
+  });
+
+  it('sends Cache-Control: no-store on 405 responses', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/hello.md', { method: 'PUT' }),
+    );
+    expect(res.headers.get('Cache-Control')).toBe('no-store');
+  });
+});
