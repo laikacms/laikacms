@@ -977,6 +977,108 @@ const makeFolderRepo = (existingKeys: string[]) =>
       ),
   }) as unknown as StorageRepository;
 
+// ---------------------------------------------------------------------------
+// GET /atoms and GET /atom-summaries — meta.page.total surfacing (LCMS-214)
+// ---------------------------------------------------------------------------
+
+describe('storage-api meta.page.total (LCMS-214)', () => {
+  it('GET /atoms/:key includes meta.page.total when stream done has total', async () => {
+    const partialRepo = {
+      listAtoms: (_folderKey: string, _options: ListAtomsOptions) =>
+        LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+          emit =>
+            Effect.gen(function*() {
+              yield* emit.data({
+                type: 'folder',
+                key: 'posts',
+                createdAt: '2026-01-01T00:00:00Z',
+                updatedAt: '2026-01-01T00:00:00Z',
+              });
+              return { total: 42 };
+            }),
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/atoms/root'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { meta?: { page?: { total?: number } } };
+    expect(body.meta?.page?.total).toBe(42);
+  });
+
+  it('GET /atoms/:key omits meta.page when stream done has no total', async () => {
+    const partialRepo = {
+      listAtoms: (_folderKey: string, _options: ListAtomsOptions) =>
+        LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+          emit =>
+            Effect.gen(function*() {
+              yield* emit.data({
+                type: 'folder',
+                key: 'posts',
+                createdAt: '2026-01-01T00:00:00Z',
+                updatedAt: '2026-01-01T00:00:00Z',
+              });
+              return {} as ListAtomsDone;
+            }),
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/atoms/root'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { meta?: { page?: { total?: number } } };
+    expect(body.meta?.page).toBeUndefined();
+  });
+
+  it('GET /atom-summaries/:key includes meta.page.total when stream done has total', async () => {
+    const partialRepo = {
+      listAtomSummaries: (_folderKey: string, _options: ListAtomsOptions) =>
+        LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+          emit =>
+            Effect.gen(function*() {
+              yield* emit.data({
+                type: 'folder',
+                key: 'posts',
+                createdAt: '2026-01-01T00:00:00Z',
+                updatedAt: '2026-01-01T00:00:00Z',
+              });
+              return { total: 7 };
+            }),
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/atom-summaries/root'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { meta?: { page?: { total?: number } } };
+    expect(body.meta?.page?.total).toBe(7);
+  });
+
+  it('GET /atom-summaries/:key omits meta.page when stream done has no total', async () => {
+    const partialRepo = {
+      listAtomSummaries: (_folderKey: string, _options: ListAtomsOptions) =>
+        LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+          emit =>
+            Effect.gen(function*() {
+              yield* emit.data({
+                type: 'folder',
+                key: 'posts',
+                createdAt: '2026-01-01T00:00:00Z',
+                updatedAt: '2026-01-01T00:00:00Z',
+              });
+              return {} as ListAtomsDone;
+            }),
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/atom-summaries/root'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { meta?: { page?: { total?: number } } };
+    expect(body.meta?.page).toBeUndefined();
+  });
+});
+
 describe('GET /folders/:key (LCMS-218)', () => {
   it('returns 200 with folder resource for an existing folder key', async () => {
     const api = buildJsonApi({ repo: makeFolderRepo(['posts']) });
