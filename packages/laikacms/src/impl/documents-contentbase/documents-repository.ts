@@ -176,7 +176,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           this.storageRepository.createObject({
             type: 'object',
             key: path,
-            content: create.content,
+            // language is embedded in content so reads derive it from obj.content.language
+            content: { ...create.content, language: create.language },
           }),
           emit,
         );
@@ -199,7 +200,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
       Effect.gen({ self: this }, function*() {
         const path = yield* this.getDocumentPath(update.key, emit);
         const existing = yield* LaikaTask.runValueForwarding(this.getDocument(update.key), emit);
-        const newContent = update.content ?? existing.content;
+        const newLanguage = update.language ?? existing.language;
+        const newContent = { ...(update.content ?? existing.content), language: newLanguage };
         yield* LaikaTask.runValueForwarding(
           this.storageRepository.updateObject({
             key: path,
@@ -210,6 +212,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
         return {
           ...existing,
           content: newContent,
+          language: newLanguage,
           updatedAt: new Date().toISOString(),
         };
       })
@@ -271,7 +274,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           this.storageRepository.createObject({
             type: 'object',
             key: path,
-            content: create.content,
+            content: { ...create.content, language: create.language },
           }),
           emit,
         );
@@ -293,12 +296,13 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(update.key), emit);
-        const newContent = update.content || existing.content;
 
         if (update.status && update.status !== existing.status) {
           return yield* LaikaTask.runValueForwarding(this.updateUnpublishedStatus(update.key, update.status), emit);
         }
 
+        const newLanguage = update.language ?? existing.language;
+        const newContent = { ...(update.content || existing.content), language: newLanguage };
         const path = yield* this.getUnpublishedPath(update.key, existing.status, emit);
         yield* LaikaTask.runValueForwarding(
           this.storageRepository.updateObject({
@@ -310,6 +314,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
         return {
           ...existing,
           content: newContent,
+          language: newLanguage,
           updatedAt: new Date().toISOString(),
         };
       })
@@ -583,7 +588,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
           this.storageRepository.createObject({
             type: 'object',
             key: path,
-            content: create.content,
+            content: { ...create.content, language: create.language },
           }),
           emit,
         );
