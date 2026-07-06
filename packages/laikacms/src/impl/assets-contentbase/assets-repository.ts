@@ -232,23 +232,18 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
         const resolved = yield* this.resolveCollection(collection, emit);
         const physicalFolder = remainder ? pathCombine(resolved.directory, remainder) : resolved.directory;
 
-        const summaries = yield* Effect.map(
-          LaikaStream.runCollectForwarding(
-            this.storageRepository.listAtomSummaries(physicalFolder, {
-              pagination: options.pagination,
-              depth: options.depth,
-            }),
-            emit,
-          ),
-          r => r.data,
+        const { data: summaries, done: storageDone } = yield* LaikaStream.runCollectForwarding(
+          this.storageRepository.listAtomSummaries(physicalFolder, {
+            pagination: options.pagination,
+            depth: options.depth,
+          }),
+          emit,
         );
 
-        let emitted = 0;
         for (const atom of summaries) {
           yield* emit.data(this.summaryToResource(atom, resolved.directory, collection));
-          emitted += 1;
         }
-        return { total: emitted };
+        return { total: storageDone.total ?? summaries.length };
       })
     );
   }

@@ -99,6 +99,22 @@ describe('ObsidianAssetsRepository — assets', () => {
 });
 
 describe('ObsidianAssetsRepository — listing', () => {
+  it('done.total equals the full count, not the page count', async () => {
+    await fs.mkdir(path.join(vaultDir, 'imgs'), { recursive: true });
+    for (let i = 0; i < 5; i++) {
+      await fs.writeFile(path.join(vaultDir, `imgs/img${i}.png`), Buffer.from(PNG));
+    }
+
+    const repo = new ObsidianAssetsRepository(vaultDir);
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listResources('', { depth: 2, pagination: { offset: 0, limit: 2 } }),
+    );
+
+    // 5 images + 1 folder entry = 6 total; only 2 returned on the page
+    expect(collected.data).toHaveLength(2);
+    expect(collected.done.total).toBe(6);
+  });
+
   it('listResources returns assets and folders, skipping notes and .obsidian', async () => {
     await fs.mkdir(path.join(vaultDir, 'attachments'), { recursive: true });
     await fs.mkdir(path.join(vaultDir, '.obsidian'), { recursive: true });

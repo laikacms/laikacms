@@ -99,6 +99,21 @@ describe('ContentBaseAssetsRepository — deleteAssets (bulk)', () => {
 });
 
 describe('ContentBaseAssetsRepository — listResources', () => {
+  it('done.total equals the full count, not the page count', async () => {
+    for (let i = 0; i < 5; i++) {
+      await LaikaTask.runPromise(
+        repo.createAsset({ key: KEY(`gallery/img${i}.png`), content: PNG, mimeType: 'image/png' }),
+      );
+    }
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listResources('uploads/gallery', { depth: 1, pagination: { offset: 0, limit: 2 } }),
+    );
+
+    expect(collected.data).toHaveLength(2);
+    expect(collected.done.total).toBe(5);
+  });
+
   it('lists assets created under a folder prefix', async () => {
     const k1 = KEY('gallery/a.png');
     const k2 = KEY('gallery/b.png');

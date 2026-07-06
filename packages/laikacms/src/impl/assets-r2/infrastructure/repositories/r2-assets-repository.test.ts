@@ -196,6 +196,23 @@ describe('R2AssetsRepository.createAsset', () => {
 });
 
 describe('R2AssetsRepository.listResources', () => {
+  it('done.total equals the full count, not the page count', async () => {
+    const bucket = makeBucket();
+    for (let i = 0; i < 5; i++) await bucket.put(`img${i}.png`, PNG);
+
+    const repo = new R2AssetsRepository({
+      bucket: bucket as unknown as R2Bucket,
+      dangerouslyAllowAllFiles: true,
+    });
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listResources('', { depth: 1, pagination: { offset: 0, limit: 2 } }),
+    );
+
+    expect(collected.data).toHaveLength(2);
+    expect(collected.done.total).toBe(5);
+  });
+
   it('surfaces a failing subfolder listing as recoverableError + still returns siblings', async () => {
     const bucket = makeBucket('forbidden/');
     await bucket.put('good/a.png', PNG);
