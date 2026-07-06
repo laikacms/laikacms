@@ -97,8 +97,10 @@ describe('assets-api meta.warnings', () => {
     expect(body.meta.warnings?.[0]?.detail).toContain('orphan thumbnail');
   });
 
-  it('multi-page cursor walk: following links.next returns the next page, not the first page again', async () => {
-    // 5 resources in total; page size = 2 → 3 pages
+  it('multi-page walk: following links.next via page[number] advances through pages correctly (LCMS-277)', async () => {
+    // 5 resources in total; page size = 2 → 3 pages.
+    // Since page[size] alone now defaults to page-based (LCMS-277), links.next
+    // carries page[number]=N, which the server translates to offset=(N-1)*limit.
     const allResources: Resource[] = [
       {
         type: 'asset',
@@ -137,13 +139,13 @@ describe('assets-api meta.warnings', () => {
       },
     ];
 
-    // Stub repo: honours `after` cursor by slicing from the item after the cursor
+    // Stub repo: honours offset-based calls (how assets-api forwards page-based requests)
     const partialRepo = {
       getCapabilities: () =>
         LaikaTask.succeed({
           compatibilityDate:
             '2026-01-01' as unknown as import('laikacms/assets').AssetsCapabilities['compatibilityDate'],
-          pagination: { supported: true, description: 'cursor', styles: { offset: false, page: false, cursor: true } },
+          pagination: { supported: true, description: 'offset', styles: { offset: true, page: false, cursor: false } },
         }),
       listResources: (_folderKey: string, options: ListResourcesOptions) =>
         LaikaStream.make<Resource, ListResourcesDone>(emit =>
@@ -155,11 +157,13 @@ describe('assets-api meta.warnings', () => {
               const perPage = p.perPage;
               items = idx >= 0 ? allResources.slice(idx + 1, idx + 1 + perPage) : allResources.slice(0, perPage);
             } else {
-              const limit = 'limit' in p ? p.limit : p.perPage;
-              items = allResources.slice(0, limit);
+              const offset = 'offset' in p ? p.offset : 0;
+              const limit = 'limit' in p ? p.limit : (p as { perPage: number }).perPage;
+              items = allResources.slice(offset, offset + limit);
             }
             for (const r of items) yield* emit.data(r);
-            return { total: items.length };
+            // Return total so respondCollectionWithConverter can compute hasMore
+            return { total: allResources.length };
           })
         ),
     } as unknown as AssetsRepository;
@@ -175,6 +179,8 @@ describe('assets-api meta.warnings', () => {
     };
     expect(body1.data.map(d => d.id)).toEqual(['a.jpg', 'b.jpg']);
     expect(body1.links.next).toBeTruthy();
+    // next link must use page[number] (not cursor) so all backends can follow it
+    expect(body1.links.next).toContain('page[number]');
 
     // Page 2: follow links.next — must NOT return the same first page
     const res2 = await api.fetch(new Request(body1.links.next!));
@@ -254,8 +260,9 @@ describe('GET /resources — shared JSON:API pagination params', () => {
             const idx = allResources.findIndex(r => r.key === p.after);
             items = idx >= 0 ? allResources.slice(idx + 1, idx + 1 + p.perPage) : [];
           } else {
-            const limit = 'limit' in p ? p.limit : p.perPage;
-            items = allResources.slice(0, limit);
+            const offset = 'offset' in p ? p.offset : 0;
+            const limit = 'limit' in p ? p.limit : (p as { perPage: number }).perPage;
+            items = allResources.slice(offset, offset + limit);
           }
           for (const r of items) yield* emit.data(r);
           return { total: allResources.length };
@@ -263,14 +270,16 @@ describe('GET /resources — shared JSON:API pagination params', () => {
       ),
   } as unknown as AssetsRepository);
 
-  it('page[size] controls items per page on first page', async () => {
+  it('page[size] controls items per page on first page and emits page[number] next link (LCMS-277)', async () => {
     const api = buildAssetsApi({ repository: makeRepo() });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[size]=2'));
     expect(res.status).toBe(200);
     const body = await res.json() as { data: Array<{ id: string }>, links: { next?: string } };
     expect(body.data.map(d => d.id)).toEqual(['a.jpg', 'b.jpg']);
-    expect(body.links.next).toContain('page[after]=');
+    // next link must use page[number], not page[after], so it works on all backends
+    expect(body.links.next).toContain('page[number]=');
     expect(body.links.next).toContain('page[size]=2');
+    expect(body.links.next).not.toContain('page[after]=');
   });
 
   it('page[after] advances to the next cursor page', async () => {
@@ -283,13 +292,15 @@ describe('GET /resources — shared JSON:API pagination params', () => {
     expect(body.data.map(d => d.id)).toEqual(['c.jpg', 'd.jpg']);
   });
 
-  it('links.next carries page[after] pointing to the last item on the page', async () => {
+  it('links.next from standalone page[size] carries page[number]=2 (LCMS-277)', async () => {
     const api = buildAssetsApi({ repository: makeRepo() });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[size]=2'));
     const body = await res.json() as { links: { next?: string } };
     expect(body.links.next).toBeDefined();
     const nextUrl = new URL(body.links.next!);
-    expect(nextUrl.searchParams.get('page[after]')).toBe('b.jpg');
+    expect(nextUrl.searchParams.get('page[number]')).toBe('2');
+    expect(nextUrl.searchParams.get('page[size]')).toBe('2');
+    expect(nextUrl.searchParams.get('page[after]')).toBeNull();
   });
 });
 

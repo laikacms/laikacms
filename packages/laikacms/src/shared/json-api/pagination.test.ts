@@ -37,12 +37,14 @@ describe('parsePaginationQuery', () => {
     });
   });
 
-  it('falls back to cursor-based with perPage=10 when no params are provided', () => {
-    expect(parsePaginationQuery({})).toEqual({ after: undefined, perPage: 10 });
+  it('falls back to page-based (page 1, perPage 10) when no params are provided', () => {
+    expect(parsePaginationQuery({})).toEqual({ page: 1, perPage: 10 });
   });
 
-  it('honours a standalone page[size] in the cursor fallthrough', () => {
-    expect(parsePaginationQuery({ 'page[size]': '5' })).toEqual({ after: undefined, perPage: 5 });
+  it('treats a standalone page[size] as page 1 of page-based pagination (LCMS-277)', () => {
+    // page[size] alone must NOT produce cursor-shaped output: cursor next links are rejected
+    // by FS/R2 backends with cursor:false, so the server's own next link would 400.
+    expect(parsePaginationQuery({ 'page[size]': '5' })).toEqual({ page: 1, perPage: 5 });
   });
 
   it('takes the first value when a query parameter is repeated', () => {
