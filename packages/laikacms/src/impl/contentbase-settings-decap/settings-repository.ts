@@ -380,8 +380,10 @@ function decapFieldToJsonSchema(field: DecapField): JSONSchema7 {
     }
     case 'image':
     case 'file':
-    case 'relation':
-      return { type: 'string' };
+    case 'relation': {
+      const base: JSONSchema7 = { type: 'string' };
+      return field.multiple ? { type: 'array', items: base } : base;
+    }
     default:
       return {};
   }
