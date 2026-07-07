@@ -1254,3 +1254,56 @@ describe('GET /atom-summaries/:key — filter[depth] forwarding (LCMS-290)', () 
     expect(spy.mock.calls[0]![1].depth).toBe(1);
   });
 });
+
+// ---------------------------------------------------------------------------
+// GET /atoms and GET /atom-summaries — filter[prefix] rejection (LCMS-322)
+// ---------------------------------------------------------------------------
+
+describe('GET /atoms — filter[prefix] query param rejection (LCMS-322)', () => {
+  it('returns 400 with invalid_data when filter[prefix] is used without a path key', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/atoms?filter%5Bprefix%5D=posts'));
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string, detail: string }> };
+    expect(body.errors[0]?.code).toBe('invalid_data');
+    expect(body.errors[0]?.detail).toContain('filter[prefix]');
+    expect(body.errors[0]?.detail).toContain('/atoms/{key}');
+  });
+
+  it('does NOT reject when a path key is present alongside filter[prefix]', async () => {
+    const partialRepo = {
+      listAtoms: (_key: string, _opts: ListAtomsOptions) =>
+        LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+          () => Effect.succeed({} as ListAtomsDone),
+        ),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+    // /atoms/posts has a path key ("posts"), filter[prefix] in query should not trigger 400
+    const res = await api.fetch(new Request('http://localhost/atoms/posts?filter%5Bprefix%5D=ignored'));
+    expect(res.status).toBe(200);
+  });
+});
+
+describe('GET /atom-summaries — filter[prefix] query param rejection (LCMS-322)', () => {
+  it('returns 400 with invalid_data when filter[prefix] is used without a path key', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/atom-summaries?filter%5Bprefix%5D=posts'));
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string, detail: string }> };
+    expect(body.errors[0]?.code).toBe('invalid_data');
+    expect(body.errors[0]?.detail).toContain('filter[prefix]');
+    expect(body.errors[0]?.detail).toContain('/atom-summaries/{key}');
+  });
+
+  it('does NOT reject when a path key is present alongside filter[prefix]', async () => {
+    const partialRepo = {
+      listAtomSummaries: (_key: string, _opts: ListAtomsOptions) =>
+        LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+          () => Effect.succeed({} as ListAtomsDone),
+        ),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/atom-summaries/posts?filter%5Bprefix%5D=ignored'));
+    expect(res.status).toBe(200);
+  });
+});
