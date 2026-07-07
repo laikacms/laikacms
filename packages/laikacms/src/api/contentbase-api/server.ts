@@ -4,7 +4,7 @@ import type { Context } from 'hono';
 import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
 import { type CollectionSettings } from 'laikacms/contentbase-settings';
 import type { LaikaResult } from 'laikacms/core';
-import { LaikaTask, NotFoundError } from 'laikacms/core';
+import { ConflictError, LaikaTask, NotFoundError } from 'laikacms/core';
 import {
   collectionFromJsonApi,
   type CollectionJsonApi,
@@ -21,7 +21,7 @@ export interface ContentBaseApiOptions {
 function respondError(
   c: Context,
   result: LaikaResult<unknown>,
-  status: 400 | 404 | 500 = 400,
+  status: 400 | 404 | 409 | 500 = 400,
   onError?: ((error: unknown) => void) | undefined,
 ) {
   if (Result.isFailure(result)) {
@@ -209,7 +209,19 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
       const validatedData = decodeCollectionJsonApi(jsonData.data);
       const body = collectionFromJsonApi(validatedData as CollectionJsonApi);
 
-      // Ensure the key matches
+      if (body.key !== key) {
+        return respondError(
+          c,
+          Result.fail(
+            new ConflictError(
+              `Body data.id ('${body.key}') does not match URL key ('${key}'). Use the URL key as the resource identifier.`,
+            ),
+          ),
+          409,
+          onError,
+        );
+      }
+
       const bodyWithKey = { ...body, key };
 
       if (bodyWithKey.type === 'document') {
