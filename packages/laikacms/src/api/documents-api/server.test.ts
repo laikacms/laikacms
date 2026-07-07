@@ -1162,6 +1162,60 @@ describe('GET /revisions/:key — cursor capability guard', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /revisions/:key — pagination links.next shape (LCMS-279)
+// ---------------------------------------------------------------------------
+
+describe('GET /revisions/:key — pagination links.next shape (LCMS-279)', () => {
+  it('page[size]=N emits links.next with page[number], not page[after]', async () => {
+    const summaries = [makeRevisionSummary('posts/hello', 'rev-1'), makeRevisionSummary('posts/hello', 'rev-2')];
+    const repo = {
+      listRevisions: (_key: string, _options: unknown) =>
+        LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
+          Effect.gen(function*() {
+            for (const s of summaries) yield* emit.data(s);
+            return { total: 10 };
+          })
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello?page%5Bsize%5D=2'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: unknown[], links: { next?: string } };
+    expect(body.data).toHaveLength(2);
+    expect(body.links.next).toBeDefined();
+    expect(body.links.next).toContain('page[number]');
+    expect(body.links.next).not.toContain('page[after]');
+  });
+
+  it('page[number]=1&page[size]=N with a full page emits links.next=page[number]=2', async () => {
+    const summaries = [makeRevisionSummary('posts/hello', 'rev-1'), makeRevisionSummary('posts/hello', 'rev-2')];
+    const repo = {
+      listRevisions: (_key: string, _options: unknown) =>
+        LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
+          Effect.gen(function*() {
+            for (const s of summaries) yield* emit.data(s);
+            return { total: 10 };
+          })
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/revisions/posts%2Fhello?page%5Bnumber%5D=1&page%5Bsize%5D=2'),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { links: { next?: string } };
+    const nextUrl = new URL(body.links.next!);
+    expect(nextUrl.searchParams.get('page[number]')).toBe('2');
+    expect(nextUrl.searchParams.get('page[size]')).toBe('2');
+    expect(nextUrl.searchParams.get('page[after]')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /revisions/:key/:revisionId (LCMS-188)
 // ---------------------------------------------------------------------------
 
@@ -1495,6 +1549,58 @@ describe('GET /records — pagination forwarding', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /records — pagination links.next shape (LCMS-279)
+// ---------------------------------------------------------------------------
+
+describe('GET /records — pagination links.next shape (LCMS-279)', () => {
+  const makeRecordsRepo = (docs: Array<ReturnType<typeof makeDocument>>) =>
+    ({
+      listRecords: (_opts: ListRecordsOptions) =>
+        LaikaStream.make<
+          {
+            type: 'published',
+            key: string,
+            status: string,
+            language: string,
+            content: object,
+            createdAt: string,
+            updatedAt: string,
+          },
+          ListRecordsDone
+        >(emit =>
+          Effect.gen(function*() {
+            for (const d of docs) yield* emit.data(d);
+            return { total: 10 };
+          })
+        ),
+    }) as unknown as DocumentsRepository;
+
+  it('page[size]=N emits links.next with page[number], not page[after] (LCMS-277 guard)', async () => {
+    const api = buildJsonApi({ repo: makeRecordsRepo([makeDocument('posts/a'), makeDocument('posts/b')]) });
+    const res = await api.fetch(new Request('http://localhost/records?page%5Bsize%5D=2'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: unknown[], links: { next?: string } };
+    expect(body.data).toHaveLength(2);
+    expect(body.links.next).toBeDefined();
+    expect(body.links.next).toContain('page[number]');
+    expect(body.links.next).not.toContain('page[after]');
+  });
+
+  it('page[number]=1&page[size]=N with a full page emits links.next=page[number]=2&page[size]=N', async () => {
+    const api = buildJsonApi({ repo: makeRecordsRepo([makeDocument('posts/a'), makeDocument('posts/b')]) });
+    const res = await api.fetch(new Request('http://localhost/records?page%5Bnumber%5D=1&page%5Bsize%5D=2'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { links: { next?: string } };
+    const nextUrl = new URL(body.links.next!);
+    expect(nextUrl.searchParams.get('page[number]')).toBe('2');
+    expect(nextUrl.searchParams.get('page[size]')).toBe('2');
+    expect(nextUrl.searchParams.get('page[after]')).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /record-summaries — filter param forwarding (LCMS-196)
 // ---------------------------------------------------------------------------
 
@@ -1766,6 +1872,54 @@ describe('GET /record-summaries — pagination forwarding', () => {
 
     const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bbefore%5D=cursor-abc'));
     expect(res.status).toBe(400);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /record-summaries — pagination links.next shape (LCMS-279)
+// ---------------------------------------------------------------------------
+
+describe('GET /record-summaries — pagination links.next shape (LCMS-279)', () => {
+  const makeSummaryDoc = (key: string) => ({
+    type: 'published-summary' as const,
+    key,
+    status: 'published',
+    language: 'en' as const,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+  });
+
+  const makeSummariesRepo = (docs: Array<ReturnType<typeof makeSummaryDoc>>) =>
+    ({
+      listRecordSummaries: (_opts: unknown) =>
+        LaikaStream.make<
+          {
+            type: 'published-summary',
+            key: string,
+            status: string,
+            language: string,
+            createdAt: string,
+            updatedAt: string,
+          },
+          ListRecordsDone
+        >(emit =>
+          Effect.gen(function*() {
+            for (const d of docs) yield* emit.data(d);
+            return { total: 10 };
+          })
+        ),
+    }) as unknown as DocumentsRepository;
+
+  it('page[size]=N emits links.next with page[number], not page[after] (LCMS-277 guard)', async () => {
+    const api = buildJsonApi({ repo: makeSummariesRepo([makeSummaryDoc('posts/a'), makeSummaryDoc('posts/b')]) });
+    const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bsize%5D=2'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { data: unknown[], links: { next?: string } };
+    expect(body.data).toHaveLength(2);
+    expect(body.links.next).toBeDefined();
+    expect(body.links.next).toContain('page[number]');
+    expect(body.links.next).not.toContain('page[after]');
   });
 });
 
