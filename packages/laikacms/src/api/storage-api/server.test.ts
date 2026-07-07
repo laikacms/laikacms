@@ -1182,3 +1182,75 @@ describe('GET /folders/:key (LCMS-218)', () => {
     expect(res.status).toBe(400);
   });
 });
+
+// ---------------------------------------------------------------------------
+// GET /atoms/:key — filter[depth] forwarding (LCMS-290)
+// ---------------------------------------------------------------------------
+
+describe('GET /atoms/:key — filter[depth] forwarding (LCMS-290)', () => {
+  const makeAtomsStream = () =>
+    LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+      () => Effect.succeed({} as ListAtomsDone),
+    );
+
+  it('parses filter[depth]=2 as a number and forwards it to repo.listAtoms', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeAtomsStream());
+    const partialRepo = { listAtoms: spy } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+
+    const res = await api.fetch(new Request('http://localhost/atoms/root?filter%5Bdepth%5D=2'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].depth).toBe(2);
+    expect(typeof spy.mock.calls[0]![1].depth).toBe('number');
+  });
+
+  it('falls back to depth:1 when filter[depth]=abc is not a valid integer', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeAtomsStream());
+    const partialRepo = { listAtoms: spy } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+
+    const res = await api.fetch(new Request('http://localhost/atoms/root?filter%5Bdepth%5D=abc'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].depth).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /atom-summaries/:key — filter[depth] forwarding (LCMS-290)
+// ---------------------------------------------------------------------------
+
+describe('GET /atom-summaries/:key — filter[depth] forwarding (LCMS-290)', () => {
+  const makeAtomSummariesStream = () =>
+    LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+      () => Effect.succeed({} as ListAtomsDone),
+    );
+
+  it('parses filter[depth]=2 as a number and forwards it to repo.listAtomSummaries', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeAtomSummariesStream());
+    const partialRepo = { listAtomSummaries: spy } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+
+    const res = await api.fetch(new Request('http://localhost/atom-summaries/root?filter%5Bdepth%5D=2'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].depth).toBe(2);
+    expect(typeof spy.mock.calls[0]![1].depth).toBe('number');
+  });
+
+  it('falls back to depth:1 when filter[depth]=abc is not a valid integer', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeAtomSummariesStream());
+    const partialRepo = { listAtomSummaries: spy } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+
+    const res = await api.fetch(new Request('http://localhost/atom-summaries/root?filter%5Bdepth%5D=abc'));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].depth).toBe(1);
+  });
+});
