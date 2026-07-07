@@ -10,7 +10,6 @@
  *   - URL query-string api_key is rejected / ignored
  */
 
-import * as Effect from 'effect/Effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { AssetsCapabilities, AssetsRepository } from 'laikacms/assets';
