@@ -10,7 +10,7 @@ import type {
   ListResourcesOptions,
   Resource,
 } from 'laikacms/assets';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import { ForbiddenError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 
@@ -915,5 +915,66 @@ describe('malformed JSON body — never throws, always returns a Response', () =
     expect(res.status).toBe(400);
     const body = await res.json() as { errors: Array<{ status: string }> };
     expect(body.errors[0]?.status).toBe('400');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /resources — filter[depth] forwarding (LCMS-292)
+// ---------------------------------------------------------------------------
+
+describe('GET /resources — filter[depth] forwarding', () => {
+  const makeResourcesStream = () =>
+    LaikaStream.make<Resource, ListResourcesDone>(
+      () => Effect.succeed({ total: 0 } as ListResourcesDone),
+    );
+
+  it('?filter[depth]=3 forwards depth: 3 to listResources', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bdepth%5D=3'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].depth).toBe(3);
+  });
+
+  it('?filter[depth]=NaN falls back to depth: 1', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bdepth%5D=NaN'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].depth).toBe(1);
+  });
+
+  it('?depth=2 (alias) forwards depth: 2 to listResources', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?depth=2'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].depth).toBe(2);
+  });
+
+  it('no depth param defaults to depth: 1', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].depth).toBe(1);
+  });
+
+  it('?filter[depth]=0 clamps to minimum depth: 1', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bdepth%5D=0'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].depth).toBe(1);
   });
 });
