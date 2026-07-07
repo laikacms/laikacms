@@ -3,6 +3,7 @@
  * Tests auth, session CRUD, ownership enforcement, and routing — all without a real AI model.
  */
 
+import { streamText } from 'ai';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { AiSession, AiSessionCallbacks, DecapAiConfig, User } from './types.js';
 
@@ -267,6 +268,31 @@ describe('decapAi()', () => {
       const res = await adapter.fetch(req);
       expect(res.status).toBe(200);
       expect(res.headers.get('X-Session-Id')).toBeTruthy();
+    });
+
+    it('returns 500 when streamText throws and calls logger.error', async () => {
+      const modelError = new Error('model failure');
+      vi.mocked(streamText).mockImplementationOnce(() => {
+        throw modelError;
+      });
+
+      const loggerError = vi.fn();
+      const adapter = decapAi(makeConfig({ logger: { error: loggerError, warn: vi.fn(), info: vi.fn() } }));
+
+      const req = makeRequest('/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Hello' }],
+          document: { slug: 'posts/hello' },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const res = await adapter.fetch(req);
+      expect(res.status).toBe(500);
+      expect(loggerError).toHaveBeenCalledWith('AI chat error:', modelError);
+      const body = await res.json() as { error: string };
+      expect(typeof body.error).toBe('string');
     });
   });
 
