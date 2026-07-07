@@ -386,7 +386,7 @@ interprets it as a different path)
   "errors": [
     {
       "status": "404",
-      "code": "NOT_FOUND",
+      "code": "not_found",
       "detail": "The file at posts does not exist"
     }
   ]
@@ -886,7 +886,7 @@ Get a single published document by key.
   "errors": [
     {
       "status": "404",
-      "code": "NOT_FOUND",
+      "code": "not_found",
       "detail": "Document not found"
     }
   ]
@@ -2178,7 +2178,7 @@ All four APIs return errors in JSON:API error format.
   "errors": [
     {
       "status": "404",
-      "code": "NOT_FOUND",
+      "code": "not_found",
       "detail": "Resource not found: posts/missing"
     }
   ]
@@ -2189,8 +2189,8 @@ All four APIs return errors in JSON:API error format.
 
 | HTTP Status | Code               | Description                                 |
 | ----------- | ------------------ | ------------------------------------------- |
-| 400         | `INVALID_DATA`     | Request body failed schema validation       |
-| 400         | `BAD_REQUEST`      | Malformed request or unsupported operation  |
+| 400         | `invalid_data`     | Request body failed schema validation       |
+| 400         | `bad_request`      | Malformed request or unsupported operation  |
 | 400         | `validation_error` | Field-level validation failure (Assets API) |
-| 404         | `NOT_FOUND`        | Resource does not exist                     |
-| 500         | `INTERNAL_ERROR`   | Unexpected server error                     |
+| 404         | `not_found`        | Resource does not exist                     |
+| 500         | `internal_error`   | Unexpected server error                     |
