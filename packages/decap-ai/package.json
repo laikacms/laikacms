@@ -152,6 +152,6 @@
     "vitest": "catalog:tools"
   },
   "engines": {
-    "node": "22.x"
+    "node": ">=22.0.0"
   }
 }
