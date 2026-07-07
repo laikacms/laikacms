@@ -536,11 +536,31 @@ in their own repositories.
 | Lucide Icons | `@laikacms/decap/decap-cms-widget-lucide-icon` |
 | Radix Icons  | `@laikacms/decap/decap-cms-widget-radix-icon`  |
 
-```ts
-import DecapCmsCore from '@laikacms/decap-cms/core';
-import { LucideIconPreview, LucideIconWidget } from '@laikacms/decap/decap-cms-widget-lucide-icon';
+Each widget registers under a unique name (`lucide-icon` / `radix-icon`) so both can be used in the
+same app without one overwriting the other.
 
-DecapCmsCore.registerWidget('lucide-icon', LucideIconWidget, LucideIconPreview);
+```ts
+import CMS from '@laikacms/decap-cms';
+import LucideWidgetIcon from '@laikacms/decap/decap-cms-widget-lucide-icon';
+import RadixWidgetIcon from '@laikacms/decap/decap-cms-widget-radix-icon';
+
+// Registers as 'lucide-icon'
+CMS.registerWidget(LucideWidgetIcon.Widget());
+
+// Registers as 'radix-icon' — safe to call alongside lucide-icon
+CMS.registerWidget(RadixWidgetIcon.Widget());
+```
+
+In collection config, reference them by their distinct names:
+
+```yaml
+fields:
+  - label: Button Icon   # uses Lucide picker
+    name: button_icon
+    widget: lucide-icon
+  - label: Feature Icon  # uses Radix picker
+    name: feature_icon
+    widget: radix-icon
 ```
 
 ---
