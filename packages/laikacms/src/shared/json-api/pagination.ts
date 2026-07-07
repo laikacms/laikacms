@@ -160,6 +160,22 @@ type ParsedPagination =
   | { page: number, perPage: number | undefined }
   | { offset: number, limit: number | undefined };
 
+function firstStr(v: string | string[] | undefined): string | undefined {
+  if (v === undefined) return undefined;
+  return Array.isArray(v) ? v[0] : v;
+}
+
+function safeIntOpt(s: string | undefined): number | undefined {
+  if (s === undefined) return undefined;
+  const n = parseInt(s, 10);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function safeIntReq(s: string, fallback: number): number {
+  const n = parseInt(s, 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 /**
  * Parses pagination parameters from query string
  * @param query - Record of query parameters
@@ -175,29 +191,29 @@ export function parsePaginationQuery(query: Record<string, string | string[] | u
 
   if (pageAfter) {
     return {
-      after: Array.isArray(pageAfter) ? pageAfter[0] : pageAfter,
-      perPage: pageSize ? parseInt(Array.isArray(pageSize) ? pageSize[0] : pageSize) : undefined,
+      after: firstStr(pageAfter),
+      perPage: safeIntOpt(firstStr(pageSize)),
     };
   }
 
   if (pageBefore) {
     return {
-      before: Array.isArray(pageBefore) ? pageBefore[0] : pageBefore,
-      perPage: pageSize ? parseInt(Array.isArray(pageSize) ? pageSize[0] : pageSize) : undefined,
+      before: firstStr(pageBefore),
+      perPage: safeIntOpt(firstStr(pageSize)),
     };
   }
 
   if (pageNumber) {
     return {
-      page: parseInt(Array.isArray(pageNumber) ? pageNumber[0] : pageNumber),
-      perPage: pageSize ? parseInt(Array.isArray(pageSize) ? pageSize[0] : pageSize) : undefined,
+      page: safeIntReq(firstStr(pageNumber)!, 1),
+      perPage: safeIntOpt(firstStr(pageSize)),
     };
   }
 
   if (pageOffset !== undefined) {
     return {
-      offset: parseInt(Array.isArray(pageOffset) ? pageOffset[0] : pageOffset),
-      limit: pageLimit ? parseInt(Array.isArray(pageLimit) ? pageLimit[0] : pageLimit) : undefined,
+      offset: safeIntReq(firstStr(pageOffset)!, 0),
+      limit: safeIntOpt(firstStr(pageLimit)),
     };
   }
 
@@ -206,9 +222,9 @@ export function parsePaginationQuery(query: Record<string, string | string[] | u
   // work on every backend, whereas cursor links (page[after]) are rejected by FS/R2 backends
   // that declare pagination.styles.cursor:false — which would make the server's own next links
   // self-reject with 400 (LCMS-277).
-  const sizeStr = pageSize && (Array.isArray(pageSize) ? pageSize[0] : pageSize);
+  const sizeStr = firstStr(pageSize);
   return {
     page: 1,
-    perPage: sizeStr ? parseInt(sizeStr, 10) : 10,
+    perPage: sizeStr ? (safeIntOpt(sizeStr) ?? 10) : 10,
   };
 }
