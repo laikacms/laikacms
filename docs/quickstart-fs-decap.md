@@ -140,9 +140,25 @@ In `package.json`:
   "type": "module",
   "scripts": {
     "start": "node server.mjs"
+  },
+  "overrides": {
+    "decap-cms-widget-code": {
+      "codemirror": "^5"
+    }
+  },
+  "pnpm": {
+    "overrides": {
+      "decap-cms-widget-code>codemirror": "^5"
+    }
   }
 }
 ```
+
+> **Why the `overrides`:** `decap-cms-app@3` ships `decap-cms-widget-code@3.x` which requires
+> codemirror@5. `@laikacms/decap-cms@4` requires codemirror@6. Without these overrides both package
+> managers deduplicate to codemirror@6, causing esbuild to fail with ~94 "Could not resolve
+> `codemirror/keymap/…`" errors when bundling the admin. The overrides force codemirror@5 to remain
+> nested under `decap-cms-widget-code` so the two versions coexist instead of colliding.
 
 Start the server:
 
@@ -171,9 +187,10 @@ that the Laika backend imports at bundle time), and esbuild (used to compile the
 file into a browser bundle):
 
 ```bash
-# npm
-npm install decap-cms-app @laikacms/decap-cms
-npm install --save-dev esbuild
+# npm — --legacy-peer-deps is required: react-redux@^7 (optional peer from @laikacms/decap)
+# conflicts with decap-cms-app@3, and npm@9+ rejects the conflict by default.
+npm install --legacy-peer-deps decap-cms-app @laikacms/decap-cms
+npm install --legacy-peer-deps --save-dev esbuild
 
 # pnpm
 pnpm add decap-cms-app @laikacms/decap-cms
