@@ -325,7 +325,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       const result = await firstResult(repository.getCapabilities());
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
-        return respondError(result.failure, status);
+        return respondError(result.failure, status, logger);
       }
       return respondResource({
         type: 'assets-capabilities',
