@@ -1977,7 +1977,33 @@ Delete an asset or folder.
 | ----------- | -------- | --------- | ---------------------------------- |
 | `recursive` | `"true"` | `"false"` | Recursively delete folder contents |
 
-**Response** — `204 No Content` (empty body)
+**Response**
+
+| Status           | Condition                                                                                          | Body                                                 |
+| ---------------- | -------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| `204 No Content` | Clean delete, no warnings                                                                          | empty                                                |
+| `200 OK`         | Delete succeeded with recoverable warnings (e.g. a variation or CDN invalidation partially failed) | `{ "meta": { "deleted": true, "warnings": [...] } }` |
+
+**`200` response body example (partial success with warnings):**
+
+```json
+{
+  "meta": {
+    "deleted": true,
+    "warnings": [
+      {
+        "code": "not_found",
+        "title": "Not Found",
+        "detail": "Variation 'thumb_200' could not be deleted — object not found in storage"
+      }
+    ]
+  }
+}
+```
+
+> **Note:** Clients that check `response.status === 204` to confirm deletion must also handle `200`
+> — both statuses indicate a successful delete. The `200` body surfaces actionable detail about what
+> partially failed; clients that ignore warnings can treat any `2xx` as success.
 
 ---
 
