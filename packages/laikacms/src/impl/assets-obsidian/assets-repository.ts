@@ -13,6 +13,7 @@ import type {
   AssetsCapabilities,
   AssetUpdate,
   AssetUrl,
+  AssetVariation,
   AssetVariations,
   DeleteAssetsDone,
   GetResourceOptions,
@@ -96,6 +97,12 @@ export interface ObsidianAssetsRepositoryOptions {
    * unchanged — supply this to point at a static host or CDN.
    */
   createUrl?: (key: string) => string;
+  /**
+   * Returns the variation map for an asset key.
+   * Variation values follow the {@link AssetVariation} shape.
+   * Return `{}` (the default) to indicate no variations.
+   */
+  createVariations?: (key: string) => Record<string, AssetVariation>;
 }
 
 const DEFAULT_IGNORE = ['.obsidian', '.trash', '.git', '.DS_Store', 'Thumbs.db'];
@@ -119,6 +126,7 @@ export class ObsidianAssetsRepository extends AssetsRepository {
   private readonly documentExtensions: ReadonlySet<string>;
   private readonly ignore: ReadonlySet<string>;
   private readonly createUrlFn?: (key: string) => string;
+  private readonly createVariationsFn?: (key: string) => Record<string, AssetVariation>;
 
   constructor(vaultPath: string, options: ObsidianAssetsRepositoryOptions = {}) {
     super();
@@ -131,6 +139,7 @@ export class ObsidianAssetsRepository extends AssetsRepository {
     );
     this.ignore = new Set(options.ignore ?? DEFAULT_IGNORE);
     this.createUrlFn = options.createUrl;
+    this.createVariationsFn = options.createVariations;
   }
 
   // ===== Path helpers =====
@@ -424,8 +433,13 @@ export class ObsidianAssetsRepository extends AssetsRepository {
   /** No transformation pipeline — an Obsidian vault holds originals only. */
   getVariations(assets: Asset[]): LaikaStream.LaikaStream<AssetVariations, LaikaDone> {
     return LaikaStream.make<AssetVariations, LaikaDone>(emit =>
-      Effect.gen(function*() {
-        for (const asset of assets) yield* emit.data({ key: asset.key, variations: {} });
+      Effect.gen({ self: this }, function*() {
+        for (const asset of assets) {
+          yield* emit.data({
+            key: asset.key,
+            variations: this.createVariationsFn ? this.createVariationsFn(asset.key) : {},
+          });
+        }
         return { total: assets.length };
       })
     );

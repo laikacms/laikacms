@@ -186,12 +186,24 @@ export function runAssetsRepositoryContract(testCase: AssetsContractCase): void 
     });
 
     // --- getVariations ---
-    itOrSkip('getVariations')('getVariations: yields entries for assets that support them', async () => {
+    itOrSkip('getVariations')('getVariations: yields one entry per asset with a Record variations map', async () => {
       const k1 = keyIn(`var-${Date.now()}-1.png`);
       const a1 = await runTask(repo.createAsset({ key: k1, content: PNG_BYTES, mimeType: 'image/png' }));
 
       const { items } = await collectStream(repo.getVariations([a1]));
-      expect(Array.isArray(items)).toBe(true);
+      expect(items.length).toBeGreaterThanOrEqual(1);
+      for (const item of items) {
+        expect(item.key).toBeDefined();
+        expect(item.variations).toBeDefined();
+        // variations must be a plain object (Record), never an array
+        expect(Array.isArray(item.variations)).toBe(false);
+        expect(typeof item.variations).toBe('object');
+        // each variation value (if any) must have at least a variant and url string
+        for (const [, variation] of Object.entries(item.variations)) {
+          expect(typeof variation.variant).toBe('string');
+          expect(typeof variation.url).toBe('string');
+        }
+      }
     });
   });
 }

@@ -11,6 +11,7 @@ import {
   AssetsRepository,
   type AssetUpdate,
   type AssetUrl,
+  type AssetVariation,
   type AssetVariations,
   type DeleteAssetsDone,
   type GetResourceOptions,
@@ -70,11 +71,17 @@ async function consumeBinary(
  * optional metadata). Logical asset keys are `<collection>/<rest>`.
  */
 export class ContentBaseAssetsRepository extends AssetsRepository {
+  private readonly createVariationsFn?: (key: string) => Record<string, AssetVariation>;
+
   constructor(
     private readonly storageRepository: StorageRepository,
     private readonly settingsProvider: ContentBaseSettingsProvider,
+    options?: {
+      createVariations?: (key: string) => Record<string, AssetVariation>,
+    },
   ) {
     super();
+    this.createVariationsFn = options?.createVariations;
   }
 
   getCapabilities(): LaikaTask.LaikaTask<AssetsCapabilities> {
@@ -383,8 +390,13 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
 
   getVariations(assets: Asset[]): LaikaStream.LaikaStream<AssetVariations, LaikaDone> {
     return LaikaStream.make<AssetVariations, LaikaDone>(emit =>
-      Effect.gen(function*() {
-        for (const asset of assets) yield* emit.data({ key: asset.key, variations: {} });
+      Effect.gen({ self: this }, function*() {
+        for (const asset of assets) {
+          yield* emit.data({
+            key: asset.key,
+            variations: this.createVariationsFn ? this.createVariationsFn(asset.key) : {},
+          });
+        }
         return { total: assets.length };
       })
     );
