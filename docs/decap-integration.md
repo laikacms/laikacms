@@ -199,49 +199,89 @@ server) was moved out of this monorepo in June 2026 — see
 
 ## Serving the Decap admin shell
 
-The admin UI loads Decap from a CDN, registers the Laika backend, and points at your `decapApi`
-route. Build a small HTML page that does this and serve it from a non-page route (so your
-framework's SSR hydration doesn't fight Decap for the `<html>` element):
+The admin UI requires a compiled browser bundle — compile the Laika backend and Decap CMS together
+with esbuild, then serve the resulting files as static assets.
 
-```ts
-const ADMIN_HTML = `<!doctype html>
-<html>
+> **Why not esm.sh / import maps?** esm.sh re-bundles packages on the fly but does not fully resolve
+> deep `export *` barrel chains. The `@laikacms/decap/decap-cms-backend-laika` subpath depends on
+> symbols re-exported through several barrel layers (e.g. `DocumentsCompatibilityDate`) that
+> esm.sh's bundler drops, so the admin silently fails to load. esbuild resolves all transitive
+> imports at build time and produces a self-contained bundle with no runtime CDN dependency.
+
+### Install build dependencies
+
+```bash
+npm install @laikacms/decap @laikacms/decap-cms decap-cms-app esbuild --save-dev
+```
+
+`@laikacms/decap-cms` is the scoped Decap CMS fork that provides the `@laikacms/decap-cms/lib-util`,
+`/lib-auth`, `/ui-default`, and `/core` subpaths required by the Laika backend at bundle time.
+Without it the esbuild step will fail with "Could not resolve" errors.
+
+### Create the admin entry point
+
+```typescript
+// admin/index.ts
+import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
+import CMS from 'decap-cms-app';
+
+const LaikaBackend = createLaikaBackend();
+CMS.registerBackend('laika', LaikaBackend);
+CMS.init();
+```
+
+### Create the HTML shell
+
+```html
+<!-- admin/index.html -->
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>My Admin</title>
-    <!--
-      Import map: resolves the bare @laikacms/decap specifier for the browser.
-      esm.sh re-bundles the package on the fly and handles all transitive imports.
-      Pin to a specific version (e.g. @1.0.1) in production.
-    -->
-    <script type="importmap">
-    {
-      "imports": {
-        "@laikacms/decap/decap-cms-backend-laika": "https://esm.sh/@laikacms/decap/decap-cms-backend-laika"
-      }
-    }
-    </script>
+    <title>Admin</title>
   </head>
   <body>
-    <script>window.CMS_MANUAL_INIT = true;</script>
-    <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
-    <script type="module">
-      import createLaikaBackend from '@laikacms/decap/decap-cms-backend-laika';
-      window.CMS.registerBackend('laika', createLaikaBackend());
-      window.CMS.init({
-        config: {
-          backend: { name: 'laika', api_root: '/api/decap' },
-          // …collections…
-        },
-      });
-    </script>
+    <!-- esbuild compiles admin/index.ts → admin/bundle.js -->
+    <script src="bundle.js"></script>
   </body>
-</html>`;
+</html>
+```
 
-// Hono
-app.get('/admin', c => c.html(ADMIN_HTML));
+### Build and serve
+
+```bash
+# Build the bundle (re-run after editing admin/index.ts)
+npx esbuild admin/index.ts --bundle --outfile=admin/bundle.js --format=iife --target=es2020
+
+# Terminal 1 — LaikaCMS API (with CORS if admin runs on a different port)
+npm start
+
+# Terminal 2 — admin UI
+npx serve admin/
+```
+
+Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS admin.
+
+> **CORS:** when the admin (`npx serve` on `:5000`) and the API (`:3000`) are on different origins,
+> add `cors: { origins: ['http://localhost:5000'] }` to your `decapApi(...)` call. Without it the
+> browser blocks every request with a CORS error. In production, serve the admin and API from the
+> same origin to avoid the need for CORS. See [quickstart-fs-decap](./quickstart-fs-decap.md) for a
+> complete working example.
+
+For a framework server (Hono, Express, Astro, etc.), serve the `admin/` directory as static files
+and mount it before any catch-all API handler:
+
+```ts
+// Hono + @hono/node-server
+import { serveStatic } from '@hono/node-server/serve-static';
+app.use('/admin/*', serveStatic({ root: './admin' }));
+
 // Express
-app.get('/admin', (_req, res) => res.send(ADMIN_HTML));
+import express from 'express';
+app.use('/admin', express.static('admin'));
+
+// Then mount the API catch-all after
+app.all('/api/decap/*', c => api.fetch(c.req.raw));
 ```
 
 For full control (custom widgets, the Decap React tree) you can instead render a React island:
@@ -509,8 +549,8 @@ DecapCmsCore.registerWidget('lucide-icon', LucideIconWidget, LucideIconPreview);
 
 There are **two** packages in the laika-cms ecosystem with confusingly similar names:
 
-- **`@laikacms/decap`** — fork of upstream Decap CMS itself (the React `App`, `DecapCmsProvider`,
-  widgets, backends like `backend-github`, etc.). Lives in
+- **`@laikacms/decap-cms`** — fork of upstream Decap CMS itself (the React `App`,
+  `DecapCmsProvider`, widgets, backends like `backend-github`, etc.). Lives in
   [`laikacms/decap-cms#v4.beta`](https://github.com/laikacms/decap-cms).
 - **`@laikacms/decap`** — adapters _around_ Decap: the `laika` Decap backend (`createLaikaBackend`),
   the Decap-compatible HTTP API (`decapApi`), the `decapOauth2` server, custom widgets. Lives in
