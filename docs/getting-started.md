@@ -9,9 +9,9 @@ pnpm add laikacms
 ## Basic Example
 
 ```typescript
-import { rawSerializer } from 'laikacms/serializers/raw';
-import { buildJsonApi } from 'laikacms/storage/api';
-import { FileSystemStorageRepository } from 'laikacms/storage/fs';
+import { buildJsonApi } from 'laikacms/storage-api';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
 
 const repo = new FileSystemStorageRepository('./content', { md: rawSerializer }, 'md');
 const api = buildJsonApi({ repo });
@@ -26,9 +26,9 @@ export default { fetch: api.fetch };
 ## Cloudflare Workers
 
 ```typescript
-import { rawSerializer } from 'laikacms/serializers/raw';
-import { buildJsonApi } from 'laikacms/storage/api';
-import { R2StorageRepository } from 'laikacms/storage/r2';
+import { buildJsonApi } from 'laikacms/storage-api';
+import { R2StorageRepository } from 'laikacms/storage-r2';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
