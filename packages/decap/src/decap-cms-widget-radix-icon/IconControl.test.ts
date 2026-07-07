@@ -6,7 +6,12 @@
  * verify that icons excluded by the filter are absent from the filtered list.
  */
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('./IconControl.js', () => ({ IconControl: () => null }));
+vi.mock('./IconPreview.js', () => ({ IconPreview: () => null }));
+
+const { default: WidgetIcon } = await import('./index.js');
 
 // Radix icons are loaded asynchronously in the real control; here we replicate
 // the filter computation over a representative set to keep tests synchronous
@@ -45,6 +50,13 @@ function computeIcons(
     return true;
   });
 }
+
+describe('WidgetIcon name (radix-icon)', () => {
+  it('registers as radix-icon to avoid collision with lucide-icon', () => {
+    expect(WidgetIcon.name).toBe('radix-icon');
+    expect(WidgetIcon.Widget().name).toBe('radix-icon');
+  });
+});
 
 describe('IconControl filter logic (radix-icon)', () => {
   it('includes all icons when no filter is supplied', () => {

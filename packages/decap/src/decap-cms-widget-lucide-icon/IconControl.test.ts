@@ -7,7 +7,12 @@
  */
 
 import * as lucideReact from 'lucide-react';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('./IconControl.js', () => ({ IconControl: () => null }));
+vi.mock('./IconPreview.js', () => ({ IconPreview: () => null }));
+
+const { default: WidgetIcon } = await import('./index.js');
 
 // Mirror the allIcons computation from IconControl.tsx
 const allIcons = Object.fromEntries(Object.entries(lucideReact.icons));
@@ -21,6 +26,13 @@ function computeFilteredIcons(search: string, filter?: RegExp | ((id: string) =>
     return true;
   });
 }
+
+describe('WidgetIcon name (lucide-icon)', () => {
+  it('registers as lucide-icon to avoid collision with radix-icon', () => {
+    expect(WidgetIcon.name).toBe('lucide-icon');
+    expect(WidgetIcon.Widget().name).toBe('lucide-icon');
+  });
+});
 
 describe('IconControl filter logic (lucide-icon)', () => {
   it('includes all icons when no filter is supplied', () => {

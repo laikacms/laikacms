@@ -41,7 +41,7 @@ CMS.registerWidget(WidgetIcon.Widget(opts));
 
 ### Decap CMS config
 
-After registration, use `widget: icon` in any collection field:
+After registration, use `widget: lucide-icon` in any collection field:
 
 ```yaml
 collections:
@@ -54,8 +54,12 @@ collections:
         fields:
           - label: Icon
             name: icon
-            widget: icon
+            widget: lucide-icon
 ```
+
+> **Note:** This widget registers as `lucide-icon`. If you also use
+> `@laikacms/decap/decap-cms-widget-radix-icon` (which registers as `radix-icon`), both can coexist
+> in the same Decap CMS app without one overwriting the other.
 
 The field value stored in your content files is the Lucide icon name as a string (e.g.
 `"ArrowRight"`).
@@ -82,7 +86,7 @@ export function Icon({ icon }: Props) {
 
 | Property           | Type                                      | Description                               |
 | ------------------ | ----------------------------------------- | ----------------------------------------- |
-| `name`             | `'icon'`                                  | Widget type name used in Decap config     |
+| `name`             | `'lucide-icon'`                           | Widget type name used in Decap config     |
 | `Widget`           | `(opts?: IconWidgetOptions) => WidgetDef` | Factory — call this for `registerWidget`  |
 | `controlComponent` | `React.FC<IconControlProps>`              | The picker control rendered in the editor |
 | `previewComponent` | `React.FC`                                | The preview shown alongside the editor    |

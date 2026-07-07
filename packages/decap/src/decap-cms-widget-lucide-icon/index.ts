@@ -6,7 +6,7 @@ import type { IconWidgetOptions } from './types.js';
 
 function Widget(opts: IconWidgetOptions = {}) {
   return {
-    name: 'icon',
+    name: 'lucide-icon',
     controlComponent: (props: React.ComponentProps<typeof IconControl>) =>
       React.createElement(IconControl, { ...props, filter: opts.filter }),
     previewComponent: IconPreview,
@@ -14,7 +14,7 @@ function Widget(opts: IconWidgetOptions = {}) {
 }
 
 export const WidgetIcon = {
-  name: 'icon',
+  name: 'lucide-icon',
   Widget,
   controlComponent: IconControl,
   previewComponent: IconPreview,
