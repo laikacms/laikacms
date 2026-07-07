@@ -21,6 +21,44 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 // legacy unscoped decap-cms-lib-* siblings — mock the same specifiers.
 // ---------------------------------------------------------------------------
 
+// vi.mock factories are hoisted before module evaluation; use vi.hoisted to
+// share Cursor/symbol between the factory and test bodies.
+const { MockCursor, CURSOR_COMPATIBILITY_SYMBOL } = vi.hoisted(() => {
+  const CURSOR_COMPATIBILITY_SYMBOL = Symbol('cursor_compat');
+
+  class MockCursor {
+    private _actions: string[];
+    private _data: Record<string, unknown>;
+    private _meta: Record<string, unknown>;
+
+    constructor(store: { actions?: string[], data?: Record<string, unknown>, meta?: Record<string, unknown> } = {}) {
+      this._actions = store.actions ?? [];
+      this._data = store.data ?? {};
+      this._meta = store.meta ?? {};
+    }
+
+    static create(store: { actions?: string[], data?: Record<string, unknown>, meta?: Record<string, unknown> } = {}) {
+      return new MockCursor(store);
+    }
+
+    get data() {
+      const d = this._data;
+      return { toJS: () => d };
+    }
+
+    get meta() {
+      const m = this._meta;
+      return { get: (k: string) => m[k] };
+    }
+
+    get actions() {
+      return { has: (a: string) => this._actions.includes(a) };
+    }
+  }
+
+  return { MockCursor, CURSOR_COMPATIBILITY_SYMBOL };
+});
+
 vi.mock('@laikacms/decap-cms/lib-util', () => ({
   AccessTokenError: class AccessTokenError extends Error {
     constructor(msg: string) {
@@ -41,6 +79,8 @@ vi.mock('@laikacms/decap-cms/lib-util', () => ({
   unsentRequest: {
     fetchWithTimeout: vi.fn(),
   },
+  Cursor: MockCursor,
+  CURSOR_COMPATIBILITY_SYMBOL,
 }));
 
 vi.mock('@laikacms/decap-cms/lib-auth', () => ({
@@ -408,7 +448,7 @@ describe('LaikaBackend.entriesByFolder()', () => {
 
     const entries = await backend.entriesByFolder('articles', 'json', 1);
 
-    expect(entries).toEqual([]);
+    expect(entries).toHaveLength(0);
   });
 
   it('skips failed results and continues processing successful ones', async () => {
@@ -424,7 +464,7 @@ describe('LaikaBackend.entriesByFolder()', () => {
     expect(entries[0].file.path).toBe('articles/ok');
   });
 
-  it('returns all 110 entries when collection exceeds the 100-entry page size', async () => {
+  it('returns first page (20) when collection has 110 entries; cursor stores all 110 for traversal', async () => {
     const page1 = Array.from({ length: 100 }, (_, i) => ({
       key: `articles/entry-${i}`,
       content: { title: `Entry ${i}` },
@@ -442,9 +482,11 @@ describe('LaikaBackend.entriesByFolder()', () => {
 
     const entries = await backend.entriesByFolder('articles', 'json', 1);
 
-    expect(entries).toHaveLength(110);
+    // entriesByFolder now returns only the first UI page (20 entries)
+    expect(entries).toHaveLength(20);
     expect(entries[0].file.path).toBe('articles/entry-0');
-    expect(entries[100].file.path).toBe('articles/entry-100');
+    expect(entries[19].file.path).toBe('articles/entry-19');
+    // Both repo batches were fetched to build the full list
     expect(mockDocRepo.listRecords).toHaveBeenCalledTimes(2);
     expect(mockDocRepo.listRecords).toHaveBeenNthCalledWith(
       1,
@@ -454,6 +496,102 @@ describe('LaikaBackend.entriesByFolder()', () => {
       2,
       expect.objectContaining({ pagination: { limit: 100, offset: 100 } }),
     );
+    // Cursor is attached and has 'next' action because there are more pages
+    const cursor = (entries as any)[CURSOR_COMPATIBILITY_SYMBOL];
+    expect(cursor).toBeDefined();
+    expect(cursor.actions.has('next')).toBe(true);
+    expect(cursor.actions.has('prev')).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: traverseCursor
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.traverseCursor()', () => {
+  let mockDocRepo: ReturnType<typeof makeMockDocumentsRepository>;
+  let backend: any;
+
+  function makeEntries(count: number) {
+    return Array.from({ length: count }, (_, i) => ({
+      key: `posts/entry-${i}`,
+      content: { title: `Post ${i}` },
+      type: 'published' as const,
+    }));
+  }
+
+  beforeEach(() => {
+    mockDocRepo = makeMockDocumentsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => mockDocRepo as any,
+      getAssetsRepository: () => makeMockAssetsRepository() as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).documentsRepository = mockDocRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it("'next' advances to page 2 and returns the correct slice of entries", async () => {
+    // Seed 25 entries so there are 2 pages (20 + 5)
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(25) as any[], {}));
+    await backend.entriesByFolder('posts', 'json', 1); // populates allEntriesCache
+
+    const page1Cursor = new MockCursor({
+      actions: ['next', 'last'],
+      meta: { page: 1, pageSize: 20, pageCount: 2, count: 25 },
+      data: { folder: 'posts' },
+    });
+
+    const result = await backend.traverseCursor(page1Cursor, 'next');
+
+    expect(result.entries).toHaveLength(5); // entries 20-24
+    expect(result.entries[0].file.path).toBe('posts/entry-20');
+    expect(result.entries[4].file.path).toBe('posts/entry-24');
+  });
+
+  it('returned cursor reflects the new page position', async () => {
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(25) as any[], {}));
+    await backend.entriesByFolder('posts', 'json', 1);
+
+    const page1Cursor = new MockCursor({
+      actions: ['next', 'last'],
+      meta: { page: 1, pageSize: 20, pageCount: 2, count: 25 },
+      data: { folder: 'posts' },
+    });
+
+    const result = await backend.traverseCursor(page1Cursor, 'next');
+
+    // New cursor should be on page 2 with no 'next' (last page)
+    expect(result.cursor.meta.get('page')).toBe(2);
+    expect(result.cursor.actions.has('prev')).toBe(true);
+    expect(result.cursor.actions.has('next')).toBe(false);
+  });
+
+  it('throws a typed error when cursor carries no folder', async () => {
+    const emptyCursor = new MockCursor({ data: {}, meta: {} });
+
+    await expect(backend.traverseCursor(emptyCursor, 'next')).rejects.toThrow(
+      'traverseCursor: cursor carries no folder',
+    );
+  });
+
+  it("'first' resets to page 1 regardless of current position", async () => {
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(45) as any[], {}));
+    await backend.entriesByFolder('posts', 'json', 1);
+
+    const page3Cursor = new MockCursor({
+      actions: ['prev', 'first'],
+      meta: { page: 3, pageSize: 20, pageCount: 3, count: 45 },
+      data: { folder: 'posts' },
+    });
+
+    const result = await backend.traverseCursor(page3Cursor, 'first');
+
+    expect(result.entries).toHaveLength(20);
+    expect(result.entries[0].file.path).toBe('posts/entry-0');
+    expect(result.cursor.meta.get('page')).toBe(1);
+    expect(result.cursor.actions.has('next')).toBe(true);
+    expect(result.cursor.actions.has('prev')).toBe(false);
   });
 });
 
