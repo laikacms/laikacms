@@ -262,6 +262,20 @@ async function parseBody<T>(request: Request, decode: (raw: unknown) => T): Prom
 }
 
 /**
+ * Safely decode query parameters with the given schema decoder.
+ * Schema decode failures are client input errors — they return InvalidData (400)
+ * rather than leaking as InternalError (500) through the outer fetch catch.
+ */
+function parseQuery<T>(queryParams: Record<string, string>, decode: (raw: unknown) => T): LaikaResult<T> {
+  try {
+    return Result.succeed(decode(queryParams));
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : 'Invalid query parameters';
+    return Result.fail(new InvalidData(msg));
+  }
+}
+
+/**
  * Run a LaikaTask and surface the resolved value as a LaikaResult. Catches
  * both typed failures AND defects (e.g. `TypeError`s thrown by buggy impl
  * code) so route handlers always produce a JSON:API response instead of
@@ -621,7 +635,9 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     const listFullRecords = async () => {
       const cursorRejection = await rejectUnsupportedCursor();
       if (cursorRejection) return cursorRejection;
-      const parsed = decodeRecordsQuery(queryParams);
+      const parsedResult = parseQuery(queryParams, decodeRecordsQuery);
+      if (Result.isFailure(parsedResult)) return failResponse(parsedResult, 400);
+      const parsed = parsedResult.success;
       const type = parsed['filter[type]'] === 'all' ? undefined : (parsed['filter[type]'] ?? 'published');
       const folder = parsed['filter[folder]'] ?? '';
       const depth = parsed['filter[depth]'] ?? 1;
@@ -673,7 +689,9 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     const listRecordSummaries = async () => {
       const cursorRejection = await rejectUnsupportedCursor();
       if (cursorRejection) return cursorRejection;
-      const parsed = decodeRecordsQuery(queryParams);
+      const parsedResult = parseQuery(queryParams, decodeRecordsQuery);
+      if (Result.isFailure(parsedResult)) return failResponse(parsedResult, 400);
+      const parsed = parsedResult.success;
       const type = parsed['filter[type]'] === 'all' ? undefined : (parsed['filter[type]'] ?? 'published');
       const folder = parsed['filter[folder]'] ?? '';
       const depth = parsed['filter[depth]'] ?? 1;
