@@ -52,11 +52,11 @@ pass them to `decapApi(...)`, and mount `.fetch` on a catch-all route.
 
 ```ts
 import { decapApi } from '@laikacms/decap/decap-api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets/contentbase';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents/contentbase';
-import { markdownSerializer } from 'laikacms/serializers/markdown';
-import { FileSystemStorageRepository } from 'laikacms/storage/fs';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { resolve } from 'node:path';
 
 const storage = new FileSystemStorageRepository(
@@ -155,10 +155,10 @@ edge-compatible repo such as `R2StorageRepository` (`node:fs` is unavailable in 
 ```ts
 import { decapApi } from '@laikacms/decap/decap-api';
 import { Hono } from 'hono';
-import { ContentBaseAssetsRepository } from 'laikacms/assets/contentbase';
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents/contentbase';
-import { R2StorageRepository } from 'laikacms/storage/r2';
+import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { R2StorageRepository } from 'laikacms/storage-r2';
 
 export interface Env {
   CONTENT: R2Bucket;
@@ -244,10 +244,10 @@ PKCE server from `@laikacms/decap/decap-oauth2` — see
 
 | Storage repo                  | Subpath                    | Runtime                            |
 | ----------------------------- | -------------------------- | ---------------------------------- |
-| `FileSystemStorageRepository` | `laikacms/storage/fs`      | Node, Bun, Deno (needs `node:fs`)  |
-| `R2StorageRepository`         | `laikacms/storage/r2`      | V8 isolates (Workers, Vercel Edge) |
-| `DrizzleStorageRepository`    | `laikacms/storage/drizzle` | Any SQL DB via Drizzle ORM         |
-| `WebDavStorageRepository`     | `laikacms/storage/webdav`  | Any RFC 4918 WebDAV server         |
+| `FileSystemStorageRepository` | `laikacms/storage-fs`      | Node, Bun, Deno (needs `node:fs`)  |
+| `R2StorageRepository`         | `laikacms/storage-r2`      | V8 isolates (Workers, Vercel Edge) |
+| `DrizzleStorageRepository`    | `laikacms/storage-drizzle` | Any SQL DB via Drizzle ORM         |
+| `WebDavStorageRepository`     | `laikacms/storage-webdav`  | Any RFC 4918 WebDAV server         |
 
 Wrap the repo in `ContentBaseDocumentsRepository` / `ContentBaseAssetsRepository`, pass them to
 `decapApi(...)`, and mount `.fetch` from your framework's catch-all route. `decapApi(...)` returns
@@ -270,11 +270,11 @@ These are the things that consistently bite first-time integrators:
    - The Express/Fastify/Koa starters all have a custom adapter (`*-fetch-adapter.ts`) that handles
      the conversion correctly.
 
-3. **`@laikacms/storage/fs` is NOT a separate package on npm.**
+3. **`laikacms/storage-fs` is NOT a separate package on npm.**
    - It's a subpath export of `laikacms`. Use
      `import { FileSystemStorageRepository } from
-     'laikacms/storage/fs'`. Same for
-     `storage-api`, `documents-api`, `storage-serializers-*`, etc.
+     'laikacms/storage-fs'`. Same for
+     `laikacms/storage-api`, `laikacms/documents-api`, `laikacms/storage-serializers-*`, etc.
    - The Decap backend lives at `@laikacms/decap/decap-cms-backend-laika` — a subpath of
      `@laikacms/decap`, NOT a separate `@laikacms/decap-cms-backend-laika` package.
 

@@ -27,9 +27,9 @@ pnpm add laikacms
 ```
 
 ```typescript
-import { rawSerializer } from 'laikacms/serializers/raw';
-import { buildJsonApi } from 'laikacms/storage/api';
-import { FileSystemStorageRepository } from 'laikacms/storage/fs';
+import { buildJsonApi } from 'laikacms/storage-api';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
 
 const repo = new FileSystemStorageRepository('./content', { md: rawSerializer }, 'md');
 const api = buildJsonApi({ repo });
@@ -40,9 +40,9 @@ export default { fetch: api.fetch };
 ## Cloudflare Workers
 
 ```typescript
-import { rawSerializer } from 'laikacms/serializers/raw';
-import { buildJsonApi } from 'laikacms/storage/api';
-import { R2StorageRepository } from 'laikacms/storage/r2';
+import { buildJsonApi } from 'laikacms/storage-api';
+import { R2StorageRepository } from 'laikacms/storage-r2';
+import { rawSerializer } from 'laikacms/storage-serializers-raw';
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -61,7 +61,7 @@ example apps were moved out into their own repositories in June 2026 — see
 
 | Package              | Description                                                                                                                                                                           |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `laikacms`           | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage/api`, `laikacms/storage/fs`, `laikacms/storage/r2`, `laikacms/core`, …) |
+| `laikacms`           | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
 | `@laikacms/decap`    | Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives in `@laikacms/decap-ai`                                                                              |
 | `@laikacms/decap-ai` | AI chat integration for Decap CMS (Vercel AI SDK)                                                                                                                                     |
 
