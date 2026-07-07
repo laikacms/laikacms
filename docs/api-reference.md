@@ -2127,6 +2127,16 @@ Updates an existing collection. `data.id` **must** match the URL `:key`; a misma
 
 **Response 200** — same shape as POST 201, without status code.
 
+**Response 404** — collection key does not exist:
+
+```json
+{
+  "errors": [
+    { "status": "404", "title": "not_found", "detail": "Collection 'articles' not found." }
+  ]
+}
+```
+
 **Response 409 Conflict** — `data.id` ≠ URL `:key`:
 
 ```json

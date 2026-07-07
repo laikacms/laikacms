@@ -205,6 +205,21 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
   app.patch('/collections/:key', async c => {
     try {
       const key = c.req.param('key');
+
+      const allSettings = await LaikaTask.runPromiseResult(repo.getSettings());
+      if (Result.isFailure(allSettings)) {
+        return respondError(c, allSettings, 400, onError);
+      }
+      const collections = allSettings.success.collections ?? {};
+      if (!collections[key]) {
+        return respondError(
+          c,
+          Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
+          404,
+          onError,
+        );
+      }
+
       const jsonData = await c.req.json();
       const validatedData = decodeCollectionJsonApi(jsonData.data);
       const body = collectionFromJsonApi(validatedData as CollectionJsonApi);

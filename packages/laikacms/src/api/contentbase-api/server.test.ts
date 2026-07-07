@@ -238,6 +238,7 @@ describe('POST /collections', () => {
 describe('PATCH /collections/:key', () => {
   it('returns 200 when updating a document collection', async () => {
     const repo = {
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
       putDocumentCollectionSettings: (_key: string, _settings: DocumentCollectionSettings) =>
         LaikaTask.succeed(undefined),
     } as unknown as ContentBaseSettingsProvider;
@@ -265,6 +266,7 @@ describe('PATCH /collections/:key', () => {
 
   it('returns 200 when updating a media collection', async () => {
     const repo = {
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
       putMediaCollectionSettings: (_key: string, _settings: MediaCollectionSettings) => LaikaTask.succeed(undefined),
     } as unknown as ContentBaseSettingsProvider;
 
@@ -289,8 +291,39 @@ describe('PATCH /collections/:key', () => {
     expect(body.data.id).toBe('images');
   });
 
+  it('returns 404 JSON:API error when PATCH targets a non-existent collection key', async () => {
+    const repo = {
+      getSettings: () => LaikaTask.succeed({ collections: {} }),
+    } as unknown as ContentBaseSettingsProvider;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/collections/ghost', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            type: 'document-collection',
+            id: 'ghost',
+            attributes: { type: 'document', name: 'Ghost' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string, detail: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+    expect(body.errors[0]!.detail).toContain('ghost');
+  });
+
   it('returns 400 JSON:API error on invalid request body', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const repo = {
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
+    } as unknown as ContentBaseSettingsProvider;
+
+    const api = buildJsonApi({ repo });
     const res = await api.fetch(
       new Request('http://localhost/collections/posts', {
         method: 'PATCH',
@@ -306,7 +339,10 @@ describe('PATCH /collections/:key', () => {
   });
 
   it('returns 409 Conflict when body data.id differs from URL :key (document)', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const repo = {
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
+    } as unknown as ContentBaseSettingsProvider;
+    const api = buildJsonApi({ repo });
     const res = await api.fetch(
       new Request('http://localhost/collections/posts', {
         method: 'PATCH',
@@ -330,7 +366,10 @@ describe('PATCH /collections/:key', () => {
   });
 
   it('returns 409 Conflict when body data.id differs from URL :key (media)', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const repo = {
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
+    } as unknown as ContentBaseSettingsProvider;
+    const api = buildJsonApi({ repo });
     const res = await api.fetch(
       new Request('http://localhost/collections/images', {
         method: 'PATCH',
