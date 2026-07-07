@@ -223,10 +223,8 @@ const ADMIN_HTML = `<!doctype html>
     </script>
   </head>
   <body>
+    <script>window.CMS_MANUAL_INIT = true;</script>
     <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
-    <script>
-      window.CMS_MANUAL_INIT = true;
-    </script>
     <script type="module">
       import createLaikaBackend from '@laikacms/decap/decap-cms-backend-laika';
       window.CMS.registerBackend('laika', createLaikaBackend());
