@@ -304,6 +304,54 @@ describe('PATCH /collections/:key', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('400');
   });
+
+  it('returns 409 Conflict when body data.id differs from URL :key (document)', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/collections/posts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            type: 'document-collection',
+            id: 'articles',
+            attributes: { type: 'document', name: 'Articles' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(409);
+
+    const body = await res.json() as { errors: Array<{ status: string, detail: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('409');
+    expect(body.errors[0]!.detail).toContain('articles');
+    expect(body.errors[0]!.detail).toContain('posts');
+  });
+
+  it('returns 409 Conflict when body data.id differs from URL :key (media)', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/collections/images', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            type: 'media-collection',
+            id: 'videos',
+            attributes: { type: 'media', name: 'Videos' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(409);
+
+    const body = await res.json() as { errors: Array<{ status: string, detail: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('409');
+    expect(body.errors[0]!.detail).toContain('videos');
+    expect(body.errors[0]!.detail).toContain('images');
+  });
 });
 
 // ---------------------------------------------------------------------------
