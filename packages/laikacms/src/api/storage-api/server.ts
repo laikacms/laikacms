@@ -401,6 +401,17 @@ export function buildJsonApi(options: StorageApiOptions) {
 
     const listFullAtoms = async () => {
       const queryParams = Object.fromEntries(url.searchParams.entries());
+      if (queryParams['filter[prefix]'] !== undefined && key === undefined) {
+        return failResponse(
+          Result.fail(
+            new InvalidData(
+              '`filter[prefix]` is not a supported query parameter. '
+                + 'To list atoms under a prefix, include the key in the URL path: GET /atoms/{key}',
+            ),
+          ),
+          400,
+        );
+      }
       const cursorRejection = await rejectUnsupportedCursor(queryParams);
       if (cursorRejection) return cursorRejection;
       const hasPaginationParam = Object.keys(queryParams).some(k => k.startsWith('page['));
@@ -426,6 +437,17 @@ export function buildJsonApi(options: StorageApiOptions) {
 
     const listAtomSummaries = async () => {
       const queryParams = Object.fromEntries(url.searchParams.entries());
+      if (queryParams['filter[prefix]'] !== undefined && key === undefined) {
+        return failResponse(
+          Result.fail(
+            new InvalidData(
+              '`filter[prefix]` is not a supported query parameter. '
+                + 'To list atom summaries under a prefix, include the key in the URL path: GET /atom-summaries/{key}',
+            ),
+          ),
+          400,
+        );
+      }
       const cursorRejection = await rejectUnsupportedCursor(queryParams);
       if (cursorRejection) return cursorRejection;
       const hasPaginationParam = Object.keys(queryParams).some(k => k.startsWith('page['));
