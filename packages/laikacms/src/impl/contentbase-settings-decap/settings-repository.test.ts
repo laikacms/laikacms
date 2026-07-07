@@ -659,6 +659,96 @@ describe('DecapContentBaseSettingsProvider', () => {
       expect(result.success.properties?.['thumbnail']).toEqual({ type: 'string' });
     });
 
+    it('maps image widget with multiple=true to array', async () => {
+      const provider = makeProvider({
+        collections: [
+          {
+            name: 'posts',
+            folder: 'content/posts',
+            fields: [{ name: 'gallery', widget: 'image', multiple: true }],
+          },
+        ],
+      });
+
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (!Result.isSuccess(result)) return;
+
+      expect(result.success.properties?.['gallery']).toEqual({ type: 'array', items: { type: 'string' } });
+    });
+
+    it('maps file widget to JSON Schema string', async () => {
+      const provider = makeProvider({
+        collections: [
+          {
+            name: 'posts',
+            folder: 'content/posts',
+            fields: [{ name: 'attachment', widget: 'file' }],
+          },
+        ],
+      });
+
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (!Result.isSuccess(result)) return;
+
+      expect(result.success.properties?.['attachment']).toEqual({ type: 'string' });
+    });
+
+    it('maps file widget with multiple=true to array', async () => {
+      const provider = makeProvider({
+        collections: [
+          {
+            name: 'posts',
+            folder: 'content/posts',
+            fields: [{ name: 'attachments', widget: 'file', multiple: true }],
+          },
+        ],
+      });
+
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (!Result.isSuccess(result)) return;
+
+      expect(result.success.properties?.['attachments']).toEqual({ type: 'array', items: { type: 'string' } });
+    });
+
+    it('maps relation widget to JSON Schema string', async () => {
+      const provider = makeProvider({
+        collections: [
+          {
+            name: 'posts',
+            folder: 'content/posts',
+            fields: [{ name: 'author', widget: 'relation', collection: 'authors', value_field: 'name' }],
+          },
+        ],
+      });
+
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (!Result.isSuccess(result)) return;
+
+      expect(result.success.properties?.['author']).toEqual({ type: 'string' });
+    });
+
+    it('maps relation widget with multiple=true to array', async () => {
+      const provider = makeProvider({
+        collections: [
+          {
+            name: 'posts',
+            folder: 'content/posts',
+            fields: [{ name: 'tags', widget: 'relation', collection: 'tags', multiple: true }],
+          },
+        ],
+      });
+
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (!Result.isSuccess(result)) return;
+
+      expect(result.success.properties?.['tags']).toEqual({ type: 'array', items: { type: 'string' } });
+    });
+
     it('falls back to empty schema ({}) for unknown widget type', async () => {
       const provider = makeProvider({
         collections: [
