@@ -1,4 +1,10 @@
-import { AccessTokenError, APIError, unsentRequest } from '@laikacms/decap-cms/lib-util';
+import {
+  AccessTokenError,
+  APIError,
+  Cursor,
+  CURSOR_COMPATIBILITY_SYMBOL,
+  unsentRequest,
+} from '@laikacms/decap-cms/lib-util';
 
 import React from 'react';
 
@@ -9,7 +15,6 @@ import type {
   AssetProxy,
   Config,
   Credentials,
-  Cursor,
   DisplayURL,
   Entry,
   Implementation,
@@ -30,6 +35,7 @@ import {
   ErrorCodeToStatusMap,
   IllegalStateException,
   LaikaError,
+  NotFoundError,
   TemplateLiteral as TL,
   Url,
 } from 'laikacms/core';
@@ -248,6 +254,10 @@ export default function createLaikaBackend(
 
   const CACHE_TTL = 5000; // 5 seconds cache TTL
 
+  // Number of entries returned per UI page in the collection list / media library.
+  // Matches the page size used by decap-cms-backend-github (20).
+  const ENTRIES_PAGE_SIZE = 20;
+
   class DedupeCache<T> {
     private cache = new Map<string, CacheEntry<T>>();
     private pending = new Map<string, Promise<T>>();
@@ -336,6 +346,8 @@ export default function createLaikaBackend(
     entryCache = new DedupeCache<ImplementationEntry>();
     unpublishedEntryCache = new DedupeCache<UnpublishedEntry>();
     unpublishedEntriesListCache = new DedupeCache<string[]>();
+    // Full entry lists keyed by folder — populated by entriesByFolder, read by traverseCursor
+    allEntriesCache = new Map<string, ImplementationEntry[]>();
 
     /**
      * Optional pre-shared token for local-dev / same-origin embedded setups.
@@ -586,14 +598,14 @@ export default function createLaikaBackend(
 
     // ===== ENTRY OPERATIONS (using DocumentsRepository) =====
 
-    async entriesByFolder(folder: string, _extension: string, _depth: number): Promise<ImplementationEntry[]> {
+    private async _fetchAllEntriesFromRepo(folder: string): Promise<ImplementationEntry[]> {
       const repo = this.getDocumentsRepo();
       const entries: ImplementationEntry[] = [];
-      const pageSize = 100;
+      const repoPageSize = 100;
       let offset = 0;
 
       while (true) {
-        const pagination: Pagination = { limit: pageSize, offset };
+        const pagination: Pagination = { limit: repoPageSize, offset };
         const result = await collectStream(
           repo.listRecords({ pagination, folder, type: 'published', depth: 10 }),
         );
@@ -610,20 +622,56 @@ export default function createLaikaBackend(
           }
         }
 
-        if (result.success.length < pageSize) break;
-        offset += pageSize;
+        if (result.success.length < repoPageSize) break;
+        offset += repoPageSize;
       }
 
       return entries;
     }
 
+    private _buildPageCursor(folder: string, allEntries: ImplementationEntry[], page: number): {
+      cursor: Cursor,
+      pageEntries: ImplementationEntry[],
+    } {
+      const pageCount = Math.max(1, Math.ceil(allEntries.length / ENTRIES_PAGE_SIZE));
+      const clampedPage = Math.max(1, Math.min(page, pageCount));
+      const actions: string[] = [];
+      if (clampedPage > 1) {
+        actions.push('prev', 'first');
+      }
+      if (clampedPage < pageCount) {
+        actions.push('next', 'last');
+      }
+      const cursor = Cursor.create({
+        actions,
+        meta: { page: clampedPage, pageSize: ENTRIES_PAGE_SIZE, pageCount, count: allEntries.length },
+        data: { folder },
+      });
+      const pageEntries = allEntries.slice(
+        (clampedPage - 1) * ENTRIES_PAGE_SIZE,
+        clampedPage * ENTRIES_PAGE_SIZE,
+      );
+      return { cursor, pageEntries };
+    }
+
+    async entriesByFolder(folder: string, _extension: string, _depth: number): Promise<ImplementationEntry[]> {
+      const allEntries = await this._fetchAllEntriesFromRepo(folder);
+      this.allEntriesCache.set(folder, allEntries);
+
+      const { cursor, pageEntries } = this._buildPageCursor(folder, allEntries, 1);
+      // Attach cursor so Decap's Backend can track pagination position.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (pageEntries as any)[CURSOR_COMPATIBILITY_SYMBOL] = cursor;
+      return pageEntries;
+    }
+
     async allEntriesByFolder(
       folder: string,
-      extension: string,
-      depth: number,
+      _extension: string,
+      _depth: number,
       pathRegex?: RegExp,
     ): Promise<ImplementationEntry[]> {
-      const entries = await this.entriesByFolder(folder, extension, depth);
+      const entries = await this._fetchAllEntriesFromRepo(folder);
 
       if (pathRegex) {
         return entries.filter(entry => pathRegex.test(entry.file.path));
@@ -1281,20 +1329,45 @@ export default function createLaikaBackend(
 
     // ===== CURSOR/PAGINATION =====
 
-    async traverseCursor(cursor: Cursor, _action: string): Promise<{
+    async traverseCursor(cursor: Cursor, action: string): Promise<{
       entries: ImplementationEntry[],
       cursor: Cursor,
     }> {
-      // Basic cursor implementation - can be enhanced based on needs
-      const data = cursor.data?.toJS?.() || {};
-      const folder = data.folder as string;
+      const data = cursor.data?.toJS?.() as Record<string, unknown> | undefined ?? {};
+      const folder = data.folder as string | undefined;
 
-      const entries = await this.entriesByFolder(folder, '', 1);
+      if (!folder) {
+        throw new NotFoundError('traverseCursor: cursor carries no folder — cannot advance pagination');
+      }
 
-      return {
-        entries,
-        cursor,
-      };
+      const currentPage = (cursor.meta?.get?.('page') as number | undefined) ?? 1;
+      const pageCount = (cursor.meta?.get?.('pageCount') as number | undefined) ?? 1;
+
+      let nextPage: number;
+      switch (action) {
+        case 'next':
+          nextPage = currentPage + 1;
+          break;
+        case 'prev':
+          nextPage = currentPage - 1;
+          break;
+        case 'first':
+          nextPage = 1;
+          break;
+        case 'last':
+          nextPage = pageCount;
+          break;
+        default:
+          nextPage = 1;
+      }
+
+      // Use cached entries; fall back to a fresh fetch if the cache was cleared
+      // (e.g. the backend instance was reused across a full page reload).
+      const allEntries = this.allEntriesCache.get(folder) ?? await this._fetchAllEntriesFromRepo(folder);
+      this.allEntriesCache.set(folder, allEntries);
+
+      const { cursor: newCursor, pageEntries } = this._buildPageCursor(folder, allEntries, nextPage);
+      return { entries: pageEntries, cursor: newCursor };
     }
 
     // ===== DEPLOY PREVIEW =====
