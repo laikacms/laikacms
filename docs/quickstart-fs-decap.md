@@ -11,10 +11,10 @@ Workers or AWS Lambda deployments see [deployment](./deployment.md).
 
 ## Prerequisites
 
-| Requirement | Version    |
-| ----------- | ---------- |
-| Node.js     | 22.x       |
-| npm or pnpm | any recent |
+| Requirement | Version                 |
+| ----------- | ----------------------- |
+| Node.js     | ≥ 22 (22 LTS or 24 LTS) |
+| npm or pnpm | any recent              |
 
 ---
 
@@ -300,7 +300,7 @@ Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS
 ## 6. Production deployment
 
 The `decapApi` server is a standard Node.js process and can be deployed anywhere that supports
-Node.js 22.
+Node.js 22 or later.
 
 ### Key requirement
 
