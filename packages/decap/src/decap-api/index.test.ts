@@ -10,7 +10,13 @@
  *   - URL query-string api_key is rejected / ignored
  */
 
+import * as Effect from 'effect/Effect';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { AssetsCapabilities, AssetsRepository } from 'laikacms/assets';
+import { LaikaTask } from 'laikacms/core';
+import type { DocumentsCapabilities, DocumentsRepository } from 'laikacms/documents';
+import type { Capabilities, StorageRepository } from 'laikacms/storage';
 
 import { decapApi, SECURITY_DEFAULTS } from './index.js';
 import type { DecapOptions, User } from './index.js';
@@ -664,5 +670,150 @@ describe('cors option — CORS headers on regular responses', () => {
     expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
     // Vary: Origin is not meaningful with wildcard — browser caching not affected by origin
     expect(res.headers.get('Vary') ?? '').not.toContain('Origin');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Suite: sub-API routing via api.fetch() — LCMS-305
+//
+// These tests verify that an authenticated request to /storage/*, /documents/*,
+// or /assets/* is actually forwarded to the corresponding sub-API and that the
+// sub-API's response reaches the caller. Each test uses a minimal stub repo
+// that only implements getCapabilities() — enough for GET /capabilities.
+// ---------------------------------------------------------------------------
+
+const makeStorageCaps = (): Capabilities => ({
+  compatibilityDate: '2026-01-01' as Capabilities['compatibilityDate'],
+  fileExtensions: { supported: false, description: 'none' },
+  pagination: { supported: false, description: 'none' },
+});
+
+const makeDocumentsCaps = (): DocumentsCapabilities => ({
+  compatibilityDate: '2026-01-01' as DocumentsCapabilities['compatibilityDate'],
+  pagination: { supported: false, description: 'none' },
+});
+
+const makeAssetsCaps = (): AssetsCapabilities => ({
+  compatibilityDate: '2026-01-01' as AssetsCapabilities['compatibilityDate'],
+  pagination: { supported: false, description: 'none' },
+});
+
+describe('sub-API routing — GET /storage/capabilities (LCMS-305)', () => {
+  it('forwards an authenticated request to the storage sub-API and returns 200', async () => {
+    const storageRepo = {
+      getCapabilities: () => LaikaTask.succeed(makeStorageCaps()),
+    } as unknown as StorageRepository;
+
+    const api = decapApi(makeOptions({ storage: storageRepo }));
+    const res = await api.fetch(makeRequest('/storage/capabilities', { Authorization: 'Bearer good-token' }));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { type: string } };
+    expect(body.data.type).toBe('storage-capabilities');
+  });
+
+  it('returns 401 (not a sub-API error) when the /storage/* request is unauthenticated', async () => {
+    const storageRepo = {
+      getCapabilities: () => LaikaTask.succeed(makeStorageCaps()),
+    } as unknown as StorageRepository;
+
+    const api = decapApi(makeOptions({ storage: storageRepo }));
+    const res = await api.fetch(makeRequest('/storage/capabilities'));
+
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('sub-API routing — GET /documents/capabilities (LCMS-305)', () => {
+  it('forwards an authenticated request to the documents sub-API and returns 200', async () => {
+    const documentsRepo = {
+      getCapabilities: () => LaikaTask.succeed(makeDocumentsCaps()),
+    } as unknown as DocumentsRepository;
+
+    const api = decapApi(makeOptions({ documents: documentsRepo }));
+    const res = await api.fetch(makeRequest('/documents/capabilities', { Authorization: 'Bearer good-token' }));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { type: string } };
+    expect(body.data.type).toBe('documents-capabilities');
+  });
+
+  it('returns 401 when the /documents/* request is unauthenticated', async () => {
+    const documentsRepo = {
+      getCapabilities: () => LaikaTask.succeed(makeDocumentsCaps()),
+    } as unknown as DocumentsRepository;
+
+    const api = decapApi(makeOptions({ documents: documentsRepo }));
+    const res = await api.fetch(makeRequest('/documents/capabilities'));
+
+    expect(res.status).toBe(401);
+  });
+});
+
+describe('sub-API routing — GET /assets/capabilities (LCMS-305)', () => {
+  it('forwards an authenticated request to the assets sub-API and returns 200', async () => {
+    const assetsRepo = {
+      getCapabilities: () => LaikaTask.succeed(makeAssetsCaps()),
+    } as unknown as AssetsRepository;
+
+    const api = decapApi(makeOptions({ assets: assetsRepo }));
+    const res = await api.fetch(makeRequest('/assets/capabilities', { Authorization: 'Bearer good-token' }));
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { type: string } };
+    expect(body.data.type).toBe('assets-capabilities');
+  });
+
+  it('returns 401 when the /assets/* request is unauthenticated', async () => {
+    const assetsRepo = {
+      getCapabilities: () => LaikaTask.succeed(makeAssetsCaps()),
+    } as unknown as AssetsRepository;
+
+    const api = decapApi(makeOptions({ assets: assetsRepo }));
+    const res = await api.fetch(makeRequest('/assets/capabilities'));
+
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when assets repo is not configured and /assets/* is requested', async () => {
+    // No assets repo passed → assets routing is disabled
+    const api = decapApi(makeOptions({ assets: undefined }));
+    const res = await api.fetch(makeRequest('/assets/capabilities', { Authorization: 'Bearer good-token' }));
+
+    expect(res.status).toBe(404);
+  });
+});
+
+describe('sub-API routing — basePath propagation (LCMS-305)', () => {
+  it('routes /api/decap/documents/* when basePath is /api/decap', async () => {
+    const documentsRepo = {
+      getCapabilities: () => LaikaTask.succeed(makeDocumentsCaps()),
+    } as unknown as DocumentsRepository;
+
+    const api = decapApi(makeOptions({ documents: documentsRepo, basePath: '/api/decap' }));
+    const res = await api.fetch(
+      new Request(`${BASE_URL}/api/decap/documents/capabilities`, {
+        headers: { Authorization: 'Bearer good-token' },
+      }),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { type: string } };
+    expect(body.data.type).toBe('documents-capabilities');
+  });
+
+  it('returns 404 for /documents/* (without basePath prefix) when basePath is set', async () => {
+    const documentsRepo = {
+      getCapabilities: () => LaikaTask.succeed(makeDocumentsCaps()),
+    } as unknown as DocumentsRepository;
+
+    const api = decapApi(makeOptions({ documents: documentsRepo, basePath: '/api/decap' }));
+    const res = await api.fetch(
+      new Request(`${BASE_URL}/documents/capabilities`, {
+        headers: { Authorization: 'Bearer good-token' },
+      }),
+    );
+
+    expect(res.status).toBe(404);
   });
 });
