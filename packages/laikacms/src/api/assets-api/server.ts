@@ -13,6 +13,7 @@ import {
   LaikaError,
   LaikaStream,
   LaikaTask,
+  NotFoundError,
 } from 'laikacms/core';
 import { recoverableErrorsToWarnings } from 'laikacms/json-api';
 
@@ -492,7 +493,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       }
       const resourceData = result.success.value[0];
       if (!resourceData) {
-        return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
+        return respondError(new NotFoundError('Resource not found'), errorStatus.NOT_FOUND);
       }
 
       const included: JsonApiResource[] = [];
@@ -762,7 +763,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       }
       const firstResource = resourceResult.success[0];
       if (!firstResource) {
-        return respondError(new BadRequestError('Resource not found'), errorStatus.NOT_FOUND);
+        return respondError(new NotFoundError('Resource not found'), errorStatus.NOT_FOUND);
       }
       const resourceType = firstResource.type;
 

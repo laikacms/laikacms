@@ -678,10 +678,26 @@ describe('PATCH /resources/:key', () => {
 // ---------------------------------------------------------------------------
 
 describe('DELETE /resources/:key', () => {
-  it('returns 404 when the resource does not exist', async () => {
+  it('returns 404 with code not_found when getResource task fails with NotFoundError', async () => {
     const partialRepo = {
       getResource: (_key: string) =>
         LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.fail(new NotFoundError('no such resource'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/ghost.png', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('404');
+    expect(body.errors[0]?.code).toBe('not_found');
+  });
+
+  it('returns 404 with code not_found when getResource succeeds with empty array (LCMS-326)', async () => {
+    const partialRepo = {
+      getResource: (_key: string) => LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.succeed([])),
     } as unknown as AssetsRepository;
 
     const api = buildAssetsApi({ repository: partialRepo });
