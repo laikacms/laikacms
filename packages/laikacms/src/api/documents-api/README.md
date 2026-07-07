@@ -112,7 +112,7 @@ Accepts the same pagination parameters as `/records`.
 
 ## Resource types
 
-The API uses four JSON:API resource types:
+The API uses seven JSON:API resource types:
 
 | Type                     | Returned by                                       |
 | ------------------------ | ------------------------------------------------- |
