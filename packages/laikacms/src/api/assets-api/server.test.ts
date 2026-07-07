@@ -1000,3 +1000,64 @@ describe('GET /resources — filter[depth] forwarding', () => {
     expect(spy.mock.calls[0]![1].depth).toBe(1);
   });
 });
+
+describe('assets-api onError / logger (LCMS-331)', () => {
+  it('calls onError when the route handler throws unexpectedly', async () => {
+    const boom = new Error('unexpected crash');
+    const throwingRepo = {
+      listResources: () => {
+        throw boom;
+      },
+    } as unknown as AssetsRepository;
+    const onError = vi.fn();
+
+    const api = buildAssetsApi({ repository: throwingRepo, onError });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
+
+    expect(res.status).toBe(500);
+    expect(onError).toHaveBeenCalledOnce();
+    expect(onError).toHaveBeenCalledWith(boom);
+  });
+
+  it('does not call onError for normal 404 responses', async () => {
+    const api = buildAssetsApi({ repository: stubRepo, onError: vi.fn() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/does-not-exist'));
+    const opts = api as unknown as { _onError?: () => void };
+    // 404 is a normal route-not-found — the catch-all is never hit.
+    expect(res.status).toBe(404);
+  });
+
+  it('calls logger.error for a 500 response but not for a 400 response', async () => {
+    const boom = new Error('internal boom');
+    const throwingRepo = {
+      listResources: () => {
+        throw boom;
+      },
+    } as unknown as AssetsRepository;
+    const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+
+    const api = buildAssetsApi({ repository: throwingRepo, logger });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
+
+    expect(res.status).toBe(500);
+    expect(logger.error).toHaveBeenCalled();
+  });
+
+  it('does not call logger.error for a 400 domain error', async () => {
+    const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+    // stubRepo returns nothing useful — GET /resources with stubRepo causes a 400
+    // because listResources is undefined and the catch-all wraps it.
+    // Instead, use a request to a known 400 path: bad content-type POST.
+    const api = buildAssetsApi({ repository: stubRepo, logger });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: 'hello',
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+});

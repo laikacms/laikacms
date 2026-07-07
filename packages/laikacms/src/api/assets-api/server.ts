@@ -15,7 +15,8 @@ import {
   LaikaTask,
   NotFoundError,
 } from 'laikacms/core';
-import { recoverableErrorsToWarnings } from 'laikacms/json-api';
+import type { JsonApiLogger } from 'laikacms/json-api';
+import { errorToJsonApiMapper, recoverableErrorsToWarnings } from 'laikacms/json-api';
 
 /** Convert any caught throw into a LaikaError, preserving LaikaError instances and wrapping defects in InternalError. */
 const toLaikaError = (err: unknown): LaikaError => {
@@ -112,6 +113,8 @@ export interface AssetsApi {
 export interface AssetsApiOptions {
   repository: AssetsRepository;
   basePath?: string;
+  onError?: (error: unknown) => void;
+  logger?: JsonApiLogger;
 }
 
 // ============================================
@@ -133,17 +136,8 @@ const json = <T>(
   });
 };
 
-function respondError(error: LaikaError, status: ErrorStatus = 400): Response {
-  return json(
-    {
-      errors: [{
-        status: String(status),
-        code: error.code,
-        detail: error.message,
-      }],
-    },
-    status,
-  );
+function respondError(error: LaikaError, status: ErrorStatus = 400, logger?: JsonApiLogger): Response {
+  return json(errorToJsonApiMapper(error, logger), status);
 }
 
 function respondValidationError(errors: Array<{ message: string }>, status: ErrorStatus = 400): Response {
@@ -279,7 +273,7 @@ type JsonApiFolderCreateData = S.Schema.Type<typeof JsonApiFolderCreateSchema>;
  * `fetch` can list, upload, modify, and delete asset binaries.
  */
 export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
-  const { repository, basePath = '/api/assets' } = options;
+  const { repository, basePath = '/api/assets', onError, logger } = options;
 
   // Create decoders
   const decodeAssetCreate = S.decodeUnknownSync(JsonApiAssetCreateSchema);
@@ -291,7 +285,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       try {
         return await fetchInner(request);
       } catch (err) {
-        return respondError(toLaikaError(err), 500);
+        onError?.(err);
+        return respondError(toLaikaError(err), 500, logger);
       }
     },
   };
@@ -330,7 +325,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       const result = await firstResult(repository.getCapabilities());
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
-        return respondError(result.failure, status);
+        return respondError(result.failure, status, logger);
       }
       return respondResource({
         type: 'assets-capabilities',
