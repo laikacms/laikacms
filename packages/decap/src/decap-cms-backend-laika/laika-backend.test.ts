@@ -1004,6 +1004,49 @@ describe('LaikaBackend.persistEntry()', () => {
     expect(mockDocRepo.createUnpublished).not.toHaveBeenCalled();
     expect(mockDocRepo.createDocument).not.toHaveBeenCalled();
   });
+
+  it('uploads each asset via persistMedia before writing the document', async () => {
+    mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
+
+    const mockPersistMedia = vi.spyOn(backend, 'persistMedia').mockResolvedValue({
+      id: 'asset-1',
+      name: 'image.jpg',
+      url: 'http://example.com/image.jpg',
+    } as any);
+
+    const asset1 = { path: 'uploads/image.jpg', fileObj: new File(['a'], 'image.jpg', { type: 'image/jpeg' }) } as any;
+    const asset2 = { path: 'uploads/doc.pdf', fileObj: new File(['b'], 'doc.pdf', { type: 'application/pdf' }) } as any;
+
+    await backend.persistEntry(
+      {
+        dataFiles: [{ path: 'articles/hello.json', raw: JSON.stringify({ title: 'Hello' }) }],
+        assets: [asset1, asset2],
+      },
+      { newEntry: true, useWorkflow: false },
+    );
+
+    expect(mockPersistMedia).toHaveBeenCalledTimes(2);
+    expect(mockPersistMedia).toHaveBeenCalledWith(asset1, expect.anything());
+    expect(mockPersistMedia).toHaveBeenCalledWith(asset2, expect.anything());
+    expect(mockDocRepo.createDocument).toHaveBeenCalledOnce();
+  });
+
+  it('throws and does not write document when persistMedia fails on first asset', async () => {
+    mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
+
+    vi.spyOn(backend, 'persistMedia').mockRejectedValue(new Error('upload failed'));
+
+    const asset = { path: 'uploads/image.jpg', fileObj: new File(['a'], 'image.jpg', { type: 'image/jpeg' }) } as any;
+
+    await expect(
+      backend.persistEntry(
+        { dataFiles: [{ path: 'articles/hello.json', raw: JSON.stringify({ title: 'Hello' }) }], assets: [asset] },
+        { newEntry: true, useWorkflow: false },
+      ),
+    ).rejects.toThrow('upload failed');
+
+    expect(mockDocRepo.createDocument).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
