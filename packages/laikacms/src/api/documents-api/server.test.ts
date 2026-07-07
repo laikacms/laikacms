@@ -2204,3 +2204,51 @@ describe('404 on unknown routes', () => {
     expect(body.errors[0]!.status).toBe('404');
   });
 });
+
+// ---------------------------------------------------------------------------
+// GET /records + /record-summaries — invalid query param error shape (LCMS-335)
+// ---------------------------------------------------------------------------
+
+describe('GET /records — invalid query params return invalid_data/400, not internal_error/500', () => {
+  it('returns HTTP 400 with code:"invalid_data"/status:"400" for filter[depth]=0', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/records?filter%5Bdepth%5D=0'));
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.code).toBe('invalid_data');
+    expect(body.errors[0]!.status).toBe('400');
+  });
+
+  it('returns HTTP 400 with code:"invalid_data"/status:"400" for filter[type]=invalid', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/records?filter%5Btype%5D=invalid'));
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.code).toBe('invalid_data');
+    expect(body.errors[0]!.status).toBe('400');
+  });
+});
+
+describe('GET /record-summaries — invalid query params return invalid_data/400, not internal_error/500', () => {
+  it('returns HTTP 400 with code:"invalid_data"/status:"400" for filter[depth]=0', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Bdepth%5D=0'));
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.code).toBe('invalid_data');
+    expect(body.errors[0]!.status).toBe('400');
+  });
+
+  it('returns HTTP 400 with code:"invalid_data"/status:"400" for filter[type]=invalid', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Btype%5D=invalid'));
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.code).toBe('invalid_data');
+    expect(body.errors[0]!.status).toBe('400');
+  });
+});
