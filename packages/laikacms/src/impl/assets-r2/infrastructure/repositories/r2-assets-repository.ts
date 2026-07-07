@@ -9,6 +9,7 @@ import type {
   AssetsCapabilities,
   AssetUpdate,
   AssetUrl,
+  AssetVariation,
   AssetVariations,
   DeleteAssetsDone,
   GetResourceOptions,
@@ -36,12 +37,23 @@ const liftResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError>
   Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
 
 export type R2AssetsRepositoryOptions =
-  | { bucket: R2Bucket, sanitizer: Sanitizer, createUrl?: (url: string) => string }
-  | { bucket: R2Bucket, dangerouslyAllowAllFiles: true, createUrl?: (url: string) => string };
+  | {
+    bucket: R2Bucket,
+    sanitizer: Sanitizer,
+    createUrl?: (key: string) => string,
+    createVariations?: (key: string) => Record<string, AssetVariation>,
+  }
+  | {
+    bucket: R2Bucket,
+    dangerouslyAllowAllFiles: true,
+    createUrl?: (key: string) => string,
+    createVariations?: (key: string) => Record<string, AssetVariation>,
+  };
 
 export class R2AssetsRepository extends AssetsRepository {
   private readonly datasource: R2AssetsDataSource;
-  private readonly createUrl?: (url: string) => string;
+  private readonly createUrl?: (key: string) => string;
+  private readonly createVariations?: (key: string) => Record<string, AssetVariation>;
   private readonly sanitizer?: Sanitizer;
 
   constructor(options: R2AssetsRepositoryOptions) {
@@ -57,6 +69,7 @@ export class R2AssetsRepository extends AssetsRepository {
     }
     this.datasource = new R2AssetsDataSource(options.bucket);
     this.createUrl = options.createUrl;
+    this.createVariations = options.createVariations;
     this.sanitizer = 'dangerouslyAllowAllFiles' in options ? undefined : options.sanitizer;
   }
 
@@ -330,9 +343,12 @@ export class R2AssetsRepository extends AssetsRepository {
 
   getVariations(assets: Asset[]): LaikaStream.LaikaStream<AssetVariations, LaikaDone> {
     return LaikaStream.make<AssetVariations, LaikaDone>(emit =>
-      Effect.gen(function*() {
+      Effect.gen({ self: this }, function*() {
         for (const asset of assets) {
-          yield* emit.data({ key: asset.key, variations: {} });
+          yield* emit.data({
+            key: asset.key,
+            variations: this.createVariations ? this.createVariations(asset.key) : {},
+          });
         }
         return { total: assets.length };
       })

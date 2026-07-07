@@ -1750,8 +1750,18 @@ Get a single resource (asset or folder) by key. Supports sideloading related dat
       "id": "images/hero.jpg",
       "attributes": {
         "variations": {
-          "thumbnail": "https://cdn.example.com/images/hero_thumb.jpg",
-          "webp": "https://cdn.example.com/images/hero.webp"
+          "thumbnail": {
+            "variant": "thumbnail",
+            "url": "https://cdn.example.com/images/hero_thumb.jpg",
+            "width": 200,
+            "height": 150,
+            "mimeType": "image/jpeg"
+          },
+          "webp": {
+            "variant": "webp",
+            "url": "https://cdn.example.com/images/hero.webp",
+            "mimeType": "image/webp"
+          }
         }
       }
     }

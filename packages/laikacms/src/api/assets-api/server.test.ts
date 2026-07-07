@@ -4,6 +4,7 @@ import type {
   AssetMetadata,
   AssetsRepository,
   AssetUrl,
+  AssetVariation,
   AssetVariations,
   Folder,
   ListResourcesDone,
@@ -735,7 +736,12 @@ const stubAssetUrl: AssetUrl = {
 
 const stubVariations: AssetVariations = {
   key: 'images/hero.jpg',
-  variations: [{ key: 'thumb', url: 'https://cdn.example.com/images/hero-thumb.jpg' }],
+  variations: {
+    thumb: {
+      variant: 'thumb',
+      url: 'https://cdn.example.com/images/hero-thumb.jpg',
+    } satisfies AssetVariation,
+  },
 };
 
 const stubMetadata: AssetMetadata = {
