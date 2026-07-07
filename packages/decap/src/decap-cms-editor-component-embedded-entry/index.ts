@@ -90,9 +90,14 @@ const embeddedEntry: EditorComponentOptions = {
   pattern: /^{{<\s*embedded-entry\s+"([^"]+)"\s+"([^"]+)"\s*>}}/,
   fields: [
     {
-      name: 'relation',
-      widget: 'relation',
-      label: 'Select Entry',
+      name: 'collection',
+      widget: 'string',
+      label: 'Collection',
+    },
+    {
+      name: 'entry',
+      widget: 'string',
+      label: 'Entry',
     },
   ],
   allow_add: true,

@@ -565,6 +565,39 @@ fields:
 
 ---
 
+## Editor Components
+
+### Embedded Entry (`decap-cms-editor-component-embedded-entry`)
+
+Adds a markdown shortcode that lets editors link inline content cross-references from within the
+markdown editor toolbar. The shortcode format is `embedded-entry` with two quoted arguments:
+collection and entry slugs.
+
+```ts
+import CMS from '@laikacms/decap-cms';
+import { DecapCmsEditorComponentEmbeddedEntry } from '@laikacms/decap/decap-cms-editor-component-embedded-entry';
+
+CMS.registerEditorComponent(DecapCmsEditorComponentEmbeddedEntry);
+```
+
+When an editor clicks the "Embedded Entry" toolbar button, Decap shows a two-field form:
+
+| Field      | Widget   | Purpose                                      |
+| ---------- | -------- | -------------------------------------------- |
+| Collection | `string` | Collection slug to embed from (e.g. `posts`) |
+| Entry      | `string` | Entry identifier within that collection      |
+
+The shortcode is stored verbatim in the markdown field and round-trips without data loss:
+
+```md
+Here is an inline reference: {{< embedded-entry "posts" "hello-world" >}}
+```
+
+To parse the shortcode in your site renderer, match against the pattern `embedded-entry` and extract
+the collection + entry slugs from the two quoted arguments.
+
+---
+
 ## Package name collision (FYI)
 
 There are **two** packages in the laika-cms ecosystem with confusingly similar names:
