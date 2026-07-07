@@ -514,3 +514,46 @@ describe('contentbase-api onError', () => {
     expect(onError).toHaveBeenCalledOnce();
   });
 });
+
+// ---------------------------------------------------------------------------
+// global app.onError — NetworkingError → 503 + logger option
+// ---------------------------------------------------------------------------
+
+describe('contentbase-api global error handler', () => {
+  it('returns 503 service_unavailable JSON:API shape on NetworkingError', async () => {
+    const networkingErr = Object.assign(new Error('ECONNREFUSED'), { name: 'NetworkingError' });
+    const repo = {
+      getSettings: () =>
+        LaikaTask.make(() => {
+          throw networkingErr;
+        }),
+    } as unknown as ContentBaseSettingsProvider;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/collections'));
+    expect(res.status).toBe(503);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors[0]!.status).toBe('503');
+  });
+
+  it('routes error details through a custom logger and does not call console.error', async () => {
+    const customLogger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    const networkingErr = Object.assign(new Error('connect timeout'), { name: 'NetworkingError' });
+    const repo = {
+      getSettings: () =>
+        LaikaTask.make(() => {
+          throw networkingErr;
+        }),
+    } as unknown as ContentBaseSettingsProvider;
+
+    const api = buildJsonApi({ repo, logger: customLogger });
+    await api.fetch(new Request('http://localhost/collections'));
+
+    expect(customLogger.error).toHaveBeenCalled();
+    expect(consoleSpy).not.toHaveBeenCalled();
+    consoleSpy.mockRestore();
+  });
+});

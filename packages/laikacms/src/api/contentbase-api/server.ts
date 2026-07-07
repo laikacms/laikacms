@@ -5,6 +5,7 @@ import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings'
 import { type CollectionSettings } from 'laikacms/contentbase-settings';
 import type { LaikaResult } from 'laikacms/core';
 import { ConflictError, LaikaTask, NotFoundError } from 'laikacms/core';
+import type { JsonApiLogger } from 'laikacms/json-api';
 import {
   collectionFromJsonApi,
   type CollectionJsonApi,
@@ -15,6 +16,7 @@ import {
 export interface ContentBaseApiOptions {
   repo: ContentBaseSettingsProvider;
   onError?(error: unknown): void;
+  logger?: JsonApiLogger;
 }
 
 // JSON:API error response
@@ -89,7 +91,7 @@ function respondCollection<T extends CollectionSettings>(
  * `fetch` can read, mutate, and delete collection settings.
  */
 export function buildJsonApi(options: ContentBaseApiOptions) {
-  const { repo, onError } = options;
+  const { repo, onError, logger } = options;
   const app = new Hono();
 
   // Ensure all responses carry Cache-Control: no-store
@@ -100,11 +102,7 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
 
   // Global error handler
   app.onError((err, c) => {
-    console.error('=== CONTENTBASE API ERROR ===');
-    console.error('Error type:', err.constructor.name);
-    console.error('Error message:', err.message);
-    console.error('Error stack:', err.stack);
-    console.error('============================');
+    logger?.error('contentbase-api unhandled error:', err.constructor.name, err.message, err.stack);
 
     onError?.(err);
 
