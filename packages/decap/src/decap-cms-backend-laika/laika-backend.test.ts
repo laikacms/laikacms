@@ -808,6 +808,64 @@ describe('LaikaBackend.persistEntry()', () => {
       expect.objectContaining({ language: 'und' }),
     );
   });
+
+  it('calls updateDocument when newEntry:false, useWorkflow:false', async () => {
+    mockDocRepo.updateDocument.mockReturnValue(succeed(undefined));
+
+    const raw = JSON.stringify({ title: 'Updated Title', language: 'en' });
+    await backend.persistEntry(
+      { dataFiles: [{ path: 'articles/existing.json', raw }], assets: [] },
+      { newEntry: false, useWorkflow: false },
+    );
+
+    expect(mockDocRepo.updateDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: 'articles/existing',
+        content: { title: 'Updated Title', language: 'en' },
+      }),
+    );
+    expect(mockDocRepo.createDocument).not.toHaveBeenCalled();
+  });
+
+  it('calls createUnpublished when newEntry:true, useWorkflow:true, status:draft', async () => {
+    mockDocRepo.createUnpublished.mockReturnValue(succeed(undefined));
+
+    const raw = JSON.stringify({ title: 'Draft Post', language: 'en' });
+    await backend.persistEntry(
+      { dataFiles: [{ path: 'articles/new-draft.json', raw }], assets: [] },
+      { newEntry: true, useWorkflow: true, status: 'draft' },
+    );
+
+    expect(mockDocRepo.createUnpublished).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'unpublished',
+        status: 'draft',
+        key: 'articles/new-draft',
+        content: { title: 'Draft Post', language: 'en' },
+      }),
+    );
+    expect(mockDocRepo.createDocument).not.toHaveBeenCalled();
+  });
+
+  it('calls updateUnpublished when newEntry:false, useWorkflow:true, status:draft', async () => {
+    mockDocRepo.updateUnpublished.mockReturnValue(succeed(undefined));
+
+    const raw = '---\ntitle: Updated Draft\n---\n\nBody.';
+    await backend.persistEntry(
+      { dataFiles: [{ path: 'posts/existing-draft.md', raw }], assets: [] },
+      { newEntry: false, useWorkflow: true, status: 'draft' },
+    );
+
+    expect(mockDocRepo.updateUnpublished).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: 'posts/existing-draft',
+        content: raw,
+        status: 'draft',
+      }),
+    );
+    expect(mockDocRepo.createUnpublished).not.toHaveBeenCalled();
+    expect(mockDocRepo.createDocument).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
