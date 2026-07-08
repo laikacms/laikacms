@@ -13,7 +13,7 @@ import type {
 } from 'laikacms/assets';
 import { describe, expect, it, vi } from 'vitest';
 
-import { ForbiddenError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { BadRequestError, ForbiddenError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 
 import { buildAssetsApi } from './server.js';
 
@@ -670,6 +670,44 @@ describe('PATCH /resources/:key', () => {
     const body = await res.json() as { data: { type: string, id: string } };
     expect(body.data.type).toBe('asset');
     expect(body.data.id).toBe('photo.jpg');
+  });
+
+  it('returns 404 with JSON:API body when updateAsset fails with NotFoundError (LCMS-359)', async () => {
+    const partialRepo = {
+      updateAsset: () => LaikaTask.make(() => Effect.fail(new NotFoundError('asset not found'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/missing.jpg', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'asset', attributes: { cacheControl: 'no-cache' } } }),
+      }),
+    );
+    expect(res.status).toBe(404);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('404');
+    expect(body.errors[0]?.code).toBe('not_found');
+  });
+
+  it('returns 400 with JSON:API body when updateAsset fails with BadRequestError (LCMS-359)', async () => {
+    const partialRepo = {
+      updateAsset: () => LaikaTask.make(() => Effect.fail(new BadRequestError('invalid update'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/photo.jpg', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'asset', attributes: { cacheControl: 'no-cache' } } }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('400');
+    expect(body.errors[0]?.code).toBe('bad_request');
   });
 });
 
