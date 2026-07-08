@@ -93,7 +93,6 @@ export function Icon({ icon }: Props) {
 
 ### `IconWidgetOptions`
 
-| Property     | Type                                  | Required | Description                                                                               |
-| ------------ | ------------------------------------- | -------- | ----------------------------------------------------------------------------------------- |
-| `collection` | `string`                              | no       | Arbitrary collection label (passed through to the widget config)                          |
-| `filter`     | `RegExp \| ((id: string) => boolean)` | no       | Only icons whose names match this pattern (or pass the predicate) are shown in the picker |
+| Property | Type                                  | Required | Description                                                                               |
+| -------- | ------------------------------------- | -------- | ----------------------------------------------------------------------------------------- |
+| `filter` | `RegExp \| ((id: string) => boolean)` | no       | Only icons whose names match this pattern (or pass the predicate) are shown in the picker |

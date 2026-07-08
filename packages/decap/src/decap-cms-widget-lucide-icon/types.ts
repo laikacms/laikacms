@@ -1,5 +1,4 @@
 export interface IconWidgetOptions {
-  collection?: string;
   filter?: RegExp | ((id: string) => boolean);
 }
 
