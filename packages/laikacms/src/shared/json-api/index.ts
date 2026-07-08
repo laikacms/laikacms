@@ -25,3 +25,6 @@ export * from './types.js';
 export * from './utilities.js';
 
 export * from './errors.js';
+
+// Export OpenAPI authoring types (used by the api/* packages' openapi.ts specs)
+export * from './openapi.js';

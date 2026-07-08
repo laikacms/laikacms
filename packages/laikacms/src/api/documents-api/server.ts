@@ -43,6 +43,7 @@ import {
   unpublishedUpdateFromJsonApi,
   type UnpublishedUpdateJsonApi,
 } from './jsonapi.js';
+import { buildDocumentsOpenApi } from './openapi.js';
 
 type AllJsonApiResponses =
   | JsonApiResponse
@@ -514,6 +515,22 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     if (path.startsWith('/')) path = path.substring(1);
     if (path.endsWith('/')) path = path.slice(0, -1);
 
+    // OpenAPI document — plain JSON (not JSON:API), with the servers entry
+    // resolved against the incoming request's origin.
+    if (path === 'openapi.json' && request.method === 'GET') {
+      const doc = buildDocumentsOpenApi({ basePath });
+      return new Response(
+        JSON.stringify({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store',
+          },
+        },
+      );
+    }
+
     // Root endpoint - list available endpoints
     if (path === '' && request.method === 'GET') {
       return json({
@@ -524,6 +541,11 @@ export function buildJsonApi(options: DocumentsApiOptions) {
             name: 'Documents API',
             version: '1.0.0',
             endpoints: [
+              {
+                path: '/openapi.json',
+                methods: ['GET'],
+                description: 'OpenAPI 3.1 specification for this API',
+              },
               {
                 path: '/capabilities',
                 methods: ['GET'],

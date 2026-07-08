@@ -101,6 +101,7 @@ import {
   parseMetaQuery,
   resourceToJsonApi,
 } from './jsonapi.js';
+import { buildAssetsOpenApi } from './openapi.js';
 
 // ============================================
 // Types
@@ -316,6 +317,20 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       urls: includeHints.urls,
       variations: includeHints.variations,
     };
+
+    // Route: GET /openapi.json
+    // Serve the machine-readable API description with `servers` rewritten to
+    // the absolute mount point so the document is usable as-is by clients.
+    if (path === `${basePath}/openapi.json` && method === 'GET') {
+      const doc = buildAssetsOpenApi({ basePath });
+      return new Response(
+        JSON.stringify({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] }),
+        {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        },
+      );
+    }
 
     // Route: GET /capabilities
     // Surface the underlying assets repository's `Capabilities` so the

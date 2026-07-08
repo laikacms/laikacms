@@ -35,6 +35,7 @@ import {
   storageObjectToJsonApi,
   withSelfLink,
 } from './jsonapi.js';
+import { buildStorageOpenApi } from './openapi.js';
 
 type AllJsonApiResponses = JsonApiResponse | JsonApiCollectionResponse | JsonApiError;
 
@@ -337,6 +338,11 @@ export function buildJsonApi(options: StorageApiOptions) {
             version: '1.0.0',
             endpoints: [
               {
+                path: '/openapi.json',
+                methods: ['GET'],
+                description: 'OpenAPI 3.1 specification for this API',
+              },
+              {
                 path: '/capabilities',
                 methods: ['GET'],
                 description: 'Underlying storage repository capabilities',
@@ -368,6 +374,20 @@ export function buildJsonApi(options: StorageApiOptions) {
           },
         },
       });
+    }
+
+    if (path === 'openapi.json' && request.method === 'GET') {
+      const doc = buildStorageOpenApi({ basePath });
+      return new Response(
+        JSON.stringify({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] }),
+        {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-store',
+          },
+        },
+      );
     }
 
     // The JSON-API proxy URL-encodes the key (so keys with slashes survive the

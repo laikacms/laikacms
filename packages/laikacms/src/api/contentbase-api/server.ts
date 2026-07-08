@@ -12,11 +12,17 @@ import {
   collectionToJsonApi,
   decodeCollectionJsonApi,
 } from './jsonapi.js';
+import { buildContentbaseOpenApi } from './openapi.js';
 
 export interface ContentBaseApiOptions {
   repo: ContentBaseSettingsProvider;
   onError?(error: unknown): void;
   logger?: JsonApiLogger;
+  /**
+   * Mount prefix advertised in the served OpenAPI document's `servers` URL.
+   * The Hono app itself is prefix-agnostic — mount it at this same path.
+   */
+  basePath?: string;
 }
 
 // JSON:API error response
@@ -91,7 +97,7 @@ function respondCollection<T extends CollectionSettings>(
  * `fetch` can read, mutate, and delete collection settings.
  */
 export function buildJsonApi(options: ContentBaseApiOptions) {
-  const { repo, onError, logger } = options;
+  const { repo, onError, logger, basePath = '' } = options;
   const app = new Hono();
 
   // Ensure all responses carry Cache-Control: no-store
@@ -123,6 +129,16 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
     }
 
     throw err;
+  });
+
+  // OpenAPI document
+  app.get('/openapi.json', c => {
+    const url = new URL(c.req.url);
+    const doc = buildContentbaseOpenApi({ basePath });
+    return c.json({
+      ...doc,
+      servers: [{ url: `${url.origin}${basePath}` }],
+    });
   });
 
   // Collections
