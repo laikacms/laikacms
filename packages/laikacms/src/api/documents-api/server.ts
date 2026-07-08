@@ -1136,10 +1136,11 @@ export function buildJsonApi(options: DocumentsApiOptions) {
 
         if (Result.isFailure(op)) {
           const failure = op.failure as LaikaError;
+          const status = String(ErrorCodeToStatusMap[failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500);
           return {
             errors: [
               {
-                status: '400',
+                status,
                 title: 'Operation Failed',
                 detail: failure.message,
               },
