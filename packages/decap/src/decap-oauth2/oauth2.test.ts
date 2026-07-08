@@ -3,7 +3,9 @@
  *
  * Covers:
  *  - handleAuthorize GET: 200 HTML login form, PKCE params preserved
+ *  - handleAuthorize GET: TOTP session present (valid → TOTP page, unknown → login page fallthrough)
  *  - handleAuthorize POST: correct creds → redirect with code; bad creds → error page; TOTP required → TOTP page
+ *  - handleAuthorize POST: TOTP verification (valid code → 302; invalid code → 401; replay → 401; expired session → 401)
  *  - handleToken authorization_code: valid PKCE → tokens; mismatched code_verifier → invalid_grant
  *  - handleRefreshTokenGrant: valid → new session + old invalidated; expired → invalid_grant; unknown → invalid_grant
  */
@@ -33,8 +35,15 @@ vi.mock('laikacms/crypto', () => ({
   verifyPassword: vi.fn(),
 }));
 
+vi.mock('./totp/totp.js', () => ({
+  setupOAuthTOTP: vi.fn(),
+  verifyOAuthTOTPSetup: vi.fn(),
+  verifyOAuthTOTPWithReplayProtection: vi.fn(),
+}));
+
 // Import after mock registration so the mock is in place when the module loads.
 import { verifyPassword } from 'laikacms/crypto';
+import { verifyOAuthTOTPWithReplayProtection } from './totp/totp.js';
 
 // ---------------------------------------------------------------------------
 // PKCE helpers (S256)
@@ -96,6 +105,19 @@ function makeConfig(callbacks: OAuthCallbacks, overrides: Partial<OAuthConfig> =
     clientId: CLIENT_ID,
     basePath: BASE_PATH,
     ...overrides,
+  };
+}
+
+function makeTotpCallbacks() {
+  return {
+    hasTotp: vi.fn().mockResolvedValue(false),
+    getTotpSecret: vi.fn().mockResolvedValue(null),
+    storeTotpSecret: vi.fn().mockResolvedValue(undefined),
+    storePendingTotpSession: vi.fn().mockResolvedValue(undefined),
+    getPendingTotpSession: vi.fn().mockResolvedValue(null),
+    deletePendingTotpSession: vi.fn().mockResolvedValue(undefined),
+    getLastTotpStep: vi.fn().mockResolvedValue(null),
+    setLastTotpStep: vi.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -427,6 +449,180 @@ describe('handleAuthorize POST — TOTP required → TOTP page', () => {
     const html = await response.text();
     // Should render the TOTP verification page (contains totp input or session)
     expect(html).toContain('totp');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// handleAuthorize GET — TOTP session (totp_session query param present)
+// ---------------------------------------------------------------------------
+
+describe('handleAuthorize GET — TOTP session', () => {
+  let pkce: { codeVerifier: string, codeChallenge: string };
+
+  beforeEach(async () => {
+    pkce = await makePkce();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('returns 200 TOTP verification page when totp_session is valid', async () => {
+    const callbacks = makeCallbacks();
+    const totpCbs = makeTotpCallbacks();
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    const config = makeConfig(callbacks, {
+      totp: { enabled: true, callbacks: totpCbs },
+    });
+
+    const request = new Request(
+      authorizeUrl(pkce.codeChallenge, { totp_session: 'valid-session-id' }),
+      { method: 'GET' },
+    );
+    const response = await handleAuthorize(request, config);
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('Content-Type')).toContain('text/html');
+    const html = await response.text();
+    expect(html).toContain('totp_session');
+  });
+
+  it('falls through to the login page when totp_session is unknown', async () => {
+    const callbacks = makeCallbacks();
+    const totpCbs = makeTotpCallbacks();
+    totpCbs.getPendingTotpSession.mockResolvedValue(null);
+    const config = makeConfig(callbacks, {
+      totp: { enabled: true, callbacks: totpCbs },
+    });
+
+    const request = new Request(
+      authorizeUrl(pkce.codeChallenge, { totp_session: 'unknown-id' }),
+      { method: 'GET' },
+    );
+    const response = await handleAuthorize(request, config);
+
+    // Invalid session falls through to the standard login form
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain('email');
+    expect(html).toContain('password');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// handleAuthorize POST — TOTP verification (totp_code + totp_session path)
+// ---------------------------------------------------------------------------
+
+describe('handleAuthorize POST — TOTP verification', () => {
+  let pkce: { codeVerifier: string, codeChallenge: string };
+
+  beforeEach(async () => {
+    pkce = await makePkce();
+    vi.mocked(verifyOAuthTOTPWithReplayProtection).mockResolvedValue({ valid: true });
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function makeTotpPostRequest(codeChallenge: string, totpCode: string, totpSession: string) {
+    const body = new FormData();
+    body.set('totp_code', totpCode);
+    body.set('totp_session', totpSession);
+    return new Request(authorizeUrl(codeChallenge), { method: 'POST', body });
+  }
+
+  it('redirects 302 with code when totp_code and totp_session are valid', async () => {
+    const callbacks = makeCallbacks({ storeAuthorizationCode: vi.fn().mockResolvedValue(undefined) });
+    const totpCbs = makeTotpCallbacks();
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    const config = makeConfig(callbacks, {
+      totp: { enabled: true, callbacks: totpCbs },
+    });
+
+    const response = await handleAuthorize(
+      makeTotpPostRequest(pkce.codeChallenge, '123456', 'session-abc'),
+      config,
+    );
+
+    expect(response.status).toBe(302);
+    const location = response.headers.get('Location')!;
+    const redirected = new URL(location);
+    expect(redirected.searchParams.has('code')).toBe(true);
+    expect(redirected.searchParams.get('code')!.length).toBeGreaterThan(0);
+  });
+
+  it('calls deletePendingTotpSession after successful verification', async () => {
+    const callbacks = makeCallbacks({ storeAuthorizationCode: vi.fn().mockResolvedValue(undefined) });
+    const totpCbs = makeTotpCallbacks();
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    const config = makeConfig(callbacks, {
+      totp: { enabled: true, callbacks: totpCbs },
+    });
+
+    await handleAuthorize(
+      makeTotpPostRequest(pkce.codeChallenge, '123456', 'session-abc'),
+      config,
+    );
+
+    expect(totpCbs.deletePendingTotpSession).toHaveBeenCalledWith('session-abc');
+  });
+
+  it('returns 401 HTML when totp_code is invalid', async () => {
+    vi.mocked(verifyOAuthTOTPWithReplayProtection).mockResolvedValue({ valid: false });
+    const callbacks = makeCallbacks();
+    const totpCbs = makeTotpCallbacks();
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    const config = makeConfig(callbacks, {
+      totp: { enabled: true, callbacks: totpCbs },
+    });
+
+    const response = await handleAuthorize(
+      makeTotpPostRequest(pkce.codeChallenge, '000000', 'session-abc'),
+      config,
+    );
+
+    expect(response.status).toBe(401);
+    expect(response.headers.get('Content-Type')).toContain('text/html');
+    const html = await response.text();
+    expect(html).toContain('Invalid TOTP code');
+  });
+
+  it('returns 401 HTML with replay message when totp_code has been used before', async () => {
+    vi.mocked(verifyOAuthTOTPWithReplayProtection).mockResolvedValue({ valid: false, replay: true });
+    const callbacks = makeCallbacks();
+    const totpCbs = makeTotpCallbacks();
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    const config = makeConfig(callbacks, {
+      totp: { enabled: true, callbacks: totpCbs },
+    });
+
+    const response = await handleAuthorize(
+      makeTotpPostRequest(pkce.codeChallenge, '123456', 'session-abc'),
+      config,
+    );
+
+    expect(response.status).toBe(401);
+    const html = await response.text();
+    expect(html).toContain('TOTP code already used');
+  });
+
+  it('returns 401 HTML when totp_session is expired or unknown', async () => {
+    const callbacks = makeCallbacks();
+    const totpCbs = makeTotpCallbacks();
+    totpCbs.getPendingTotpSession.mockResolvedValue(null);
+    const config = makeConfig(callbacks, {
+      totp: { enabled: true, callbacks: totpCbs },
+    });
+
+    const response = await handleAuthorize(
+      makeTotpPostRequest(pkce.codeChallenge, '123456', 'expired-session'),
+      config,
+    );
+
+    expect(response.status).toBe(401);
+    const html = await response.text();
+    expect(html).toContain('Invalid or expired TOTP session');
   });
 });
 
