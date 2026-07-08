@@ -264,7 +264,7 @@ export class FileSystemStorageRepository extends StorageRepository {
             this.rootDirectory,
             pathCombine(folderCreate.key, '.keep'),
             '',
-            'keep',
+            '',
           ),
         );
         return yield* LaikaTask.runValue(this.getFolder(folderCreate.key));
