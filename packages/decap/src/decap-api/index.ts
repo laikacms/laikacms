@@ -315,7 +315,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         });
         return respond(await documentsApi.fetch(request));
       } else if (assets && pathname.startsWith(assetsEndpoint)) {
-        const assetsApi = buildAssetsApi({ repository: assets, basePath: `${base}/assets` });
+        const assetsApi = buildAssetsApi({ repository: assets, basePath: `${base}/assets`, logger: options.logger });
         return respond(await assetsApi.fetch(request));
       } else {
         options.logger?.debug('Endpoint not found:', pathname);

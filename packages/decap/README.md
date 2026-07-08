@@ -48,15 +48,15 @@ type PageProps = ExtractFieldsType<PagesCollection['fields']>;
 
 Key options accepted by `decapApi(options)`:
 
-| Option                    | Type                                              | Required | Description                                                                                |
-| ------------------------- | ------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------ |
-| `documents`               | `DocumentsRepository`                             | yes      | Document storage backend                                                                   |
-| `storage`                 | `StorageRepository`                               | yes      | Raw file storage backend                                                                   |
-| `assets`                  | `AssetsRepository`                                | no       | Binary asset storage; enables the `/assets` endpoint when provided                         |
-| `basePath`                | `string`                                          | no       | URL prefix for all endpoints (e.g. `'/api/decap'`)                                         |
-| `authenticateAccessToken` | `(token: string) => Promise<User>`                | yes      | Validates a Bearer access token and returns the user                                       |
-| `authenticateApiToken`    | `(key: string) => Promise<User>`                  | no       | Validates an API key sent via `X-API-Key` or `Authorization: ApiKey` for M2M access        |
-| `logger`                  | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | no       | Receives structured diagnostic output; forwarded to storage and documents API sub-handlers |
+| Option                    | Type                                              | Required | Description                                                                                         |
+| ------------------------- | ------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------- |
+| `documents`               | `DocumentsRepository`                             | yes      | Document storage backend                                                                            |
+| `storage`                 | `StorageRepository`                               | yes      | Raw file storage backend                                                                            |
+| `assets`                  | `AssetsRepository`                                | no       | Binary asset storage; enables the `/assets` endpoint when provided                                  |
+| `basePath`                | `string`                                          | no       | URL prefix for all endpoints (e.g. `'/api/decap'`)                                                  |
+| `authenticateAccessToken` | `(token: string) => Promise<User>`                | yes      | Validates a Bearer access token and returns the user                                                |
+| `authenticateApiToken`    | `(key: string) => Promise<User>`                  | no       | Validates an API key sent via `X-API-Key` or `Authorization: ApiKey` for M2M access                 |
+| `logger`                  | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | no       | Receives structured diagnostic output; forwarded to storage, documents, and assets API sub-handlers |
 
 ### Widgets
 

@@ -816,3 +816,21 @@ describe('sub-API routing — basePath propagation (LCMS-305)', () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe('logger forwarding — assets sub-API (LCMS-353)', () => {
+  it('forwards the configured logger to the assets sub-handler (error logged on unexpected 500)', async () => {
+    const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+
+    const assetsRepo = {
+      getCapabilities: () => {
+        throw new Error('unexpected boom');
+      },
+    } as unknown as AssetsRepository;
+
+    const api = decapApi(makeOptions({ assets: assetsRepo, logger }));
+    const res = await api.fetch(makeRequest('/assets/capabilities', { Authorization: 'Bearer good-token' }));
+
+    expect(res.status).toBe(500);
+    expect(logger.error).toHaveBeenCalled();
+  });
+});
