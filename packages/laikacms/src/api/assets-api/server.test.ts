@@ -731,6 +731,58 @@ describe('DELETE /resources/:key', () => {
     );
     expect(res.status).toBe(204);
   });
+
+  it('forwards recursive=true to deleteFolder when ?recursive=true is set', async () => {
+    let capturedRecursive: boolean | undefined;
+    const partialRepo = {
+      getResource: (key: string) =>
+        LaikaTask.make<ReadonlyArray<Resource>>(() =>
+          Effect.succeed([{
+            type: 'folder' as const,
+            key,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          }])
+        ),
+      deleteFolder: (_key: string, recursive: boolean) => {
+        capturedRecursive = recursive;
+        return LaikaTask.succeed(undefined);
+      },
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/my-folder/?recursive=true', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(204);
+    expect(capturedRecursive).toBe(true);
+  });
+
+  it('forwards recursive=false to deleteFolder when ?recursive param is absent', async () => {
+    let capturedRecursive: boolean | undefined;
+    const partialRepo = {
+      getResource: (key: string) =>
+        LaikaTask.make<ReadonlyArray<Resource>>(() =>
+          Effect.succeed([{
+            type: 'folder' as const,
+            key,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+          }])
+        ),
+      deleteFolder: (_key: string, recursive: boolean) => {
+        capturedRecursive = recursive;
+        return LaikaTask.succeed(undefined);
+      },
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/my-folder/', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(204);
+    expect(capturedRecursive).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
