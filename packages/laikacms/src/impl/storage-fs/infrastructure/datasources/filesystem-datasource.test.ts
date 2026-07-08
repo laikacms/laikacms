@@ -328,6 +328,85 @@ describe('FileSystemDataSource dot-prefix key handling (LCMS-132)', () => {
   });
 });
 
+describe('FileSystemDataSource dotted-key round-trip (LCMS-350)', () => {
+  it('createOrUpdate stores v1.0.0 as v1.0.0.json (not v1.0.json)', async () => {
+    const ds = new FileSystemDataSource(['json', 'md'], 'json');
+    const result = await ds.createOrUpdate(tmpDir, 'revisions/v1.0.0', '{"v":1}', 'json');
+
+    expect(Result.isSuccess(result)).toBe(true);
+    if (Result.isSuccess(result)) {
+      expect(result.success.path).toBe('revisions/v1.0.0');
+    }
+    // Correct file must exist
+    const content = await fs.readFile(path.join(tmpDir, 'revisions/v1.0.0.json'), 'utf8');
+    expect(content).toBe('{"v":1}');
+    // Wrong path must NOT exist
+    await expect(fs.access(path.join(tmpDir, 'revisions/v1.0.json'))).rejects.toThrow();
+  });
+
+  it('getFileContents round-trips v1.0.0 key written by createOrUpdate', async () => {
+    const ds = new FileSystemDataSource(['json'], 'json');
+    await ds.createOrUpdate(tmpDir, 'rev/v1.0.0', '{"ok":true}', 'json');
+
+    const result = await ds.getFileContents(tmpDir, 'rev/v1.0.0');
+    expect(Result.isSuccess(result)).toBe(true);
+    if (Result.isSuccess(result)) {
+      expect(result.success.content).toBe('{"ok":true}');
+      expect(result.success.path).toBe('rev/v1.0.0');
+      expect(result.success.extension).toBe('json');
+    }
+  });
+
+  it('getDirectoryContents exposes v1.0.0.json as file path (strip happens in repository layer)', async () => {
+    const ds = new FileSystemDataSource(['json'], 'json');
+    await ds.createOrUpdate(tmpDir, 'rev/v1.0.0', '{}', 'json');
+    await ds.createOrUpdate(tmpDir, 'rev/v2.3.1', '{}', 'json');
+
+    const result = await ds.getDirectoryContents(tmpDir, 'rev');
+    expect(Result.isSuccess(result)).toBe(true);
+    if (Result.isSuccess(result)) {
+      const names = result.success.map(e => e.path).sort();
+      expect(names).toContain('rev/v1.0.0.json');
+      expect(names).toContain('rev/v2.3.1.json');
+    }
+  });
+
+  it('keys with no dots are unaffected', async () => {
+    const ds = new FileSystemDataSource(['json'], 'json');
+    const result = await ds.createOrUpdate(tmpDir, 'plain-key', '{}', 'json');
+
+    expect(Result.isSuccess(result)).toBe(true);
+    if (Result.isSuccess(result)) {
+      expect(result.success.path).toBe('plain-key');
+    }
+    await fs.access(path.join(tmpDir, 'plain-key.json'));
+  });
+
+  it('a key that IS a known extension suffix (foo.json) strips correctly', async () => {
+    const ds = new FileSystemDataSource(['json'], 'json');
+    // Passing the key with the extension suffix explicitly
+    const result = await ds.createOrUpdate(tmpDir, 'foo.json', 'data', 'json');
+
+    expect(Result.isSuccess(result)).toBe(true);
+    if (Result.isSuccess(result)) {
+      expect(result.success.path).toBe('foo');
+    }
+    // Must not create foo.json.json
+    await expect(fs.access(path.join(tmpDir, 'foo.json.json'))).rejects.toThrow();
+  });
+
+  it('two keys that differ only in suffix after the last dot are stored at distinct paths', async () => {
+    const ds = new FileSystemDataSource(['json'], 'json');
+    await ds.createOrUpdate(tmpDir, 'rev/v1.0.0', 'A', 'json');
+    await ds.createOrUpdate(tmpDir, 'rev/v1.0.1', 'B', 'json');
+
+    const a = await ds.getFileContents(tmpDir, 'rev/v1.0.0');
+    const b = await ds.getFileContents(tmpDir, 'rev/v1.0.1');
+    expect(Result.isSuccess(a) && a.success.content).toBe('A');
+    expect(Result.isSuccess(b) && b.success.content).toBe('B');
+  });
+});
+
 describe('FileSystemDataSource.fsStat (error mapping)', () => {
   it('maps ENOENT to NotFoundError', async () => {
     const ds = new FileSystemDataSource([], '');

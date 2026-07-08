@@ -47,14 +47,12 @@ export class FileSystemDataSource {
    * This ensures the interface never exposes file extensions.
    */
   private stripExtension(relativePath: string): string {
-    // for (const ext of this.availableExtensions) {
-    //   if (relativePath.endsWith(`.${ext}`)) {
-    //     return relativePath.slice(0, -(ext.length + 1));
-    //   }
-    // }
-    // return relativePath;
-    const lastDot = relativePath.lastIndexOf('.');
-    return lastDot > 0 ? relativePath.slice(0, lastDot) : relativePath;
+    for (const ext of this.availableExtensions) {
+      if (relativePath.endsWith(`.${ext}`)) {
+        return relativePath.slice(0, -(ext.length + 1));
+      }
+    }
+    return relativePath;
   }
 
   /**
