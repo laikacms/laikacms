@@ -735,7 +735,9 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
 
       const result = await firstResultWithMetadata(repository.updateAsset(assetUpdate));
       if (Result.isFailure(result)) {
-        return respondError(result.failure, errorStatus.BAD_REQUEST);
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
+          ?? errorStatus.BAD_REQUEST;
+        return respondError(result.failure, status);
       }
       return respondResource(
         assetToJsonApi(result.success.value),
