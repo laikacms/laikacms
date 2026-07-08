@@ -194,10 +194,12 @@ Errors follow JSON:API format:
 interface ContentBaseApiOptions {
   repo: ContentBaseSettingsProvider;
   onError?(error: unknown): void;
+  logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'>;
 }
 ```
 
-| Option    | Type                          | Description                                        |
-| --------- | ----------------------------- | -------------------------------------------------- |
-| `repo`    | `ContentBaseSettingsProvider` | The settings provider to read/write collections    |
-| `onError` | `(error: unknown) => void`    | Called for every error before the response is sent |
+| Option    | Type                                                    | Description                                         |
+| --------- | ------------------------------------------------------- | --------------------------------------------------- |
+| `repo`    | `ContentBaseSettingsProvider`                           | The settings provider to read/write collections     |
+| `onError` | `(error: unknown) => void`                              | Called for every error before the response is sent  |
+| `logger`  | `Pick<Console, 'error' \| 'warn' \| 'info' \| 'debug'>` | Routes unhandled-error log output; no-op if omitted |
