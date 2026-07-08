@@ -131,22 +131,27 @@ export function decapAi(config: DecapAiConfig): DecapAi {
     let session: AiSession;
     const now = Date.now();
 
-    if (sessionId) {
-      const existing = await config.callbacks.getSession(sessionId);
-      if (!existing) return errorResponse(t.errors.sessionNotFound, 404);
-      if (existing.userId !== user.id) return errorResponse(t.errors.sessionAccessDenied, 403);
-      session = existing;
-    } else {
-      session = {
-        id: generateId(),
-        documentSlug: document.slug,
-        userId: user.id,
-        title: generateSessionTitle(lastUserMessageText),
-        messages: [],
-        createdAt: now,
-        updatedAt: now,
-      };
-      await config.callbacks.createSession(session);
+    try {
+      if (sessionId) {
+        const existing = await config.callbacks.getSession(sessionId);
+        if (!existing) return errorResponse(t.errors.sessionNotFound, 404);
+        if (existing.userId !== user.id) return errorResponse(t.errors.sessionAccessDenied, 403);
+        session = existing;
+      } else {
+        session = {
+          id: generateId(),
+          documentSlug: document.slug,
+          userId: user.id,
+          title: generateSessionTitle(lastUserMessageText),
+          messages: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+        await config.callbacks.createSession(session);
+      }
+    } catch (error) {
+      config.logger?.error('AI chat error:', error);
+      return errorResponse(t.errors.aiProcessingFailed, 500);
     }
 
     // Merge client-side document tools with consumer-provided tools
