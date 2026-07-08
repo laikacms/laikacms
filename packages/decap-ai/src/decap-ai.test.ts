@@ -270,6 +270,55 @@ describe('decapAi()', () => {
       expect(res.headers.get('X-Session-Id')).toBeTruthy();
     });
 
+    it('returns 500 when createSession throws and calls logger.error', async () => {
+      const createError = new Error('db write failure');
+      const callbacks = makeCallbacks();
+      vi.mocked(callbacks.createSession).mockRejectedValueOnce(createError);
+
+      const loggerError = vi.fn();
+      const config = makeConfig({ logger: { error: loggerError, warn: vi.fn(), info: vi.fn() }, callbacks });
+
+      const req = makeRequest('/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Hello' }],
+          document: { slug: 'posts/hello' },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const res = await decapAi(config).fetch(req);
+      expect(res.status).toBe(500);
+      expect(loggerError).toHaveBeenCalledWith('AI chat error:', createError);
+      const body = await res.json() as { error: string };
+      expect(typeof body.error).toBe('string');
+    });
+
+    it('returns 500 when getSession throws on continuation and calls logger.error', async () => {
+      const getError = new Error('db read failure');
+      const callbacks = makeCallbacks();
+      vi.mocked(callbacks.getSession).mockRejectedValueOnce(getError);
+
+      const loggerError = vi.fn();
+      const config = makeConfig({ logger: { error: loggerError, warn: vi.fn(), info: vi.fn() }, callbacks });
+
+      const req = makeRequest('/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Hello' }],
+          sessionId: 'some-session-id',
+          document: { slug: 'posts/hello' },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const res = await decapAi(config).fetch(req);
+      expect(res.status).toBe(500);
+      expect(loggerError).toHaveBeenCalledWith('AI chat error:', getError);
+      const body = await res.json() as { error: string };
+      expect(typeof body.error).toBe('string');
+    });
+
     it('returns 500 when streamText throws and calls logger.error', async () => {
       const modelError = new Error('model failure');
       vi.mocked(streamText).mockImplementationOnce(() => {
