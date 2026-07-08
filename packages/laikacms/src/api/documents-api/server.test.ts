@@ -10,7 +10,15 @@ import type {
 } from 'laikacms/documents';
 import { describe, expect, it, vi } from 'vitest';
 
-import { BadRequestError, InternalError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import {
+  BadRequestError,
+  EntryAlreadyExistsError,
+  InternalError,
+  InvalidData,
+  LaikaStream,
+  LaikaTask,
+  NotFoundError,
+} from 'laikacms/core';
 
 import { buildJsonApi } from './server.js';
 
@@ -2136,6 +2144,43 @@ describe('POST /operations — remove/unpublished', () => {
     expect(result.meta.ref.type).toBe('unpublished');
     expect(result.meta.ref.id).toBe('posts/draft');
     expect((result as unknown as { data?: unknown }).data).toBeUndefined();
+  });
+});
+
+describe('POST /operations — repo-failure status codes', () => {
+  it('returns per-operation status "409" when add/published repo raises EntryAlreadyExistsError', async () => {
+    const repo = {
+      createDocument: (_data: unknown) =>
+        LaikaTask.make(() => Effect.fail(new EntryAlreadyExistsError('posts/existing already exists'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      { op: 'add', data: { type: 'published', attributes: { title: 'Dupe', status: 'published' } } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    const result = body['atomic:results'][0] as AtomicResultError;
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]!.status).toBe('409');
+  });
+
+  it('returns per-operation status "404" when remove/document repo raises NotFoundError', async () => {
+    const repo = {
+      deleteDocument: (_key: string) => LaikaTask.make(() => Effect.fail(new NotFoundError('posts/missing not found'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      { op: 'remove', ref: { type: 'document', id: 'posts/missing' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    const result = body['atomic:results'][0] as AtomicResultError;
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]!.status).toBe('404');
   });
 });
 
