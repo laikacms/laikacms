@@ -1,15 +1,15 @@
 # laikacms/documents
 
-[![npm](https://img.shields.io/npm/v/laikacms/documents)](https://www.npmjs.com/package/laikacms/documents)
-[![npm](https://img.shields.io/npm/dm/laikacms/documents)](https://www.npmjs.com/package/laikacms/documents)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/documents)](https://bundlephobia.com/result?p=laikacms/documents)
+[![npm](https://img.shields.io/npm/v/laikacms)](https://www.npmjs.com/package/laikacms)
+[![npm](https://img.shields.io/npm/dm/laikacms)](https://www.npmjs.com/package/laikacms)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms)](https://bundlephobia.com/result?p=laikacms)
 
 Document management with editorial workflow support.
 
 ## Installation
 
 ```bash
-pnpm add laikacms/documents
+pnpm add laikacms
 ```
 
 ## Usage

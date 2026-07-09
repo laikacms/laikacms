@@ -1,8 +1,8 @@
 # laikacms/storage/api
 
-[![npm](https://img.shields.io/npm/v/laikacms/storage/api)](https://www.npmjs.com/package/laikacms/storage/api)
-[![npm](https://img.shields.io/npm/dm/laikacms/storage/api)](https://www.npmjs.com/package/laikacms/storage/api)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/storage/api)](https://bundlephobia.com/result?p=laikacms/storage/api)
+[![npm](https://img.shields.io/npm/v/laikacms)](https://www.npmjs.com/package/laikacms)
+[![npm](https://img.shields.io/npm/dm/laikacms)](https://www.npmjs.com/package/laikacms)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms)](https://bundlephobia.com/result?p=laikacms)
 
 JSON:API server for storage operations.
 
@@ -31,7 +31,7 @@ export default {
 ## Installation
 
 ```bash
-pnpm add laikacms/storage/api
+pnpm add laikacms
 ```
 
 ## Usage

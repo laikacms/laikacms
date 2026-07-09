@@ -1,15 +1,15 @@
 # laikacms/assets
 
-[![npm](https://img.shields.io/npm/v/laikacms/assets)](https://www.npmjs.com/package/laikacms/assets)
-[![npm](https://img.shields.io/npm/dm/laikacms/assets)](https://www.npmjs.com/package/laikacms/assets)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/assets)](https://bundlephobia.com/result?p=laikacms/assets)
+[![npm](https://img.shields.io/npm/v/laikacms)](https://www.npmjs.com/package/laikacms)
+[![npm](https://img.shields.io/npm/dm/laikacms)](https://www.npmjs.com/package/laikacms)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms)](https://bundlephobia.com/result?p=laikacms)
 
 Asset/media management for Laika CMS.
 
 ## Installation
 
 ```bash
-pnpm add laikacms/assets
+pnpm add laikacms
 ```
 
 ## Usage
