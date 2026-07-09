@@ -919,7 +919,7 @@ export default function createLaikaBackend(
           ) {
             for (const el of chunk) {
               if (el._tag === 'RecoverableError') {
-                console.error('Warning listing media:', el.error);
+                handleRecoverableWarning(el.error);
                 continue;
               }
               if (el._tag !== 'Data') continue;
