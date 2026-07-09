@@ -1137,27 +1137,24 @@ export default function createLaikaBackend(
           || [];
         const entries: string[] = [];
         const repo = this.getDocumentsRepo();
+        const pageSize = 100;
 
         for (const collection of collections) {
           const collectionName = typeof collection === 'string' ? collection : collection.name;
+          let offset = 0;
 
-          const pagination: Pagination = { limit: 100, offset: 0 };
+          while (true) {
+            const result = await collectStream(
+              repo.listRecords({
+                pagination: { limit: pageSize, offset },
+                folder: collectionName,
+                type: 'unpublished',
+                depth: 10,
+              }),
+            );
+            if (Result.isFailure(result)) throw result.failure;
 
-          for await (
-            const chunk of repo.listRecords({
-              pagination,
-              folder: collectionName,
-              type: 'unpublished',
-              depth: 10,
-            })
-          ) {
-            for (const el of chunk) {
-              if (el._tag === 'RecoverableError') {
-                console.error(`Warning listing unpublished for ${collectionName}:`, el.error);
-                continue;
-              }
-              if (el._tag !== 'Data') continue;
-              const unpub = el.value;
+            for (const unpub of result.success) {
               if (unpub.type !== 'unpublished') {
                 throw new IllegalStateException(`Expected unpublished type but got ${unpub.type}`);
               }
@@ -1183,6 +1180,9 @@ export default function createLaikaBackend(
               };
               this.entryCache.set(unpub.key, entry);
             }
+
+            if (result.success.length < pageSize) break;
+            offset += pageSize;
           }
         }
 
