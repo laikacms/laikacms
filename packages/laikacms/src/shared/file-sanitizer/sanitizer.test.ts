@@ -1,5 +1,7 @@
+import { CorruptedFileError } from 'laikacms/core';
 import { describe, expect, it } from 'vitest';
 import { canSanitize, getSupportedFileTypes, sanitizeFile } from './sanitizer.js';
+import { PngSanitizer } from './sanitizers/png.js';
 import { isSanitizableFileType } from './types.js';
 
 const PNG_SIGNATURE = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a];
@@ -545,5 +547,206 @@ describe('sanitizeFile (options)', () => {
     const pdf = new Uint8Array(32);
     pdf.set([0x25, 0x50, 0x44, 0x46, 0x2d]);
     await expect(sanitizeFile(pdf)).rejects.toThrow(/not supported/);
+  });
+});
+
+// ─── JPEG corrupt-file error paths (LCMS-386) ──────────────────────────────
+
+// All inputs must start with FF D8 FF (JPEG magic) so detectFileType routes
+// them to JpegSanitizer; the 3rd byte 0xFF is the magic requirement.
+
+describe('sanitizeFile (JPEG) — CorruptedFileError branches', () => {
+  it('throws CorruptedFileError when a byte that should be a marker prefix is not 0xFF', async () => {
+    // SOI (FF D8) + valid APP0 segment (FF E0, length=4, 2 payload bytes)
+    // so offset advances past 2, then hits a 0x00 byte instead of 0xFF.
+    const data = new Uint8Array([
+      0xFF,
+      0xD8, // SOI
+      0xFF,
+      0xE0,
+      0x00,
+      0x04,
+      0xAA,
+      0xBB, // APP0 — segmentEnd = 8
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00, // non-0xFF at offset 8 → triggers "expected marker"
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('expected marker at offset');
+  });
+
+  it('throws CorruptedFileError when fill bytes (0xFF…) exhaust the buffer before a real marker code', async () => {
+    // SOI + all 0xFF fill bytes — the inner fill-byte loop advances offset until
+    // offset >= data.length - 1, which triggers "unexpected end of file".
+    const data = new Uint8Array([
+      0xFF,
+      0xD8, // SOI
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF, // 10 fill bytes
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('unexpected end of file');
+  });
+
+  it("throws CorruptedFileError when fewer than 4 bytes remain for a segment's length field", async () => {
+    // SOI + valid APP0 (segmentEnd = 9) + start of APP1 with only 2 bytes left:
+    // offset+4 = 13 > 12 = data.length → "segment length extends beyond file".
+    const data = new Uint8Array([
+      0xFF,
+      0xD8, // SOI
+      0xFF,
+      0xE0,
+      0x00,
+      0x05,
+      0xAA,
+      0xBB,
+      0xCC, // APP0 — length 5, segmentEnd = 9
+      0xFF,
+      0xE1,
+      0x00, // APP1 start — only 3 bytes, needs 4 for length field
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('segment length extends beyond file');
+  });
+
+  it('throws CorruptedFileError when the segment length field value is less than 2', async () => {
+    // SOI + APP0 with length field = 0 (minimum valid is 2, which encodes just the length itself).
+    const data = new Uint8Array([
+      0xFF,
+      0xD8, // SOI
+      0xFF,
+      0xE0,
+      0x00,
+      0x00, // APP0, length = 0 < 2 → "segment length too small"
+      0xAA,
+      0xBB,
+      0xCC,
+      0xDD,
+      0xEE,
+      0xFF, // padding to satisfy detectFileType ≥ 12 bytes
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('segment length too small');
+  });
+
+  it('throws CorruptedFileError when the segment data extends beyond the end of the file', async () => {
+    // SOI + APP0 with length = 10, but only 4 bytes of payload present:
+    // segmentEnd = 2 + 2 + 10 = 14 > 12 = data.length → "segment extends beyond file".
+    const data = new Uint8Array([
+      0xFF,
+      0xD8, // SOI
+      0xFF,
+      0xE0,
+      0x00,
+      0x0A, // APP0, length = 10
+      0xAA,
+      0xBB,
+      0xCC,
+      0xDD,
+      0xEE,
+      0xFF, // only 6 bytes of payload (10 - 2(length field) = 8 needed, 6 present)
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('segment extends beyond file');
+  });
+});
+
+// ─── PNG corrupt-file error paths (LCMS-386) ───────────────────────────────
+
+describe('sanitizeFile (PNG) — CorruptedFileError branches', () => {
+  it('throws CorruptedFileError when data does not start with the PNG signature (PngSanitizer.sanitize direct)', async () => {
+    // "Invalid PNG signature" is unreachable via sanitizeFile() because detectFileType()
+    // uses the same 8-byte magic check — if the signature is wrong, the file is routed
+    // elsewhere before reaching PngSanitizer.sanitize(). Call it directly to cover the
+    // guard that a future refactor might make reachable.
+    const sanitizer = new PngSanitizer();
+    const err = await sanitizer.sanitize(new Uint8Array(20).fill(0), {}).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('Invalid PNG signature');
+  });
+
+  it('throws CorruptedFileError when a chunk length field claims more data than the file contains', async () => {
+    // PNG signature + a chunk whose 4-byte length field is 0xFFFFFFFF — far more than
+    // the 0 remaining data bytes. Triggers "Invalid chunk length".
+    const data = new Uint8Array([
+      ...PNG_SIGNATURE,
+      0xFF,
+      0xFF,
+      0xFF,
+      0xFF, // chunk length = 4 294 967 295
+      0x49,
+      0x48,
+      0x44,
+      0x52, // chunk type "IHDR" (content irrelevant — length check fires first)
+      0x00,
+      0x00,
+      0x00,
+      0x00, // 4 bytes of what would be data/CRC
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('Invalid chunk length');
+  });
+
+  it('throws CorruptedFileError when a CRC check fails for a chunk', async () => {
+    // Build a valid 1x1 PNG, then flip one byte inside the IHDR data section
+    // (offset 16 = first byte of the IHDR 13-byte data block). The stored CRC at
+    // offset 29 no longer matches → "Invalid CRC for chunk IHDR".
+    const png = buildPng();
+    const broken = new Uint8Array(png);
+    broken[16] ^= 0xFF; // corrupt first byte of IHDR data (high byte of image width)
+    const err = await sanitizeFile(broken).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('Invalid CRC for chunk IHDR');
+  });
+
+  it('throws CorruptedFileError when no IHDR chunk is present', async () => {
+    // PNG signature + valid IEND chunk only (no IHDR). All CRCs are correct, but
+    // hasIHDR stays false throughout the chunk walk → "Missing IHDR chunk".
+    const iend = pngChunk('IEND', []);
+    const data = new Uint8Array([...PNG_SIGNATURE, ...iend]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('Missing IHDR chunk');
+  });
+
+  it('throws CorruptedFileError when no IEND chunk is present', async () => {
+    // PNG signature + valid IHDR (correct CRC) but no IEND. The chunk walk exhausts
+    // the buffer without setting hasIEND → "Missing IEND chunk".
+    const ihdr = pngChunk('IHDR', [
+      0x00,
+      0x00,
+      0x00,
+      0x01, // width = 1
+      0x00,
+      0x00,
+      0x00,
+      0x01, // height = 1
+      0x08, // bit depth
+      0x06, // color type RGBA
+      0x00, // compression
+      0x00, // filter
+      0x00, // interlace
+    ]);
+    const data = new Uint8Array([...PNG_SIGNATURE, ...ihdr]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('Missing IEND chunk');
   });
 });
