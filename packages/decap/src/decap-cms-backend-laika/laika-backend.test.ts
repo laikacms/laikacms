@@ -1130,13 +1130,13 @@ describe('LaikaBackend.unpublishedEntries()', () => {
       .mockReturnValueOnce(mixedStream)
       .mockReturnValueOnce(empty());
 
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     try {
       const keys = await backend.unpublishedEntries();
       expect(keys).toContain('articles/ok');
-      expect(errorSpy).toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalled();
     } finally {
-      errorSpy.mockRestore();
+      warnSpy.mockRestore();
     }
   });
 
@@ -1183,6 +1183,50 @@ describe('LaikaBackend.unpublishedEntries()', () => {
     expect(entry.slug).toBe('pre-cached');
     // getUnpublished should NOT have been called (cache hit)
     expect(mockDocRepo.getUnpublished).not.toHaveBeenCalled();
+  });
+
+  it('returns all 110 entries when collection has more than 100 unpublished records (pagination loop)', async () => {
+    const page1 = Array.from({ length: 100 }, (_, i) => ({
+      key: `articles/draft-${i}`,
+      content: { title: `Draft ${i}` },
+      type: 'unpublished' as const,
+      status: 'draft',
+      updatedAt: '2024-01-01T00:00:00Z',
+    }));
+    const page2 = Array.from({ length: 10 }, (_, i) => ({
+      key: `articles/draft-${100 + i}`,
+      content: { title: `Draft ${100 + i}` },
+      type: 'unpublished' as const,
+      status: 'draft',
+      updatedAt: '2024-01-01T00:00:00Z',
+    }));
+
+    mockDocRepo.listRecords
+      .mockReturnValueOnce(LaikaStream.succeedMany(page1 as any[], {}))
+      .mockReturnValueOnce(LaikaStream.succeedMany(page2 as any[], {}))
+      // second collection (pages) returns empty
+      .mockReturnValueOnce(LaikaStream.succeedMany([] as any[], {}));
+
+    const keys = await backend.unpublishedEntries();
+
+    expect(keys).toHaveLength(110);
+    expect(keys[0]).toBe('articles/draft-0');
+    expect(keys[99]).toBe('articles/draft-99');
+    expect(keys[100]).toBe('articles/draft-100');
+    expect(keys[109]).toBe('articles/draft-109');
+    expect(mockDocRepo.listRecords).toHaveBeenCalledTimes(3);
+    expect(mockDocRepo.listRecords).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ pagination: { limit: 100, offset: 0 } }),
+    );
+    expect(mockDocRepo.listRecords).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ pagination: { limit: 100, offset: 100 } }),
+    );
+    expect(mockDocRepo.listRecords).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ pagination: { limit: 100, offset: 0 } }),
+    );
   });
 });
 
