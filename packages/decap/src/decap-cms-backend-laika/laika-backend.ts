@@ -898,62 +898,71 @@ export default function createLaikaBackend(
     async getMedia(mediaFolder = this.mediaFolder): Promise<ImplementationMediaFile[]> {
       const repo = this.getAssetsRepo();
       const media: ImplementationMediaFile[] = [];
-
-      const pagination: Pagination = { limit: 100, offset: 0 };
+      const repoPageSize = 100;
+      let offset = 0;
 
       // Match the old behaviour: if listResources fails (e.g. caller passes an
       // invalid empty folderKey), log and return whatever we have so far.
       // The old AsyncGenerator yielded a Result.fail that the loop ignored;
       // the new stream THROWS the LaikaError instead.
       try {
-        for await (
-          const chunk of repo.listResources(mediaFolder, {
-            depth: Infinity,
-            pagination,
-            hints: { urls: true },
-          })
-        ) {
-          for (const el of chunk) {
-            if (el._tag === 'RecoverableError') {
-              console.error('Warning listing media:', el.error);
-              continue;
-            }
-            if (el._tag !== 'Data') continue;
-            const resource = el.value;
-            if (resource.type !== 'asset') continue;
-            // Get the URL for display
-            for await (const urlsChunk of repo.getUrls([resource])) {
-              for (const urlEl of urlsChunk) {
-                if (urlEl._tag === 'RecoverableError') {
-                  throw new APIError(
-                    `Failed to get media URLs: ${urlEl.error.message}`,
-                    ErrorCodeToStatusMap[urlEl.error.code as ErrorCode],
-                    'Laika Backend',
-                  );
+        while (true) {
+          const pagination: Pagination = { limit: repoPageSize, offset };
+          let totalItemsThisPage = 0;
+
+          for await (
+            const chunk of repo.listResources(mediaFolder, {
+              depth: Infinity,
+              pagination,
+              hints: { urls: true },
+            })
+          ) {
+            for (const el of chunk) {
+              if (el._tag === 'RecoverableError') {
+                console.error('Warning listing media:', el.error);
+                continue;
+              }
+              if (el._tag !== 'Data') continue;
+              totalItemsThisPage++;
+              const resource = el.value;
+              if (resource.type !== 'asset') continue;
+              // Get the URL for display
+              for await (const urlsChunk of repo.getUrls([resource])) {
+                for (const urlEl of urlsChunk) {
+                  if (urlEl._tag === 'RecoverableError') {
+                    throw new APIError(
+                      `Failed to get media URLs: ${urlEl.error.message}`,
+                      ErrorCodeToStatusMap[urlEl.error.code as ErrorCode],
+                      'Laika Backend',
+                    );
+                  }
+                  if (urlEl._tag !== 'Data') continue;
+                  const displayUrl = urlEl.value.url;
+                  if (!displayUrl) {
+                    throw new APIError(`No URL available for asset: ${resource.key}`, 500, 'Laika Backend');
+                  }
+                  // Decap CMS's per-field media picker filters `entry.mediaFiles`
+                  // by `dirname(file.path) === media_folder` (see selector `mc` /
+                  // `Tp` in decap-cms-app). So `path` MUST be the media_folder
+                  // storage path (e.g. "content/uploads/logo.svg"), not the
+                  // public URL. `displayURL` and `url` carry the publicly-loadable
+                  // URL instead. Mixing the two up makes every existing media
+                  // file invisible in the picker.
+                  media.push({
+                    id: resource.key,
+                    name: resource.key.split('/').pop() || resource.key,
+                    size: (resource.content as { size?: number })?.size || 0,
+                    displayURL: displayUrl,
+                    path: resource.key,
+                    url: displayUrl,
+                  });
                 }
-                if (urlEl._tag !== 'Data') continue;
-                const displayUrl = urlEl.value.url;
-                if (!displayUrl) {
-                  throw new APIError(`No URL available for asset: ${resource.key}`, 500, 'Laika Backend');
-                }
-                // Decap CMS's per-field media picker filters `entry.mediaFiles`
-                // by `dirname(file.path) === media_folder` (see selector `mc` /
-                // `Tp` in decap-cms-app). So `path` MUST be the media_folder
-                // storage path (e.g. "content/uploads/logo.svg"), not the
-                // public URL. `displayURL` and `url` carry the publicly-loadable
-                // URL instead. Mixing the two up makes every existing media
-                // file invisible in the picker.
-                media.push({
-                  id: resource.key,
-                  name: resource.key.split('/').pop() || resource.key,
-                  size: (resource.content as { size?: number })?.size || 0,
-                  displayURL: displayUrl,
-                  path: resource.key,
-                  url: displayUrl,
-                });
               }
             }
           }
+
+          if (totalItemsThisPage < repoPageSize) break;
+          offset += repoPageSize;
         }
       } catch (err) {
         if (err instanceof LaikaError) {
