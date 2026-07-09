@@ -375,6 +375,17 @@ describe('decapAi()', () => {
       const res = await adapter.fetch(req);
       expect(res.status).toBe(405);
     });
+
+    it('returns 500 when getSessionsByDocument throws', async () => {
+      const callbacks = makeCallbacks();
+      vi.mocked(callbacks.getSessionsByDocument).mockRejectedValueOnce(new Error('db error'));
+      const adapter = decapAi(makeConfig({ callbacks }));
+      const req = makeRequest('/ai/sessions?documentSlug=posts%2Fhello');
+      const res = await adapter.fetch(req);
+      expect(res.status).toBe(500);
+      const body = await res.json() as { error: string };
+      expect(typeof body.error).toBe('string');
+    });
   });
 
   describe('GET /ai/sessions/:id', () => {
@@ -405,6 +416,17 @@ describe('decapAi()', () => {
       const req = makeRequest('/ai/sessions/nonexistent');
       const res = await adapter.fetch(req);
       expect(res.status).toBe(404);
+    });
+
+    it('returns 500 when getSession throws', async () => {
+      const callbacks = makeCallbacks();
+      vi.mocked(callbacks.getSession).mockRejectedValueOnce(new Error('db error'));
+      const adapter = decapAi(makeConfig({ callbacks }));
+      const req = makeRequest('/ai/sessions/any-id');
+      const res = await adapter.fetch(req);
+      expect(res.status).toBe(500);
+      const body = await res.json() as { error: string };
+      expect(typeof body.error).toBe('string');
     });
   });
 
@@ -437,6 +459,41 @@ describe('decapAi()', () => {
       const req = makeRequest('/ai/sessions/nonexistent', { method: 'DELETE' });
       const res = await adapter.fetch(req);
       expect(res.status).toBe(404);
+    });
+
+    it('returns 500 when getSession throws', async () => {
+      const callbacks = makeCallbacks();
+      vi.mocked(callbacks.getSession).mockRejectedValueOnce(new Error('db error'));
+      const adapter = decapAi(makeConfig({ callbacks }));
+      const req = makeRequest('/ai/sessions/any-id', { method: 'DELETE' });
+      const res = await adapter.fetch(req);
+      expect(res.status).toBe(500);
+      const body = await res.json() as { error: string };
+      expect(typeof body.error).toBe('string');
+    });
+
+    it('returns 500 when deleteSession throws after ownership check passes', async () => {
+      const sessions = new Map<string, AiSession>();
+      sessions.set('s1', makeSession({ id: 's1', userId: USER_A.id }));
+      const callbacks = makeCallbacks(sessions);
+      vi.mocked(callbacks.deleteSession).mockRejectedValueOnce(new Error('db delete error'));
+      const adapter = decapAi(makeConfig({ callbacks }));
+      const req = makeRequest('/ai/sessions/s1', { method: 'DELETE' });
+      const res = await adapter.fetch(req);
+      expect(res.status).toBe(500);
+      const body = await res.json() as { error: string };
+      expect(typeof body.error).toBe('string');
+    });
+  });
+
+  describe('PATCH /ai/sessions/:id', () => {
+    it('returns 405 for unsupported methods on session detail endpoint', async () => {
+      const adapter = decapAi(makeConfig());
+      const req = makeRequest('/ai/sessions/s1', { method: 'PATCH' });
+      const res = await adapter.fetch(req);
+      expect(res.status).toBe(405);
+      const body = await res.json() as { error: string };
+      expect(typeof body.error).toBe('string');
     });
   });
 
