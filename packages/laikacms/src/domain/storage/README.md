@@ -1,15 +1,15 @@
 # laikacms/storage
 
-[![npm](https://img.shields.io/npm/v/laikacms/storage)](https://www.npmjs.com/package/laikacms/storage)
-[![npm](https://img.shields.io/npm/dm/laikacms/storage)](https://www.npmjs.com/package/laikacms/storage)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/storage)](https://bundlephobia.com/result?p=laikacms/storage)
+[![npm](https://img.shields.io/npm/v/laikacms)](https://www.npmjs.com/package/laikacms)
+[![npm](https://img.shields.io/npm/dm/laikacms)](https://www.npmjs.com/package/laikacms)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms)](https://bundlephobia.com/result?p=laikacms)
 
 Core storage abstractions for Laika CMS.
 
 ## Installation
 
 ```bash
-pnpm add laikacms/storage
+pnpm add laikacms
 ```
 
 ## Usage

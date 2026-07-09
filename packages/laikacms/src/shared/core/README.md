@@ -1,15 +1,15 @@
 # laikacms/core
 
-[![npm](https://img.shields.io/npm/v/laikacms/core)](https://www.npmjs.com/package/laikacms/core)
-[![npm](https://img.shields.io/npm/dm/laikacms/core)](https://www.npmjs.com/package/laikacms/core)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/core)](https://bundlephobia.com/result?p=laikacms/core)
+[![npm](https://img.shields.io/npm/v/laikacms)](https://www.npmjs.com/package/laikacms)
+[![npm](https://img.shields.io/npm/dm/laikacms)](https://www.npmjs.com/package/laikacms)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms)](https://bundlephobia.com/result?p=laikacms)
 
 Core types, errors, and utilities for Laika CMS.
 
 ## Installation
 
 ```bash
-pnpm add laikacms/core
+pnpm add laikacms
 ```
 
 ## Usage

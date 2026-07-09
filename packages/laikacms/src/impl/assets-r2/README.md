@@ -9,7 +9,7 @@ Cloudflare R2-backed implementation of `AssetsRepository` for Cloudflare Workers
 ## Installation
 
 ```bash
-pnpm add laikacms/assets/r2
+pnpm add laikacms
 ```
 
 ## Usage

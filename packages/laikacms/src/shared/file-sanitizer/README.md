@@ -1,8 +1,8 @@
 # laikacms/file-sanitizer
 
-[![npm](https://img.shields.io/npm/v/laikacms/file-sanitizer)](https://www.npmjs.com/package/laikacms/file-sanitizer)
-[![npm](https://img.shields.io/npm/dm/laikacms/file-sanitizer)](https://www.npmjs.com/package/laikacms/file-sanitizer)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms/file-sanitizer)](https://bundlephobia.com/result?p=laikacms/file-sanitizer)
+[![npm](https://img.shields.io/npm/v/laikacms)](https://www.npmjs.com/package/laikacms)
+[![npm](https://img.shields.io/npm/dm/laikacms)](https://www.npmjs.com/package/laikacms)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/laikacms)](https://bundlephobia.com/result?p=laikacms)
 
 Best-effort file sanitization for uploaded content.
 
@@ -15,7 +15,7 @@ Best-effort file sanitization for uploaded content.
 ## Installation
 
 ```bash
-pnpm add laikacms/file-sanitizer
+pnpm add laikacms
 ```
 
 ## Usage
