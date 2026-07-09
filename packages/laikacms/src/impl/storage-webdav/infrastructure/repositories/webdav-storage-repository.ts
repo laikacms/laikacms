@@ -304,8 +304,9 @@ export class WebDavStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, total, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, total, missingFolder, recoverableErrors } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
+        for (const err of recoverableErrors) yield* emit.recoverableError(err);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
         return { total };
       })
@@ -315,8 +316,9 @@ export class WebDavStorageRepository extends StorageRepository {
   listAtoms(folderKey: string, options: ListAtomsOptions): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, total, missingFolder } = yield* this.collectSummaries(folderKey, options);
+        const { summaries, total, missingFolder, recoverableErrors } = yield* this.collectSummaries(folderKey, options);
         if (missingFolder) yield* emit.recoverableError(missingFolder);
+        for (const err of recoverableErrors) yield* emit.recoverableError(err);
         for (const summary of summaries) {
           if (summary.type === 'object-summary') {
             const result = yield* Effect.result(LaikaTask.runValueForwarding(this.getObject(summary.key), emit));
@@ -337,20 +339,32 @@ export class WebDavStorageRepository extends StorageRepository {
    * Recursively collect WebDAV children under `folderKey` up to
    * `maxRelativeDepth` levels below the starting collection. Depth=1 lists
    * direct children only, matching `PROPFIND Depth: 1` semantics.
+   *
+   * All PROPFIND failures are surfaced rather than silently swallowed:
+   * - A `NotFoundError` at depth 1 is returned as `missingFolder` (the
+   *   canonical "folder does not exist" signal for the listing contract).
+   * - Any other failure at depth 1 or any failure at depth > 1 is collected
+   *   in `recoverableErrors` so the caller can route them through
+   *   `emit.recoverableError`.
    */
   private async collectWebDavEntriesRecursively(
     folderKey: string,
     maxRelativeDepth: number,
     currentRelativeDepth: number = 1,
-  ): Promise<{ children: Array<{ key: string, isCollection: boolean }>, missingFolder?: LaikaError }> {
+  ): Promise<{
+    children: Array<{ key: string, isCollection: boolean }>,
+    missingFolder?: LaikaError,
+    recoverableErrors: LaikaError[],
+  }> {
     const listing = await this.dataSource.listChildren(folderKey);
     if (Result.isFailure(listing)) {
       if (currentRelativeDepth === 1 && listing.failure instanceof NotFoundError) {
-        return { children: [], missingFolder: listing.failure };
+        return { children: [], missingFolder: listing.failure, recoverableErrors: [] };
       }
-      return { children: [] };
+      return { children: [], recoverableErrors: [listing.failure] };
     }
     const children: Array<{ key: string, isCollection: boolean }> = [];
+    const recoverableErrors: LaikaError[] = [];
     for (const child of listing.success) {
       children.push({ key: child.key, isCollection: child.isCollection });
       if (child.isCollection && currentRelativeDepth < maxRelativeDepth) {
@@ -360,30 +374,38 @@ export class WebDavStorageRepository extends StorageRepository {
           currentRelativeDepth + 1,
         );
         children.push(...nested.children);
+        recoverableErrors.push(...nested.recoverableErrors);
       }
     }
-    return { children };
+    return { children, recoverableErrors };
   }
 
   /**
    * Shared listing core: recursively collects children via `PROPFIND Depth: 1`
    * calls up to `options.depth` levels. Sorts naturally and paginates in
    * memory. A missing collection is reported via `missingFolder` (a recoverable
-   * {@link NotFoundError}) rather than failing the stream.
+   * {@link NotFoundError}) rather than failing the stream. Non-404 PROPFIND
+   * failures (at any depth) are returned in `recoverableErrors` for the caller
+   * to forward through `emit.recoverableError`.
    */
   private collectSummaries(
     folderKey: string,
     options: ListAtomsOptions,
   ): Effect.Effect<
-    { summaries: ReadonlyArray<AtomSummary>, total: number, missingFolder?: LaikaError },
+    {
+      summaries: ReadonlyArray<AtomSummary>,
+      total: number,
+      missingFolder?: LaikaError,
+      recoverableErrors: LaikaError[],
+    },
     LaikaError
   > {
     return Effect.gen({ self: this }, function*() {
-      const { children, missingFolder } = yield* Effect.promise(() =>
+      const { children, missingFolder, recoverableErrors } = yield* Effect.promise(() =>
         this.collectWebDavEntriesRecursively(folderKey, options.depth)
       );
       if (missingFolder) {
-        return { summaries: [] as ReadonlyArray<AtomSummary>, total: 0, missingFolder };
+        return { summaries: [] as ReadonlyArray<AtomSummary>, total: 0, missingFolder, recoverableErrors };
       }
 
       const summaries = children.map((child): AtomSummary => {
@@ -402,7 +424,7 @@ export class WebDavStorageRepository extends StorageRepository {
 
       const sorted = [...summaries].sort((a, b) => naturalCompare(a.key, b.key));
       const total = sorted.length;
-      return { summaries: applyPagination(sorted, options.pagination), total };
+      return { summaries: applyPagination(sorted, options.pagination), total, recoverableErrors };
     });
   }
 

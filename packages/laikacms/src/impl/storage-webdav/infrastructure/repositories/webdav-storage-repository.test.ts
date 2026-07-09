@@ -1,5 +1,5 @@
 import * as Effect from 'effect/Effect';
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ConflictError, ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { WebDavConfig } from '../datasources/webdav-datasource.js';
@@ -43,7 +43,14 @@ const buildPropfindXml = (resources: Array<{ path: string, resource: MockResourc
   return `<?xml version="1.0" encoding="utf-8"?><d:multistatus xmlns:d="DAV:">${inner}</d:multistatus>`;
 };
 
-const createMockServer = () => {
+/**
+ * Per-path PROPFIND response overrides — maps a decoded server path to the
+ * HTTP status code the mock should return instead of the normal 207.
+ * Used by tests that exercise non-404 error propagation.
+ */
+type PropfindOverrides = Map<string, number>;
+
+const createMockServer = (propfindOverrides: PropfindOverrides = new Map()) => {
   const store = new Map<string, MockResource>();
   store.set(ROOT_PATH, { isCollection: true, content: '', ctime: new Date(0), mtime: new Date(0) });
 
@@ -66,6 +73,10 @@ const createMockServer = () => {
     const path = decodeURIComponent(url.pathname);
     const method = (init?.method ?? 'GET').toUpperCase();
     const resource = store.get(path);
+
+    if (method === 'PROPFIND' && propfindOverrides.has(path)) {
+      return new Response('', { status: propfindOverrides.get(path)! });
+    }
 
     if (method === 'PROPFIND') {
       if (!resource) return new Response('', { status: 404 });
@@ -128,10 +139,10 @@ afterEach(() => {
   server.store.clear();
 });
 
-const makeRepo = () => {
+const makeRepo = (srv: ReturnType<typeof createMockServer> = server) => {
   const config: WebDavConfig = {
     baseUrl: `http://dav.test${ROOT_PATH}`,
-    fetch: server.fetch,
+    fetch: srv.fetch,
   };
   return new WebDavStorageRepository(
     config,
@@ -290,5 +301,78 @@ describe('WebDavStorageRepository — getCapabilities', () => {
     expect(caps.compatibilityDate.length).toBeGreaterThan(0);
     expect(caps.pagination).toBeDefined();
     expect(caps.pagination.supported).toBe(true);
+  });
+});
+
+describe('WebDavStorageRepository — non-404 PROPFIND errors surface as recoverableErrors', () => {
+  it('listAtomSummaries: 403 on root PROPFIND emits a ForbiddenError', async () => {
+    const srv = createMockServer(new Map([[`${ROOT_PATH}`, 403]]));
+    const repo = makeRepo(srv);
+
+    const collected = await Effect.runPromise(
+      LaikaStream.runCollect(repo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } })),
+    );
+
+    expect(collected.data).toEqual([]);
+    expect(collected.done).toEqual({ total: 0 });
+    expect(collected.recoverableErrors).toHaveLength(1);
+    expect(collected.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('listAtoms: 403 on root PROPFIND emits a ForbiddenError', async () => {
+    const srv = createMockServer(new Map([[`${ROOT_PATH}`, 403]]));
+    const repo = makeRepo(srv);
+
+    const collected = await Effect.runPromise(
+      LaikaStream.runCollect(repo.listAtoms('', { pagination: { offset: 0, limit: 100 } })),
+    );
+
+    expect(collected.data).toEqual([]);
+    expect(collected.done).toEqual({ total: 0 });
+    expect(collected.recoverableErrors).toHaveLength(1);
+    expect(collected.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('listAtomSummaries: 403 on a nested collection PROPFIND emits a ForbiddenError alongside top-level results', async () => {
+    // Root contains a top-level file and a subfolder; the subfolder's PROPFIND returns 403.
+    const nestedPath = `${ROOT_PATH}/docs/private`;
+    const srv = createMockServer(new Map([[nestedPath, 403]]));
+
+    // Seed: /dav/docs/ (collection), /dav/docs/private/ (collection — real, but PROPFIND blocked),
+    //       /dav/docs/public.md (file).
+    srv.store.set(`${ROOT_PATH}/docs`, {
+      isCollection: true,
+      content: '',
+      ctime: new Date(0),
+      mtime: new Date(0),
+    });
+    srv.store.set(nestedPath, {
+      isCollection: true,
+      content: '',
+      ctime: new Date(0),
+      mtime: new Date(0),
+    });
+    srv.store.set(`${ROOT_PATH}/docs/public.md`, {
+      isCollection: false,
+      content: 'hello',
+      ctime: new Date(0),
+      mtime: new Date(0),
+    });
+
+    const repo = makeRepo(srv);
+
+    // depth: 2 so the repo recurses into the private/ subfolder.
+    const collected = await Effect.runPromise(
+      LaikaStream.runCollect(
+        repo.listAtomSummaries('docs', { depth: 2, pagination: { offset: 0, limit: 100 } }),
+      ),
+    );
+
+    // The top-level public.md and the private/ folder-summary are returned.
+    expect(collected.data.map(s => s.key)).toContain('docs/public');
+    expect(collected.data.some(s => s.key === 'docs/private' && s.type === 'folder-summary')).toBe(true);
+    // The 403 on docs/private/ surfaces as a ForbiddenError.
+    expect(collected.recoverableErrors).toHaveLength(1);
+    expect(collected.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
   });
 });
