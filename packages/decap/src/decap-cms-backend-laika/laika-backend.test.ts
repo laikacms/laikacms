@@ -1228,6 +1228,53 @@ describe('LaikaBackend.unpublishedEntries()', () => {
       expect.objectContaining({ pagination: { limit: 100, offset: 0 } }),
     );
   });
+
+  it('routes RecoverableErrors to a custom onWarning handler instead of console.warn', async () => {
+    const { LaikaStream: LS, NotFoundError: NFE } = await import('laikacms/core');
+    const Effect = await import('effect/Effect');
+
+    const observed: unknown[] = [];
+    const localMockRepo = makeMockDocumentsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => localMockRepo as any,
+      getAssetsRepository: () => makeMockAssetsRepository() as any,
+      onWarning: (e: unknown) => {
+        observed.push(e);
+      },
+    });
+    const localBackend = new LaikaBackend(makeConfig({ collections: [{ name: 'articles' }] })) as any;
+    (localBackend as any).documentsRepository = localMockRepo;
+    (localBackend as any).tokenPromise = () => Promise.resolve('fake-token');
+
+    const mixedStream = LS.make<
+      { key: string, content: object, type: string, status: string, updatedAt: string },
+      object
+    >(emit =>
+      Effect.gen(function*() {
+        yield* emit.recoverableError(new NFE('simulated repo warning'));
+        yield* emit.data({
+          key: 'articles/ok',
+          content: { title: 'OK' },
+          type: 'unpublished',
+          status: 'draft',
+          updatedAt: '2024-01-01T00:00:00Z',
+        });
+        return {};
+      })
+    );
+    localMockRepo.listRecords.mockReturnValueOnce(mixedStream as any);
+
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      const keys = await localBackend.unpublishedEntries();
+      expect(keys).toContain('articles/ok');
+      expect(observed).toHaveLength(1);
+      expect(observed[0]).toBeInstanceOf(NFE);
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1649,24 +1696,45 @@ describe('LaikaBackend.getMedia()', () => {
     expect(media).toEqual([]);
   });
 
-  it('skips recoverable errors from listResources and continues', async () => {
-    const { NotFoundError } = await import('laikacms/core');
+  it('skips recoverable errors from listResources and continues, routing them to onWarning', async () => {
+    const { LaikaStream: LS, NotFoundError: NFE } = await import('laikacms/core');
+    const Effect = await import('effect/Effect');
+
+    const observed: unknown[] = [];
+    const localMockAssetsRepo = makeMockAssetsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => makeMockDocumentsRepository() as any,
+      getAssetsRepository: () => localMockAssetsRepo as any,
+      onWarning: (e: unknown) => {
+        observed.push(e);
+      },
+    });
+    const localBackend = new LaikaBackend(makeConfig()) as any;
+    (localBackend as any).assetsRepository = localMockAssetsRepo;
+    (localBackend as any).tokenPromise = () => Promise.resolve('fake-token');
+
     const asset = { key: 'assets/uploads/good.png', type: 'asset', content: { size: 50 } };
-    // Produce a stream that has a RecoverableError element followed by a Data element
-    // We use Effect to build a custom stream via LaikaStream
-    mockAssetsRepo.listResources.mockReturnValue(
-      LaikaStream.succeedMany([asset as any], { total: 1 }),
+    const mixedStream = LS.make<typeof asset, object>(emit =>
+      Effect.gen(function*() {
+        yield* emit.recoverableError(new NFE('simulated listing warning'));
+        yield* emit.data(asset);
+        return {};
+      })
     );
-    mockAssetsRepo.getUrls.mockReturnValue(
+    localMockAssetsRepo.listResources.mockReturnValue(mixedStream as any);
+    localMockAssetsRepo.getUrls.mockReturnValue(
       LaikaStream.succeedMany([{ url: 'https://cdn.example.com/good.png' }] as any, { total: 1 }),
     );
 
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     try {
-      const media = await backend.getMedia('assets/uploads');
+      const media = await localBackend.getMedia('assets/uploads');
       expect(media).toHaveLength(1);
+      expect(observed).toHaveLength(1);
+      expect(observed[0]).toBeInstanceOf(NFE);
+      expect(errorSpy).not.toHaveBeenCalled();
     } finally {
-      consoleSpy.mockRestore();
+      errorSpy.mockRestore();
     }
   });
 
