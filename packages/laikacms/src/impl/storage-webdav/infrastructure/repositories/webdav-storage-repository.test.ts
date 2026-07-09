@@ -1,5 +1,5 @@
 import * as Effect from 'effect/Effect';
-import { ConflictError, ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { WebDavConfig } from '../datasources/webdav-datasource.js';
