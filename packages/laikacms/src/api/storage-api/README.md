@@ -57,6 +57,7 @@ export default { fetch: api.fetch };
 | GET    | `/objects/{key}`           | Read a storage object         |
 | POST   | `/objects`                 | Create object                 |
 | PATCH  | `/objects/{key}`           | Update object                 |
+| DELETE | `/objects/{key}`           | Delete a storage object       |
 | GET    | `/folders/{key}`           | Read a folder                 |
 | POST   | `/operations`              | Atomic batch operations       |
 
