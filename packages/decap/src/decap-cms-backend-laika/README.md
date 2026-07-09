@@ -1,21 +1,23 @@
-# @laikacms/decap-cms-backend-laika
+# @laikacms/decap/decap-cms-backend-laika
 
-[![npm](https://img.shields.io/npm/v/@laikacms/decap-cms-backend-laika)](https://www.npmjs.com/package/@laikacms/decap-cms-backend-laika)
-[![npm](https://img.shields.io/npm/dm/@laikacms/decap-cms-backend-laika)](https://www.npmjs.com/package/@laikacms/decap-cms-backend-laika)
-[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/decap-cms-backend-laika)](https://bundlephobia.com/result?p=@laikacms/decap-cms-backend-laika)
+[![npm](https://img.shields.io/npm/v/@laikacms/decap)](https://www.npmjs.com/package/@laikacms/decap)
+[![npm](https://img.shields.io/npm/dm/@laikacms/decap)](https://www.npmjs.com/package/@laikacms/decap)
+[![Bundle Size](https://img.shields.io/bundlephobia/minzip/@laikacms/decap)](https://bundlephobia.com/result?p=@laikacms/decap)
 
 Custom Decap CMS backend for Laika CMS.
 
 ## Installation
 
+This module is a subpath export of `@laikacms/decap`:
+
 ```bash
-pnpm add @laikacms/decap-cms-backend-laika decap-cms-app
+pnpm add @laikacms/decap
 ```
 
 ## Usage
 
 ```typescript
-import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
+import createLaikaBackend from '@laikacms/decap/decap-cms-backend-laika';
 import CMS from 'decap-cms-app';
 
 const LaikaBackend = createLaikaBackend({
@@ -67,7 +69,7 @@ interface GetDocumentsRepositoryOptions {
 Example — swap in an in-memory repository for Storybook / unit tests:
 
 ```typescript
-import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
+import createLaikaBackend from '@laikacms/decap/decap-cms-backend-laika';
 import { InMemoryDocumentsRepository } from './test-helpers';
 
 const LaikaBackend = createLaikaBackend({
@@ -95,7 +97,7 @@ interface GetAssetsRepositoryOptions {
 Example — point assets at a different origin than documents:
 
 ```typescript
-import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
+import createLaikaBackend from '@laikacms/decap/decap-cms-backend-laika';
 import { AssetsJsonApiProxyRepository } from 'laikacms/assets/jsonapi-proxy';
 
 const LaikaBackend = createLaikaBackend({
@@ -118,7 +120,7 @@ By default, warnings are written to `console.warn` so they surface in browser de
 own handler to route them to a structured logger or error-tracking service.
 
 ```typescript
-import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
+import createLaikaBackend from '@laikacms/decap/decap-cms-backend-laika';
 import * as Sentry from '@sentry/browser';
 
 const LaikaBackend = createLaikaBackend({
@@ -138,7 +140,7 @@ const LaikaBackend = createLaikaBackend({
 Or with a structured logger:
 
 ```typescript
-import createLaikaBackend from '@laikacms/decap-cms-backend-laika';
+import createLaikaBackend from '@laikacms/decap/decap-cms-backend-laika';
 import { logger } from './logger';
 
 const LaikaBackend = createLaikaBackend({
