@@ -1669,6 +1669,44 @@ describe('LaikaBackend.getMedia()', () => {
       consoleSpy.mockRestore();
     }
   });
+
+  it('returns all 101 assets when listResources yields more than 100 items across two pages (pagination loop)', async () => {
+    const page1 = Array.from({ length: 100 }, (_, i) => ({
+      key: `assets/uploads/img-${i}.jpg`,
+      type: 'asset',
+      content: { size: 100 + i },
+    }));
+    const page2 = [{ key: 'assets/uploads/img-100.jpg', type: 'asset', content: { size: 200 } }];
+
+    mockAssetsRepo.listResources
+      .mockReturnValueOnce(LaikaStream.succeedMany(page1 as any[], {}))
+      .mockReturnValueOnce(LaikaStream.succeedMany(page2 as any[], {}));
+
+    mockAssetsRepo.getUrls.mockImplementation((resources: any[]) =>
+      LaikaStream.succeedMany(
+        [{ url: `https://cdn.example.com/${resources[0].key}` }] as any,
+        { total: 1 },
+      )
+    );
+
+    const media = await backend.getMedia('assets/uploads');
+
+    expect(media).toHaveLength(101);
+    expect(media[0].name).toBe('img-0.jpg');
+    expect(media[99].name).toBe('img-99.jpg');
+    expect(media[100].name).toBe('img-100.jpg');
+    expect(mockAssetsRepo.listResources).toHaveBeenCalledTimes(2);
+    expect(mockAssetsRepo.listResources).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      expect.objectContaining({ pagination: { limit: 100, offset: 0 } }),
+    );
+    expect(mockAssetsRepo.listResources).toHaveBeenNthCalledWith(
+      2,
+      expect.anything(),
+      expect.objectContaining({ pagination: { limit: 100, offset: 100 } }),
+    );
+  });
 });
 
 // ---------------------------------------------------------------------------
