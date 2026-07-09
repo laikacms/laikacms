@@ -425,6 +425,31 @@ describe('PATCH /published/:key', () => {
     expect(body.errors[0]!.status).toBe('400');
     expect(body.errors[0]!.code).toBe('invalid_data');
   });
+
+  it('returns 404 JSON:API error when document not found', async () => {
+    const repo = {
+      updateDocument: vi.fn(() => LaikaTask.make(() => Effect.fail(new NotFoundError('document not found')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fmissing', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'published',
+            id: 'posts/missing',
+            attributes: { status: 'published', content: { title: 'Updated' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(404);
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -940,6 +965,31 @@ describe('PATCH /unpublished/:key', () => {
     const body = await res.json() as { data: { type: string, id: string } };
     expect(body.data.type).toBe('unpublished');
     expect(body.data.id).toBe('posts/draft');
+  });
+
+  it('returns 404 JSON:API error when draft not found', async () => {
+    const repo = {
+      updateUnpublished: vi.fn(() => LaikaTask.make(() => Effect.fail(new NotFoundError('draft not found')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fmissing', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'unpublished',
+            id: 'posts/missing',
+            attributes: { status: 'draft', content: { title: 'Updated Draft' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(404);
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
   });
 });
 
