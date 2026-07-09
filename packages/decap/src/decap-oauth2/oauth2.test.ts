@@ -248,6 +248,107 @@ describe('handleAuthorize GET', () => {
 });
 
 // ---------------------------------------------------------------------------
+// handleAuthorize GET — CAPTCHA CSP (LCMS-354)
+// ---------------------------------------------------------------------------
+
+describe('handleAuthorize GET — CAPTCHA CSP', () => {
+  let pkce: { codeVerifier: string, codeChallenge: string };
+
+  beforeEach(async () => {
+    pkce = await makePkce();
+  });
+
+  function makeCaptchaConfig(
+    overrides: Partial<import('./oauth2.js').CaptchaConfig> = {},
+  ): import('./oauth2.js').CaptchaConfig {
+    return {
+      enabled: true,
+      widgetHtml: '<div class="captcha-widget"></div>',
+      scriptHtml: '<script src="https://example-captcha.com/api.js"></script>',
+      responseFieldName: 'captcha-response',
+      verify: vi.fn().mockResolvedValue(true),
+      ...overrides,
+    };
+  }
+
+  it('CSP uses captchaCspAdditions when provided (not hardcoded Cloudflare domains)', async () => {
+    const callbacks = makeCallbacks();
+    const config = makeConfig(callbacks, {
+      captcha: makeCaptchaConfig({
+        captchaCspAdditions: ' https://example-captcha.com; frame-src https://example-captcha.com',
+      }),
+    });
+    const request = new Request(authorizeUrl(pkce.codeChallenge), { method: 'GET' });
+
+    const response = await handleAuthorize(request, config);
+
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).toContain('https://example-captcha.com');
+    expect(csp).not.toContain('challenges.cloudflare.com');
+  });
+
+  it('CSP contains no external CAPTCHA domains when captchaCspAdditions is omitted', async () => {
+    const callbacks = makeCallbacks();
+    const config = makeConfig(callbacks, {
+      captcha: makeCaptchaConfig(), // no captchaCspAdditions
+    });
+    const request = new Request(authorizeUrl(pkce.codeChallenge), { method: 'GET' });
+
+    const response = await handleAuthorize(request, config);
+
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).not.toContain('challenges.cloudflare.com');
+    // script-src still present because CAPTCHA scripts are inline
+    expect(csp).toContain("script-src 'unsafe-inline'");
+  });
+
+  it('CSP contains no captcha domains when captcha is disabled', async () => {
+    const callbacks = makeCallbacks();
+    const config = makeConfig(callbacks); // no captcha
+    const request = new Request(authorizeUrl(pkce.codeChallenge), { method: 'GET' });
+
+    const response = await handleAuthorize(request, config);
+
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).not.toContain('challenges.cloudflare.com');
+  });
+
+  it('passkey + captcha: CSP script-src includes captchaCspAdditions', async () => {
+    const callbacks = makeCallbacks();
+    const config = makeConfig(callbacks, {
+      captcha: makeCaptchaConfig({
+        captchaCspAdditions: ' https://js.hcaptcha.com; frame-src https://newassets.hcaptcha.com',
+      }),
+      passkey: {
+        rpName: 'Test',
+        rpId: 'auth.example.com',
+        origin: 'https://auth.example.com',
+        callbacks: {
+          storeCredential: vi.fn(),
+          getCredentialById: vi.fn().mockResolvedValue(null),
+          getCredentialsByUserId: vi.fn().mockResolvedValue([]),
+          updateCredential: vi.fn(),
+          deleteCredential: vi.fn(),
+          storeChallenge: vi.fn(),
+          consumeChallenge: vi.fn().mockResolvedValue(null),
+          getUserById: vi.fn().mockResolvedValue(null),
+          getUserByEmail: vi.fn().mockResolvedValue(null),
+          storePendingPasskeySetupSession: vi.fn(),
+          getPendingPasskeySetupSession: vi.fn().mockResolvedValue(null),
+        },
+      },
+    });
+    const request = new Request(authorizeUrl(pkce.codeChallenge), { method: 'GET' });
+
+    const response = await handleAuthorize(request, config);
+
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).toContain('https://js.hcaptcha.com');
+    expect(csp).not.toContain('challenges.cloudflare.com');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // handleAuthorize — POST (login flow)
 // ---------------------------------------------------------------------------
 

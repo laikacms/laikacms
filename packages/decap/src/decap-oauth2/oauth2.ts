@@ -216,6 +216,22 @@ export interface CaptchaConfig {
   responseFieldName: string;
 
   /**
+   * Additional CSP directives to allow the CAPTCHA provider's scripts and widgets.
+   * Appended to `script-src 'unsafe-inline'` and may include extra directives
+   * such as `frame-src`.
+   *
+   * Applied on both the login page and the forgot-password page.
+   *
+   * Examples:
+   * - Cloudflare Turnstile: `' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com'`
+   * - reCAPTCHA v2: `' https://www.google.com https://www.gstatic.com; frame-src https://www.google.com'`
+   * - hCaptcha: `' https://js.hcaptcha.com https://newassets.hcaptcha.com; frame-src https://newassets.hcaptcha.com'`
+   *
+   * If omitted, no external origins are added to the CSP (only `'unsafe-inline'` is kept).
+   */
+  captchaCspAdditions?: string;
+
+  /**
    * Verify the CAPTCHA response token.
    * This callback should call your CAPTCHA provider's verification API.
    *
@@ -627,15 +643,16 @@ export async function handleAuthorize(
     });
 
     // Build CSP with logo origins if needed
-    // Include Cloudflare Turnstile domains if CAPTCHA is enabled
-    const captchaCspAdditions = captchaEnabled
-      ? ' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com'
+    // CAPTCHA CSP additions come from the provider-supplied captchaCspAdditions field,
+    // not hardcoded Cloudflare domains, so any provider works correctly.
+    const captchaCspExtra = captchaEnabled
+      ? (config.captcha!.captchaCspAdditions ?? '')
       : '';
     const baseCsp = passkeyEnabled
-      ? `default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'${captchaCspAdditions}; img-src 'self' data:; connect-src 'self'`
+      ? `default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'${captchaCspExtra}; img-src 'self' data:; connect-src 'self'`
       : `default-src 'self'; style-src 'unsafe-inline'${
         captchaEnabled
-          ? "; script-src 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com"
+          ? `; script-src 'unsafe-inline'${captchaCspExtra}`
           : ''
       }; img-src 'self' data:`;
     const csp = buildCspWithLogo(baseCsp, authPage.imgSrc);
@@ -1649,11 +1666,15 @@ async function handleForgotPassword(
   const url = new URL(request.url);
 
   // Get CAPTCHA config if enabled
-  const captchaWidget = config.captcha?.enabled ? config.captcha.widgetHtml : undefined;
-  const captchaScript = config.captcha?.enabled ? config.captcha.scriptHtml : undefined;
+  const captchaEnabled = !!config.captcha?.enabled;
+  const captchaWidget = captchaEnabled ? config.captcha!.widgetHtml : undefined;
+  const captchaScript = captchaEnabled ? config.captcha!.scriptHtml : undefined;
+  const captchaCspExtra = captchaEnabled ? (config.captcha!.captchaCspAdditions ?? '') : '';
 
-  // Base CSP for password reset pages
-  const baseCsp = "default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:";
+  // Base CSP for password reset pages — includes CAPTCHA script origins when enabled
+  const baseCsp = `default-src 'self'; style-src 'unsafe-inline'${
+    captchaEnabled ? `; script-src 'unsafe-inline'${captchaCspExtra}` : ''
+  }; img-src 'self' data:`;
 
   // GET - show forgot password page
   if (request.method === 'GET') {
