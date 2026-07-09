@@ -252,6 +252,26 @@ describe('decapAi()', () => {
       expect(res.status).toBe(403);
     });
 
+    it('continues an existing session: returns 200 and echoes the same X-Session-Id', async () => {
+      const sessions = new Map<string, AiSession>();
+      sessions.set('session-1', makeSession({ id: 'session-1', userId: USER_A.id }));
+
+      const adapter = decapAi(makeConfig({}, sessions));
+      const req = makeRequest('/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Continue the conversation' }],
+          sessionId: 'session-1',
+          document: { slug: 'posts/hello' },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const res = await adapter.fetch(req);
+      expect(res.status).toBe(200);
+      expect(res.headers.get('X-Session-Id')).toBe('session-1');
+    });
+
     it('accepts v3 parts format for user messages', async () => {
       const sessions = new Map<string, AiSession>();
       const adapter = decapAi(makeConfig({}, sessions));
