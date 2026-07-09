@@ -314,6 +314,20 @@ describe('GET /published/:key', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
   });
+
+  it('returns 500 JSON:API error when repo throws InternalError on get', async () => {
+    const repo = {
+      getDocument: (_key: string) => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/published/posts%2Fhello'));
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -376,6 +390,60 @@ describe('POST /published', () => {
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
     expect(body.errors[0]!.status).toBe('400');
     expect(body.errors[0]!.code).toBe('invalid_data');
+  });
+
+  it('returns 409 JSON:API error when document already exists', async () => {
+    const repo = {
+      createDocument: vi.fn(() =>
+        LaikaTask.make(() => Effect.fail(new EntryAlreadyExistsError('document already exists')))
+      ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'published',
+            id: 'posts/existing',
+            attributes: { status: 'published', content: { title: 'Hello' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(409);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('409');
+  });
+
+  it('returns 500 JSON:API error when repo throws InternalError', async () => {
+    const repo = {
+      createDocument: vi.fn(() => LaikaTask.make(() => Effect.fail(new InternalError('db write failed')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'published',
+            id: 'posts/new',
+            attributes: { status: 'published', content: { title: 'Hello' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
   });
 });
 
@@ -450,6 +518,32 @@ describe('PATCH /published/:key', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
   });
+
+  it('returns 500 JSON:API error when repo throws InternalError on update', async () => {
+    const repo = {
+      updateDocument: vi.fn(() => LaikaTask.make(() => Effect.fail(new InternalError('storage failure')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fhello', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'published',
+            id: 'posts/hello',
+            attributes: { status: 'published', content: { title: 'Updated' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -472,7 +566,7 @@ describe('DELETE /published/:key', () => {
     expect(body.meta.deleted).toBe(true);
   });
 
-  it('returns JSON:API error when document not found', async () => {
+  it('returns 404 JSON:API error when document not found', async () => {
     const repo = {
       deleteDocument: vi.fn((_key: string) =>
         LaikaTask.make(() => Effect.fail(new NotFoundError('document not found')))
@@ -483,12 +577,29 @@ describe('DELETE /published/:key', () => {
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fmissing', { method: 'DELETE' }),
     );
-    // respondVoid calls respondError with no explicit status — defaults to 400
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
 
     const body = await res.json() as { errors: Array<{ status: string }> };
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
+  });
+
+  it('returns 500 JSON:API error when repo throws InternalError', async () => {
+    const repo = {
+      deleteDocument: vi.fn((_key: string) =>
+        LaikaTask.make(() => Effect.fail(new InternalError('db connection lost')))
+      ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fhello', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
   });
 });
 
@@ -1011,6 +1122,42 @@ describe('DELETE /unpublished/:key', () => {
 
     const body = await res.json() as { meta: { deleted: boolean } };
     expect(body.meta.deleted).toBe(true);
+  });
+
+  it('returns 404 JSON:API error when unpublished document not found', async () => {
+    const repo = {
+      deleteUnpublished: vi.fn((_key: string) =>
+        LaikaTask.make(() => Effect.fail(new NotFoundError('unpublished document not found')))
+      ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fmissing', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(404);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('404');
+  });
+
+  it('returns 500 JSON:API error when repo throws InternalError', async () => {
+    const repo = {
+      deleteUnpublished: vi.fn((_key: string) =>
+        LaikaTask.make(() => Effect.fail(new InternalError('storage failure')))
+      ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fdraft', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
   });
 });
 
