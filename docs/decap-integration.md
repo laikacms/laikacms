@@ -1022,8 +1022,8 @@ import { decapApi } from '@laikacms/decap/decap-api';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
-import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { resolve } from 'node:path';
 
 // Module-level singletons — initialized once, reused across all requests

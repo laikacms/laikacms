@@ -408,6 +408,36 @@ describe('LaikaStream — iterator semantics', () => {
     expect(returned.done).toBe(true);
   });
 
+  it('iterator.throw() rethrows the injected error to the caller', async () => {
+    const stream = succeedMany([1, 2, 3], emptyDone);
+    const it = stream[Symbol.asyncIterator]();
+    await it.next();
+    const injected = new Error('injected from consumer');
+    await expect(it.throw!(injected)).rejects.toBe(injected);
+  });
+
+  it('iterator.throw() closes the scope — subsequent next() calls return done immediately', async () => {
+    const stream = succeedMany([1, 2, 3], emptyDone);
+    const it = stream[Symbol.asyncIterator]();
+    await it.next();
+    try {
+      await it.throw!(new Error('boom'));
+    } catch {
+      // expected — throw() always rethrows
+    }
+    const after = await it.next();
+    expect(after.done).toBe(true);
+  });
+
+  it('iterator.throw() before first next() still rethrows and leaves iterator closed', async () => {
+    const stream = succeedMany([1, 2], emptyDone);
+    const it = stream[Symbol.asyncIterator]();
+    const err = new NotFoundError('early throw');
+    await expect(it.throw!(err)).rejects.toBe(err);
+    const after = await it.next();
+    expect(after.done).toBe(true);
+  });
+
   it('Symbol.asyncIterator property is non-enumerable on the stream', () => {
     const stream = succeed('x', emptyDone);
     const desc = Object.getOwnPropertyDescriptor(stream, Symbol.asyncIterator);
