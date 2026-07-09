@@ -69,15 +69,11 @@ export type PartialByUndefined<T> =
   };
 
 /**
- * Extract the TypeScript value type for a single field definition based on
- * its `widget`. Handles:
- *   - `widget: 'list'` with nested `fields` → array of structured items
- *   - `widget: 'list'` with a single `field` template → array of that widget's type
- *   - `widget: 'object'` with `fields` → structured record
- *   - `widget: 'select'` with `options` (string list or `{ value }[]`) → union of literal values
- *   - any other widget → looked up in `WidgetTypeMap`, falling back to `DefaultWidgetType`
+ * Scalar (non-array) field type — the raw single-value type for a field
+ * definition without considering `multiple: true`. Used internally by
+ * `ExtractFieldType`.
  */
-export type ExtractFieldType<F> = F extends { widget: infer W, fields: infer Fields }
+type ExtractSingleFieldType<F> = F extends { widget: infer W, fields: infer Fields }
   ? W extends 'list' ? Fields extends readonly unknown[] ? ExtractFieldsType<Fields>[]
     : unknown[]
   : W extends 'object' ? Fields extends readonly unknown[] ? ExtractFieldsType<Fields>
@@ -99,6 +95,20 @@ export type ExtractFieldType<F> = F extends { widget: infer W, fields: infer Fie
   : F extends { widget: infer W } ? W extends keyof WidgetTypeMap ? WidgetTypeMap[W]
     : DefaultWidgetType
   : DefaultWidgetType;
+
+/**
+ * Extract the TypeScript value type for a single field definition based on
+ * its `widget`. Handles:
+ *   - `widget: 'list'` with nested `fields` → array of structured items
+ *   - `widget: 'list'` with a single `field` template → array of that widget's type
+ *   - `widget: 'object'` with `fields` → structured record
+ *   - `widget: 'select'` with `options` (string list or `{ value }[]`) → union of literal values
+ *   - `widget: 'select' | 'image' | 'file' | 'relation'` with `multiple: true` → `Array<T>`
+ *   - any other widget → looked up in `WidgetTypeMap`, falling back to `DefaultWidgetType`
+ */
+export type ExtractFieldType<F> = F extends { multiple: true, widget: 'select' | 'image' | 'file' | 'relation' }
+  ? Array<ExtractSingleFieldType<F>>
+  : ExtractSingleFieldType<F>;
 
 /**
  * Extract the TypeScript value type for an array of field definitions, keyed
