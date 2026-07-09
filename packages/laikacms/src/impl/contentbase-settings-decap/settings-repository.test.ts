@@ -793,6 +793,131 @@ describe('DecapContentBaseSettingsProvider', () => {
       expect(result.success.required).not.toContain('subtitle');
     });
 
+    it('maps select widget with {label,value} object options to string enum', async () => {
+      const provider = makeProvider({
+        collections: [
+          {
+            name: 'posts',
+            folder: 'content/posts',
+            fields: [
+              {
+                name: 'status',
+                widget: 'select',
+                options: [
+                  { label: 'Draft', value: 'draft' },
+                  { label: 'Published', value: 'published' },
+                ],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (!Result.isSuccess(result)) return;
+
+      const schema = result.success.properties?.['status'] as Record<string, unknown>;
+      expect(schema?.type).toBe('string');
+      expect(schema?.enum).toEqual(['draft', 'published']);
+    });
+
+    it('maps select widget with number options to mixed-type enum', async () => {
+      const provider = makeProvider({
+        collections: [
+          {
+            name: 'posts',
+            folder: 'content/posts',
+            fields: [
+              {
+                name: 'priority',
+                widget: 'select',
+                options: [1, 2, 3],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (!Result.isSuccess(result)) return;
+
+      const schema = result.success.properties?.['priority'] as Record<string, unknown>;
+      expect(schema?.type).toEqual(['string', 'number']);
+      expect(schema?.enum).toEqual([1, 2, 3]);
+    });
+
+    it('maps select widget with {label,value} object options where value is number to mixed-type enum', async () => {
+      const provider = makeProvider({
+        collections: [
+          {
+            name: 'posts',
+            folder: 'content/posts',
+            fields: [
+              {
+                name: 'level',
+                widget: 'select',
+                options: [{ label: 'One', value: 1 }],
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (!Result.isSuccess(result)) return;
+
+      const schema = result.success.properties?.['level'] as Record<string, unknown>;
+      expect(schema?.type).toEqual(['string', 'number']);
+      expect(schema?.enum).toEqual([1]);
+    });
+
+    it('maps list widget with single field: to typed array', async () => {
+      const provider = makeProvider({
+        collections: [
+          {
+            name: 'posts',
+            folder: 'content/posts',
+            fields: [
+              {
+                name: 'tags',
+                widget: 'list',
+                field: { name: 'tag', widget: 'string' },
+              },
+            ],
+          },
+        ],
+      });
+
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (!Result.isSuccess(result)) return;
+
+      const schema = result.success.properties?.['tags'] as Record<string, unknown>;
+      expect(schema?.type).toBe('array');
+      expect(schema?.items).toEqual({ type: 'string' });
+    });
+
+    it('maps unknown widget to empty schema and does not throw', async () => {
+      const provider = makeProvider({
+        collections: [
+          {
+            name: 'posts',
+            folder: 'content/posts',
+            fields: [{ name: 'location', widget: 'custom-map' as never }],
+          },
+        ],
+      });
+
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (!Result.isSuccess(result)) return;
+
+      expect(result.success.properties?.['location']).toEqual({});
+    });
+
     it('returns NotFoundError for unknown collection', async () => {
       const provider = makeProvider({
         collections: [
