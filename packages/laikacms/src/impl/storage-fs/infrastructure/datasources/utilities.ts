@@ -4,7 +4,7 @@ import { ErrorCode, ErrorCodeToClassMap, InternalError, LaikaError } from 'laika
 // Common system errors#
 // This is a list of system errors commonly-encountered when writing a Node.js program. For a comprehensive list, see the errno(3) man page.
 
-// EACCES (Permission denied): An attempt was made to access a file in a way forbidden by its file access permissions.
+// EACCES (Permission denied): An attempt was made to access a file in a way forbidden by its file access permissions. Node.js uses single-S EACCES (not EACCESS).
 
 // EADDRINUSE (Address already in use): An attempt to bind a server (net, http, or https) to a local address failed due to another server on the local system already occupying that address.
 
@@ -33,7 +33,7 @@ import { ErrorCode, ErrorCodeToClassMap, InternalError, LaikaError } from 'laika
 // ETIMEDOUT (Operation timed out): A connect or send request failed because the connected party did not properly respond after a period of time. Usually encountered by http or net. Often a sign that a socket.end() was not properly called.
 
 const systemErrors = {
-  EACCESS: {
+  EACCES: {
     publicMessage: 'Permission denied',
     laikaCode: 'forbidden',
   },
