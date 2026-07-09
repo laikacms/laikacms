@@ -112,6 +112,14 @@ describe('head()', () => {
     );
     await expect(bucket.head('x')).rejects.toThrow('throttled');
   });
+
+  it('prepends keyPrefix to HeadObjectCommand Key', async () => {
+    const client: S3ClientLike = { send: vi.fn(() => Promise.resolve({ ContentLength: 1, ETag: '"e"' })) };
+    const bucket = createS3Bucket({ client, bucketName: 'b', commands, keyPrefix: 'ns/' });
+    await bucket.head('file.md');
+    const cmd = vi.mocked(client.send).mock.calls[0]![0] as { input: Record<string, unknown> };
+    expect(cmd.input['Key']).toBe('ns/file.md');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -138,6 +146,14 @@ describe('put()', () => {
     expect(vi.mocked(client.send)).toHaveBeenCalledOnce();
     const cmd = vi.mocked(client.send).mock.calls[0]![0] as { input: Record<string, unknown> };
     expect(cmd.input['ContentType']).toBe('text/markdown');
+  });
+
+  it('prepends keyPrefix to PutObjectCommand Key', async () => {
+    const client: S3ClientLike = { send: vi.fn(() => Promise.resolve({})) };
+    const bucket = createS3Bucket({ client, bucketName: 'b', commands, keyPrefix: 'ns/' });
+    await bucket.put('file.md', 'content');
+    const cmd = vi.mocked(client.send).mock.calls[0]![0] as { input: Record<string, unknown> };
+    expect(cmd.input['Key']).toBe('ns/file.md');
   });
 });
 
@@ -306,6 +322,22 @@ describe('get()', () => {
   it('rethrows non-404 errors', async () => {
     const { bucket } = makeBucket(() => Promise.reject(Object.assign(new Error('boom'), { name: 'InternalError' })));
     await expect(bucket.get('key')).rejects.toThrow('boom');
+  });
+
+  it('prepends keyPrefix to GetObjectCommand Key', async () => {
+    const client: S3ClientLike = {
+      send: vi.fn(() =>
+        Promise.resolve({
+          ContentLength: 3,
+          ETag: '"e"',
+          Body: { transformToString: async () => 'hi' },
+        })
+      ),
+    };
+    const bucket = createS3Bucket({ client, bucketName: 'b', commands, keyPrefix: 'ns/' });
+    await bucket.get('file.md');
+    const cmd = vi.mocked(client.send).mock.calls[0]![0] as { input: Record<string, unknown> };
+    expect(cmd.input['Key']).toBe('ns/file.md');
   });
 });
 
