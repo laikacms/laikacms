@@ -117,11 +117,9 @@ function respondResource<T, R extends JsonApiResource>(
   logger?: JsonApiLogger,
 ) {
   if (Result.isFailure(result)) {
-    // Check if this is a "not found" error and return 404
-    const isNotFound = result.failure.code === NotFoundError.CODE
-      || result.failure.message?.toLowerCase().includes('not found');
     onErrorFn?.(result.failure);
-    return respondError(result, isNotFound ? 404 : 400, logger);
+    const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+    return respondError(result, status, logger);
   }
   const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
   return json({
@@ -176,7 +174,8 @@ function respondVoid(
 ) {
   if (Result.isFailure(result)) {
     onErrorFn?.(result.failure);
-    return respondError(result, undefined, logger);
+    const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+    return respondError(result, status, logger);
   }
   const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
   return json({ meta: { deleted: true, ...(warnings ? { warnings } : {}) } });
