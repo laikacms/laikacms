@@ -107,8 +107,15 @@ export interface DrizzleDocumentsRepositoryOptions<CKE, CKSW, CSE, CSNE, CSI, CD
       select: (query: {
         where: RKE | RE | RA,
         limit?: number,
+        offset?: number,
         excludeContent?: boolean,
       }) => Promise<RevisionModel[]>,
+      /**
+       * Optional. Return the total number of revision rows matching `where` (no LIMIT/OFFSET).
+       * When provided, `listRevisions` populates `done.total` with the full count instead of the
+       * page count, enabling correct `meta.page.total` in the Documents JSON:API.
+       */
+      count?: (query: { where: RKE | RE | RA }) => Promise<number>,
     },
   };
 }
@@ -491,9 +498,14 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
           : 'page' in pagination
           ? (pagination.perPage ?? 100)
           : 100;
-        const rows = yield* Effect.promise(() => this.options.callbacks.revisions.select({ where: qb.keyEquals(key) }));
-        const page = rows.slice(offset, offset + limit);
-        for (const row of page) {
+        const where = qb.keyEquals(key);
+        const [rows, fullCount] = yield* Effect.all([
+          Effect.promise(() => this.options.callbacks.revisions.select({ where, limit, offset })),
+          this.options.callbacks.revisions.count
+            ? Effect.promise(() => this.options.callbacks.revisions.count!({ where }))
+            : Effect.succeed(null),
+        ]);
+        for (const row of rows) {
           yield* emit.data({
             type: 'revision-summary' as const,
             key,
@@ -503,7 +515,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
             updatedAt: row.updatedAt,
           });
         }
-        return { total: rows.length };
+        return { total: fullCount ?? rows.length };
       })
     );
   }

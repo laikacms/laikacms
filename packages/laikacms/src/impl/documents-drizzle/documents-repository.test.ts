@@ -108,9 +108,12 @@ function makeInMemoryOptions():
           }
           return deleted;
         },
-        async select({ where, limit }) {
+        async select({ where, limit, offset = 0 }) {
           const filtered = revisions.filter(where);
-          return limit !== undefined ? filtered.slice(0, limit) : filtered;
+          return filtered.slice(offset, limit !== undefined ? offset + limit : undefined);
+        },
+        async count({ where }) {
+          return revisions.filter(where).length;
         },
       },
     },

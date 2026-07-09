@@ -57,8 +57,11 @@ const repo = new DrizzleDocumentsRepository({
       insert: ({ values }) => db.insert(revisionsTable).values(values).returning(),
       update: ({ where, values }) => db.update(revisionsTable).set(values).where(where).returning(),
       delete: ({ where }) => db.delete(revisionsTable).where(where).returning(),
-      select: ({ where, limit }) =>
-        db.select().from(revisionsTable).where(where).limit(limit ?? 100),
+      select: ({ where, limit, offset = 0 }) =>
+        db.select().from(revisionsTable).where(where).limit(limit ?? 100).offset(offset),
+      count: ({ where }) =>
+        db.select({ count: count() }).from(revisionsTable).where(where)
+          .then(([r]) => r?.count ?? 0),
     },
   },
 });
@@ -123,12 +126,13 @@ practice you never need to name the type parameters explicitly.
 
 ### `callbacks.revisions`
 
-| Field    | Signature                                                                       | Description                            |
-| -------- | ------------------------------------------------------------------------------- | -------------------------------------- |
-| `insert` | `({ values: RevisionModelStrict }) => Promise<RevisionModel[]>`                 | Insert a revision row.                 |
-| `update` | `({ where, values: Partial<RevisionModelStrict> }) => Promise<RevisionModel[]>` | Update revision rows matching `where`. |
-| `delete` | `({ where }) => Promise<RevisionModel[]>`                                       | Delete revision rows matching `where`. |
-| `select` | `({ where, limit?, excludeContent? }) => Promise<RevisionModel[]>`              | Query revisions.                       |
+| Field    | Signature                                                                       | Description                                                                                                                 |
+| -------- | ------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `insert` | `({ values: RevisionModelStrict }) => Promise<RevisionModel[]>`                 | Insert a revision row.                                                                                                      |
+| `update` | `({ where, values: Partial<RevisionModelStrict> }) => Promise<RevisionModel[]>` | Update revision rows matching `where`.                                                                                      |
+| `delete` | `({ where }) => Promise<RevisionModel[]>`                                       | Delete revision rows matching `where`.                                                                                      |
+| `select` | `({ where, limit?, offset?, excludeContent? }) => Promise<RevisionModel[]>`     | Query revisions (DB should apply LIMIT/OFFSET).                                                                             |
+| `count`  | `({ where }) => Promise<number>` _(optional)_                                   | Return total matching rows (no LIMIT). When provided, `listRevisions` uses this for `done.total` instead of the page count. |
 
 ### Model types
 
