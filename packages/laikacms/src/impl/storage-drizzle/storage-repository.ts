@@ -322,14 +322,14 @@ export class DrizzleStorageRepository extends StorageRepository {
         const pattern = folderKey ? `${folderKey}/` : '';
         const baseDepth = folderKey ? this.calculateDepth(folderKey) : 0;
         const maxDepth = baseDepth + options.depth;
-        let limit: number;
+        let limit: number | undefined;
         let offset: number;
         if ('page' in options.pagination) {
           const perPage = options.pagination.perPage ?? 20;
           limit = perPage;
           offset = (options.pagination.page - 1) * perPage;
         } else {
-          limit = 'limit' in options.pagination ? (options.pagination.limit ?? 20) : 20;
+          limit = 'limit' in options.pagination ? options.pagination.limit : undefined;
           offset = 'offset' in options.pagination ? options.pagination.offset : 0;
         }
 
