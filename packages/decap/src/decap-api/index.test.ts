@@ -93,6 +93,14 @@ describe('GET /health', () => {
     expect(typeof body.timestamp).toBe('string');
     expect(() => new Date(body.timestamp)).not.toThrow();
   });
+
+  it('uses Content-Type: application/json (not application/vnd.api+json)', async () => {
+    const api = decapApi(makeOptions());
+    const res = await api.fetch(makeRequest('/health'));
+
+    expect(res.headers.get('Content-Type')).toContain('application/json');
+    expect(res.headers.get('Content-Type')).not.toContain('vnd.api+json');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -417,6 +425,16 @@ describe('GET /session', () => {
     const res = await api.fetch(makeRequest('/session'));
 
     expect(res.status).toBe(401);
+  });
+
+  it('uses Content-Type: application/json (not application/vnd.api+json) — LCMS-375', async () => {
+    const api = decapApi(makeOptions());
+    const res = await api.fetch(
+      makeRequest('/session', { Authorization: 'Bearer good-token' }),
+    );
+
+    expect(res.headers.get('Content-Type')).toContain('application/json');
+    expect(res.headers.get('Content-Type')).not.toContain('vnd.api+json');
   });
 });
 
@@ -831,6 +849,42 @@ describe('logger forwarding — assets sub-API (LCMS-353)', () => {
     const res = await api.fetch(makeRequest('/assets/capabilities', { Authorization: 'Bearer good-token' }));
 
     expect(res.status).toBe(500);
+    expect(logger.error).toHaveBeenCalled();
+  });
+});
+
+describe('logger forwarding — storage sub-API (LCMS-366)', () => {
+  it('forwards the configured logger to the storage sub-handler (error logged on unexpected 500)', async () => {
+    const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+
+    const storageRepo = {
+      getCapabilities: () => {
+        throw new Error('storage boom');
+      },
+    } as unknown as StorageRepository;
+
+    const api = decapApi(makeOptions({ storage: storageRepo, logger }));
+    const res = await api.fetch(makeRequest('/storage/capabilities', { Authorization: 'Bearer good-token' }));
+
+    expect(res.status).toBe(500);
+    expect(logger.error).toHaveBeenCalled();
+  });
+});
+
+describe('logger forwarding — documents sub-API (LCMS-366)', () => {
+  it('forwards the configured logger to the documents sub-handler (error logged on non-success)', async () => {
+    const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+
+    const documentsRepo = {
+      getCapabilities: () => {
+        throw new Error('documents boom');
+      },
+    } as unknown as DocumentsRepository;
+
+    const api = decapApi(makeOptions({ documents: documentsRepo, logger }));
+    const res = await api.fetch(makeRequest('/documents/capabilities', { Authorization: 'Bearer good-token' }));
+
+    expect(res.status).not.toBe(200);
     expect(logger.error).toHaveBeenCalled();
   });
 });

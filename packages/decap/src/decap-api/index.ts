@@ -301,7 +301,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
                 },
               },
             }),
-            { status: 200, headers: SECURITY_HEADERS },
+            { status: 200, headers: { ...SECURITY_HEADERS, 'Content-Type': 'application/json' } },
           ),
         );
       } else if (pathname.startsWith(storageEndpoint)) {
