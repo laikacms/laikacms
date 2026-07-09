@@ -595,6 +595,31 @@ describe('POST /resources — asset via JSON:API', () => {
     const body = await res.json() as { errors: Array<{ status: string }> };
     expect(body.errors[0]?.status).toBe('400');
   });
+
+  it('returns 400 when createAsset repo call fails via JSON:API path (LCMS-362)', async () => {
+    const partialRepo = {
+      createAsset: () => LaikaTask.fail(new BadRequestError('storage quota exceeded')),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'asset',
+            id: 'uploads/quota-exceeded.txt',
+            attributes: { mimeType: 'text/plain', content: btoa('data') },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string, detail: string }> };
+    expect(body.errors[0]?.code).toBe('bad_request');
+    expect(body.errors[0]?.detail).toContain('storage quota exceeded');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -632,6 +657,73 @@ describe('POST /resources — folder via JSON:API', () => {
     const body = await res.json() as { data: { type: string, id: string } };
     expect(body.data.type).toBe('folder');
     expect(body.data.id).toBe('my-folder/');
+  });
+
+  it('returns 400 when createFolder repo call fails (LCMS-362)', async () => {
+    const partialRepo = {
+      createFolder: () => LaikaTask.fail(new BadRequestError('folder already exists')),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'folder',
+            id: 'existing-folder/',
+            attributes: {},
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string, detail: string }> };
+    expect(body.errors[0]?.code).toBe('bad_request');
+    expect(body.errors[0]?.detail).toContain('folder already exists');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /resources — JSON:API invalid type / unsupported Content-Type (LCMS-362)
+// ---------------------------------------------------------------------------
+
+describe('POST /resources — JSON:API invalid data.type', () => {
+  it('returns 400 bad_request when data.type is not "asset" or "folder" (LCMS-362)', async () => {
+    const api = buildAssetsApi({ repository: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'image',
+            id: 'uploads/photo.jpg',
+            attributes: {},
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string }> };
+    expect(body.errors[0]?.code).toBe('bad_request');
+  });
+});
+
+describe('POST /resources — unsupported Content-Type', () => {
+  it('returns 400 bad_request when Content-Type is text/plain (LCMS-362)', async () => {
+    const api = buildAssetsApi({ repository: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: 'hello',
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string }> };
+    expect(body.errors[0]?.code).toBe('bad_request');
   });
 });
 
