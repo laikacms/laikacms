@@ -1,4 +1,4 @@
-import { type StorageContractCase, storageContractRegistry } from '../../domain/storage/testing/index.js';
+import type { StorageContractCase } from '../../domain/storage/testing/index.js';
 
 import {
   type DrizzleStorageCallbacks,
@@ -88,5 +88,3 @@ export const drizzleStorageContractCase: StorageContractCase = {
     return new DrizzleStorageRepository({ queryBuilders, callbacks });
   },
 };
-
-storageContractRegistry.push(drizzleStorageContractCase);
