@@ -636,6 +636,109 @@ describe('POST /resources — folder via JSON:API', () => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /resources — multipart/form-data upload
+// ---------------------------------------------------------------------------
+
+describe('POST /resources — multipart form-data', () => {
+  const makeMultipartRequest = (fields: Record<string, string | Blob>): Request => {
+    const formData = new FormData();
+    for (const [key, value] of Object.entries(fields)) {
+      formData.append(key, value);
+    }
+    return new Request('http://localhost/api/assets/resources', {
+      method: 'POST',
+      body: formData,
+    });
+  };
+
+  it('returns 201 with JSON:API asset after successful multipart upload', async () => {
+    const createdAsset: Asset = {
+      type: 'asset',
+      key: 'uploads/photo.jpg',
+      createdAt: '2026-06-24T00:00:00Z',
+      updatedAt: '2026-06-24T00:00:00Z',
+      content: { size: 1024, etag: 'photo-etag' },
+    };
+    const partialRepo = {
+      createAsset: () => LaikaTask.succeed(createdAsset),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const file = new File(['<binary data>'], 'photo.jpg', { type: 'image/jpeg' });
+    const res = await api.fetch(makeMultipartRequest({ file }));
+
+    expect(res.status).toBe(201);
+    const body = await res.json() as { data: { type: string, id: string } };
+    expect(body.data.type).toBe('asset');
+    expect(body.data.id).toBe('uploads/photo.jpg');
+  });
+
+  it('returns 400 bad_request when file field is absent', async () => {
+    const api = buildAssetsApi({ repository: stubRepo });
+    const res = await api.fetch(makeMultipartRequest({ key: 'uploads/no-file.jpg' }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string, status: string }> };
+    expect(body.errors[0]?.code).toBe('bad_request');
+    expect(body.errors[0]?.status).toBe('400');
+  });
+
+  it('returns 400 bad_request when metadata field contains invalid JSON', async () => {
+    const api = buildAssetsApi({ repository: stubRepo });
+    const file = new File(['data'], 'test.txt', { type: 'text/plain' });
+    const res = await api.fetch(makeMultipartRequest({ file, metadata: '{not-valid-json' }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string }> };
+    expect(body.errors[0]?.code).toBe('bad_request');
+  });
+
+  it('individual fields take priority over metadata JSON values', async () => {
+    let capturedCreate: Parameters<AssetsRepository['createAsset']>[0] | undefined;
+    const partialRepo = {
+      createAsset: (opts: Parameters<AssetsRepository['createAsset']>[0]) => {
+        capturedCreate = opts;
+        return LaikaTask.succeed({
+          type: 'asset' as const,
+          key: opts.key,
+          createdAt: '2026-06-24T00:00:00Z',
+          updatedAt: '2026-06-24T00:00:00Z',
+          content: { size: 4, etag: 'e' },
+        });
+      },
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const file = new File(['data'], 'original.txt', { type: 'text/plain' });
+    const metadata = JSON.stringify({ key: 'from-metadata/original.txt', mimeType: 'text/plain' });
+    const res = await api.fetch(makeMultipartRequest({
+      file,
+      metadata,
+      key: 'individual-key/overridden.txt',
+      mimeType: 'application/octet-stream',
+    }));
+
+    expect(res.status).toBe(201);
+    expect(capturedCreate?.key).toBe('individual-key/overridden.txt');
+    expect(capturedCreate?.mimeType).toBe('application/octet-stream');
+  });
+
+  it('returns 400 when createAsset repo call fails', async () => {
+    const partialRepo = {
+      createAsset: () => LaikaTask.fail(new BadRequestError('storage quota exceeded')),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const file = new File(['data'], 'test.bin', { type: 'application/octet-stream' });
+    const res = await api.fetch(makeMultipartRequest({ file }));
+
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ detail: string }> };
+    expect(body.errors[0]?.detail).toContain('storage quota exceeded');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // PATCH /resources/:key
 // ---------------------------------------------------------------------------
 
