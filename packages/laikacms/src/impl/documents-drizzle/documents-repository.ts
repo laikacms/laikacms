@@ -160,7 +160,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
           key: row.key,
           status: 'published' as const,
           content,
-          language: row.language ?? 'unk',
+          language: row.language ?? 'und',
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
         };
@@ -238,7 +238,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
           type: 'unpublished' as const,
           key: row.key,
           status: row.status ?? 'published',
-          language: row.language ?? 'unk',
+          language: row.language ?? 'und',
           content,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
@@ -276,7 +276,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
         const now = new Date().toISOString();
         const values: Partial<DocumentModelStrict> = {
           updatedAt: now,
-          language: update.language ?? 'unk',
+          language: update.language ?? 'und',
         };
         if (update.status) values.status = update.status;
         if (update.content) values.content = JSON.stringify(update.content);
@@ -395,7 +395,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
               type: isPublished ? 'published-summary' : 'unpublished-summary',
               key: row.key,
               status: row.status ?? PUBLISHED_STATUS,
-              language: row.language ?? 'unk',
+              language: row.language ?? 'und',
               createdAt: row.createdAt,
               updatedAt: row.updatedAt,
             } as T);
@@ -411,7 +411,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
             type: isPublished ? 'published' : 'unpublished',
             key: row.key,
             status: row.status ?? PUBLISHED_STATUS,
-            language: row.language ?? 'unk',
+            language: row.language ?? 'und',
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
             content: parsed.success,
@@ -442,7 +442,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
           type: 'revision' as const,
           key: row.key,
           revision: row.revision,
-          language: row.language ?? 'unk',
+          language: row.language ?? 'und',
           content,
           createdAt: row.createdAt,
           updatedAt: row.updatedAt,
@@ -498,7 +498,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
             type: 'revision-summary' as const,
             key,
             revision: row.revision,
-            language: row.language ?? 'unk',
+            language: row.language ?? 'und',
             createdAt: row.createdAt,
             updatedAt: row.updatedAt,
           });

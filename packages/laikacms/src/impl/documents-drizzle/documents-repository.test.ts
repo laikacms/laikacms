@@ -11,18 +11,21 @@ import type { DocumentModel, DrizzleDocumentsRepositoryOptions, RevisionModel } 
 type Condition = (row: DocumentModel) => boolean;
 type RevisionCondition = (row: RevisionModel) => boolean;
 
-function makeInMemoryOptions(): DrizzleDocumentsRepositoryOptions<
-  Condition,
-  Condition,
-  Condition,
-  Condition,
-  Condition,
-  Condition,
-  Condition,
-  RevisionCondition,
-  RevisionCondition,
-  RevisionCondition
-> {
+function makeInMemoryOptions():
+  & DrizzleDocumentsRepositoryOptions<
+    Condition,
+    Condition,
+    Condition,
+    Condition,
+    Condition,
+    Condition,
+    Condition,
+    RevisionCondition,
+    RevisionCondition,
+    RevisionCondition
+  >
+  & { __documents: DocumentModel[], __revisions: RevisionModel[] }
+{
   const documents: DocumentModel[] = [];
   const revisions: RevisionModel[] = [];
 
@@ -111,6 +114,8 @@ function makeInMemoryOptions(): DrizzleDocumentsRepositoryOptions<
         },
       },
     },
+    __documents: documents,
+    __revisions: revisions,
   };
 }
 
@@ -184,6 +189,27 @@ describe('DrizzleDocumentsRepository', () => {
       expect(Result.isFailure(result)).toBe(true);
       if (Result.isFailure(result)) {
         expect(result.failure.code).toBe(NotFoundError.CODE);
+      }
+    });
+
+    it('returns "und" (not "unk") when the stored language is null — LCMS-381', async () => {
+      // Simulate a legacy DB row with language: null (e.g. inserted before the column existed)
+      const opts = makeInMemoryOptions();
+      const r = new DrizzleDocumentsRepository(opts);
+      const now = new Date().toISOString();
+      opts.__documents.push({
+        key: 'null-lang-doc',
+        depth: 1,
+        status: 'published',
+        language: null,
+        content: JSON.stringify({}),
+        createdAt: now,
+        updatedAt: now,
+      });
+      const result = await resolveTask(r.getDocument('null-lang-doc'));
+      expect(Result.isSuccess(result)).toBe(true);
+      if (Result.isSuccess(result)) {
+        expect(result.success.language).toBe('und');
       }
     });
   });
