@@ -497,6 +497,29 @@ describe('DrizzleStorageRepository.listAtoms', () => {
 
     expect(selectCalls[0]).toEqual({ limit: 2, offset: 2 });
   });
+
+  it('passes limit=undefined to select callback when pagination has no limit key — returns all rows (LCMS-369)', async () => {
+    const allRows = Array.from({ length: 25 }, (_, i) => row(`blog/p${i}`));
+    const selectCalls: Array<{ limit?: number, offset?: number }> = [];
+
+    const repo = makeRepoFull({
+      async select({ limit, offset }) {
+        selectCalls.push({ limit, offset });
+        // Simulate DB returning all rows when no LIMIT clause (limit undefined)
+        const start = offset ?? 0;
+        return limit !== undefined ? allRows.slice(start, start + limit) : allRows.slice(start);
+      },
+    });
+
+    const collected = await Effect.runPromise(
+      LaikaStream.runCollect(
+        repo.listAtoms('blog', { depth: 1, pagination: { offset: 0 } }),
+      ),
+    );
+
+    expect(selectCalls[0]).toEqual({ limit: undefined, offset: 0 });
+    expect(collected.data).toHaveLength(25);
+  });
 });
 
 describe('DrizzleStorageRepository.listAtomSummaries', () => {
