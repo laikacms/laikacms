@@ -51,6 +51,7 @@ pass them to `decapApi(...)`, and mount `.fetch` on a catch-all route.
 ### a) Spin up a Node.js backend (Express/Hono/Fastify/Koa/Bun/Deno)
 
 ```ts
+import { serveStatic } from '@hono/node-server/serve-static';
 import { decapApi } from '@laikacms/decap/decap-api';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
@@ -76,11 +77,11 @@ const laika = decapApi({
   authenticateAccessToken: yourValidator, // throw to reject; see task (e) for production auth
 });
 
+// Serve the Decap CMS admin bundle (built by esbuild — see docs/decap-integration.md → "Serving the Decap admin shell"):
+app.use('/admin/*', serveStatic({ root: './admin' }));
+
 // Mount on every method at /api/decap/*:
 app.all('/api/decap/*', c => laika.fetch(c.req.raw));
-
-// Serve the Decap CMS admin shell (loads Decap from CDN, registers the Laika backend):
-app.get('/admin', c => c.html(ADMIN_HTML)); // see docs/decap-integration.md → "Serving the Decap admin shell"
 ```
 
 > **Before any content operation: seed the Decap config into storage once.**
@@ -179,7 +180,9 @@ const makeLaika = (env: Env) => {
 };
 
 app.all('/api/decap/*', c => makeLaika(c.env).fetch(c.req.raw));
-app.get('/admin', c => c.html(ADMIN_HTML)); // see docs/decap-integration.md → "Serving the Decap admin shell"
+// Serve the Decap CMS admin bundle: build admin/ with esbuild, then declare
+// `[assets] directory = "./admin"` in wrangler.toml — Workers Assets serve /admin/* automatically.
+// See docs/decap-integration.md → "Serving the Decap admin shell"
 
 export default app;
 ```
