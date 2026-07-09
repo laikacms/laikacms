@@ -925,6 +925,100 @@ describe('handleForgotPassword', () => {
 });
 
 // ===========================================================================
+// handleForgotPassword — CAPTCHA CSP (LCMS-354)
+// ===========================================================================
+
+describe('handleForgotPassword — CAPTCHA CSP', () => {
+  const passwordResetConfig = (prCbs: ReturnType<typeof makePasswordResetCallbacks>) => ({
+    emailProvider: { sendEmail: vi.fn().mockResolvedValue({ success: true }) },
+    callbacks: prCbs,
+    resetBaseUrl: undefined,
+    fromEmail: 'noreply@example.com',
+    appName: 'Test CMS',
+  });
+
+  function makeCaptchaConfig(extra?: string) {
+    return {
+      enabled: true,
+      widgetHtml: '<div class="captcha-widget"></div>',
+      scriptHtml: '<script src="https://example-captcha.com/api.js"></script>',
+      responseFieldName: 'captcha-response',
+      verify: vi.fn().mockResolvedValue(true),
+      ...(extra !== undefined ? { captchaCspAdditions: extra } : {}),
+    };
+  }
+
+  it('CSP includes captchaCspAdditions on forgot-password GET when captcha enabled', async () => {
+    const callbacks = makeCallbacks();
+    const prCbs = makePasswordResetCallbacks();
+    const config = makeConfig(callbacks, {
+      passwordReset: passwordResetConfig(prCbs),
+      captcha: makeCaptchaConfig(' https://example-captcha.com; frame-src https://example-captcha.com'),
+    });
+    const router = decapOauth2(config);
+
+    const request = new Request(makeUrl('forgot-password'), { method: 'GET' });
+    const response = await router.fetch(request);
+
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).toContain('https://example-captcha.com');
+    expect(csp).not.toContain('challenges.cloudflare.com');
+  });
+
+  it('CSP has script-src but no external domains when captchaCspAdditions omitted', async () => {
+    const callbacks = makeCallbacks();
+    const prCbs = makePasswordResetCallbacks();
+    const config = makeConfig(callbacks, {
+      passwordReset: passwordResetConfig(prCbs),
+      captcha: makeCaptchaConfig(), // enabled, no captchaCspAdditions
+    });
+    const router = decapOauth2(config);
+
+    const request = new Request(makeUrl('forgot-password'), { method: 'GET' });
+    const response = await router.fetch(request);
+
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).toContain("script-src 'unsafe-inline'");
+    expect(csp).not.toContain('challenges.cloudflare.com');
+  });
+
+  it('CSP has no script-src when captcha is not enabled', async () => {
+    const callbacks = makeCallbacks();
+    const prCbs = makePasswordResetCallbacks();
+    const config = makeConfig(callbacks, {
+      passwordReset: passwordResetConfig(prCbs),
+      // no captcha config
+    });
+    const router = decapOauth2(config);
+
+    const request = new Request(makeUrl('forgot-password'), { method: 'GET' });
+    const response = await router.fetch(request);
+
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).not.toContain('script-src');
+    expect(csp).not.toContain('challenges.cloudflare.com');
+  });
+
+  it('POST missing email also applies CAPTCHA CSP', async () => {
+    const callbacks = makeCallbacks();
+    const prCbs = makePasswordResetCallbacks();
+    const config = makeConfig(callbacks, {
+      passwordReset: passwordResetConfig(prCbs),
+      captcha: makeCaptchaConfig(' https://example-captcha.com'),
+    });
+    const router = decapOauth2(config);
+
+    const body = new FormData(); // no email
+    const request = new Request(makeUrl('forgot-password'), { method: 'POST', body });
+    const response = await router.fetch(request);
+
+    expect(response.status).toBe(400);
+    const csp = response.headers.get('Content-Security-Policy') ?? '';
+    expect(csp).toContain('https://example-captcha.com');
+  });
+});
+
+// ===========================================================================
 // handleResetPassword — GET + POST /oauth2/reset-password
 // ===========================================================================
 
