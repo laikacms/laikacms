@@ -6,7 +6,7 @@
  * can be exercised by injecting mock DocumentsRepository / AssetsRepository
  * implementations.
  *
- * Browser-only Decap CMS packages (@laikacms/decap-cms/lib-util, lib-auth,
+ * Browser-only Decap CMS packages (@laikacms/decap-cms/lib/util, lib-auth,
  * ui-default) are mocked because they call `window` at module load time.
  * We do NOT test the authentication flow because that requires a running server.
  */
@@ -26,40 +26,27 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const { MockCursor, CURSOR_COMPATIBILITY_SYMBOL } = vi.hoisted(() => {
   const CURSOR_COMPATIBILITY_SYMBOL = Symbol('cursor_compat');
 
+  // Mirrors the v4.beta Cursor: `data`/`meta` are plain objects, `actions` a Set.
   class MockCursor {
-    private _actions: string[];
-    private _data: Record<string, unknown>;
-    private _meta: Record<string, unknown>;
+    actions: Set<string>;
+    data: Record<string, unknown>;
+    meta: Record<string, unknown>;
 
     constructor(store: { actions?: string[], data?: Record<string, unknown>, meta?: Record<string, unknown> } = {}) {
-      this._actions = store.actions ?? [];
-      this._data = store.data ?? {};
-      this._meta = store.meta ?? {};
+      this.actions = new Set(store.actions ?? []);
+      this.data = store.data ?? {};
+      this.meta = store.meta ?? {};
     }
 
     static create(store: { actions?: string[], data?: Record<string, unknown>, meta?: Record<string, unknown> } = {}) {
       return new MockCursor(store);
-    }
-
-    get data() {
-      const d = this._data;
-      return { toJS: () => d };
-    }
-
-    get meta() {
-      const m = this._meta;
-      return { get: (k: string) => m[k] };
-    }
-
-    get actions() {
-      return { has: (a: string) => this._actions.includes(a) };
     }
   }
 
   return { MockCursor, CURSOR_COMPATIBILITY_SYMBOL };
 });
 
-vi.mock('@laikacms/decap-cms/lib-util', () => ({
+vi.mock('@laikacms/decap-cms/lib/util', () => ({
   AccessTokenError: class AccessTokenError extends Error {
     constructor(msg: string) {
       super(msg);
@@ -83,14 +70,14 @@ vi.mock('@laikacms/decap-cms/lib-util', () => ({
   CURSOR_COMPATIBILITY_SYMBOL,
 }));
 
-vi.mock('@laikacms/decap-cms/lib-auth', () => ({
+vi.mock('@laikacms/decap-cms/lib/auth', () => ({
   PkceAuthenticator: class PkceAuthenticator {
     completeAuth = vi.fn();
     authenticate = vi.fn();
   },
 }));
 
-vi.mock('@laikacms/decap-cms/ui-default', () => ({
+vi.mock('@laikacms/decap-cms/ui/default', () => ({
   AuthenticationPage: () => null,
   Icon: () => null,
 }));
@@ -180,7 +167,7 @@ function makeConfig(overrides: Record<string, unknown> = {}) {
 // Import createLaikaBackend (after mocks are in place)
 // ---------------------------------------------------------------------------
 
-import { unsentRequest } from '@laikacms/decap-cms/lib-util';
+import { unsentRequest } from '@laikacms/decap-cms/lib/util';
 
 import createLaikaBackend from './laika-backend.js';
 
@@ -562,7 +549,7 @@ describe('LaikaBackend.traverseCursor()', () => {
     const result = await backend.traverseCursor(page1Cursor, 'next');
 
     // New cursor should be on page 2 with no 'next' (last page)
-    expect(result.cursor.meta.get('page')).toBe(2);
+    expect(result.cursor.meta.page).toBe(2);
     expect(result.cursor.actions.has('prev')).toBe(true);
     expect(result.cursor.actions.has('next')).toBe(false);
   });
@@ -589,7 +576,7 @@ describe('LaikaBackend.traverseCursor()', () => {
 
     expect(result.entries).toHaveLength(20);
     expect(result.entries[0].file.path).toBe('posts/entry-0');
-    expect(result.cursor.meta.get('page')).toBe(1);
+    expect(result.cursor.meta.page).toBe(1);
     expect(result.cursor.actions.has('next')).toBe(true);
     expect(result.cursor.actions.has('prev')).toBe(false);
   });

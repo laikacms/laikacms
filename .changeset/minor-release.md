@@ -1,5 +1,0 @@
----
-"laikacms": minor
----
-
-Minor release.

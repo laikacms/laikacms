@@ -1,5 +1,5 @@
-import { PkceAuthenticator } from '@laikacms/decap-cms/lib-auth';
-import { AuthenticationPage, Icon } from '@laikacms/decap-cms/ui-default';
+import { PkceAuthenticator } from '@laikacms/decap-cms/lib/auth';
+import { AuthenticationPage, Icon } from '@laikacms/decap-cms/ui/default';
 import React, { Component } from 'react';
 
 interface BackendConfig {
@@ -111,9 +111,6 @@ class PKCEAuthenticationPage extends Component<PKCEAuthPageProps, PKCEAuthPageSt
         onLogin={this.handleLogin}
         loginDisabled={inProgress}
         loginErrorMessage={loginError}
-        logoUrl={config?.logo_url}
-        // "logo" prop is optional visual override; pass through logoUrl for type satisfaction
-        logo={config?.logo_url}
         siteUrl={config?.site_url}
         renderButtonContent={() => (
           <React.Fragment>

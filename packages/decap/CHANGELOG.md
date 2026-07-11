@@ -1,5 +1,13 @@
 # @laikacms/decap
 
+## 1.1.0
+
+### Patch Changes
+
+- Updated dependencies [96f8692]
+- Updated dependencies [96f8692]
+  - laikacms@1.1.0
+
 ## 1.0.1
 
 ### Patch Changes

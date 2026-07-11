@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/decap-ai",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "AI chat integration for Decap CMS: server adapter, React widget, model providers, all bundled with their own ai SDK runtime so consumers stay decoupled.",
   "keywords": [
     "decap-cms",

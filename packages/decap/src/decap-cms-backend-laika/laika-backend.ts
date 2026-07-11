@@ -4,7 +4,7 @@ import {
   Cursor,
   CURSOR_COMPATIBILITY_SYMBOL,
   unsentRequest,
-} from '@laikacms/decap-cms/lib-util';
+} from '@laikacms/decap-cms/lib/util';
 
 import React from 'react';
 
@@ -12,19 +12,19 @@ import PKCEAuthenticationPage from './AuthenticationPage.js';
 import DevAuthenticationPage from './DevAuthenticationPage.js';
 
 import type {
-  AssetProxy,
-  Config,
-  Credentials,
-  DisplayURL,
-  Entry,
-  Implementation,
-  ImplementationEntry,
-  ImplementationFile,
-  ImplementationMediaFile,
-  PersistOptions,
-  UnpublishedEntry,
-  User,
-} from '@laikacms/decap-cms/lib-util';
+  CmsAssetProxy as AssetProxy,
+  CmsConfig as Config,
+  CmsCredentials as Credentials,
+  CmsDisplayURL as DisplayURL,
+  CmsFileEntry as Entry,
+  CmsImplementation as Implementation,
+  CmsImplementationEntry as ImplementationEntry,
+  CmsImplementationFile as ImplementationFile,
+  CmsImplementationMediaFile as ImplementationMediaFile,
+  CmsPersistOptions as PersistOptions,
+  CmsUnpublishedEntry as UnpublishedEntry,
+  CmsUser as User,
+} from '@laikacms/decap-cms/lib/util';
 
 import * as Result from 'effect/Result';
 import type { AssetCreate, AssetsRepository } from 'laikacms/assets';
@@ -362,16 +362,16 @@ export default function createLaikaBackend(
 
     constructor(config: Config, _options: Record<string, unknown> = {}) {
       this.config = config;
-      this.mediaFolder = config.media_folder;
+      this.mediaFolder = config.media_folder ?? '';
       // IMPORTANT
       // public_folder is used for the path that appears in content
       // When not set, we use media_folder so paths match what Decap CMS expects
-      this.publicFolder = (config as Config & { public_folder?: string }).public_folder ?? config.media_folder;
+      this.publicFolder = (config as Config & { public_folder?: string }).public_folder ?? this.mediaFolder;
 
       this.baseUrl = Url.normalize(config.backend.base_url);
       // api_root is the canonical field; api_url is accepted as an alias for
       // compatibility with starter templates that pre-date this field name.
-      const backendExt = config.backend as Record<string, unknown>;
+      const backendExt = config.backend as unknown as Record<string, unknown>;
       const apiPath = (backendExt.api_root ?? backendExt.api_url) as string | undefined;
       this.apiUrl = Url.combine(this.baseUrl, apiPath);
       this.devToken = (config.backend as { dev_token?: unknown }).dev_token as string | undefined;
@@ -1342,15 +1342,15 @@ export default function createLaikaBackend(
       entries: ImplementationEntry[],
       cursor: Cursor,
     }> {
-      const data = cursor.data?.toJS?.() as Record<string, unknown> | undefined ?? {};
+      const data = cursor.data ?? {};
       const folder = data.folder as string | undefined;
 
       if (!folder) {
         throw new NotFoundError('traverseCursor: cursor carries no folder — cannot advance pagination');
       }
 
-      const currentPage = (cursor.meta?.get?.('page') as number | undefined) ?? 1;
-      const pageCount = (cursor.meta?.get?.('pageCount') as number | undefined) ?? 1;
+      const currentPage = (cursor.meta?.page as number | undefined) ?? 1;
+      const pageCount = (cursor.meta?.pageCount as number | undefined) ?? 1;
 
       let nextPage: number;
       switch (action) {
