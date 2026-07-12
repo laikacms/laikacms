@@ -517,8 +517,9 @@ describe('contentbase-api onError', () => {
   // LCMS-384: POST /collections — media branch write failure
   it('calls onError when putMediaCollectionSettings fails on POST /collections', async () => {
     const onError = vi.fn();
+    const put = vi.fn(() => LaikaTask.fail(new NotFoundError('write failed')));
     const repo = {
-      putMediaCollectionSettings: () => LaikaTask.fail(new NotFoundError('write failed')),
+      putMediaCollectionSettings: put,
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo, onError });
@@ -537,14 +538,18 @@ describe('contentbase-api onError', () => {
     );
     expect(res.status).toBe(400);
     expect(onError).toHaveBeenCalledOnce();
+    expect(put).toHaveBeenCalledOnce();
+    expect(onError.mock.calls[0]![0]).toBeInstanceOf(NotFoundError);
+    expect((onError.mock.calls[0]![0] as Error).message).toBe('write failed');
   });
 
   // LCMS-367: PATCH /collections/:key — document branch write failure
   it('calls onError when putDocumentCollectionSettings fails on PATCH /collections/:key', async () => {
     const onError = vi.fn();
+    const put = vi.fn(() => LaikaTask.fail(new NotFoundError('write failed')));
     const repo = {
       getSettings: () => LaikaTask.succeed(settingsWithBoth),
-      putDocumentCollectionSettings: () => LaikaTask.fail(new NotFoundError('write failed')),
+      putDocumentCollectionSettings: put,
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo, onError });
@@ -563,14 +568,18 @@ describe('contentbase-api onError', () => {
     );
     expect(res.status).toBe(400);
     expect(onError).toHaveBeenCalledOnce();
+    expect(put).toHaveBeenCalledOnce();
+    expect(onError.mock.calls[0]![0]).toBeInstanceOf(NotFoundError);
+    expect((onError.mock.calls[0]![0] as Error).message).toBe('write failed');
   });
 
   // LCMS-367: PATCH /collections/:key — media branch write failure
   it('calls onError when putMediaCollectionSettings fails on PATCH /collections/:key', async () => {
     const onError = vi.fn();
+    const put = vi.fn(() => LaikaTask.fail(new NotFoundError('write failed')));
     const repo = {
       getSettings: () => LaikaTask.succeed(settingsWithBoth),
-      putMediaCollectionSettings: () => LaikaTask.fail(new NotFoundError('write failed')),
+      putMediaCollectionSettings: put,
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo, onError });
@@ -589,14 +598,18 @@ describe('contentbase-api onError', () => {
     );
     expect(res.status).toBe(400);
     expect(onError).toHaveBeenCalledOnce();
+    expect(put).toHaveBeenCalledOnce();
+    expect(onError.mock.calls[0]![0]).toBeInstanceOf(NotFoundError);
+    expect((onError.mock.calls[0]![0] as Error).message).toBe('write failed');
   });
 
   // LCMS-368: DELETE /collections/:key — putSettings write failure after collection found
   it('calls onError when putSettings fails on DELETE /collections/:key (write after lookup)', async () => {
     const onError = vi.fn();
+    const put = vi.fn(() => LaikaTask.fail(new NotFoundError('write failed')));
     const repo = {
       getSettings: () => LaikaTask.succeed(settingsWithBoth),
-      putSettings: () => LaikaTask.fail(new NotFoundError('write failed')),
+      putSettings: put,
     } as unknown as ContentBaseSettingsProvider;
 
     const api = buildJsonApi({ repo, onError });
@@ -605,6 +618,9 @@ describe('contentbase-api onError', () => {
     );
     expect(res.status).toBe(400);
     expect(onError).toHaveBeenCalledOnce();
+    expect(put).toHaveBeenCalledOnce();
+    expect(onError.mock.calls[0]![0]).toBeInstanceOf(NotFoundError);
+    expect((onError.mock.calls[0]![0] as Error).message).toBe('write failed');
   });
 });
 
