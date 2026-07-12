@@ -994,6 +994,12 @@ export async function handleToken(
     return oauthError('invalid_client', 'Invalid or missing client_id', undefined, 401);
   }
 
+  // RFC 6749 §5.2: missing required parameter → invalid_request; present but unsupported → unsupported_grant_type
+  if (grantType === null) {
+    await addTimingJitter();
+    return oauthError('invalid_request', 'Missing required parameter: grant_type');
+  }
+
   // Handle different grant types
   if (grantType === 'authorization_code') {
     return handleAuthorizationCodeGrant(config, formData);
