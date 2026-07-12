@@ -1,0 +1,13 @@
+{
+  "name": "laikacms-browser-sim",
+  "version": "1.0.0",
+  "description": "Headless browser smoke tests for the LaikaCMS admin UI quickstart",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "smoke:quickstart": "node quickstart-smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  }
+}
