@@ -4,7 +4,7 @@ import {
   Cursor,
   CURSOR_COMPATIBILITY_SYMBOL,
   unsentRequest,
-} from '@laikacms/decap-cms/lib/util';
+} from '@laikacms/decap-cms/lib-util';
 
 import React from 'react';
 
@@ -12,19 +12,19 @@ import PKCEAuthenticationPage from './AuthenticationPage.js';
 import DevAuthenticationPage from './DevAuthenticationPage.js';
 
 import type {
-  CmsAssetProxy as AssetProxy,
-  CmsConfig as Config,
-  CmsCredentials as Credentials,
-  CmsDisplayURL as DisplayURL,
-  CmsFileEntry as Entry,
-  CmsImplementation as Implementation,
-  CmsImplementationEntry as ImplementationEntry,
-  CmsImplementationFile as ImplementationFile,
-  CmsImplementationMediaFile as ImplementationMediaFile,
-  CmsPersistOptions as PersistOptions,
-  CmsUnpublishedEntry as UnpublishedEntry,
-  CmsUser as User,
-} from '@laikacms/decap-cms/lib/util';
+  AssetProxy,
+  Config,
+  Credentials,
+  DisplayURL,
+  Entry,
+  Implementation,
+  ImplementationEntry,
+  ImplementationFile,
+  ImplementationMediaFile,
+  PersistOptions,
+  UnpublishedEntry,
+  User,
+} from '@laikacms/decap-cms/lib-util';
 
 import * as Result from 'effect/Result';
 import type { AssetCreate, AssetsRepository } from 'laikacms/assets';
@@ -1342,15 +1342,16 @@ export default function createLaikaBackend(
       entries: ImplementationEntry[],
       cursor: Cursor,
     }> {
-      const data = cursor.data ?? {};
-      const folder = data.folder as string | undefined;
+      const data = cursor.data as Record<string, unknown> | undefined;
+      const folder = data?.['folder'] as string | undefined;
 
       if (!folder) {
         throw new NotFoundError('traverseCursor: cursor carries no folder — cannot advance pagination');
       }
 
-      const currentPage = (cursor.meta?.page as number | undefined) ?? 1;
-      const pageCount = (cursor.meta?.pageCount as number | undefined) ?? 1;
+      const meta = cursor.meta as Record<string, unknown> | undefined;
+      const currentPage = (meta?.['page'] as number | undefined) ?? 1;
+      const pageCount = (meta?.['pageCount'] as number | undefined) ?? 1;
 
       let nextPage: number;
       switch (action) {

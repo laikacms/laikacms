@@ -6,7 +6,7 @@
  * can be exercised by injecting mock DocumentsRepository / AssetsRepository
  * implementations.
  *
- * Browser-only Decap CMS packages (@laikacms/decap-cms/lib/util, lib-auth,
+ * Browser-only Decap CMS packages (@laikacms/decap-cms/lib-util, lib-auth,
  * ui-default) are mocked because they call `window` at module load time.
  * We do NOT test the authentication flow because that requires a running server.
  */
@@ -46,7 +46,7 @@ const { MockCursor, CURSOR_COMPATIBILITY_SYMBOL } = vi.hoisted(() => {
   return { MockCursor, CURSOR_COMPATIBILITY_SYMBOL };
 });
 
-vi.mock('@laikacms/decap-cms/lib/util', () => ({
+vi.mock('@laikacms/decap-cms/lib-util', () => ({
   AccessTokenError: class AccessTokenError extends Error {
     constructor(msg: string) {
       super(msg);
@@ -70,14 +70,14 @@ vi.mock('@laikacms/decap-cms/lib/util', () => ({
   CURSOR_COMPATIBILITY_SYMBOL,
 }));
 
-vi.mock('@laikacms/decap-cms/lib/auth', () => ({
+vi.mock('@laikacms/decap-cms/lib-auth', () => ({
   PkceAuthenticator: class PkceAuthenticator {
     completeAuth = vi.fn();
     authenticate = vi.fn();
   },
 }));
 
-vi.mock('@laikacms/decap-cms/ui/default', () => ({
+vi.mock('@laikacms/decap-cms/ui-default', () => ({
   AuthenticationPage: () => null,
   Icon: () => null,
 }));
@@ -167,7 +167,7 @@ function makeConfig(overrides: Record<string, unknown> = {}) {
 // Import createLaikaBackend (after mocks are in place)
 // ---------------------------------------------------------------------------
 
-import { unsentRequest } from '@laikacms/decap-cms/lib/util';
+import { unsentRequest } from '@laikacms/decap-cms/lib-util';
 
 import createLaikaBackend from './laika-backend.js';
 
