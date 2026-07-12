@@ -17,11 +17,11 @@
  * Ports used: API :3100, admin :5100 (avoids conflicts with dev servers on 3000/5000).
  */
 
-import { chromium } from 'playwright';
 import { execSync, spawn } from 'node:child_process';
-import { mkdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { chromium } from 'playwright';
 
 const API_PORT = 3100;
 const SERVE_PORT = 5100;
@@ -40,13 +40,23 @@ let failed = 0;
 // Helpers
 // ---------------------------------------------------------------------------
 
-function log(msg) { console.log(`[qs-smoke] ${msg}`); }
-function ok(label) { log(`✓ ${label}`); passed++; }
-function fail(label, detail) { log(`✗ ${label}: ${detail}`); failed++; }
+function log(msg) {
+  console.log(`[qs-smoke] ${msg}`);
+}
+function ok(label) {
+  log(`✓ ${label}`);
+  passed++;
+}
+function fail(label, detail) {
+  log(`✗ ${label}: ${detail}`);
+  failed++;
+}
 
 /** Write the quickstart server.mjs into a temp dir. */
 function writeServerMjs(dir) {
-  writeFileSync(join(dir, 'server.mjs'), `
+  writeFileSync(
+    join(dir, 'server.mjs'),
+    `
 import { serve } from '@hono/node-server';
 import { decapApi } from '@laikacms/decap/decap-api';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
@@ -73,21 +83,30 @@ const api = decapApi({
 serve({ fetch: api.fetch, port: ${API_PORT} }, () =>
   console.log('LaikaCMS API listening on http://localhost:${API_PORT}'),
 );
-`);
+`,
+  );
 }
 
 /** Write admin files into a temp dir. */
 function writeAdminFiles(dir) {
   mkdirSync(join(dir, 'admin'), { recursive: true });
-  writeFileSync(join(dir, 'admin', 'index.ts'), `
+  writeFileSync(
+    join(dir, 'admin', 'index.ts'),
+    `
 import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 import CMS from 'decap-cms-app';
 const LaikaBackend = createLaikaBackend();
 CMS.registerBackend('laika', LaikaBackend);
 CMS.init();
-`);
-  writeFileSync(join(dir, 'admin', 'index.html'), `<!doctype html><html lang="en"><head><meta charset="utf-8"/><title>Admin — LaikaCMS</title></head><body><script src="bundle.js"></script></body></html>`);
-  writeFileSync(join(dir, 'admin', 'config.yml'), `
+`,
+  );
+  writeFileSync(
+    join(dir, 'admin', 'index.html'),
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"/><title>Admin — LaikaCMS</title></head><body><script src="bundle.js"></script></body></html>`,
+  );
+  writeFileSync(
+    join(dir, 'admin', 'config.yml'),
+    `
 backend:
   name: laika
   base_url: http://localhost:${API_PORT}
@@ -103,7 +122,8 @@ collections:
     fields:
       - { name: title, label: Title, widget: string }
       - { name: body,  label: Body,  widget: markdown }
-`);
+`,
+  );
 }
 
 /** Run a command synchronously in a directory, returning stdout. */
@@ -113,7 +133,10 @@ function run(cmd, cwd, opts = {}) {
 
 /** Kill a spawned process group. */
 function kill(proc) {
-  try { process.kill(-proc.pid, 'SIGKILL'); } catch {}
+  try {
+    process.kill(-proc.pid, 'SIGKILL');
+    // eslint-disable-next-line no-empty
+  } catch {}
 }
 
 /** Wait for a port to become reachable. */
@@ -123,10 +146,32 @@ async function waitForPort(port, ms = 10000) {
     try {
       const r = await fetch(`http://localhost:${port}/`);
       if (r.ok || r.status < 500) return true;
+      // eslint-disable-next-line no-empty
     } catch {}
     await new Promise(r => setTimeout(r, 300));
   }
   return false;
+}
+
+/** Assert GET /api/health returns 200 with status:"ok". */
+async function checkHealth(label) {
+  try {
+    const r = await fetch(`http://localhost:${API_PORT}/api/health`);
+    if (r.status !== 200) {
+      fail(`${label} /api/health`, `HTTP ${r.status}`);
+      return false;
+    }
+    const body = await r.json().catch(() => null);
+    if (!body || body.status !== 'ok') {
+      fail(`${label} /api/health`, `unexpected body: ${JSON.stringify(body)}`);
+      return false;
+    }
+    ok(`${label} GET /api/health → 200 {"status":"ok",...}`);
+    return true;
+  } catch (e) {
+    fail(`${label} /api/health`, e.message.slice(0, 200));
+    return false;
+  }
 }
 
 /** Launch headless Chromium and verify the Decap admin UI renders. */
@@ -164,8 +209,8 @@ async function testNpm() {
 
   log('npm install (step §1)...');
   try {
-    run('npm install --legacy-peer-deps laikacms @laikacms/decap @hono/node-server hono', dir);
-    ok('npm install core (with hono)');
+    run('npm install laikacms @laikacms/decap @hono/node-server hono', dir);
+    ok('npm install core');
   } catch (e) {
     fail('npm install core', e.message.slice(0, 200));
     return;
@@ -192,14 +237,26 @@ async function testNpm() {
 
   log('Starting API server...');
   const server = spawn('node', ['server.mjs'], { cwd: dir, detached: true, stdio: 'ignore' });
-  const serve = spawn('npx', ['serve', 'admin/', '-p', String(SERVE_PORT), '-n'], { cwd: dir, detached: true, stdio: 'ignore' });
+  const serve = spawn('npx', ['serve', 'admin/', '-p', String(SERVE_PORT), '-n'], {
+    cwd: dir,
+    detached: true,
+    stdio: 'ignore',
+  });
 
   try {
     const apiUp = await waitForPort(API_PORT);
     const serveUp = await waitForPort(SERVE_PORT);
-    if (!apiUp) { fail('npm API server', 'did not start in time'); return; }
-    if (!serveUp) { fail('npm serve', 'did not start in time'); return; }
+    if (!apiUp) {
+      fail('npm API server', 'did not start in time');
+      return;
+    }
+    if (!serveUp) {
+      fail('npm serve', 'did not start in time');
+      return;
+    }
     ok('npm server + serve running');
+
+    await checkHealth('npm');
 
     const { ncRoot, bodyText } = await checkUI('npm');
     if (ncRoot) {
@@ -259,14 +316,26 @@ async function testPnpm() {
 
   log('Starting API server...');
   const server = spawn('node', ['server.mjs'], { cwd: dir, detached: true, stdio: 'ignore' });
-  const serve = spawn('npx', ['serve', 'admin/', '-p', String(SERVE_PORT), '-n'], { cwd: dir, detached: true, stdio: 'ignore' });
+  const serve = spawn('npx', ['serve', 'admin/', '-p', String(SERVE_PORT), '-n'], {
+    cwd: dir,
+    detached: true,
+    stdio: 'ignore',
+  });
 
   try {
     const apiUp = await waitForPort(API_PORT);
     const serveUp = await waitForPort(SERVE_PORT);
-    if (!apiUp) { fail('pnpm API server', 'did not start in time'); return; }
-    if (!serveUp) { fail('pnpm serve', 'did not start in time'); return; }
+    if (!apiUp) {
+      fail('pnpm API server', 'did not start in time');
+      return;
+    }
+    if (!serveUp) {
+      fail('pnpm serve', 'did not start in time');
+      return;
+    }
     ok('pnpm server + serve running');
+
+    await checkHealth('pnpm');
 
     const { ncRoot, bodyText } = await checkUI('pnpm');
     if (ncRoot) {

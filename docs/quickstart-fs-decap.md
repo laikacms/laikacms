@@ -25,20 +25,20 @@ factories, and serializers are all subpath exports of the single `laikacms` pack
 integration lives in `@laikacms/decap`:
 
 ```bash
-# npm — hono must be listed explicitly: @hono/node-server@2 declares it as a peer dependency
-# and npm does not install peer dependencies automatically.
+# npm — add hono explicitly: §4a's --legacy-peer-deps prunes auto-installed peers, and
+# @hono/node-server's type declarations import from hono (needed if you use server.ts).
 npm install laikacms @laikacms/decap @hono/node-server hono
 
-# pnpm — pnpm installs peer dependencies automatically, so hono is pulled in for you.
+# pnpm
 pnpm add laikacms @laikacms/decap @hono/node-server
 ```
 
-| Package             | Purpose                                                                           |
-| ------------------- | --------------------------------------------------------------------------------- |
-| `laikacms`          | Core: storage repos, document/asset repos, API factories, serializers (subpaths). |
-| `@laikacms/decap`   | Decap-compatible API server + Laika backend for the browser-side Decap CMS admin. |
-| `@hono/node-server` | Runs a Web-standard `fetch` handler on Node.js.                                   |
-| `hono`              | Required peer dependency of `@hono/node-server@2`. npm users must install it explicitly; pnpm installs it automatically. |
+| Package             | Purpose                                                                                                                                        |
+| ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laikacms`          | Core: storage repos, document/asset repos, API factories, serializers (subpaths).                                                              |
+| `@laikacms/decap`   | Decap-compatible API server + Laika backend for the browser-side Decap CMS admin.                                                              |
+| `@hono/node-server` | Runs a Web-standard `fetch` handler on Node.js.                                                                                                |
+| `hono`              | Peer dependency of `@hono/node-server@2`. §4a's `--legacy-peer-deps` prunes npm's auto-installed copy; also needed to typecheck a `server.ts`. |
 
 > **Subpath exports:** the snippet below imports from `laikacms/storage-fs`,
 > `laikacms/documents-contentbase`, `laikacms/assets-contentbase`,
