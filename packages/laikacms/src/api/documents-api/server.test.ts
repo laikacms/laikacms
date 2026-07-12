@@ -661,6 +661,22 @@ describe('POST /unpublished/:key/publish', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
   });
+
+  it('returns 500 JSON:API error when repo throws InternalError on publish', async () => {
+    const repo = {
+      publish: vi.fn((_key: string) => LaikaTask.make(() => Effect.fail(new InternalError('storage failure')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fhello/publish', { method: 'POST' }),
+    );
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1315,6 +1331,30 @@ describe('POST /published/:key/unpublish', () => {
     const body = await res.json() as { errors: Array<{ status: string }> };
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
+  });
+
+  it('returns 500 JSON:API error when repo throws InternalError on unpublish', async () => {
+    const repo = {
+      unpublish: vi.fn((_key: string, _status: string) =>
+        LaikaTask.make(() => Effect.fail(new InternalError('storage failure')))
+      ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fhello/unpublish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: { type: 'unpublished', attributes: { status: 'draft' } },
+        }),
+      }),
+    );
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
   });
 });
 
