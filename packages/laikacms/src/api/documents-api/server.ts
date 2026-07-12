@@ -1020,7 +1020,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       const parsedBody = bodyResult.success;
 
       const atomicOperations = parsedBody['atomic:operations'].map(
-        async (operation: AtomicOperation) => {
+        async (operation: AtomicOperation, index: number) => {
           let result: LaikaResult<unknown>;
           let transformer: ((data: unknown) => JsonApiResource) | null = null;
 
@@ -1030,25 +1030,41 @@ export function buildJsonApi(options: DocumentsApiOptions) {
               && operation.data.type === 'unpublished'
             ) {
               const op = operation as AddUnpublishedOp;
-              const createData = unpublishedCreateFromJsonApi({
-                type: 'unpublished',
-                id: op.data.id ?? '',
-                attributes: op.data.attributes,
-              } as UnpublishedCreateJsonApi);
-              result = await firstResultWithMetadata(repo.createUnpublished(createData));
-              transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
+              if (!op.data.id) {
+                result = Result.fail(
+                  new BadRequestError(
+                    `atomic:operations[${index}].data.id is required — provide the document key (e.g. 'posts/my-doc')`,
+                  ),
+                );
+              } else {
+                const createData = unpublishedCreateFromJsonApi({
+                  type: 'unpublished',
+                  id: op.data.id,
+                  attributes: op.data.attributes,
+                } as UnpublishedCreateJsonApi);
+                result = await firstResultWithMetadata(repo.createUnpublished(createData));
+                transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
+              }
             } else if (
               'data' in operation
               && operation.data.type === 'published'
             ) {
               const op = operation as AddDocumentOp;
-              const createData = documentCreateFromJsonApi({
-                type: 'published',
-                id: op.data.id ?? '',
-                attributes: op.data.attributes,
-              } as DocumentCreateJsonApi);
-              result = await firstResultWithMetadata(repo.createDocument(createData));
-              transformer = documentToJsonApi as (data: unknown) => JsonApiResource;
+              if (!op.data.id) {
+                result = Result.fail(
+                  new BadRequestError(
+                    `atomic:operations[${index}].data.id is required — provide the document key (e.g. 'posts/my-doc')`,
+                  ),
+                );
+              } else {
+                const createData = documentCreateFromJsonApi({
+                  type: 'published',
+                  id: op.data.id,
+                  attributes: op.data.attributes,
+                } as DocumentCreateJsonApi);
+                result = await firstResultWithMetadata(repo.createDocument(createData));
+                transformer = documentToJsonApi as (data: unknown) => JsonApiResource;
+              }
             } else {
               result = Result.fail(
                 new BadRequestError(

@@ -501,7 +501,7 @@ const schemas: Record<string, OpenApiSchema> = {
       op: { const: 'add' },
       data: {
         type: 'object',
-        required: ['type', 'attributes'],
+        required: ['type', 'id', 'attributes'],
         properties: {
           type: { const: 'published' },
           id: { type: 'string' },
@@ -517,7 +517,7 @@ const schemas: Record<string, OpenApiSchema> = {
       op: { const: 'add' },
       data: {
         type: 'object',
-        required: ['type', 'attributes'],
+        required: ['type', 'id', 'attributes'],
         properties: {
           type: { const: 'unpublished' },
           id: { type: 'string' },
