@@ -25,10 +25,11 @@ factories, and serializers are all subpath exports of the single `laikacms` pack
 integration lives in `@laikacms/decap`:
 
 ```bash
-# npm
-npm install laikacms @laikacms/decap @hono/node-server
+# npm — hono must be listed explicitly: @hono/node-server@2 declares it as a peer dependency
+# and npm does not install peer dependencies automatically.
+npm install laikacms @laikacms/decap @hono/node-server hono
 
-# pnpm
+# pnpm — pnpm installs peer dependencies automatically, so hono is pulled in for you.
 pnpm add laikacms @laikacms/decap @hono/node-server
 ```
 
@@ -37,6 +38,7 @@ pnpm add laikacms @laikacms/decap @hono/node-server
 | `laikacms`          | Core: storage repos, document/asset repos, API factories, serializers (subpaths). |
 | `@laikacms/decap`   | Decap-compatible API server + Laika backend for the browser-side Decap CMS admin. |
 | `@hono/node-server` | Runs a Web-standard `fetch` handler on Node.js.                                   |
+| `hono`              | Required peer dependency of `@hono/node-server@2`. npm users must install it explicitly; pnpm installs it automatically. |
 
 > **Subpath exports:** the snippet below imports from `laikacms/storage-fs`,
 > `laikacms/documents-contentbase`, `laikacms/assets-contentbase`,
