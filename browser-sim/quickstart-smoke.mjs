@@ -153,30 +153,63 @@ async function waitForPort(port, ms = 10000) {
   return false;
 }
 
-/** Assert GET /api/health returns 200 with status:"ok". */
-async function checkHealth(label) {
-  try {
-    const r = await fetch(`http://localhost:${API_PORT}/api/health`);
-    if (r.status !== 200) {
-      fail(`${label} /api/health`, `HTTP ${r.status}`);
-      return false;
+/**
+ * Assert GET /api/health returns 200 with status:"ok".
+ *
+ * Retries transport errors: waitForPort() leaves a keep-alive socket in undici's pool that the
+ * server may already have closed, so the first request here can be torn down mid-body ("terminated"
+ * / "other side closed"). The retry lands on a fresh connection. A non-200 or a bad payload is a
+ * real failure and is not retried.
+ */
+async function checkHealth(label, attempts = 3) {
+  let lastError = '';
+  for (let i = 0; i < attempts; i++) {
+    let raw;
+    try {
+      const r = await fetch(`http://localhost:${API_PORT}/api/health`);
+      if (r.status !== 200) {
+        fail(`${label} /api/health`, `HTTP ${r.status}`);
+        return false;
+      }
+      raw = await r.text();
+    } catch (e) {
+      lastError = e.message.split('\n')[0];
+      await new Promise(r => setTimeout(r, 300));
+      continue;
     }
-    const body = await r.json().catch(() => null);
-    if (!body || body.status !== 'ok') {
-      fail(`${label} /api/health`, `unexpected body: ${JSON.stringify(body)}`);
+    let body;
+    try {
+      body = JSON.parse(raw);
+    } catch {
+      lastError = `unparseable body: ${JSON.stringify(raw.slice(0, 120))}`;
+      await new Promise(r => setTimeout(r, 300));
+      continue;
+    }
+    if (body?.status !== 'ok') {
+      fail(`${label} /api/health`, `unexpected body: ${raw.slice(0, 120)}`);
       return false;
     }
     ok(`${label} GET /api/health → 200 {"status":"ok",...}`);
     return true;
-  } catch (e) {
-    fail(`${label} /api/health`, e.message.slice(0, 200));
-    return false;
   }
+  fail(`${label} /api/health`, lastError.slice(0, 200));
+  return false;
 }
 
 /** Launch headless Chromium and verify the Decap admin UI renders. */
 async function checkUI(shotPrefix) {
-  const browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+  let browser;
+  try {
+    browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+  } catch (e) {
+    // A missing browser is an environment problem, not a quickstart failure — report it as a
+    // failed assertion so the other path still runs, rather than aborting the whole harness.
+    fail(
+      `${shotPrefix} admin UI`,
+      `could not launch chromium (npx playwright install --with-deps chromium): ${e.message.split('\n')[0]}`,
+    );
+    return { ncRoot: false, bodyText: '', launched: false };
+  }
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
@@ -188,7 +221,7 @@ async function checkUI(shotPrefix) {
 
     const ncRoot = await page.evaluate(() => !!document.getElementById('nc-root'));
     const bodyText = await page.evaluate(() => document.body.innerText).catch(() => '');
-    return { ncRoot, bodyText: bodyText.slice(0, 400) };
+    return { ncRoot, bodyText: bodyText.slice(0, 400), launched: true };
   } finally {
     await browser.close();
   }
@@ -213,6 +246,7 @@ async function testNpm() {
     ok('npm install core');
   } catch (e) {
     fail('npm install core', e.message.slice(0, 200));
+    rmSync(dir, { recursive: true, force: true });
     return;
   }
 
@@ -223,6 +257,7 @@ async function testNpm() {
     ok('npm install decap-cms-app');
   } catch (e) {
     fail('npm install decap-cms-app', e.message.slice(0, 200));
+    rmSync(dir, { recursive: true, force: true });
     return;
   }
 
@@ -232,6 +267,7 @@ async function testNpm() {
     ok('npm esbuild bundle');
   } catch (e) {
     fail('npm esbuild', e.stderr?.toString().slice(0, 300) || e.message);
+    rmSync(dir, { recursive: true, force: true });
     return;
   }
 
@@ -258,11 +294,11 @@ async function testNpm() {
 
     await checkHealth('npm');
 
-    const { ncRoot, bodyText } = await checkUI('npm');
+    const { ncRoot, bodyText, launched } = await checkUI('npm');
     if (ncRoot) {
       ok(`npm admin UI renders (#nc-root found)`);
       log(`  body text: ${bodyText.slice(0, 100).replace(/\n/g, ' ')}`);
-    } else {
+    } else if (launched) {
       fail('npm admin UI', `#nc-root not found. Body: ${bodyText.slice(0, 200)}`);
     }
   } finally {
@@ -287,10 +323,14 @@ async function testPnpm() {
 
   log('pnpm add core (step §1)...');
   try {
-    run('pnpm add laikacms @laikacms/decap @hono/node-server', dir);
+    run(
+      'pnpm add --allow-build=esbuild --allow-build=msgpackr-extract laikacms @laikacms/decap @hono/node-server hono',
+      dir,
+    );
     ok('pnpm add core');
   } catch (e) {
     fail('pnpm add core', e.message.slice(0, 200));
+    rmSync(dir, { recursive: true, force: true });
     return;
   }
 
@@ -298,10 +338,10 @@ async function testPnpm() {
   try {
     run('pnpm add decap-cms-app @laikacms/decap-cms', dir);
     run('pnpm add -D esbuild', dir);
-    run('pnpm rebuild esbuild', dir);
     ok('pnpm add decap-cms-app');
   } catch (e) {
     fail('pnpm add decap-cms-app', e.message.slice(0, 200));
+    rmSync(dir, { recursive: true, force: true });
     return;
   }
 
@@ -311,6 +351,7 @@ async function testPnpm() {
     ok('pnpm esbuild bundle');
   } catch (e) {
     fail('pnpm esbuild', e.message.slice(0, 200));
+    rmSync(dir, { recursive: true, force: true });
     return;
   }
 
@@ -337,11 +378,11 @@ async function testPnpm() {
 
     await checkHealth('pnpm');
 
-    const { ncRoot, bodyText } = await checkUI('pnpm');
+    const { ncRoot, bodyText, launched } = await checkUI('pnpm');
     if (ncRoot) {
       ok(`pnpm admin UI renders (#nc-root found)`);
       log(`  body text: ${bodyText.slice(0, 100).replace(/\n/g, ' ')}`);
-    } else {
+    } else if (launched) {
       fail('pnpm admin UI', `#nc-root not found. Body: ${bodyText.slice(0, 200)}`);
     }
   } finally {

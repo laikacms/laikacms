@@ -29,9 +29,18 @@ integration lives in `@laikacms/decap`:
 # @hono/node-server's type declarations import from hono (needed if you use server.ts).
 npm install laikacms @laikacms/decap @hono/node-server hono
 
-# pnpm
-pnpm add laikacms @laikacms/decap @hono/node-server
+# pnpm — hono for the same reason: pnpm satisfies @hono/node-server's peer internally, but does
+# not expose it at your project root, so a server.ts would not typecheck without it.
+# --allow-build: since v10 pnpm refuses to run dependency install scripts unless you allow them,
+# and exits non-zero when it skips any — without these flags this command fails outright with
+# ERR_PNPM_IGNORED_BUILDS (msgpackr-extract, and esbuild once §4a adds it).
+pnpm add --allow-build=esbuild --allow-build=msgpackr-extract \
+  laikacms @laikacms/decap @hono/node-server hono
 ```
+
+> pnpm records the `--allow-build` grants in a `pnpm-workspace.yaml` it writes next to your
+> `package.json`, so you only pass the flags once. `pnpm approve-builds` is the interactive
+> equivalent.
 
 | Package             | Purpose                                                                                                                                        |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -186,6 +195,10 @@ npm install --legacy-peer-deps --save-dev esbuild
 pnpm add decap-cms-app @laikacms/decap-cms
 pnpm add -D esbuild
 ```
+
+> **pnpm:** these two commands need no flags — the `--allow-build` grants from §1 are already
+> recorded in `pnpm-workspace.yaml`. Without those grants `pnpm` exits with
+> `ERR_PNPM_IGNORED_BUILDS` and the install step fails.
 
 > The `laika` backend lives at the `@laikacms/decap/decap-cms-backend-laika` subpath export. There
 > is no separate `@laikacms/decap-cms-backend-laika` package on npm.
