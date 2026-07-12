@@ -112,7 +112,9 @@ The callback receives the object `key` and a context object with:
 - `metadata` — optional metadata from the create/update call (may contain an `extension` hint)
 - `defaultExtension` — the storage's configured `defaultFileExtension`
 
-Returning `undefined` falls back to `defaultFileExtension`.
+Returning `undefined` falls back to `defaultFileExtension`. Returning a non-`undefined` string that
+has no registered serializer causes `createObject` / `createOrUpdateObject` to fail immediately with
+a `BadRequestError` listing the available extensions — the object is not written.
 
 ## Behaviour notes
 
