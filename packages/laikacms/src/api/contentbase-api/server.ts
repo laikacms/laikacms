@@ -4,7 +4,7 @@ import type { Context } from 'hono';
 import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
 import { type CollectionSettings } from 'laikacms/contentbase-settings';
 import type { LaikaResult } from 'laikacms/core';
-import { ConflictError, LaikaTask, NotFoundError } from 'laikacms/core';
+import { BadRequestError, ConflictError, ErrorCodeToStatusMap, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { JsonApiLogger } from 'laikacms/json-api';
 import {
   collectionFromJsonApi,
@@ -29,11 +29,11 @@ export interface ContentBaseApiOptions {
 function respondError(
   c: Context,
   result: LaikaResult<unknown>,
-  status: 400 | 404 | 409 | 500 = 400,
   onError?: ((error: unknown) => void) | undefined,
 ) {
   if (Result.isFailure(result)) {
     onError?.(result.failure);
+    const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
     return c.json(
       {
         errors: [
@@ -51,13 +51,13 @@ function respondError(
     {
       errors: [
         {
-          status: String(status),
+          status: '500',
           title: 'Unknown Error',
           detail: 'An unknown error occurred',
         },
       ],
     },
-    status,
+    500,
   );
 }
 
@@ -69,7 +69,7 @@ function respondResource<T extends CollectionSettings>(
   onError?: ((error: unknown) => void) | undefined,
 ) {
   if (Result.isFailure(result)) {
-    return respondError(c, result, 400, onError);
+    return respondError(c, result, onError);
   }
   return c.json({ data: transformer(result.success) });
 }
@@ -145,7 +145,7 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
   app.get('/collections', async c => {
     const settings = await LaikaTask.runPromiseResult(repo.getSettings());
     if (Result.isFailure(settings)) {
-      return respondError(c, settings, 400, onError);
+      return respondError(c, settings, onError);
     }
     const collections = settings.success.collections ?? {};
     const settingsList = Object.values(collections);
@@ -156,7 +156,7 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
     const key = c.req.param('key');
     const allSettings = await LaikaTask.runPromiseResult(repo.getSettings());
     if (Result.isFailure(allSettings)) {
-      return respondError(c, allSettings, 400, onError);
+      return respondError(c, allSettings, onError);
     }
     const collections = allSettings.success.collections ?? {};
     const collectionSettings = collections[key];
@@ -164,24 +164,23 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
       return respondError(
         c,
         Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
-        404,
         onError,
       );
     }
     if (collectionSettings.type === 'document') {
       const docSettingsResult = await LaikaTask.runPromiseResult(repo.getDocumentCollectionSettings(key));
       if (Result.isFailure(docSettingsResult)) {
-        return respondError(c, docSettingsResult, 400, onError);
+        return respondError(c, docSettingsResult, onError);
       }
       return respondResource(c, docSettingsResult, collectionToJsonApi, onError);
     } else if (collectionSettings.type === 'media') {
       const mediaSettingsResult = await LaikaTask.runPromiseResult(repo.getMediaCollectionSettings(key));
       if (Result.isFailure(mediaSettingsResult)) {
-        return respondError(c, mediaSettingsResult, 400, onError);
+        return respondError(c, mediaSettingsResult, onError);
       }
       return respondResource(c, mediaSettingsResult, collectionToJsonApi, onError);
     }
-    return respondError(c, Result.fail(new NotFoundError(`Unknown collection type`)), 400, onError);
+    return respondError(c, Result.fail(new BadRequestError(`Unknown collection type`)), onError);
   });
 
   app.post('/collections', async c => {
@@ -193,17 +192,17 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
       if (body.type === 'document') {
         const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(body.key, body));
         if (Result.isFailure(result)) {
-          return respondError(c, result, 400, onError);
+          return respondError(c, result, onError);
         }
         return c.json({ data: collectionToJsonApi(body) }, 201);
       } else if (body.type === 'media') {
         const result = await LaikaTask.runPromiseResult(repo.putMediaCollectionSettings(body.key, body));
         if (Result.isFailure(result)) {
-          return respondError(c, result, 400, onError);
+          return respondError(c, result, onError);
         }
         return c.json({ data: collectionToJsonApi(body) }, 201);
       }
-      return respondError(c, Result.fail(new NotFoundError(`Unknown collection type`)), 400, onError);
+      return respondError(c, Result.fail(new BadRequestError(`Unknown collection type`)), onError);
     } catch (error) {
       onError?.(error);
       return c.json({
@@ -222,14 +221,13 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
 
       const allSettings = await LaikaTask.runPromiseResult(repo.getSettings());
       if (Result.isFailure(allSettings)) {
-        return respondError(c, allSettings, 400, onError);
+        return respondError(c, allSettings, onError);
       }
       const collections = allSettings.success.collections ?? {};
       if (!collections[key]) {
         return respondError(
           c,
           Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
-          404,
           onError,
         );
       }
@@ -246,7 +244,6 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
               `Body data.id ('${body.key}') does not match URL key ('${key}'). Use the URL key as the resource identifier.`,
             ),
           ),
-          409,
           onError,
         );
       }
@@ -256,17 +253,17 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
       if (bodyWithKey.type === 'document') {
         const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(key, bodyWithKey));
         if (Result.isFailure(result)) {
-          return respondError(c, result, 400, onError);
+          return respondError(c, result, onError);
         }
         return c.json({ data: collectionToJsonApi(bodyWithKey) });
       } else if (bodyWithKey.type === 'media') {
         const result = await LaikaTask.runPromiseResult(repo.putMediaCollectionSettings(key, bodyWithKey));
         if (Result.isFailure(result)) {
-          return respondError(c, result, 400, onError);
+          return respondError(c, result, onError);
         }
         return c.json({ data: collectionToJsonApi(bodyWithKey) });
       }
-      return respondError(c, Result.fail(new NotFoundError(`Unknown collection type`)), 400, onError);
+      return respondError(c, Result.fail(new BadRequestError(`Unknown collection type`)), onError);
     } catch (error) {
       onError?.(error);
       return c.json({
@@ -283,7 +280,7 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
     const key = c.req.param('key');
     const allSettings = await LaikaTask.runPromiseResult(repo.getSettings());
     if (Result.isFailure(allSettings)) {
-      return respondError(c, allSettings, 400, onError);
+      return respondError(c, allSettings, onError);
     }
     const collections = allSettings.success.collections ?? {};
     const collectionSettings = collections[key];
@@ -291,7 +288,6 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
       return respondError(
         c,
         Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
-        404,
         onError,
       );
     }
@@ -303,7 +299,7 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
     };
     const result = await LaikaTask.runPromiseResult(repo.putSettings(updatedSettings));
     if (Result.isFailure(result)) {
-      return respondError(c, result, 400, onError);
+      return respondError(c, result, onError);
     }
     return c.body(null, 204);
   });
