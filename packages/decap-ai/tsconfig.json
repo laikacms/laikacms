@@ -29,9 +29,10 @@
       "../../node_modules/@types"
     ],
     "paths": {
-      "decap-cms-core": [
-        "../../types/decap-cms-core/index.d.ts"
-      ],
+      // decap-cms-core@3.13.0 ships index.d.ts for the root specifier — no path override needed.
+      // The wildcard must stay: v3 ships no exports map and has no types/ or actions/ at package
+      // root, so deep subpaths like 'decap-cms-core/types/redux' and
+      // 'decap-cms-core/actions/entries' only resolve through our hand-written shims.
       "decap-cms-core/*": [
         "../../types/decap-cms-core/*"
       ],
