@@ -35,25 +35,42 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const { Cursor, CURSOR_COMPATIBILITY_SYMBOL, API_ERROR, ACCESS_TOKEN_ERROR } = vi.hoisted(() => {
   // Matches the v4 Cursor exactly: data/meta are plain Record objects, actions a native Set.
   // knownMetaKeys mirrors the real package's filterUnknownMetaKeys allowlist.
-  const knownMetaKeys = new Set(['index', 'page', 'count', 'pageSize', 'pageCount',
-    'usingOldPaginationAPI', 'extension', 'folder', 'depth']);
+  const knownMetaKeys = new Set([
+    'index',
+    'page',
+    'count',
+    'pageSize',
+    'pageCount',
+    'usingOldPaginationAPI',
+    'extension',
+    'folder',
+    'depth',
+  ]);
 
   class Cursor {
-    store: { actions: Set<string>; data: Record<string, unknown>; meta: Record<string, unknown> };
-    constructor(arg: { actions?: string[]; data?: Record<string, unknown>; meta?: Record<string, unknown> } = {}) {
+    store: { actions: Set<string>, data: Record<string, unknown>, meta: Record<string, unknown> };
+    constructor(arg: { actions?: string[], data?: Record<string, unknown>, meta?: Record<string, unknown> } = {}) {
       this.store = {
         actions: new Set(arg.actions ?? []),
         data: { ...arg.data },
         meta: Object.fromEntries(Object.entries({ ...arg.meta }).filter(([k]) => knownMetaKeys.has(k))),
       };
     }
-    static create(arg?: { actions?: string[]; data?: Record<string, unknown>; meta?: Record<string, unknown> }) {
+    static create(arg?: { actions?: string[], data?: Record<string, unknown>, meta?: Record<string, unknown> }) {
       return new Cursor(arg);
     }
-    get actions() { return this.store.actions; }
-    get data() { return this.store.data; }
-    get meta() { return this.store.meta; }
-    hasAction(a: string) { return this.store.actions.has(a); }
+    get actions() {
+      return this.store.actions;
+    }
+    get data() {
+      return this.store.data;
+    }
+    get meta() {
+      return this.store.meta;
+    }
+    hasAction(a: string) {
+      return this.store.actions.has(a);
+    }
   }
 
   const CURSOR_COMPATIBILITY_SYMBOL = Symbol('cursor_compat');
