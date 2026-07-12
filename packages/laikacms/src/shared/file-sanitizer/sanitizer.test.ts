@@ -750,3 +750,233 @@ describe('sanitizeFile (PNG) — CorruptedFileError branches', () => {
     expect(err.message).toContain('Missing IEND chunk');
   });
 });
+
+// ─── WebP corrupt-file error paths (LCMS-389) ──────────────────────────────
+
+describe('sanitizeFile (WebP) — CorruptedFileError branches', () => {
+  it('throws CorruptedFileError when a chunk header declares a size that extends beyond the file', async () => {
+    // Valid RIFF+WEBP header (12 bytes) + VP8  chunk whose size field (100) far exceeds
+    // the 4 remaining data bytes — chunkEnd = 12 + 8 + 100 = 120 > 24 = data.length.
+    const data = new Uint8Array([
+      0x52,
+      0x49,
+      0x46,
+      0x46, // RIFF
+      0x14,
+      0x00,
+      0x00,
+      0x00, // RIFF size (value not validated by the sanitizer)
+      0x57,
+      0x45,
+      0x42,
+      0x50, // WEBP
+      0x56,
+      0x50,
+      0x38,
+      0x20, // VP8  (FourCC with trailing space)
+      0x64,
+      0x00,
+      0x00,
+      0x00, // chunkSize = 100 (LE)
+      0xAA,
+      0xBB,
+      0xCC,
+      0xDD, // only 4 bytes present (100 needed)
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('extends beyond file');
+  });
+});
+
+// ─── GIF corrupt-file error paths (LCMS-389) ───────────────────────────────
+
+describe('sanitizeFile (GIF) — CorruptedFileError branches', () => {
+  it('throws CorruptedFileError when data is shorter than the minimum 13 bytes needed for the screen descriptor', async () => {
+    // GIF89a signature (6 bytes) + only 6 bytes of the 7-byte screen descriptor = 12 bytes total.
+    // Signature check passes (isGifSignature requires only 6 bytes); size check fires first.
+    const data = new Uint8Array([
+      0x47,
+      0x49,
+      0x46,
+      0x38,
+      0x39,
+      0x61, // GIF89a
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x00, // partial screen descriptor (6 of 7 bytes)
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('GIF too short for screen descriptor');
+  });
+
+  it('throws CorruptedFileError when the global color table is declared but truncated', async () => {
+    // Screen descriptor packed byte = 0x80: hasGlobalColorTable=true, size index 0 → 6 bytes needed.
+    // File ends at offset 13 (just after the screen descriptor) with no color table bytes.
+    // offset (13) + globalColorTableSize (6) = 19 > 13 = data.length.
+    const data = new Uint8Array([
+      0x47,
+      0x49,
+      0x46,
+      0x38,
+      0x39,
+      0x61, // GIF89a
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x80,
+      0x00,
+      0x00, // screen descriptor, packed=0x80 (GCT present, size index 0)
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('GIF truncated in global color table');
+  });
+
+  it('throws CorruptedFileError when an extension introducer appears as the final byte with no label following', async () => {
+    // Extension introducer (0x21) at offset 13 is the last byte; no extension label byte follows.
+    // offset (13) + 1 = 14 >= 14 = data.length.
+    const data = new Uint8Array([
+      0x47,
+      0x49,
+      0x46,
+      0x38,
+      0x39,
+      0x61, // GIF89a
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x00,
+      0x00, // screen descriptor, no GCT
+      0x21, // extension introducer — no label byte
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('GIF truncated in extension');
+  });
+
+  it('throws CorruptedFileError when a Graphics Control Extension is shorter than its required 8 bytes', async () => {
+    // GCE introducer (0x21) + label (0xF9) at offsets 13–14, but only 2 bytes present.
+    // offset (13) + 8 = 21 > 15 = data.length.
+    const data = new Uint8Array([
+      0x47,
+      0x49,
+      0x46,
+      0x38,
+      0x39,
+      0x61, // GIF89a
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x00,
+      0x00, // screen descriptor, no GCT
+      0x21,
+      0xF9, // GCE introducer + label (needs 8 bytes total from offset 13)
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('GIF truncated in graphics control extension');
+  });
+
+  it('throws CorruptedFileError when the image descriptor block is truncated', async () => {
+    // Image separator (0x2C) at offset 13 with only 1 byte — needs 10 bytes.
+    // offset (13) + 10 = 23 > 14 = data.length.
+    const data = new Uint8Array([
+      0x47,
+      0x49,
+      0x46,
+      0x38,
+      0x39,
+      0x61, // GIF89a
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x00,
+      0x00, // screen descriptor, no GCT
+      0x2C, // image separator — only 1 of 10 required bytes present
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('GIF truncated in image descriptor');
+  });
+
+  it('throws CorruptedFileError when the local color table is declared but truncated', async () => {
+    // Full 10-byte image descriptor at offset 13; packed byte (offset 22) = 0x80:
+    // hasLocalColorTable=true, LCT size index 0 → 6 bytes needed.
+    // After the descriptor offset advances to 23, but data.length = 23 → 23 + 6 = 29 > 23.
+    const data = new Uint8Array([
+      0x47,
+      0x49,
+      0x46,
+      0x38,
+      0x39,
+      0x61, // GIF89a
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x00,
+      0x00, // screen descriptor, no GCT
+      0x2C, // image separator
+      0x00,
+      0x00,
+      0x00,
+      0x00, // left=0, top=0
+      0x01,
+      0x00,
+      0x01,
+      0x00, // width=1, height=1
+      0x80, // packed: hasLCT=1, LCT size index 0 → 6 bytes needed
+      // No LCT bytes follow
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('GIF truncated in local color table');
+  });
+
+  it('throws CorruptedFileError when the file ends before the LZW minimum code size byte', async () => {
+    // Full 10-byte image descriptor at offset 13; packed byte = 0x00 (no LCT).
+    // After the descriptor offset advances to 23 = data.length → offset >= data.length.
+    const data = new Uint8Array([
+      0x47,
+      0x49,
+      0x46,
+      0x38,
+      0x39,
+      0x61, // GIF89a
+      0x01,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x00,
+      0x00, // screen descriptor, no GCT
+      0x2C, // image separator
+      0x00,
+      0x00,
+      0x00,
+      0x00, // left=0, top=0
+      0x01,
+      0x00,
+      0x01,
+      0x00, // width=1, height=1
+      0x00, // packed: no LCT
+      // No LZW minimum code size byte follows
+    ]);
+    const err = await sanitizeFile(data).catch(e => e);
+    expect(err).toBeInstanceOf(CorruptedFileError);
+    expect(err.message).toContain('GIF truncated before LZW data');
+  });
+});
