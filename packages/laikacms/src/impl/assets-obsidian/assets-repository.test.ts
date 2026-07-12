@@ -160,6 +160,31 @@ describe('ObsidianAssetsRepository — listing', () => {
   });
 });
 
+describe('ObsidianAssetsRepository — getVariations', () => {
+  it('invokes createVariations callback and surfaces result on the returned entry', async () => {
+    const repo = new ObsidianAssetsRepository(vaultDir, {
+      createVariations: key => ({ thumb: { variant: 'thumb', url: 'thumb-' + key } }),
+    });
+    await LaikaTask.runPromise(repo.createAsset({ key: 'pic.png', content: PNG, mimeType: 'image/png' }));
+    const asset = await LaikaTask.runPromise(repo.getAsset('pic.png'));
+
+    const { data } = await LaikaStream.runPromiseCollect(repo.getVariations([asset]));
+    expect(data).toHaveLength(1);
+    expect(data[0]?.key).toBe('pic.png');
+    expect(data[0]?.variations['thumb']).toEqual({ variant: 'thumb', url: 'thumb-pic.png' });
+  });
+
+  it('returns empty variations when no createVariations option is set', async () => {
+    const repo = new ObsidianAssetsRepository(vaultDir);
+    await LaikaTask.runPromise(repo.createAsset({ key: 'pic.png', content: PNG, mimeType: 'image/png' }));
+    const asset = await LaikaTask.runPromise(repo.getAsset('pic.png'));
+
+    const { data } = await LaikaStream.runPromiseCollect(repo.getVariations([asset]));
+    expect(data).toHaveLength(1);
+    expect(data[0]?.variations).toEqual({});
+  });
+});
+
 describe('ObsidianAssetsRepository — urls & metadata', () => {
   it('getUrls applies the configured createUrl', async () => {
     const repo = new ObsidianAssetsRepository(vaultDir, {

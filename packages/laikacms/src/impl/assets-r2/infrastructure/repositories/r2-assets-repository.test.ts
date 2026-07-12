@@ -252,3 +252,37 @@ describe('R2AssetsRepository — getCapabilities', () => {
     expect(caps.pagination.supported).toBe(true);
   });
 });
+
+describe('R2AssetsRepository — getVariations', () => {
+  it('invokes createVariations callback and surfaces result on the returned entry', async () => {
+    const bucket = makeBucket();
+    const repo = new R2AssetsRepository({
+      bucket: bucket as unknown as R2Bucket,
+      dangerouslyAllowAllFiles: true,
+      createVariations: key => ({ thumb: { variant: 'thumb', url: 'thumb-' + key } }),
+    });
+    const asset = await LaikaTask.runPromise(
+      repo.createAsset({ key: 'photo.png', content: PNG, mimeType: 'image/png' }),
+    );
+
+    const { data } = await LaikaStream.runPromiseCollect(repo.getVariations([asset]));
+    expect(data).toHaveLength(1);
+    expect(data[0]?.key).toBe('photo.png');
+    expect(data[0]?.variations['thumb']).toEqual({ variant: 'thumb', url: 'thumb-photo.png' });
+  });
+
+  it('returns empty variations when no createVariations option is set', async () => {
+    const bucket = makeBucket();
+    const repo = new R2AssetsRepository({
+      bucket: bucket as unknown as R2Bucket,
+      dangerouslyAllowAllFiles: true,
+    });
+    const asset = await LaikaTask.runPromise(
+      repo.createAsset({ key: 'plain.png', content: PNG, mimeType: 'image/png' }),
+    );
+
+    const { data } = await LaikaStream.runPromiseCollect(repo.getVariations([asset]));
+    expect(data).toHaveLength(1);
+    expect(data[0]?.variations).toEqual({});
+  });
+});

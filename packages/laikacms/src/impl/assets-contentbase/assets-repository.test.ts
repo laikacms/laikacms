@@ -161,6 +161,23 @@ describe('ContentBaseAssetsRepository — getVariations', () => {
     expect(data[0]?.key).toBe(key);
     expect(data[0]?.variations).toBeDefined();
   });
+
+  it('invokes createVariations callback and surfaces result on the returned entry', async () => {
+    const repoWithVariations = new ContentBaseAssetsRepository(
+      new InMemoryStorageRepository(),
+      new TestSettingsProvider(),
+      { createVariations: key => ({ thumb: { variant: 'thumb', url: 'thumb-' + key } }) },
+    );
+    const key = KEY('cb.png');
+    const asset = await LaikaTask.runPromise(
+      repoWithVariations.createAsset({ key, content: PNG, mimeType: 'image/png' }),
+    );
+
+    const { data } = await LaikaStream.runPromiseCollect(repoWithVariations.getVariations([asset]));
+    expect(data).toHaveLength(1);
+    expect(data[0]?.key).toBe(key);
+    expect(data[0]?.variations['thumb']).toEqual({ variant: 'thumb', url: 'thumb-' + key });
+  });
 });
 
 describe('ContentBaseAssetsRepository — getMetadata', () => {
