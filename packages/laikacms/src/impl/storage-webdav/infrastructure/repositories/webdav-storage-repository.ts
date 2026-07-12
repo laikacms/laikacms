@@ -110,13 +110,24 @@ export class WebDavStorageRepository extends StorageRepository {
     }
   }
 
-  private resolveExtension(key: string, metadata: StorageObject['metadata'] | undefined): string {
+  private resolveExtension(
+    key: string,
+    metadata: StorageObject['metadata'] | undefined,
+  ): Effect.Effect<string, LaikaError> {
     const requested = this.determineExtension(key, {
       metadata,
       defaultExtension: this.defaultFileExtension,
     });
-    if (requested && this.serializerRegistry[requested]) return requested;
-    return this.defaultFileExtension;
+    if (!requested) return Effect.succeed(this.defaultFileExtension);
+    if (!this.serializerRegistry[requested]) {
+      return Effect.fail(
+        new BadRequestError(
+          `determineExtension returned unregistered extension "${requested}". `
+            + `Available: ${this.availableExtensions.join(', ')}`,
+        ),
+      );
+    }
+    return Effect.succeed(requested);
   }
 
   getObject(key: string): LaikaTask.LaikaTask<StorageObject> {
@@ -183,7 +194,7 @@ export class WebDavStorageRepository extends StorageRepository {
             ),
           );
         }
-        const extension = this.resolveExtension(create.key, create.metadata);
+        const extension = yield* this.resolveExtension(create.key, create.metadata);
         const serialized = yield* Effect.promise(() => this.serialize(extension, create.content));
         yield* liftResult(this.dataSource.writeFile(create.key, extension, serialized));
         return yield* LaikaTask.runValue(this.getObject(create.key));
@@ -195,7 +206,9 @@ export class WebDavStorageRepository extends StorageRepository {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
         const existing = yield* liftResult(this.dataSource.resolveExisting(create.key));
-        const extension = existing?.extension ?? this.resolveExtension(create.key, create.metadata);
+        const extension = existing
+          ? existing.extension
+          : yield* this.resolveExtension(create.key, create.metadata);
         const serialized = create.content
           ? yield* Effect.promise(() => this.serialize(extension, create.content!))
           : '';

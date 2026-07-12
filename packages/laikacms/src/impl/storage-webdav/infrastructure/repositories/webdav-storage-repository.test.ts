@@ -1,5 +1,5 @@
 import * as Effect from 'effect/Effect';
-import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { BadRequestError, ForbiddenError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import type { WebDavConfig } from '../datasources/webdav-datasource.js';
@@ -139,6 +139,18 @@ afterEach(() => {
   server.store.clear();
 });
 
+const mdSerializer = {
+  format: { mediaType: 'text/markdown' } as never,
+  serializeDocumentFileContents: async (content: unknown) => String((content as { body?: string }).body ?? ''),
+  deserializeDocumentFileContents: async (raw: string) => ({ body: raw }),
+};
+
+const yamlSerializer = {
+  format: { mediaType: 'application/yaml' } as never,
+  serializeDocumentFileContents: async (content: unknown) => String((content as { body?: string }).body ?? ''),
+  deserializeDocumentFileContents: async (raw: string) => ({ body: raw }),
+};
+
 const makeRepo = (srv: ReturnType<typeof createMockServer> = server) => {
   const config: WebDavConfig = {
     baseUrl: `http://dav.test${ROOT_PATH}`,
@@ -146,13 +158,7 @@ const makeRepo = (srv: ReturnType<typeof createMockServer> = server) => {
   };
   return new WebDavStorageRepository(
     config,
-    {
-      md: {
-        format: { mediaType: 'text/markdown' } as never,
-        serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
-        deserializeDocumentFileContents: async raw => ({ body: raw }),
-      },
-    },
+    { md: mdSerializer },
     'md',
   );
 };
@@ -374,5 +380,80 @@ describe('WebDavStorageRepository — non-404 PROPFIND errors surface as recover
     // The 403 on docs/private/ surfaces as a ForbiddenError.
     expect(collected.recoverableErrors).toHaveLength(1);
     expect(collected.recoverableErrors[0]).toBeInstanceOf(ForbiddenError);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Custom determineExtension callback
+// ---------------------------------------------------------------------------
+
+describe('WebDavStorageRepository — custom determineExtension', () => {
+  it('uses the extension returned by the callback when it is registered', async () => {
+    const config: WebDavConfig = { baseUrl: `http://dav.test${ROOT_PATH}`, fetch: server.fetch };
+    const repo = new WebDavStorageRepository(
+      config,
+      { md: mdSerializer, yaml: yamlSerializer },
+      'md',
+      (_key, _ctx) => 'yaml',
+    );
+
+    const created = await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'doc', content: { body: 'hello' } }),
+    );
+
+    expect(created.key).toBe('doc');
+    expect(server.store.has(`${ROOT_PATH}/doc.yaml`)).toBe(true);
+    expect(server.store.has(`${ROOT_PATH}/doc.md`)).toBe(false);
+  });
+
+  it('falls back to defaultFileExtension when the callback returns undefined', async () => {
+    const config: WebDavConfig = { baseUrl: `http://dav.test${ROOT_PATH}`, fetch: server.fetch };
+    const repo = new WebDavStorageRepository(
+      config,
+      { md: mdSerializer },
+      'md',
+      (_key, _ctx) => undefined,
+    );
+
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'doc', content: { body: 'hello' } }),
+    );
+
+    expect(server.store.has(`${ROOT_PATH}/doc.md`)).toBe(true);
+  });
+
+  it('fails with BadRequestError when the callback returns an unregistered extension', async () => {
+    const config: WebDavConfig = { baseUrl: `http://dav.test${ROOT_PATH}`, fetch: server.fetch };
+    const repo = new WebDavStorageRepository(
+      config,
+      { md: mdSerializer },
+      'md',
+      (_key, _ctx) => 'xlsx',
+    );
+
+    await expect(
+      LaikaTask.runPromise(
+        repo.createObject({ type: 'object', key: 'doc', content: { body: 'hello' } }),
+      ),
+    ).rejects.toBeInstanceOf(BadRequestError);
+
+    expect(server.store.has(`${ROOT_PATH}/doc.xlsx`)).toBe(false);
+    expect(server.store.has(`${ROOT_PATH}/doc.md`)).toBe(false);
+  });
+
+  it('also fails with BadRequestError in createOrUpdateObject for an unregistered extension on a new key', async () => {
+    const config: WebDavConfig = { baseUrl: `http://dav.test${ROOT_PATH}`, fetch: server.fetch };
+    const repo = new WebDavStorageRepository(
+      config,
+      { md: mdSerializer },
+      'md',
+      (_key, _ctx) => 'xlsx',
+    );
+
+    await expect(
+      LaikaTask.runPromise(
+        repo.createOrUpdateObject({ type: 'object', key: 'doc', content: { body: 'hello' } }),
+      ),
+    ).rejects.toBeInstanceOf(BadRequestError);
   });
 });
