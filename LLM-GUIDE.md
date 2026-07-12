@@ -131,7 +131,7 @@ const { items } = await collectStream(
   documents.listRecordSummaries({
     folder: 'posts',
     depth: 1,
-    pagination: { page: 1, perPage: 100 }, // NOT { offset, limit }
+    pagination: { page: 1, perPage: 100 }, // or { offset: 0, limit: 100 } — both styles work
     type: 'published',
   }),
 );
@@ -329,12 +329,15 @@ These are the things that consistently bite first-time integrators:
    - Bridge `laika.fetch` into Effect HTTP: `yield* HttpServerRequest.toWeb(request)` gives a WHATWG
      `Request`; wrap the result with `HttpServerResponse.fromWeb(response)`.
 
-10. **Pagination shape is `{ page, perPage }`, not `{ offset, limit }`.** Both `listRecordSummaries`
-    and `listRecords` exist on `DocumentsRepository`:
+10. **Both `{ page, perPage }` and `{ offset, limit }` pagination shapes are valid.** The
+    `getCapabilities()` response tells you which styles a given backend supports
+    (`capabilities.pagination.styles.offset` / `.page` / `.cursor`). Most backends support both
+    offset and page styles; cursor is backend-specific. Both `listRecordSummaries` and `listRecords`
+    exist on `DocumentsRepository`:
     - `listRecordSummaries({ pagination: { page: 1, perPage: 100 } })` — lightweight summaries,
       prefer this for listing/index pages.
-    - `listRecords({ pagination: { page: 1, perPage: 100 } })` — full record bodies, use when you
-      need the complete content of every record in one pass.
+    - `listRecords({ pagination: { offset: 0, limit: 100 } })` — full record bodies with
+      offset-based pagination, use when you need the complete content of every record in one pass.
 
 11. **`NotFoundError` must be imported from `laikacms/core` and re-thrown.** A bare `catch {}`
     swallows all errors. Always check:
