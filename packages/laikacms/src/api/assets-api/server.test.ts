@@ -1162,6 +1162,62 @@ describe('GET /resources/:key — ?meta=true inlines metadata', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /resources (collection) — ?meta=true inlines metadata (LCMS-343)
+// ---------------------------------------------------------------------------
+
+function makeCollectionMetaRepo(opts: { getMetadataSpy?: ReturnType<typeof vi.fn> } = {}): AssetsRepository {
+  const getMetadataImpl = (_assets: Asset[]) =>
+    LaikaStream.make<AssetMetadata>(emit =>
+      Effect.gen(function*() {
+        yield* emit.data(stubMetadata);
+      })
+    );
+  return {
+    listResources: (_folderKey: string, _options: ListResourcesOptions) =>
+      LaikaStream.make<Resource, ListResourcesDone>(emit =>
+        Effect.gen(function*() {
+          yield* emit.data(singleAsset);
+          return { total: 1 };
+        })
+      ),
+    getMetadata: opts.getMetadataSpy ?? getMetadataImpl,
+  } as unknown as AssetsRepository;
+}
+
+describe('GET /resources (collection) — ?meta=true inlines metadata (LCMS-343)', () => {
+  it('?meta=true inlines metadata on data[0].meta for each asset in the collection', async () => {
+    const api = buildAssetsApi({ repository: makeCollectionMetaRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?meta=true'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      data: Array<{ meta?: { mimeType?: string, size?: number, filename?: string } }>,
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]?.meta?.mimeType).toBe('image/jpeg');
+    expect(body.data[0]?.meta?.size).toBe(1024);
+    expect(body.data[0]?.meta?.filename).toBe('hero.jpg');
+  });
+
+  it('without ?meta, getMetadata is NOT called and data[0].meta is absent', async () => {
+    const getMetadataSpy = vi.fn((_assets: Asset[]) =>
+      LaikaStream.make<AssetMetadata>(emit =>
+        Effect.gen(function*() {
+          yield* emit.data(stubMetadata);
+        })
+      )
+    );
+    const api = buildAssetsApi({ repository: makeCollectionMetaRepo({ getMetadataSpy }) });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      data: Array<{ meta?: Record<string, unknown> }>,
+    };
+    expect(getMetadataSpy).not.toHaveBeenCalled();
+    expect(body.data[0]?.meta).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Malformed JSON body — fetch() must never throw, always return a Response
 // ---------------------------------------------------------------------------
 
