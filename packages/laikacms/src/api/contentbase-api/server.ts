@@ -33,20 +33,7 @@ function respondError(
 ) {
   if (Result.isFailure(result)) {
     onError?.(result.failure);
-    const status = (ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500) as
-      | 400
-      | 401
-      | 403
-      | 404
-      | 409
-      | 413
-      | 415
-      | 422
-      | 429
-      | 500
-      | 501
-      | 503
-      | 504;
+    const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
     return c.json(
       {
         errors: [
