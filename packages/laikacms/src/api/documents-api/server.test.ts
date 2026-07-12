@@ -2217,7 +2217,10 @@ describe('POST /operations — add/unpublished', () => {
 
     const api = buildJsonApi({ repo });
     const res = await postOperations(api, [
-      { op: 'add', data: { type: 'unpublished', attributes: { title: 'New draft', status: 'draft' } } },
+      {
+        op: 'add',
+        data: { type: 'unpublished', id: 'posts/new-draft', attributes: { title: 'New draft', status: 'draft' } },
+      },
     ]);
     expect(res.status).toBe(200);
 
@@ -2237,7 +2240,10 @@ describe('POST /operations — add/published', () => {
 
     const api = buildJsonApi({ repo });
     const res = await postOperations(api, [
-      { op: 'add', data: { type: 'published', attributes: { title: 'Hello', status: 'published' } } },
+      {
+        op: 'add',
+        data: { type: 'published', id: 'posts/hello', attributes: { title: 'Hello', status: 'published' } },
+      },
     ]);
     expect(res.status).toBe(200);
 
@@ -2246,6 +2252,85 @@ describe('POST /operations — add/published', () => {
     const result = body['atomic:results'][0] as AtomicResultData;
     expect(result.data.type).toBe('published');
     expect(result.data.id).toBe('posts/hello');
+  });
+});
+
+describe('POST /operations — add/unpublished missing data.id', () => {
+  it('returns per-operation 400 error identifying the operation index when data.id is absent', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await postOperations(api, [
+      { op: 'add', data: { type: 'unpublished', attributes: { title: 'No key', status: 'draft' } } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(1);
+    const result = body['atomic:results'][0] as AtomicResultError;
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]!.status).toBe('400');
+    expect(result.errors[0]!.detail).toContain('atomic:operations[0].data.id');
+  });
+
+  it('identifies the correct index in a mixed batch when a later add/unpublished op omits data.id', async () => {
+    const repo = {
+      createUnpublished: (_data: unknown) => LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/first'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      { op: 'add', data: { type: 'unpublished', id: 'posts/first', attributes: { title: 'Has ID', status: 'draft' } } },
+      { op: 'add', data: { type: 'unpublished', attributes: { title: 'No key', status: 'draft' } } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(2);
+    const goodResult = body['atomic:results'][0] as AtomicResultData;
+    expect(goodResult.data.type).toBe('unpublished');
+    const badResult = body['atomic:results'][1] as AtomicResultError;
+    expect(badResult.errors[0]!.status).toBe('400');
+    expect(badResult.errors[0]!.detail).toContain('atomic:operations[1].data.id');
+  });
+});
+
+describe('POST /operations — add/published missing data.id', () => {
+  it('returns per-operation 400 error identifying the operation index when data.id is absent', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await postOperations(api, [
+      { op: 'add', data: { type: 'published', attributes: { title: 'No key', status: 'published' } } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(1);
+    const result = body['atomic:results'][0] as AtomicResultError;
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]!.status).toBe('400');
+    expect(result.errors[0]!.detail).toContain('atomic:operations[0].data.id');
+  });
+
+  it('identifies the correct index in a mixed batch when a later add/published op omits data.id', async () => {
+    const repo = {
+      createDocument: (_data: unknown) => LaikaTask.make(() => Effect.succeed(makeDocument('posts/first'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      {
+        op: 'add',
+        data: { type: 'published', id: 'posts/first', attributes: { title: 'Has ID', status: 'published' } },
+      },
+      { op: 'add', data: { type: 'published', attributes: { title: 'No key', status: 'published' } } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as AtomicBody;
+    expect(body['atomic:results']).toHaveLength(2);
+    const goodResult = body['atomic:results'][0] as AtomicResultData;
+    expect(goodResult.data.type).toBe('published');
+    const badResult = body['atomic:results'][1] as AtomicResultError;
+    expect(badResult.errors[0]!.status).toBe('400');
+    expect(badResult.errors[0]!.detail).toContain('atomic:operations[1].data.id');
   });
 });
 
@@ -2416,7 +2501,10 @@ describe('POST /operations — repo-failure status codes', () => {
 
     const api = buildJsonApi({ repo });
     const res = await postOperations(api, [
-      { op: 'add', data: { type: 'published', attributes: { title: 'Dupe', status: 'published' } } },
+      {
+        op: 'add',
+        data: { type: 'published', id: 'posts/existing', attributes: { title: 'Dupe', status: 'published' } },
+      },
     ]);
     expect(res.status).toBe(200);
 
@@ -2482,7 +2570,10 @@ describe('POST /operations — multi-operation batch', () => {
 
     const api = buildJsonApi({ repo });
     const res = await postOperations(api, [
-      { op: 'add', data: { type: 'unpublished', attributes: { title: 'Batch draft', status: 'draft' } } },
+      {
+        op: 'add',
+        data: { type: 'unpublished', id: 'posts/batch-draft', attributes: { title: 'Batch draft', status: 'draft' } },
+      },
       { op: 'remove', ref: { type: 'document', id: 'posts/old' } },
     ]);
     expect(res.status).toBe(200);
