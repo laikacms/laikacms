@@ -6,8 +6,17 @@
  * can be exercised by injecting mock DocumentsRepository / AssetsRepository
  * implementations.
  *
- * Browser-only Decap CMS packages (@laikacms/decap-cms/lib-util, lib-auth,
- * ui-default) are mocked because they call `window` at module load time.
+ * @laikacms/decap-cms/lib-util is fully mocked: the package's dist bundle
+ * imports extension-less relative specifiers (e.g. `'./utilities'`) which
+ * Node.js ESM cannot resolve, so `vi.importActual` / `importOriginal` fails
+ * at module load time. The mock factory below stays a static factory — no
+ * `importOriginal` call — and provides hand-written equivalents for every
+ * exported name the source code uses. Real error names (API_ERROR /
+ * ACCESS_TOKEN_ERROR) and the v4 Cursor shape are used so assertions match
+ * what the real package produces at runtime.
+ *
+ * lib-auth and ui-default remain fully mocked for the same ESM reason, plus
+ * they access the DOM at module load time.
  * We do NOT test the authentication flow because that requires a running server.
  */
 
@@ -23,50 +32,75 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // vi.mock factories are hoisted before module evaluation; use vi.hoisted to
 // share Cursor/symbol between the factory and test bodies.
-const { MockCursor, CURSOR_COMPATIBILITY_SYMBOL } = vi.hoisted(() => {
-  const CURSOR_COMPATIBILITY_SYMBOL = Symbol('cursor_compat');
+const { Cursor, CURSOR_COMPATIBILITY_SYMBOL, API_ERROR, ACCESS_TOKEN_ERROR } = vi.hoisted(() => {
+  // Matches the v4 Cursor exactly: data/meta are plain Record objects, actions a native Set.
+  // knownMetaKeys mirrors the real package's filterUnknownMetaKeys allowlist.
+  const knownMetaKeys = new Set([
+    'index',
+    'page',
+    'count',
+    'pageSize',
+    'pageCount',
+    'usingOldPaginationAPI',
+    'extension',
+    'folder',
+    'depth',
+  ]);
 
-  // Mirrors the v4 Cursor: `data`/`meta` are plain Record objects, `actions` a native Set.
-  class MockCursor {
-    actions: Set<string>;
-    data: Record<string, unknown>;
-    meta: Record<string, unknown>;
-
-    constructor(store: { actions?: string[], data?: Record<string, unknown>, meta?: Record<string, unknown> } = {}) {
-      this.actions = new Set(store.actions ?? []);
-      this.data = store.data ?? {};
-      this.meta = store.meta ?? {};
+  class Cursor {
+    store: { actions: Set<string>, data: Record<string, unknown>, meta: Record<string, unknown> };
+    constructor(arg: { actions?: string[], data?: Record<string, unknown>, meta?: Record<string, unknown> } = {}) {
+      this.store = {
+        actions: new Set(arg.actions ?? []),
+        data: { ...arg.data },
+        meta: Object.fromEntries(Object.entries({ ...arg.meta }).filter(([k]) => knownMetaKeys.has(k))),
+      };
     }
-
-    static create(store: { actions?: string[], data?: Record<string, unknown>, meta?: Record<string, unknown> } = {}) {
-      return new MockCursor(store);
+    static create(arg?: { actions?: string[], data?: Record<string, unknown>, meta?: Record<string, unknown> }) {
+      return new Cursor(arg);
+    }
+    get actions() {
+      return this.store.actions;
+    }
+    get data() {
+      return this.store.data;
+    }
+    get meta() {
+      return this.store.meta;
+    }
+    hasAction(a: string) {
+      return this.store.actions.has(a);
     }
   }
 
-  return { MockCursor, CURSOR_COMPATIBILITY_SYMBOL };
+  const CURSOR_COMPATIBILITY_SYMBOL = Symbol('cursor_compat');
+  const API_ERROR = 'API_ERROR';
+  const ACCESS_TOKEN_ERROR = 'ACCESS_TOKEN_ERROR';
+
+  return { Cursor, CURSOR_COMPATIBILITY_SYMBOL, API_ERROR, ACCESS_TOKEN_ERROR };
 });
 
 vi.mock('@laikacms/decap-cms/lib-util', () => ({
   AccessTokenError: class AccessTokenError extends Error {
     constructor(msg: string) {
       super(msg);
-      this.name = 'AccessTokenError';
+      this.name = ACCESS_TOKEN_ERROR;
     }
   },
   APIError: class APIError extends Error {
     status: number;
-    backend: string;
-    constructor(msg: string, status = 500, backend = '') {
+    api: string;
+    constructor(msg: string, status = 500, api = '') {
       super(msg);
-      this.name = 'APIError';
+      this.name = API_ERROR;
       this.status = status;
-      this.backend = backend;
+      this.api = api;
     }
   },
   unsentRequest: {
     fetchWithTimeout: vi.fn(),
   },
-  Cursor: MockCursor,
+  Cursor,
   CURSOR_COMPATIBILITY_SYMBOL,
 }));
 
@@ -523,7 +557,7 @@ describe('LaikaBackend.traverseCursor()', () => {
     mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(25) as any[], {}));
     await backend.entriesByFolder('posts', 'json', 1); // populates allEntriesCache
 
-    const page1Cursor = new MockCursor({
+    const page1Cursor = new Cursor({
       actions: ['next', 'last'],
       meta: { page: 1, pageSize: 20, pageCount: 2, count: 25 },
       data: { folder: 'posts' },
@@ -540,7 +574,7 @@ describe('LaikaBackend.traverseCursor()', () => {
     mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(25) as any[], {}));
     await backend.entriesByFolder('posts', 'json', 1);
 
-    const page1Cursor = new MockCursor({
+    const page1Cursor = new Cursor({
       actions: ['next', 'last'],
       meta: { page: 1, pageSize: 20, pageCount: 2, count: 25 },
       data: { folder: 'posts' },
@@ -555,7 +589,7 @@ describe('LaikaBackend.traverseCursor()', () => {
   });
 
   it('throws a typed error when cursor carries no folder', async () => {
-    const emptyCursor = new MockCursor({ data: {}, meta: {} });
+    const emptyCursor = new Cursor({ data: {}, meta: {} });
 
     await expect(backend.traverseCursor(emptyCursor, 'next')).rejects.toThrow(
       'traverseCursor: cursor carries no folder',
@@ -566,7 +600,7 @@ describe('LaikaBackend.traverseCursor()', () => {
     mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(45) as any[], {}));
     await backend.entriesByFolder('posts', 'json', 1);
 
-    const page3Cursor = new MockCursor({
+    const page3Cursor = new Cursor({
       actions: ['prev', 'first'],
       meta: { page: 3, pageSize: 20, pageCount: 3, count: 45 },
       data: { folder: 'posts' },
@@ -585,7 +619,7 @@ describe('LaikaBackend.traverseCursor()', () => {
     mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(45) as any[], {}));
     await backend.entriesByFolder('posts', 'json', 1);
 
-    const page3Cursor = new MockCursor({
+    const page3Cursor = new Cursor({
       actions: ['prev', 'first'],
       meta: { page: 3, pageSize: 20, pageCount: 3, count: 45 },
       data: { folder: 'posts' },
@@ -604,7 +638,7 @@ describe('LaikaBackend.traverseCursor()', () => {
     mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(45) as any[], {}));
     await backend.entriesByFolder('posts', 'json', 1);
 
-    const page1Cursor = new MockCursor({
+    const page1Cursor = new Cursor({
       actions: ['next', 'last'],
       meta: { page: 1, pageSize: 20, pageCount: 3, count: 45 },
       data: { folder: 'posts' },
@@ -1931,7 +1965,7 @@ describe('LaikaBackend.getMediaFile()', () => {
     mockAssetsRepo.getAsset.mockReturnValue(fail({ message: 'Not found' }));
 
     await expect(backend.getMediaFile('missing.jpg')).rejects.toMatchObject({
-      name: 'APIError',
+      name: API_ERROR,
     });
   });
 });
@@ -1968,7 +2002,7 @@ describe('LaikaBackend.persistMedia()', () => {
     const proxy = { path: 'assets/uploads/photo.jpg', fileObj: undefined };
     await expect(
       backend.persistMedia(proxy as any, {}),
-    ).rejects.toMatchObject({ name: 'APIError', status: 400 });
+    ).rejects.toMatchObject({ name: API_ERROR, status: 400 });
   });
 
   it('uses the filename from the path as the storage key', async () => {
@@ -2013,7 +2047,7 @@ describe('LaikaBackend.persistMedia()', () => {
 
     await expect(
       backend.persistMedia(makeAssetProxy() as any, {}),
-    ).rejects.toMatchObject({ name: 'APIError' });
+    ).rejects.toMatchObject({ name: API_ERROR });
   });
 });
 
@@ -2136,7 +2170,7 @@ describe('LaikaBackend.authenticate()', () => {
     } as any);
 
     await expect(backend.authenticate({ token: 'bad-token' })).rejects.toMatchObject({
-      name: 'APIError',
+      name: API_ERROR,
     });
   });
 
@@ -2155,7 +2189,7 @@ describe('LaikaBackend.authenticate()', () => {
 
   it('throws AccessTokenError when credentials has no token', async () => {
     await expect(backend.authenticate({} as any)).rejects.toMatchObject({
-      name: 'AccessTokenError',
+      name: ACCESS_TOKEN_ERROR,
     });
   });
 });
@@ -2248,7 +2282,7 @@ describe('LaikaBackend.restoreUser()', () => {
     const backend = new LaikaBackend(makeConfig()) as any;
 
     await expect(backend.restoreUser()).rejects.toMatchObject({
-      name: 'AccessTokenError',
+      name: ACCESS_TOKEN_ERROR,
     });
   });
 
