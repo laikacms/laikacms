@@ -396,7 +396,7 @@ const schemas: Record<string, OpenApiSchema> = {
     properties: {
       data: {
         type: 'object',
-        required: ['type', 'attributes'],
+        required: ['type', 'id', 'attributes'],
         properties: {
           type: { const: 'published' },
           id: { type: 'string', description: 'Document key.' },
@@ -415,7 +415,7 @@ const schemas: Record<string, OpenApiSchema> = {
     properties: {
       data: {
         type: 'object',
-        required: ['type', 'attributes'],
+        required: ['type', 'id', 'attributes'],
         properties: {
           type: { const: 'unpublished' },
           id: { type: 'string', description: 'Document key.' },
@@ -473,7 +473,7 @@ const schemas: Record<string, OpenApiSchema> = {
     properties: {
       data: {
         type: 'object',
-        required: ['type', 'attributes'],
+        required: ['type', 'id', 'attributes'],
         properties: {
           type: { const: 'revision' },
           id: { type: 'string', description: 'Document key the revision belongs to.' },

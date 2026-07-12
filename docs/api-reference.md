@@ -923,12 +923,12 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-| Field                      | Type          | Required | Description                             |
-| -------------------------- | ------------- | -------- | --------------------------------------- |
-| `data.type`                | `"published"` | yes      | Resource type                           |
-| `data.id`                  | string        | no       | Document key. Auto-generated if omitted |
-| `data.attributes.language` | string        | yes      | BCP 47 language tag (e.g. `"en"`)       |
-| `data.attributes.content`  | object        | no       | Arbitrary document content              |
+| Field                      | Type          | Required | Description                          |
+| -------------------------- | ------------- | -------- | ------------------------------------ |
+| `data.type`                | `"published"` | yes      | Resource type                        |
+| `data.id`                  | string        | **yes**  | Document key (e.g. `"posts/my-doc"`) |
+| `data.attributes.language` | string        | yes      | BCP 47 language tag (e.g. `"en"`)    |
+| `data.attributes.content`  | object        | no       | Arbitrary document content           |
 
 **Response** — `201 Created` with the created document
 
@@ -1134,13 +1134,13 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-| Field                      | Type            | Required | Description                             |
-| -------------------------- | --------------- | -------- | --------------------------------------- |
-| `data.type`                | `"unpublished"` | yes      | Resource type                           |
-| `data.id`                  | string          | no       | Document key. Auto-generated if omitted |
-| `data.attributes.status`   | string          | yes      | Initial status (e.g. `"draft"`)         |
-| `data.attributes.language` | string          | yes      | BCP 47 language tag                     |
-| `data.attributes.content`  | object          | no       | Arbitrary document content              |
+| Field                      | Type            | Required | Description                          |
+| -------------------------- | --------------- | -------- | ------------------------------------ |
+| `data.type`                | `"unpublished"` | yes      | Resource type                        |
+| `data.id`                  | string          | **yes**  | Document key (e.g. `"posts/my-doc"`) |
+| `data.attributes.status`   | string          | yes      | Initial status (e.g. `"draft"`)      |
+| `data.attributes.language` | string          | yes      | BCP 47 language tag                  |
+| `data.attributes.content`  | object          | no       | Arbitrary document content           |
 
 **Response** — `201 Created` — created unpublished document (same shape as `GET /unpublished/:key`)
 

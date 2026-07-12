@@ -117,4 +117,22 @@ describe('buildDocumentsOpenApi', () => {
       expect(defined).toContain(r.replace('#/components/schemas/', ''));
     }
   });
+
+  it('PublishedCreateRequest requires data.id (LCMS-397)', () => {
+    const doc = buildDocumentsOpenApi();
+    const schemas = doc.components!.schemas! as Record<string, { properties?: { data?: { required?: string[] } } }>;
+    expect(schemas['PublishedCreateRequest']!.properties!.data!.required).toContain('id');
+  });
+
+  it('UnpublishedCreateRequest requires data.id (LCMS-397)', () => {
+    const doc = buildDocumentsOpenApi();
+    const schemas = doc.components!.schemas! as Record<string, { properties?: { data?: { required?: string[] } } }>;
+    expect(schemas['UnpublishedCreateRequest']!.properties!.data!.required).toContain('id');
+  });
+
+  it('RevisionCreateRequest requires data.id (LCMS-398)', () => {
+    const doc = buildDocumentsOpenApi();
+    const schemas = doc.components!.schemas! as Record<string, { properties?: { data?: { required?: string[] } } }>;
+    expect(schemas['RevisionCreateRequest']!.properties!.data!.required).toContain('id');
+  });
 });

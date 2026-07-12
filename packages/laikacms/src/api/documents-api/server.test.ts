@@ -445,6 +445,27 @@ describe('POST /published', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('500');
   });
+
+  it('returns 400 bad_request when data.id is omitted (LCMS-397)', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/published', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'published',
+            attributes: { status: 'published', content: { title: 'Hello' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string, detail: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('bad_request');
+    expect(body.errors[0]!.detail).toMatch(/data\.id is required/);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -702,6 +723,27 @@ describe('POST /unpublished', () => {
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
     expect(body.errors[0]!.status).toBe('400');
     expect(body.errors[0]!.code).toBe('invalid_data');
+  });
+
+  it('returns 400 bad_request when data.id is omitted (LCMS-397)', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'unpublished',
+            attributes: { status: 'draft', content: { title: 'Draft' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string, detail: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('bad_request');
+    expect(body.errors[0]!.detail).toMatch(/data\.id is required/);
   });
 });
 
