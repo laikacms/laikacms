@@ -18,7 +18,7 @@ implement honest fail-fast batch semantics:
 
 **Why `major`:** this is a wire-breaking change to a public export (`laikacms/documents/api`) of a
 published package. There are no in-repo consumers of the old vocabulary — the Decap backend does not
-call `/operations`, and `storage-jsonapi-proxy` targets the *storage-api* `/operations` endpoint,
+call `/operations`, and `storage-jsonapi-proxy` targets the _storage-api_ `/operations` endpoint,
 whose `atomic:*` vocabulary is deliberately unchanged. But downstream users who stand up the
 documents-api server have their own HTTP clients, and those clients break. A `minor` bump would let
 them auto-upgrade on `^1.x` into a silent 400. Semver is the only contract we have with them.
