@@ -513,6 +513,99 @@ describe('contentbase-api onError', () => {
     expect(res.status).toBe(400);
     expect(onError).toHaveBeenCalledOnce();
   });
+
+  // LCMS-384: POST /collections — media branch write failure
+  it('calls onError when putMediaCollectionSettings fails on POST /collections', async () => {
+    const onError = vi.fn();
+    const repo = {
+      putMediaCollectionSettings: () => LaikaTask.fail(new NotFoundError('write failed')),
+    } as unknown as ContentBaseSettingsProvider;
+
+    const api = buildJsonApi({ repo, onError });
+    const res = await api.fetch(
+      new Request('http://localhost/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            type: 'media-collection',
+            id: 'uploads',
+            attributes: { type: 'media', name: 'Uploads' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(onError).toHaveBeenCalledOnce();
+  });
+
+  // LCMS-367: PATCH /collections/:key — document branch write failure
+  it('calls onError when putDocumentCollectionSettings fails on PATCH /collections/:key', async () => {
+    const onError = vi.fn();
+    const repo = {
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
+      putDocumentCollectionSettings: () => LaikaTask.fail(new NotFoundError('write failed')),
+    } as unknown as ContentBaseSettingsProvider;
+
+    const api = buildJsonApi({ repo, onError });
+    const res = await api.fetch(
+      new Request('http://localhost/collections/posts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            type: 'document-collection',
+            id: 'posts',
+            attributes: { type: 'document', name: 'Posts' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(onError).toHaveBeenCalledOnce();
+  });
+
+  // LCMS-367: PATCH /collections/:key — media branch write failure
+  it('calls onError when putMediaCollectionSettings fails on PATCH /collections/:key', async () => {
+    const onError = vi.fn();
+    const repo = {
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
+      putMediaCollectionSettings: () => LaikaTask.fail(new NotFoundError('write failed')),
+    } as unknown as ContentBaseSettingsProvider;
+
+    const api = buildJsonApi({ repo, onError });
+    const res = await api.fetch(
+      new Request('http://localhost/collections/images', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            type: 'media-collection',
+            id: 'images',
+            attributes: { type: 'media', name: 'Images' },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect(onError).toHaveBeenCalledOnce();
+  });
+
+  // LCMS-368: DELETE /collections/:key — putSettings write failure after collection found
+  it('calls onError when putSettings fails on DELETE /collections/:key (write after lookup)', async () => {
+    const onError = vi.fn();
+    const repo = {
+      getSettings: () => LaikaTask.succeed(settingsWithBoth),
+      putSettings: () => LaikaTask.fail(new NotFoundError('write failed')),
+    } as unknown as ContentBaseSettingsProvider;
+
+    const api = buildJsonApi({ repo, onError });
+    const res = await api.fetch(
+      new Request('http://localhost/collections/posts', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(400);
+    expect(onError).toHaveBeenCalledOnce();
+  });
 });
 
 // ---------------------------------------------------------------------------
