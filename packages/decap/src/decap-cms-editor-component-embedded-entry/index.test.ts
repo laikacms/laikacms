@@ -34,10 +34,8 @@ describe('fromBlock', () => {
     const match = '{{< embedded-entry "posts" "hello-world" >}}'.match(pattern);
     expect(fromBlock(match!)).toEqual({ collection: 'posts', entry: 'hello-world' });
   });
-
-  it('returns falsy when match is null', () => {
-    expect(fromBlock(null)).toBeFalsy();
-  });
+  // Note: the real CmsEditorComponentOptions.fromBlock signature is (match: RegExpMatchArray)
+  // — callers never pass null; the Decap engine only calls fromBlock when the pattern matches.
 });
 
 // ---------------------------------------------------------------------------

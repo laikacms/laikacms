@@ -12,18 +12,18 @@ import PKCEAuthenticationPage from './AuthenticationPage.js';
 import DevAuthenticationPage from './DevAuthenticationPage.js';
 
 import type {
-  AssetProxy,
-  Config,
-  Credentials,
-  DisplayURL,
-  Entry,
-  Implementation,
-  ImplementationEntry,
-  ImplementationFile,
-  ImplementationMediaFile,
-  PersistOptions,
-  UnpublishedEntry,
-  User,
+  CmsAssetProxy as AssetProxy,
+  CmsConfig as Config,
+  CmsCredentials as Credentials,
+  CmsDisplayURL as DisplayURL,
+  CmsFileEntry as Entry,
+  CmsImplementation as Implementation,
+  CmsImplementationEntry as ImplementationEntry,
+  CmsImplementationFile as ImplementationFile,
+  CmsImplementationMediaFile as ImplementationMediaFile,
+  CmsPersistOptions as PersistOptions,
+  CmsUnpublishedEntry as UnpublishedEntry,
+  CmsUser as User,
 } from '@laikacms/decap-cms/lib-util';
 
 import * as Result from 'effect/Result';

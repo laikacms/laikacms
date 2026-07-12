@@ -1,4 +1,4 @@
-import { type EditorComponentOptions } from '@laikacms/decap-cms/core';
+import { type CmsEditorComponentOptions as EditorComponentOptions } from '@laikacms/decap-cms/core';
 import React from 'react';
 
 export interface EmbeddedEntryMetadata {
@@ -59,12 +59,14 @@ const isEmbeddedEntryData = (data: unknown): data is EmbeddedEntryData => {
 const embeddedEntry: EditorComponentOptions = {
   label: 'Embedded Entry',
   id: 'embedded-entry',
-  fromBlock: (match: RegExpMatchArray | null) =>
-    match && {
-      collection: match[1],
-      entry: match[2],
-    },
-  toBlock: ({ collection, entry }: EmbeddedEntryData) => `{{< embedded-entry "${collection}" "${entry}" >}}`,
+  fromBlock: (match: RegExpMatchArray) => ({
+    collection: match[1],
+    entry: match[2],
+  }),
+  toBlock: (data: unknown) => {
+    const { collection, entry } = data as EmbeddedEntryData;
+    return `{{< embedded-entry "${collection}" "${entry}" >}}`;
+  },
   toPreview: (data: unknown) => {
     if (!isEmbeddedEntryData(data)) throw new Error('Invalid data for Embedded Entry component');
     const { collection, entry } = data;
