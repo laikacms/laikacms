@@ -1165,6 +1165,47 @@ describe('PATCH /unpublished/:key', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
   });
+
+  it('returns 500 JSON:API error when repo throws InternalError on updateUnpublished', async () => {
+    const repo = {
+      updateUnpublished: vi.fn(() => LaikaTask.make(() => Effect.fail(new InternalError('storage failure')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fdraft', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'unpublished',
+            id: 'posts/draft',
+            attributes: { status: 'draft', content: { title: 'Updated Draft' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
+  });
+
+  it('returns 400 invalid_data on malformed JSON body', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fdraft', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: '{bad',
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('invalid_data');
+  });
 });
 
 // ---------------------------------------------------------------------------
