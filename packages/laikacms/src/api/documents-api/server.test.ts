@@ -200,7 +200,7 @@ describe('documents-api meta.warnings', () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/vnd.api+json' },
         body: JSON.stringify({
-          'atomic:operations': [
+          'operations': [
             { op: 'remove', ref: { type: 'document', id: 'posts/old' } },
           ],
         }),
@@ -209,7 +209,7 @@ describe('documents-api meta.warnings', () => {
     expect(res.status).toBe(200);
 
     const body = await res.json() as {
-      'atomic:results': Array<{
+      results: Array<{
         meta?: {
           deleted?: boolean,
           ref?: { type: string, id: string },
@@ -218,12 +218,12 @@ describe('documents-api meta.warnings', () => {
       }>,
     };
 
-    expect(body['atomic:results']).toHaveLength(1);
-    expect(body['atomic:results'][0]?.meta?.deleted).toBe(true);
-    expect(body['atomic:results'][0]?.meta?.ref?.id).toBe('posts/old');
-    expect(body['atomic:results'][0]?.meta?.warnings).toHaveLength(1);
-    expect(body['atomic:results'][0]?.meta?.warnings?.[0]?.code).toBe('invalid_data');
-    expect(body['atomic:results'][0]?.meta?.warnings?.[0]?.detail).toContain('orphaned sidecar');
+    expect(body.results).toHaveLength(1);
+    expect(body.results[0]?.meta?.deleted).toBe(true);
+    expect(body.results[0]?.meta?.ref?.id).toBe('posts/old');
+    expect(body.results[0]?.meta?.warnings).toHaveLength(1);
+    expect(body.results[0]?.meta?.warnings?.[0]?.code).toBe('invalid_data');
+    expect(body.results[0]?.meta?.warnings?.[0]?.detail).toContain('orphaned sidecar');
   });
 });
 
@@ -2198,14 +2198,17 @@ describe('GET /record-summaries — pagination links.next shape (LCMS-279)', () 
 type AtomicResultData = { data: { type: string, id: string, attributes: Record<string, unknown> } };
 type AtomicResultMeta = { meta: { deleted: boolean, ref: { type: string, id: string } } };
 type AtomicResultError = { errors: Array<{ status: string, title: string, detail?: string }> };
-type AtomicBody = { 'atomic:results': Array<AtomicResultData | AtomicResultMeta | AtomicResultError> };
+type BatchBody = { results: Array<AtomicResultData | AtomicResultMeta | AtomicResultError> };
+type BatchErrorBody = {
+  errors: Array<{ status: string, code: string, detail?: string, source?: { pointer: string } }>,
+};
 
 const postOperations = (api: ReturnType<typeof buildJsonApi>, operations: unknown[]) =>
   api.fetch(
     new Request('http://localhost/operations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/vnd.api+json' },
-      body: JSON.stringify({ 'atomic:operations': operations }),
+      body: JSON.stringify({ operations }),
     }),
   );
 
@@ -2224,9 +2227,9 @@ describe('POST /operations — add/unpublished', () => {
     ]);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(1);
-    const result = body['atomic:results'][0] as AtomicResultData;
+    const body = await res.json() as BatchBody;
+    expect(body.results).toHaveLength(1);
+    const result = body.results[0] as AtomicResultData;
     expect(result.data.type).toBe('unpublished');
     expect(result.data.id).toBe('posts/new-draft');
   });
@@ -2247,33 +2250,32 @@ describe('POST /operations — add/published', () => {
     ]);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(1);
-    const result = body['atomic:results'][0] as AtomicResultData;
+    const body = await res.json() as BatchBody;
+    expect(body.results).toHaveLength(1);
+    const result = body.results[0] as AtomicResultData;
     expect(result.data.type).toBe('published');
     expect(result.data.id).toBe('posts/hello');
   });
 });
 
 describe('POST /operations — add/unpublished missing data.id', () => {
-  it('returns per-operation 400 error identifying the operation index when data.id is absent', async () => {
+  it('returns 400 with top-level errors (zero writes) when data.id is absent', async () => {
     const api = buildJsonApi({ repo: stubRepo });
     const res = await postOperations(api, [
       { op: 'add', data: { type: 'unpublished', attributes: { title: 'No key', status: 'draft' } } },
     ]);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(1);
-    const result = body['atomic:results'][0] as AtomicResultError;
-    expect(result.errors).toBeDefined();
-    expect(result.errors[0]!.status).toBe('400');
-    expect(result.errors[0]!.detail).toContain('atomic:operations[0].data.id');
+    const body = await res.json() as BatchErrorBody;
+    expect(body.errors).toBeDefined();
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.detail).toContain('operations[0].data.id');
   });
 
-  it('identifies the correct index in a mixed batch when a later add/unpublished op omits data.id', async () => {
+  it('returns 400 and performs zero writes when a mixed batch contains an add/unpublished op without data.id', async () => {
+    const createUnpublished = vi.fn();
     const repo = {
-      createUnpublished: (_data: unknown) => LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/first'))),
+      createUnpublished,
     } as unknown as DocumentsRepository;
 
     const api = buildJsonApi({ repo });
@@ -2281,37 +2283,33 @@ describe('POST /operations — add/unpublished missing data.id', () => {
       { op: 'add', data: { type: 'unpublished', id: 'posts/first', attributes: { title: 'Has ID', status: 'draft' } } },
       { op: 'add', data: { type: 'unpublished', attributes: { title: 'No key', status: 'draft' } } },
     ]);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
+    expect(createUnpublished).not.toHaveBeenCalled();
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(2);
-    const goodResult = body['atomic:results'][0] as AtomicResultData;
-    expect(goodResult.data.type).toBe('unpublished');
-    const badResult = body['atomic:results'][1] as AtomicResultError;
-    expect(badResult.errors[0]!.status).toBe('400');
-    expect(badResult.errors[0]!.detail).toContain('atomic:operations[1].data.id');
+    const body = await res.json() as BatchErrorBody;
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.detail).toContain('operations[1].data.id');
   });
 });
 
 describe('POST /operations — add/published missing data.id', () => {
-  it('returns per-operation 400 error identifying the operation index when data.id is absent', async () => {
+  it('returns 400 with top-level errors (zero writes) when data.id is absent', async () => {
     const api = buildJsonApi({ repo: stubRepo });
     const res = await postOperations(api, [
       { op: 'add', data: { type: 'published', attributes: { title: 'No key', status: 'published' } } },
     ]);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(1);
-    const result = body['atomic:results'][0] as AtomicResultError;
-    expect(result.errors).toBeDefined();
-    expect(result.errors[0]!.status).toBe('400');
-    expect(result.errors[0]!.detail).toContain('atomic:operations[0].data.id');
+    const body = await res.json() as BatchErrorBody;
+    expect(body.errors).toBeDefined();
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.detail).toContain('operations[0].data.id');
   });
 
-  it('identifies the correct index in a mixed batch when a later add/published op omits data.id', async () => {
+  it('returns 400 and performs zero writes when a mixed batch contains an add/published op without data.id', async () => {
+    const createDocument = vi.fn();
     const repo = {
-      createDocument: (_data: unknown) => LaikaTask.make(() => Effect.succeed(makeDocument('posts/first'))),
+      createDocument,
     } as unknown as DocumentsRepository;
 
     const api = buildJsonApi({ repo });
@@ -2322,15 +2320,12 @@ describe('POST /operations — add/published missing data.id', () => {
       },
       { op: 'add', data: { type: 'published', attributes: { title: 'No key', status: 'published' } } },
     ]);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
+    expect(createDocument).not.toHaveBeenCalled();
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(2);
-    const goodResult = body['atomic:results'][0] as AtomicResultData;
-    expect(goodResult.data.type).toBe('published');
-    const badResult = body['atomic:results'][1] as AtomicResultError;
-    expect(badResult.errors[0]!.status).toBe('400');
-    expect(badResult.errors[0]!.detail).toContain('atomic:operations[1].data.id');
+    const body = await res.json() as BatchErrorBody;
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.detail).toContain('operations[1].data.id');
   });
 });
 
@@ -2346,24 +2341,23 @@ describe('POST /operations — update/publish', () => {
     ]);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(1);
-    const result = body['atomic:results'][0] as AtomicResultData;
+    const body = await res.json() as BatchBody;
+    expect(body.results).toHaveLength(1);
+    const result = body.results[0] as AtomicResultData;
     expect(result.data.type).toBe('published');
     expect(result.data.id).toBe('posts/now-live');
   });
 
-  it('returns error result when ref.type is not "unpublished"', async () => {
+  it('returns 400 (zero writes) when ref.type is not "unpublished"', async () => {
     const api = buildJsonApi({ repo: stubRepo });
     const res = await postOperations(api, [
       { op: 'update', href: '/publish', ref: { type: 'document', id: 'posts/x' } },
     ]);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
 
-    const body = await res.json() as AtomicBody;
-    const result = body['atomic:results'][0] as AtomicResultError;
-    expect(result.errors).toBeDefined();
-    expect(result.errors[0]!.status).toBe('400');
+    const body = await res.json() as BatchErrorBody;
+    expect(body.errors).toBeDefined();
+    expect(body.errors[0]!.status).toBe('400');
   });
 });
 
@@ -2385,27 +2379,26 @@ describe('POST /operations — update/unpublish', () => {
     ]);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(1);
-    const result = body['atomic:results'][0] as AtomicResultData;
+    const body = await res.json() as BatchBody;
+    expect(body.results).toHaveLength(1);
+    const result = body.results[0] as AtomicResultData;
     expect(result.data.type).toBe('unpublished');
     expect(result.data.id).toBe('posts/now-draft');
   });
 
-  it('returns error result when data is missing', async () => {
+  it('returns 400 (zero writes) when data is missing', async () => {
     const api = buildJsonApi({ repo: stubRepo });
     const res = await postOperations(api, [
       { op: 'update', href: '/unpublish', ref: { type: 'document', id: 'posts/x' } },
     ]);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
 
-    const body = await res.json() as AtomicBody;
-    const result = body['atomic:results'][0] as AtomicResultError;
-    expect(result.errors).toBeDefined();
-    expect(result.errors[0]!.status).toBe('400');
+    const body = await res.json() as BatchErrorBody;
+    expect(body.errors).toBeDefined();
+    expect(body.errors[0]!.status).toBe('400');
   });
 
-  it('returns error result when ref.type is not "document"', async () => {
+  it('returns 400 (zero writes) when ref.type is not "document"', async () => {
     const api = buildJsonApi({ repo: stubRepo });
     const res = await postOperations(api, [
       {
@@ -2415,12 +2408,11 @@ describe('POST /operations — update/unpublish', () => {
         data: { type: 'unpublished', attributes: { status: 'draft' } },
       },
     ]);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(400);
 
-    const body = await res.json() as AtomicBody;
-    const result = body['atomic:results'][0] as AtomicResultError;
-    expect(result.errors).toBeDefined();
-    expect(result.errors[0]!.status).toBe('400');
+    const body = await res.json() as BatchErrorBody;
+    expect(body.errors).toBeDefined();
+    expect(body.errors[0]!.status).toBe('400');
   });
 });
 
@@ -2440,9 +2432,9 @@ describe('POST /operations — update/content (updateUnpublished)', () => {
     ]);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(1);
-    const result = body['atomic:results'][0] as AtomicResultData;
+    const body = await res.json() as BatchBody;
+    expect(body.results).toHaveLength(1);
+    const result = body.results[0] as AtomicResultData;
     expect(result.data.type).toBe('unpublished');
     expect(result.data.id).toBe('posts/draft');
   });
@@ -2460,9 +2452,9 @@ describe('POST /operations — remove/document', () => {
     ]);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(1);
-    const result = body['atomic:results'][0] as AtomicResultMeta;
+    const body = await res.json() as BatchBody;
+    expect(body.results).toHaveLength(1);
+    const result = body.results[0] as AtomicResultMeta;
     expect(result.meta.deleted).toBe(true);
     expect(result.meta.ref.type).toBe('document');
     expect(result.meta.ref.id).toBe('posts/old');
@@ -2482,9 +2474,9 @@ describe('POST /operations — remove/unpublished', () => {
     ]);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(1);
-    const result = body['atomic:results'][0] as AtomicResultMeta;
+    const body = await res.json() as BatchBody;
+    expect(body.results).toHaveLength(1);
+    const result = body.results[0] as AtomicResultMeta;
     expect(result.meta.deleted).toBe(true);
     expect(result.meta.ref.type).toBe('unpublished');
     expect(result.meta.ref.id).toBe('posts/draft');
@@ -2508,8 +2500,8 @@ describe('POST /operations — repo-failure status codes', () => {
     ]);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as AtomicBody;
-    const result = body['atomic:results'][0] as AtomicResultError;
+    const body = await res.json() as BatchBody;
+    const result = body.results[0] as AtomicResultError;
     expect(result.errors).toBeDefined();
     expect(result.errors[0]!.status).toBe('409');
   });
@@ -2525,15 +2517,33 @@ describe('POST /operations — repo-failure status codes', () => {
     ]);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as AtomicBody;
-    const result = body['atomic:results'][0] as AtomicResultError;
+    const body = await res.json() as BatchBody;
+    const result = body.results[0] as AtomicResultError;
     expect(result.errors).toBeDefined();
     expect(result.errors[0]!.status).toBe('404');
+  });
+
+  it('stops processing after the first repository failure — subsequent ops are not applied', async () => {
+    const deleteDocument = vi.fn(() => LaikaTask.make(() => Effect.fail(new NotFoundError('posts/missing not found'))));
+    const createUnpublished = vi.fn();
+    const repo = { deleteDocument, createUnpublished } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await postOperations(api, [
+      { op: 'remove', ref: { type: 'document', id: 'posts/missing' } },
+      { op: 'add', data: { type: 'unpublished', id: 'posts/new', attributes: { status: 'draft' } } },
+    ]);
+    expect(res.status).toBe(200);
+    expect(createUnpublished).not.toHaveBeenCalled();
+
+    const body = await res.json() as BatchBody;
+    expect(body.results).toHaveLength(1);
+    expect((body.results[0] as AtomicResultError).errors[0]!.status).toBe('404');
   });
 });
 
 describe('POST /operations — malformed body', () => {
-  it('returns 400 when atomic:operations key is missing', async () => {
+  it('returns 400 when operations key is missing', async () => {
     const api = buildJsonApi({ repo: stubRepo });
     const res = await api.fetch(
       new Request('http://localhost/operations', {
@@ -2578,10 +2588,10 @@ describe('POST /operations — multi-operation batch', () => {
     ]);
     expect(res.status).toBe(200);
 
-    const body = await res.json() as AtomicBody;
-    expect(body['atomic:results']).toHaveLength(2);
-    const addResult = body['atomic:results'][0] as AtomicResultData;
-    const removeResult = body['atomic:results'][1] as AtomicResultMeta;
+    const body = await res.json() as BatchBody;
+    expect(body.results).toHaveLength(2);
+    const addResult = body.results[0] as AtomicResultData;
+    const removeResult = body.results[1] as AtomicResultMeta;
     expect(addResult.data.type).toBe('unpublished');
     expect(removeResult.meta.deleted).toBe(true);
   });

@@ -578,11 +578,11 @@ const schemas: Record<string, OpenApiSchema> = {
       ref: ref('ResourceRef'),
     },
   },
-  AtomicOperationsRequest: {
+  BatchOperationsRequest: {
     type: 'object',
-    required: ['atomic:operations'],
+    required: ['operations'],
     properties: {
-      'atomic:operations': {
+      operations: {
         type: 'array',
         items: {
           oneOf: [
@@ -641,14 +641,15 @@ const schemas: Record<string, OpenApiSchema> = {
       },
     ],
   },
-  AtomicOperationsResponse: {
+  BatchOperationsResponse: {
     type: 'object',
-    required: ['atomic:results'],
+    required: ['results'],
     properties: {
-      'atomic:results': {
+      results: {
         type: 'array',
-        description: 'One entry per submitted operation, in request order. Failed operations produce an '
-          + '`errors` entry without failing the whole batch.',
+        description: 'One entry per applied operation, in request order. Processing stops at the first '
+          + 'repository failure — subsequent operations are not applied. A failing operation produces an '
+          + '`errors` entry; preceding ops that succeeded remain applied (fail-fast batch, not a transaction).',
         items: ref('AtomicResult'),
       },
     },
@@ -671,7 +672,7 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
       version: '1.0.1',
       license: { name: 'MIT', identifier: 'MIT' },
       description: 'JSON:API-style HTTP interface over a Laika CMS documents repository: published documents, '
-        + 'unpublished drafts, revisions, publish/unpublish state transitions, and atomic operation batches. '
+        + 'unpublished drafts, revisions, publish/unpublish state transitions, and fail-fast operation batches. '
         + 'Success responses use the `application/vnd.api+json` media type. '
         + 'Warning: this API ships no built-in authentication — wrap it with middleware that validates '
         + 'credentials before exposing it to an untrusted network, otherwise anyone who can reach it can read, '
@@ -685,7 +686,7 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
       { name: 'published', description: 'Published documents.' },
       { name: 'unpublished', description: 'Unpublished drafts.' },
       { name: 'revisions', description: 'Document revisions.' },
-      { name: 'operations', description: 'JSON:API atomic operations.' },
+      { name: 'operations', description: 'Fail-fast batch operations.' },
     ],
     paths: {
       '/': {
@@ -997,19 +998,28 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
       },
       '/operations': {
         post: {
-          operationId: 'postAtomicOperations',
-          summary: 'Atomic operations (add/update/remove and publish/unpublish transitions)',
+          operationId: 'postBatchOperations',
+          summary: 'Batch operations (add/update/remove and publish/unpublish transitions)',
+          description: 'Fail-fast batch: all operations are validated for request shape before any I/O. '
+            + 'A shape-invalid op (e.g. missing `data.id` on an add) returns HTTP 400 with zero writes. '
+            + 'Once validation passes, ops are applied sequentially; the first repository failure stops '
+            + 'processing and no subsequent ops run. '
+            + 'A mid-batch repository failure leaves previously-applied ops applied — '
+            + 'this endpoint is a fail-fast batch, not a transaction.',
           tags: ['operations'],
           requestBody: {
             required: true,
-            content: jsonApiContent(ref('AtomicOperationsRequest')),
+            content: jsonApiContent(ref('BatchOperationsRequest')),
           },
           responses: {
             '200': {
-              description: 'Per-operation results; individual failures are reported inline in `atomic:results`.',
-              content: jsonApiContent(ref('AtomicOperationsResponse')),
+              description: 'Results for all applied operations. Processing stopped if a repository failure occurred.',
+              content: jsonApiContent(ref('BatchOperationsResponse')),
             },
-            '400': errorResponse('Malformed JSON or schema-invalid operations body.'),
+            '400': errorResponse(
+              'Shape-invalid batch (missing required field, wrong type) — zero writes performed; '
+                + 'or malformed JSON / schema-invalid body.',
+            ),
           },
         },
       },

@@ -1,7 +1,7 @@
 # laikacms/documents-api
 
 JSON:API server for document management (published documents, unpublished drafts, revisions, and
-atomic operations).
+fail-fast batch operations).
 
 ## ⚠️ Authentication
 
@@ -124,15 +124,18 @@ The API uses seven JSON:API resource types:
 | `revision-summary`       | Revision list (`GET /revisions/{key}`)            |
 | `documents-capabilities` | `GET /capabilities`                               |
 
-## Atomic operations (`POST /operations`)
+## Batch operations (`POST /operations`)
 
-The `/operations` endpoint accepts a JSON:API Atomic Operations document:
+The `/operations` endpoint accepts a batch of operations:
 
 ```jsonc
 {
-  "atomic:operations": [
+  "operations": [
     // Add an unpublished draft
-    { "op": "add", "data": { "type": "unpublished", "attributes": { "title": "Draft" } } },
+    {
+      "op": "add",
+      "data": { "type": "unpublished", "id": "blog/draft", "attributes": { "title": "Draft" } }
+    },
     // Add a published document
     {
       "op": "add",
@@ -160,15 +163,25 @@ The `/operations` endpoint accepts a JSON:API Atomic Operations document:
 }
 ```
 
-Operations run in parallel. The response is an `atomic:results` array with one entry per operation:
-a `data` object on success, a `meta: { deleted: true }` on remove success, or an `errors` array on
-per-operation failure. The overall response status is always `200`; per-operation failures do not
-abort the batch.
+**Fail-fast batch semantics** — not a transaction:
+
+1. **Pre-flight validation**: every op in the batch is validated for request shape (e.g. `data.id`
+   present on add) _before_ any I/O. If any op fails shape validation, the endpoint returns HTTP 400
+   with zero writes.
+2. **Sequential application**: once validation passes, ops are applied in order. The first
+   repository failure stops processing — no subsequent ops run.
+3. **No rollback**: a mid-batch repository failure leaves previously-applied ops applied. This
+   endpoint is a fail-fast batch, not a transaction.
+
+The response is a `results` array with one entry per applied operation: a `data` object on success,
+a `meta: { deleted: true }` on remove success, or an `errors` array on the failing op. The overall
+response status is `200` when ops were applied (even if one failed); it is `400` when the batch
+failed pre-flight validation.
 
 ## Partial success: `meta.warnings`
 
-Every response — single-resource, collection, void (delete), and per-result inside `atomic:results`
-— may carry a `meta.warnings` array. Each entry is a JSON:API error object describing a non-fatal
+Every response — single-resource, collection, void (delete), and per-result inside `results` — may
+carry a `meta.warnings` array. Each entry is a JSON:API error object describing a non-fatal
 recoverable issue surfaced by the backing repository.
 
 `meta.warnings` is **additive** to the success of the operation. The response status is still `200`

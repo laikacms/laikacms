@@ -17,9 +17,11 @@ specification. All responses use the `application/vnd.api+json` content type.
 - Single resources are returned as `{ "data": { ... } }`.
 - Collections are returned as `{ "data": [ ... ], "links": { ... }, "meta": { "page": { ... } } }`.
 - Errors are returned as `{ "errors": [ { "status", "code", "detail" } ] }`.
-- Atomic batch operations follow the [JSON:API Atomic Operations](https://jsonapi.org/ext/atomic/)
-  extension: request body is `{ "atomic:operations": [ ... ] }`, response is
-  `{ "atomic:results": [ ... ] }`.
+- The Documents API `/operations` endpoint is a **fail-fast batch** (not a JSON:API Atomic
+  Operations extension): request body is `{ "operations": [ ... ] }`, response is
+  `{ "results": [ ... ] }`. Pre-flight validates all ops before any I/O; a shape-invalid batch
+  returns 400 with zero writes. A mid-batch repository failure stops processing but does not roll
+  back prior ops.
 - Cursor-based pagination is controlled with `page[after]` (forward) / `page[before]` (backward) and
   `page[size]` query parameters. Offset-based pagination uses `page[offset]` and `page[limit]`.
   **Cursor pagination is backend-specific.** Not all storage backends support `page[after]` /
@@ -1397,8 +1399,13 @@ Get a single revision by document key and revision identifier.
 
 #### POST /operations
 
-Execute a batch of atomic operations on documents. Supports adding published or unpublished
+Execute a fail-fast batch of operations on documents. Supports adding published or unpublished
 documents, state transitions (publish/unpublish), content updates, and removals.
+
+All operations are validated for request shape before any I/O. A shape-invalid batch returns 400
+with zero writes. Valid batches are applied sequentially; the first repository failure stops
+processing. A mid-batch repository failure leaves previously-applied ops applied — this endpoint is
+a fail-fast batch, not a transaction.
 
 **Request Headers**
 
@@ -1420,7 +1427,7 @@ Content-Type: application/vnd.api+json
 
 ```json
 {
-  "atomic:operations": [
+  "operations": [
     {
       "op": "add",
       "data": {
@@ -1479,12 +1486,12 @@ Content-Type: application/vnd.api+json
 
 **Response**
 
-Results are returned in the same order as the input operations. Remove operations return a `meta`
-entry.
+Results are returned in the same order as the applied operations (may be fewer than submitted if
+processing stopped at a failure). Remove operations return a `meta` entry.
 
 ```json
 {
-  "atomic:results": [
+  "results": [
     {
       "data": {
         "type": "unpublished",
@@ -1554,15 +1561,15 @@ entry.
 }
 ```
 
-**Error entries** (when an individual operation fails)
+**Error entries** (when a repository operation fails mid-batch)
 
 ```json
 {
-  "atomic:results": [
+  "results": [
     {
       "errors": [
         {
-          "status": "400",
+          "status": "404",
           "title": "Operation Failed",
           "detail": "Document not found: posts/missing"
         }
