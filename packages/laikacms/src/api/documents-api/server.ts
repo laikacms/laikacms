@@ -51,7 +51,7 @@ type AllJsonApiResponses =
   | JsonApiError;
 
 const json = <
-  T extends AllJsonApiResponses | { meta: Record<string, unknown> } | { 'atomic:results': unknown[] },
+  T extends AllJsonApiResponses | { meta: Record<string, unknown> } | { results: unknown[] },
 >(
   body: T,
   status: number = 200,
@@ -460,7 +460,7 @@ const AtomicOperationSchema = S.Union([
 ]);
 
 const OperationsSchema = S.toStandardSchemaV1(S.Struct({
-  'atomic:operations': S.Array(AtomicOperationSchema),
+  operations: S.Array(AtomicOperationSchema),
 }));
 
 // Decoders
@@ -479,6 +479,48 @@ type AddDocumentOp = S.Schema.Type<typeof AddDocumentOpSchema>;
 type StateTransitionOp = S.Schema.Type<typeof StateTransitionOpSchema>;
 type UpdateUnpublishedOp = S.Schema.Type<typeof UpdateUnpublishedOpSchema>;
 type RemoveOp = S.Schema.Type<typeof RemoveOpSchema>;
+
+/**
+ * Validate an operation's request shape without performing any I/O.
+ * Returns a LaikaError when the op is malformed, null when it is valid.
+ * Called in the pre-flight pass so that a batch with any shape-invalid op
+ * returns HTTP 400 with zero writes.
+ */
+function validateOperationShape(operation: AtomicOperation, index: number): LaikaError | null {
+  if (operation.op === 'add') {
+    const op = operation as AddUnpublishedOp | AddDocumentOp;
+    if (!op.data.id) {
+      return new BadRequestError(
+        `operations[${index}].data.id is required — provide the document key (e.g. 'posts/my-doc')`,
+      );
+    }
+    return null;
+  }
+  if (operation.op === 'update') {
+    if ('href' in operation && 'ref' in operation) {
+      const { href, ref, data } = operation as StateTransitionOp;
+      if (href === '/publish') {
+        if (ref.type !== 'unpublished') return new BadRequestError(`Cannot publish ${ref.type}`);
+      } else if (href === '/unpublish') {
+        if (ref.type !== 'document') return new BadRequestError(`Cannot unpublish ${ref.type}`);
+        if (!data) return new BadRequestError('Missing data for unpublish operation');
+      } else {
+        return new BadRequestError(`Unknown action: ${href}`);
+      }
+      return null;
+    }
+    if ('data' in operation) return null;
+    return new BadRequestError('Invalid update operation');
+  }
+  if (operation.op === 'remove') {
+    const { ref } = operation as RemoveOp;
+    if (ref.type !== 'document' && ref.type !== 'unpublished') {
+      return new BadRequestError(`Cannot remove ${ref.type}`);
+    }
+    return null;
+  }
+  return new BadRequestError(`Unsupported operation: ${(operation as { op?: string }).op}`);
+}
 
 /**
  * Build a JSON:API handler for the documents repository.
@@ -1013,211 +1055,125 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       );
     }
 
-    // ===== ATOMIC OPERATIONS =====
+    // ===== BATCH OPERATIONS =====
     if (resource === 'operations' && request.method === 'POST') {
       const bodyResult = await parseBody(request, decodeOperations);
       if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
-      const parsedBody = bodyResult.success;
+      const { operations: ops } = bodyResult.success;
 
-      const atomicOperations = parsedBody['atomic:operations'].map(
-        async (operation: AtomicOperation, index: number) => {
-          let result: LaikaResult<unknown>;
-          let transformer: ((data: unknown) => JsonApiResource) | null = null;
+      // (a) Pre-flight: validate every op for request-shape errors before any I/O.
+      // Any shape failure → HTTP 400, zero writes.
+      const preflight: Array<{ index: number, error: LaikaError }> = [];
+      for (let i = 0; i < ops.length; i++) {
+        const err = validateOperationShape(ops[i]!, i);
+        if (err) preflight.push({ index: i, error: err });
+      }
+      if (preflight.length > 0) {
+        const errors = preflight.map(({ index, error }) => {
+          const jsonApiErr = errorToJsonApiMapper(error, logger);
+          return { ...jsonApiErr.errors[0]!, source: { pointer: `/operations/${index}` } };
+        });
+        return json({ errors }, 400);
+      }
 
-          if (operation.op === 'add') {
-            if (
-              'data' in operation
-              && operation.data.type === 'unpublished'
-            ) {
-              const op = operation as AddUnpublishedOp;
-              if (!op.data.id) {
-                result = Result.fail(
-                  new BadRequestError(
-                    `atomic:operations[${index}].data.id is required — provide the document key (e.g. 'posts/my-doc')`,
-                  ),
-                );
-              } else {
-                const createData = unpublishedCreateFromJsonApi({
-                  type: 'unpublished',
-                  id: op.data.id,
-                  attributes: op.data.attributes,
-                } as UnpublishedCreateJsonApi);
-                result = await firstResultWithMetadata(repo.createUnpublished(createData));
-                transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
-              }
-            } else if (
-              'data' in operation
-              && operation.data.type === 'published'
-            ) {
-              const op = operation as AddDocumentOp;
-              if (!op.data.id) {
-                result = Result.fail(
-                  new BadRequestError(
-                    `atomic:operations[${index}].data.id is required — provide the document key (e.g. 'posts/my-doc')`,
-                  ),
-                );
-              } else {
-                const createData = documentCreateFromJsonApi({
-                  type: 'published',
-                  id: op.data.id,
-                  attributes: op.data.attributes,
-                } as DocumentCreateJsonApi);
-                result = await firstResultWithMetadata(repo.createDocument(createData));
+      // (b) Execute ops sequentially; stop at first repository failure.
+      // A mid-batch failure leaves prior ops applied — this is a fail-fast
+      // batch, not a transaction. The remaining deviation is stated explicitly
+      // in the OpenAPI description and docs/api-reference.md.
+      type OpEntry = {
+        op: LaikaResult<unknown>,
+        operation: AtomicOperation,
+        transformer: ((data: unknown) => JsonApiResource) | null,
+      };
+      const opEntries: OpEntry[] = [];
+      for (let i = 0; i < ops.length; i++) {
+        const operation = ops[i]!;
+        let result: LaikaResult<unknown>;
+        let transformer: ((data: unknown) => JsonApiResource) | null = null;
+
+        if (operation.op === 'add') {
+          if ('data' in operation && operation.data.type === 'unpublished') {
+            const op = operation as AddUnpublishedOp;
+            const createData = unpublishedCreateFromJsonApi({
+              type: 'unpublished',
+              id: op.data.id,
+              attributes: op.data.attributes,
+            } as UnpublishedCreateJsonApi);
+            result = await firstResultWithMetadata(repo.createUnpublished(createData));
+            transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
+          } else if ('data' in operation && operation.data.type === 'published') {
+            const op = operation as AddDocumentOp;
+            const createData = documentCreateFromJsonApi({
+              type: 'published',
+              id: op.data.id,
+              attributes: op.data.attributes,
+            } as DocumentCreateJsonApi);
+            result = await firstResultWithMetadata(repo.createDocument(createData));
+            transformer = documentToJsonApi as (data: unknown) => JsonApiResource;
+          } else {
+            result = Result.fail(
+              new BadRequestError(`Cannot add type: ${(operation as { data?: { type?: string } }).data?.type}`),
+            );
+          }
+        } else if (operation.op === 'update') {
+          if ('href' in operation && 'ref' in operation) {
+            const { href, ref, data } = operation as StateTransitionOp;
+            switch (href) {
+              case '/publish':
+                result = await firstResultWithMetadata(repo.publish(ref.id));
                 transformer = documentToJsonApi as (data: unknown) => JsonApiResource;
-              }
-            } else {
-              result = Result.fail(
-                new BadRequestError(
-                  `Cannot add type: ${(operation as { data?: { type?: string } }).data?.type}`,
-                ),
-              );
+                break;
+              case '/unpublish':
+                result = await firstResultWithMetadata(repo.unpublish(ref.id, data!.attributes.status));
+                transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
+                break;
+              default:
+                result = Result.fail(new BadRequestError(`Unknown action: ${href}`));
             }
-            return { op: result, operation, transformer };
+          } else if ('data' in operation) {
+            const op = operation as UpdateUnpublishedOp;
+            const updateData = unpublishedUpdateFromJsonApi({
+              type: 'unpublished',
+              id: op.data.id,
+              attributes: op.data.attributes,
+            } as UnpublishedUpdateJsonApi);
+            result = await firstResultWithMetadata(repo.updateUnpublished(updateData));
+            transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
+          } else {
+            result = Result.fail(new BadRequestError('Invalid update operation'));
           }
-
-          if (operation.op === 'update') {
-            if ('href' in operation && 'ref' in operation) {
-              // State transition operation
-              const { href, ref, data } = operation as StateTransitionOp;
-              switch (href) {
-                case '/publish':
-                  if (ref.type === 'unpublished') {
-                    result = await firstResultWithMetadata(repo.publish(ref.id));
-                    transformer = documentToJsonApi as (data: unknown) => JsonApiResource;
-                  } else {
-                    result = Result.fail(
-                      new BadRequestError(
-                        `Cannot publish ${ref.type}`,
-                      ),
-                    );
-                  }
-                  break;
-                case '/unpublish':
-                  if (ref.type === 'document') {
-                    if (!data) {
-                      result = Result.fail(
-                        new BadRequestError(
-                          `Missing data for unpublish operation`,
-                        ),
-                      );
-                      break;
-                    }
-                    result = await firstResultWithMetadata(repo.unpublish(
-                      ref.id,
-                      data.attributes.status,
-                    ));
-                    transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
-                  } else {
-                    result = Result.fail(
-                      new BadRequestError(
-                        `Cannot unpublish ${ref.type}`,
-                      ),
-                    );
-                  }
-                  break;
-                default:
-                  result = Result.fail(
-                    new BadRequestError(
-                      `Unknown action: ${href}`,
-                    ),
-                  );
-              }
-            } else if ('data' in operation) {
-              // Update content operation
-              const op = operation as UpdateUnpublishedOp;
-              const updateData = unpublishedUpdateFromJsonApi({
-                type: 'unpublished',
-                id: op.data.id,
-                attributes: op.data.attributes,
-              } as UnpublishedUpdateJsonApi);
-              result = await firstResultWithMetadata(repo.updateUnpublished(updateData));
-              transformer = unpublishedToJsonApi as (data: unknown) => JsonApiResource;
-            } else {
-              result = Result.fail(
-                new BadRequestError(
-                  'Invalid update operation',
-                ),
-              );
-            }
-            return { op: result, operation, transformer };
+        } else if (operation.op === 'remove') {
+          const { ref } = operation as RemoveOp;
+          if (ref.type === 'document') {
+            result = await firstResultWithMetadata(repo.deleteDocument(ref.id));
+          } else if (ref.type === 'unpublished') {
+            result = await firstResultWithMetadata(repo.deleteUnpublished(ref.id));
+          } else {
+            result = Result.fail(new BadRequestError(`Cannot remove ${ref.type}`));
           }
-
-          if (operation.op === 'remove') {
-            const { ref } = operation as RemoveOp;
-            if (ref.type === 'document') {
-              result = await firstResultWithMetadata(repo.deleteDocument(ref.id));
-              transformer = null;
-            } else if (ref.type === 'unpublished') {
-              result = await firstResultWithMetadata(repo.deleteUnpublished(ref.id));
-              transformer = null;
-            } else {
-              result = Result.fail(
-                new BadRequestError(
-                  `Cannot remove ${ref.type}`,
-                ),
-              );
-            }
-            return { op: result, operation, transformer };
-          }
-
-          return {
-            op: Result.fail(
-              new BadRequestError(
-                `Unsupported operation: ${(operation as { op?: string }).op}`,
-              ),
-            ),
-            operation,
-            transformer: null,
-          };
-        },
-      );
-
-      const atomicsSettled = await Promise.allSettled(atomicOperations);
-
-      const atomicResults = atomicsSettled.map(promiseResult => {
-        if (promiseResult.status === 'rejected') {
-          return {
-            errors: [
-              {
-                status: '500',
-                title: 'Operation Failed',
-                detail: promiseResult.reason.message,
-              },
-            ],
-          };
+        } else {
+          result = Result.fail(
+            new BadRequestError(`Unsupported operation: ${(operation as { op?: string }).op}`),
+          );
         }
 
-        const { op, operation, transformer } = promiseResult.value;
+        opEntries.push({ op: result, operation, transformer });
+        if (Result.isFailure(result)) break;
+      }
 
+      const results = opEntries.map(({ op, operation, transformer }) => {
         if (Result.isFailure(op)) {
           const failure = op.failure as LaikaError;
           const status = String(ErrorCodeToStatusMap[failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500);
-          return {
-            errors: [
-              {
-                status,
-                title: 'Operation Failed',
-                detail: failure.message,
-              },
-            ],
-          };
+          return { errors: [{ status, title: 'Operation Failed', detail: failure.message }] };
         }
 
-        // For remove operations, return meta instead of data. When the
-        // underlying delete task emitted recoverable warnings (e.g. an
-        // orphaned sidecar that couldn't be cleaned up), surface them via
-        // meta.warnings on this entry.
         if (operation.op === 'remove') {
           const removeOp = operation as RemoveOp;
-          // op.success here is {value: void, recoverableErrors: [...]} from
-          // firstResultWithMetadata when ref.type is document/unpublished,
-          // or `undefined` when the route fell through to a fail branch.
           const carrier = op.success as
             | { value: void, recoverableErrors: ReadonlyArray<LaikaError> }
             | undefined;
-          const warnings = carrier
-            ? recoverableErrorsToWarnings(carrier.recoverableErrors)
-            : undefined;
+          const warnings = carrier ? recoverableErrorsToWarnings(carrier.recoverableErrors) : undefined;
           return {
             meta: warnings
               ? { deleted: true, ref: removeOp.ref, warnings }
@@ -1225,10 +1181,6 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           };
         }
 
-        // For other operations, the success now carries {value,
-        // recoverableErrors} from firstResultWithMetadata. Surface per-op
-        // recoverable warnings under each result's `meta.warnings` so a
-        // single atomic batch can report partial-success state per row.
         if (transformer) {
           const carrier = op.success as {
             value: unknown,
@@ -1242,9 +1194,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         return { data: null };
       });
 
-      return json({
-        'atomic:results': atomicResults,
-      });
+      return json({ results });
     }
 
     options.logger?.debug('Documents endpoint not found:', path);
