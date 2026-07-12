@@ -369,9 +369,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
           options.type === 'unpublished' ? qb.statusNotEquals(PUBLISHED_STATUS) : undefined,
           options.statuses ? qb.statusIn(options.statuses) : undefined,
           options.folder ? qb.keyStartsWith(options.folder + '/') : undefined,
-          options.folder
-            ? qb.depthLte(pathToSegments(options.folder).length + options.depth)
-            : undefined,
+          qb.depthLte((options.folder ? pathToSegments(options.folder).length : 0) + options.depth),
         ].filter((x): x is NonNullable<typeof x> => x !== undefined));
 
         const offset = 'offset' in options.pagination

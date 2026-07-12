@@ -476,6 +476,71 @@ describe('DrizzleDocumentsRepository', () => {
       expect((doc as import('laikacms/documents').Unpublished).language).toBe('fr');
     });
 
+    it('depth:1 at root returns only 1-segment keys (LCMS-422)', async () => {
+      const opts = makeInMemoryOptions();
+      const r = new DrizzleDocumentsRepository(opts);
+      const now = new Date().toISOString();
+      // push rows directly to bypass createDocument (which would also compute depth correctly)
+      opts.__documents.push({
+        key: 'posts',
+        depth: 1,
+        status: 'published',
+        language: 'en',
+        content: '{}',
+        createdAt: now,
+        updatedAt: now,
+      });
+      opts.__documents.push({
+        key: 'posts/hello',
+        depth: 2,
+        status: 'published',
+        language: 'en',
+        content: '{}',
+        createdAt: now,
+        updatedAt: now,
+      });
+      opts.__documents.push({
+        key: 'posts/nested/file',
+        depth: 3,
+        status: 'published',
+        language: 'en',
+        content: '{}',
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const collected = await Effect.runPromise(
+        LaikaStream.runCollect(
+          r.listRecords({ type: 'published', folder: '', depth: 1, pagination: { offset: 0, limit: 100 } }),
+        ),
+      );
+
+      expect(collected.data.map(d => d.key)).toEqual(['posts']);
+    });
+
+    it('depth:0 at root returns no documents (LCMS-422)', async () => {
+      const opts = makeInMemoryOptions();
+      const r = new DrizzleDocumentsRepository(opts);
+      const now = new Date().toISOString();
+      opts.__documents.push({
+        key: 'posts',
+        depth: 1,
+        status: 'published',
+        language: 'en',
+        content: '{}',
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const collected = await Effect.runPromise(
+        LaikaStream.runCollect(
+          r.listRecords({ type: 'published', folder: '', depth: 0, pagination: { offset: 0, limit: 100 } }),
+        ),
+      );
+
+      expect(collected.data).toHaveLength(0);
+    });
+
     it('returns the correct page when using page-based pagination', async () => {
       const keys = ['p1', 'p2', 'p3', 'p4', 'p5'];
       for (const key of keys) {
