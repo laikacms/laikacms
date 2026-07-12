@@ -1027,6 +1027,58 @@ describe('handleToken — refresh_token grant', () => {
 });
 
 // ---------------------------------------------------------------------------
+// handleToken — grant_type validation and non-POST method (LCMS-394)
+// ---------------------------------------------------------------------------
+
+describe('handleToken — grant_type validation and method guard (LCMS-394)', () => {
+  function tokenRequest(fields: Record<string, string>, method = 'POST'): Request {
+    const body = new URLSearchParams(fields);
+    return new Request(`https://auth.example.com/${BASE_PATH}/token`, {
+      method,
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString(),
+    });
+  }
+
+  it('returns invalid_request when grant_type is absent (RFC 6749 §5.2)', async () => {
+    const callbacks = makeCallbacks();
+    const config = makeConfig(callbacks);
+    const request = tokenRequest({ client_id: CLIENT_ID });
+
+    const response = await handleToken(request, config);
+
+    expect(response.status).toBe(400);
+    const json = await response.json() as Record<string, unknown>;
+    expect(json).toHaveProperty('error', 'invalid_request');
+    expect(json).toHaveProperty('error_description', 'Missing required parameter: grant_type');
+  });
+
+  it('returns unsupported_grant_type when grant_type is present but unrecognized (RFC 6749 §5.2)', async () => {
+    const callbacks = makeCallbacks();
+    const config = makeConfig(callbacks);
+    const request = tokenRequest({ client_id: CLIENT_ID, grant_type: 'client_credentials' });
+
+    const response = await handleToken(request, config);
+
+    expect(response.status).toBe(400);
+    const json = await response.json() as Record<string, unknown>;
+    expect(json).toHaveProperty('error', 'unsupported_grant_type');
+  });
+
+  it('returns 405 invalid_request for non-POST method', async () => {
+    const callbacks = makeCallbacks();
+    const config = makeConfig(callbacks);
+    const request = new Request(`https://auth.example.com/${BASE_PATH}/token`, { method: 'GET' });
+
+    const response = await handleToken(request, config);
+
+    expect(response.status).toBe(405);
+    const json = await response.json() as Record<string, unknown>;
+    expect(json).toHaveProperty('error', 'invalid_request');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // decapOauth2 — custom authorizeEndpoint / tokenEndpoint routing (LCMS-280)
 // ---------------------------------------------------------------------------
 
