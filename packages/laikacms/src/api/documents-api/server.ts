@@ -937,9 +937,15 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       const bodyResult = await parseBody(request, decodeRevisionCreateBody);
       if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
       const { data } = bodyResult.success;
+      if (!data.id) {
+        return failResponse(
+          Result.fail(new BadRequestError("data.id is required — provide the document key (e.g. 'posts/my-doc')")),
+          400,
+        );
+      }
       const createData = revisionCreateFromJsonApi({
         type: 'revision',
-        id: data.id ?? '',
+        id: data.id,
         attributes: data.attributes,
       } as RevisionCreateJsonApi);
       return respondResourceWithWarnings(

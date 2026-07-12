@@ -1274,7 +1274,7 @@ Content-Type: application/vnd.api+json
 | Field                      | Type         | Required | Description                                      |
 | -------------------------- | ------------ | -------- | ------------------------------------------------ |
 | `data.type`                | `"revision"` | yes      | Resource type                                    |
-| `data.id`                  | string       | no       | Document key. Auto-generated if omitted          |
+| `data.id`                  | string       | yes      | Document key (e.g. `posts/my-doc`)               |
 | `data.attributes.revision` | string       | yes      | Revision identifier (e.g. a version tag or hash) |
 | `data.attributes.language` | string       | yes      | BCP 47 language tag                              |
 | `data.attributes.content`  | object       | no       | Snapshot of the document content                 |

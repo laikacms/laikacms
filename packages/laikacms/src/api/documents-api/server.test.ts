@@ -766,6 +766,27 @@ describe('POST /revisions', () => {
     expect(body.errors[0]!.status).toBe('400');
     expect(body.errors[0]!.code).toBe('invalid_data');
   });
+
+  it('returns 400 bad_request when data.id is omitted (LCMS-393)', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/revisions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'revision',
+            attributes: { revision: 'v1', language: 'en', content: { title: 'Hello' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string, detail: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.code).toBe('bad_request');
+    expect(body.errors[0]!.detail).toMatch(/data\.id is required/);
+  });
 });
 
 // ---------------------------------------------------------------------------
