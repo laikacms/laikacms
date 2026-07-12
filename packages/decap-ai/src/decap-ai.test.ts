@@ -363,6 +363,58 @@ describe('decapAi()', () => {
       const body = await res.json() as { error: string };
       expect(typeof body.error).toBe('string');
     });
+
+    it('streamText is called with built-in documentTools (getDocumentData, updateDocument) in the tools object', async () => {
+      vi.mocked(streamText).mockClear();
+      const adapter = decapAi(makeConfig());
+
+      const req = makeRequest('/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Hello' }],
+          document: { slug: 'posts/hello' },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const res = await adapter.fetch(req);
+      expect(res.status).toBe(200);
+      expect(vi.mocked(streamText)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tools: expect.objectContaining({
+            getDocumentData: expect.any(Object),
+            updateDocument: expect.any(Object),
+          }),
+        }),
+      );
+    });
+
+    it('consumer config.tools are merged alongside built-in documentTools, not replacing them', async () => {
+      vi.mocked(streamText).mockClear();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const adapter = decapAi(makeConfig({ tools: { myCustomTool: { description: 'custom' } as any } }));
+
+      const req = makeRequest('/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Hello' }],
+          document: { slug: 'posts/hello' },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const res = await adapter.fetch(req);
+      expect(res.status).toBe(200);
+      expect(vi.mocked(streamText)).toHaveBeenCalledWith(
+        expect.objectContaining({
+          tools: expect.objectContaining({
+            getDocumentData: expect.any(Object),
+            updateDocument: expect.any(Object),
+            myCustomTool: expect.any(Object),
+          }),
+        }),
+      );
+    });
   });
 
   describe('GET /ai/sessions', () => {
