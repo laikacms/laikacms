@@ -1342,16 +1342,14 @@ export default function createLaikaBackend(
       entries: ImplementationEntry[],
       cursor: Cursor,
     }> {
-      const data = cursor.data as Record<string, unknown> | undefined;
-      const folder = data?.['folder'] as string | undefined;
+      const folder = cursor.data?.['folder'] as string | undefined;
 
       if (!folder) {
         throw new NotFoundError('traverseCursor: cursor carries no folder — cannot advance pagination');
       }
 
-      const meta = cursor.meta as Record<string, unknown> | undefined;
-      const currentPage = (meta?.['page'] as number | undefined) ?? 1;
-      const pageCount = (meta?.['pageCount'] as number | undefined) ?? 1;
+      const currentPage = (cursor.meta?.['page'] as number | undefined) ?? 1;
+      const pageCount = (cursor.meta?.['pageCount'] as number | undefined) ?? 1;
 
       let nextPage: number;
       switch (action) {

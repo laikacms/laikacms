@@ -26,7 +26,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const { MockCursor, CURSOR_COMPATIBILITY_SYMBOL } = vi.hoisted(() => {
   const CURSOR_COMPATIBILITY_SYMBOL = Symbol('cursor_compat');
 
-  // Mirrors the v4.beta Cursor: `data`/`meta` are plain objects, `actions` a Set.
+  // Mirrors the v4 Cursor: `data`/`meta` are plain Record objects, `actions` a native Set.
   class MockCursor {
     actions: Set<string>;
     data: Record<string, unknown>;
@@ -579,6 +579,59 @@ describe('LaikaBackend.traverseCursor()', () => {
     expect(result.cursor.meta.page).toBe(1);
     expect(result.cursor.actions.has('next')).toBe(true);
     expect(result.cursor.actions.has('prev')).toBe(false);
+  });
+
+  it("'prev' goes back one page from page 3", async () => {
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(45) as any[], {}));
+    await backend.entriesByFolder('posts', 'json', 1);
+
+    const page3Cursor = new MockCursor({
+      actions: ['prev', 'first'],
+      meta: { page: 3, pageSize: 20, pageCount: 3, count: 45 },
+      data: { folder: 'posts' },
+    });
+
+    const result = await backend.traverseCursor(page3Cursor, 'prev');
+
+    expect(result.entries).toHaveLength(20);
+    expect(result.entries[0].file.path).toBe('posts/entry-20');
+    expect(result.cursor.meta.page).toBe(2);
+    expect(result.cursor.actions.has('prev')).toBe(true);
+    expect(result.cursor.actions.has('next')).toBe(true);
+  });
+
+  it("'last' jumps to the final page regardless of current position", async () => {
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(45) as any[], {}));
+    await backend.entriesByFolder('posts', 'json', 1);
+
+    const page1Cursor = new MockCursor({
+      actions: ['next', 'last'],
+      meta: { page: 1, pageSize: 20, pageCount: 3, count: 45 },
+      data: { folder: 'posts' },
+    });
+
+    const result = await backend.traverseCursor(page1Cursor, 'last');
+
+    expect(result.entries).toHaveLength(5); // entries 40-44
+    expect(result.entries[0].file.path).toBe('posts/entry-40');
+    expect(result.cursor.meta.page).toBe(3);
+    expect(result.cursor.actions.has('prev')).toBe(true);
+    expect(result.cursor.actions.has('next')).toBe(false);
+  });
+
+  it('round-trip: cursor built by entriesByFolder round-trips through traverseCursor', async () => {
+    mockDocRepo.listRecords.mockReturnValue(LaikaStream.succeedMany(makeEntries(25) as any[], {}));
+    const page1Entries = await backend.entriesByFolder('posts', 'json', 1);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const page1Cursor = (page1Entries as any)[CURSOR_COMPATIBILITY_SYMBOL];
+
+    expect(page1Cursor).toBeDefined();
+    expect(page1Cursor.data['folder']).toBe('posts');
+    expect(page1Cursor.meta['page']).toBe(1);
+
+    const result = await backend.traverseCursor(page1Cursor, 'next');
+    expect(result.entries).toHaveLength(5);
+    expect(result.cursor.meta['page']).toBe(2);
   });
 });
 
