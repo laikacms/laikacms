@@ -53,6 +53,21 @@
       "import": "./dist/api/storage-api/index.js",
       "default": "./dist/api/storage-api/index.js"
     },
+    "./core/errors": {
+      "types": "./dist/shared/core/domain/entities/errors.d.ts",
+      "import": "./dist/shared/core/domain/entities/errors.js",
+      "default": "./dist/shared/core/domain/entities/errors.js"
+    },
+    "./core/errors-extra": {
+      "types": "./dist/shared/core/domain/entities/errors-extra.d.ts",
+      "import": "./dist/shared/core/domain/entities/errors-extra.js",
+      "default": "./dist/shared/core/domain/entities/errors-extra.js"
+    },
+    "./core/types/*": {
+      "types": "./dist/shared/core/domain/types/*.d.ts",
+      "import": "./dist/shared/core/domain/types/*.js",
+      "default": "./dist/shared/core/domain/types/*.js"
+    },
     "./assets": {
       "types": "./dist/domain/assets/index.d.ts",
       "import": "./dist/domain/assets/index.js",
