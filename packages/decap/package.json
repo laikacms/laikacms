@@ -144,6 +144,7 @@
     }
   },
   "devDependencies": {
+    "@hono/node-server": "catalog:server",
     "@laikacms/decap-cms": "catalog:decap",
     "@types/jsonwebtoken": "catalog:types",
     "@types/jwt-decode": "catalog:types",
