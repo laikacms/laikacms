@@ -1308,6 +1308,114 @@ describe('GET /atom-summaries — filter[prefix] query param rejection (LCMS-322
   });
 });
 
+// ---------------------------------------------------------------------------
+// InternalError → 500 path coverage for seven handlers (LCMS-432)
+// ---------------------------------------------------------------------------
+
+describe('storage-api: InternalError → 500 coverage (LCMS-432)', () => {
+  it('returns 500 JSON:API error when createFolder raises InternalError', async () => {
+    const partialRepo = {
+      createFolder: () => LaikaTask.make<Folder>(() => Effect.fail(new InternalError('storage outage'))),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/atoms', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'folder', id: 'posts/drafts', attributes: {} } }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
+
+  it('returns 500 JSON:API error when getObject raises InternalError', async () => {
+    const partialRepo = {
+      getObject: () => LaikaTask.make<StorageObject>(() => Effect.fail(new InternalError('storage outage'))),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/objects/notes%2Fhello'));
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
+
+  it('returns 500 JSON:API error when getFolder raises InternalError', async () => {
+    const partialRepo = {
+      getFolder: () => LaikaTask.make<Folder>(() => Effect.fail(new InternalError('storage outage'))),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/folders/posts'));
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
+
+  it('returns 500 JSON:API error when createObject raises InternalError', async () => {
+    const partialRepo = {
+      createObject: () => LaikaTask.make<StorageObject>(() => Effect.fail(new InternalError('storage outage'))),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'object', id: 'p/doc', attributes: { content: {} } } }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
+
+  it('returns 500 JSON:API error when listAtoms raises InternalError', async () => {
+    const partialRepo = {
+      listAtoms: () => LaikaStream.make<never, ListAtomsDone>(() => Effect.fail(new InternalError('storage outage'))),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/atoms/root'));
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
+
+  it('returns 500 JSON:API error when listAtomSummaries raises InternalError', async () => {
+    const partialRepo = {
+      listAtomSummaries: () =>
+        LaikaStream.make<never, ListAtomsDone>(() => Effect.fail(new InternalError('storage outage'))),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/atom-summaries/root'));
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
+
+  it('returns 500 JSON:API error when removeAtoms raises InternalError', async () => {
+    const partialRepo = {
+      removeAtoms: () =>
+        LaikaStream.make<string, { removed: number, skipped: number }>(
+          () => Effect.fail(new InternalError('storage outage')),
+        ),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/notes%2Fhello', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
+});
+
 describe('storage-api: unmapped error code falls back to 500, not 400 (LCMS-434)', () => {
   it('returns 500 when createObject fails with an error code not in ErrorCodeToStatusMap', async () => {
     // Simulate a future errorCode that has no entry in ErrorCodeToStatusMap yet.
