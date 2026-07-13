@@ -1282,6 +1282,85 @@ describe('malformed JSON body — never throws, always returns a Response', () =
 });
 
 // ---------------------------------------------------------------------------
+// GET /resources — folder-filter alias forwarding (LCMS-332)
+// ---------------------------------------------------------------------------
+
+describe('GET /resources — folder filter alias forwarding', () => {
+  const makeResourcesStream = () =>
+    LaikaStream.make<Resource, ListResourcesDone>(
+      () => Effect.succeed({ total: 0 } as ListResourcesDone),
+    );
+
+  it('?folder=images forwards folderKey "images" to listResources', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?folder=images'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0]).toBe('images');
+  });
+
+  it('?filter[folder]=images forwards folderKey "images" to listResources', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bfolder%5D=images'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0]).toBe('images');
+  });
+
+  it('?filter[prefix]=images forwards folderKey "images" to listResources', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bprefix%5D=images'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0]).toBe('images');
+  });
+
+  it('folder takes priority over filter[folder] and filter[prefix]', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(
+      new Request(
+        'http://localhost/api/assets/resources?folder=primary&filter%5Bfolder%5D=secondary&filter%5Bprefix%5D=tertiary',
+      ),
+    );
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0]).toBe('primary');
+  });
+
+  it('filter[folder] takes priority over filter[prefix]', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(
+      new Request(
+        'http://localhost/api/assets/resources?filter%5Bfolder%5D=secondary&filter%5Bprefix%5D=tertiary',
+      ),
+    );
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0]).toBe('secondary');
+  });
+
+  it('no folder param defaults folderKey to empty string', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0]).toBe('');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /resources — filter[depth] forwarding (LCMS-292)
 // ---------------------------------------------------------------------------
 
