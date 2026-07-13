@@ -20,14 +20,16 @@ import type {
   User,
 } from './types.js';
 
-const SECURITY_HEADERS = {
+// Factory — never hand out a shared mutable object to new Response() because
+// @hono/node-server's responseViaCache mutates the headers in-place (LCMS-440).
+const securityHeaders = () => ({
   'Content-Type': 'application/json',
   'X-Content-Type-Options': 'nosniff',
   'Cache-Control': 'no-store, no-cache, must-revalidate',
-} as const;
+});
 
 function errorResponse(error: string, status: number = 400): Response {
-  return new Response(JSON.stringify({ error }), { status, headers: SECURITY_HEADERS });
+  return new Response(JSON.stringify({ error }), { status, headers: securityHeaders() });
 }
 
 function normalizePath(path: string): string {
@@ -223,7 +225,7 @@ export function decapAi(config: DecapAiConfig): DecapAi {
           updatedAt: s.updatedAt,
         })),
       };
-      return new Response(JSON.stringify(response), { status: 200, headers: SECURITY_HEADERS });
+      return new Response(JSON.stringify(response), { status: 200, headers: securityHeaders() });
     } catch {
       return errorResponse(t.errors.failedToListSessions, 500);
     }
@@ -236,7 +238,7 @@ export function decapAi(config: DecapAiConfig): DecapAi {
         if (!session) return errorResponse(t.errors.sessionNotFound, 404);
         if (session.userId !== user.id) return errorResponse(t.errors.sessionAccessDenied, 403);
         const response: SessionDetailResponse = { session };
-        return new Response(JSON.stringify(response), { status: 200, headers: SECURITY_HEADERS });
+        return new Response(JSON.stringify(response), { status: 200, headers: securityHeaders() });
       } catch {
         return errorResponse(t.errors.failedToGetSession, 500);
       }
@@ -248,7 +250,7 @@ export function decapAi(config: DecapAiConfig): DecapAi {
         if (!session) return errorResponse(t.errors.sessionNotFound, 404);
         if (session.userId !== user.id) return errorResponse(t.errors.sessionAccessDenied, 403);
         await config.callbacks.deleteSession(sessionId);
-        return new Response(JSON.stringify({ success: true }), { status: 200, headers: SECURITY_HEADERS });
+        return new Response(JSON.stringify({ success: true }), { status: 200, headers: securityHeaders() });
       } catch {
         return errorResponse(t.errors.failedToDeleteSession, 500);
       }
@@ -266,7 +268,7 @@ export function decapAi(config: DecapAiConfig): DecapAi {
       if (pathname === `${basePath}/health`) {
         return new Response(
           JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }),
-          { status: 200, headers: SECURITY_HEADERS },
+          { status: 200, headers: securityHeaders() },
         );
       }
 

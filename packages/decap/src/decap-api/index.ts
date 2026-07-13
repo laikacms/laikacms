@@ -165,15 +165,14 @@ async function withHeaders(response: Response, extra: Record<string, string>): P
   });
 }
 
-/**
- * Security headers for API responses
- */
-const SECURITY_HEADERS = {
+// Factory — never hand out a shared mutable object to new Response() because
+// @hono/node-server's responseViaCache mutates the headers in-place (LCMS-440).
+const securityHeaders = () => ({
   'Content-Type': 'application/vnd.api+json',
   'X-Content-Type-Options': 'nosniff',
   'Cache-Control': 'no-store, no-cache, must-revalidate',
   'Pragma': 'no-cache',
-} as const;
+});
 
 export const decapApi = (options: DecapOptions): DecapApi => {
   const { documents, storage, assets, authenticateAccessToken, authenticateApiToken, basePath, cors } = options;
@@ -212,7 +211,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
             ),
           ),
         ),
-        { status: 401, headers: { ...SECURITY_HEADERS } },
+        { status: 401, headers: securityHeaders() },
       );
     }
 
@@ -251,7 +250,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       await addTimingJitter();
       return new Response(
         JSON.stringify(errorToJsonApiMapper(error)),
-        { status: 401, headers: { ...SECURITY_HEADERS } },
+        { status: 401, headers: securityHeaders() },
       );
     }
   };
@@ -281,7 +280,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         return await respond(
           new Response(
             JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }),
-            { status: 200, headers: { ...SECURITY_HEADERS, 'Content-Type': 'application/json' } },
+            { status: 200, headers: { ...securityHeaders(), 'Content-Type': 'application/json' } },
           ),
         );
       }
@@ -311,7 +310,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
                 },
               },
             }),
-            { status: 200, headers: { ...SECURITY_HEADERS, 'Content-Type': 'application/json' } },
+            { status: 200, headers: { ...securityHeaders(), 'Content-Type': 'application/json' } },
           ),
         );
       } else if (pathname.startsWith(storageEndpoint)) {
@@ -332,7 +331,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         return await respond(
           new Response(
             JSON.stringify(errorToJsonApiMapper(new NotFoundError('Endpoint not found'))),
-            { status: 404, headers: { ...SECURITY_HEADERS } },
+            { status: 404, headers: securityHeaders() },
           ),
         );
       }
