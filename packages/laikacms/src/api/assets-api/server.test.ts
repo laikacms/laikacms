@@ -945,6 +945,26 @@ describe('PATCH /resources/:key', () => {
     expect(body.errors[0]?.status).toBe('500');
     expect(body.errors[0]?.code).toBe('internal_error');
   });
+
+  it('fires the logger hook on repo.updateAsset failure (LCMS-431)', async () => {
+    const failure = new InternalError('storage outage');
+    const partialRepo = {
+      updateAsset: () => LaikaTask.make(() => Effect.fail(failure)),
+    } as unknown as AssetsRepository;
+    const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
+
+    const api = buildAssetsApi({ repository: partialRepo, logger });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/photo.jpg', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'asset', attributes: { cacheControl: 'no-cache' } } }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    expect(logger.error).toHaveBeenCalledOnce();
+    expect(logger.error).toHaveBeenCalledWith('errorToJsonApiMapper():', failure);
+  });
 });
 
 // ---------------------------------------------------------------------------
