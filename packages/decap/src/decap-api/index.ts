@@ -155,7 +155,9 @@ function resolveCorsHeaders(
 async function withHeaders(response: Response, extra: Record<string, string>): Promise<Response> {
   const merged = new Headers(response.headers);
   for (const [k, v] of Object.entries(extra)) merged.set(k, v);
-  const body = await response.arrayBuffer();
+  // A null-body status (204/304/…) rejects *any* body, including a zero-length
+  // buffer — so the body has to stay null rather than becoming an empty ArrayBuffer.
+  const body = response.body === null ? null : await response.arrayBuffer();
   return new Response(body, {
     status: response.status,
     statusText: response.statusText,

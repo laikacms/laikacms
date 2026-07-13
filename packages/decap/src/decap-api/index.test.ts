@@ -706,6 +706,36 @@ describe('cors option — CORS headers on regular responses', () => {
     const body = await res.json();
     expect(body).toMatchObject({ status: 'ok' });
   });
+
+  it('a 204 response survives the CORS path (LCMS-437)', async () => {
+    // The buffering above must not turn a null body into an empty ArrayBuffer: a
+    // null-body status rejects any body at all, so `new Response(new ArrayBuffer(0),
+    // { status: 204 })` throws. A clean cross-origin asset DELETE returns exactly that
+    // 204, which is why this is the assets path and not /health.
+    const assets = {
+      getResource: (key: string) =>
+        LaikaTask.succeed([{
+          type: 'asset' as const,
+          key,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+          content: { size: 4, etag: 'e' },
+        }]),
+      deleteAsset: (_key: string) => LaikaTask.succeed(undefined),
+    } as unknown as AssetsRepository;
+
+    const api = decapApi(makeOptions({ assets, cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      makeRequest(
+        '/assets/resources/pic.png',
+        { Origin: 'http://localhost:5000', Authorization: 'Bearer tok' },
+        'DELETE',
+      ),
+    );
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5000');
+  });
 });
 
 // ---------------------------------------------------------------------------
