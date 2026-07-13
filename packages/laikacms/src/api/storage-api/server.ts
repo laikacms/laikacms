@@ -442,7 +442,7 @@ export function buildJsonApi(options: StorageApiOptions) {
       const result = await runStream(repo.listAtoms(key ?? '', listOptions));
       if (Result.isFailure(result)) {
         const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
-        return failResponse(result, ErrorCodeToStatusMap[errorCode] || 400);
+        return failResponse(result, ErrorCodeToStatusMap[errorCode] ?? 500);
       }
       return respondCollectionWithConverter(
         request,
@@ -478,7 +478,7 @@ export function buildJsonApi(options: StorageApiOptions) {
       const result = await runStream(repo.listAtomSummaries(key ?? '', listOptions));
       if (Result.isFailure(result)) {
         const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
-        return failResponse(result, ErrorCodeToStatusMap[errorCode] || 400);
+        return failResponse(result, ErrorCodeToStatusMap[errorCode] ?? 500);
       }
       return respondCollectionWithConverter(
         request,
@@ -529,7 +529,7 @@ export function buildJsonApi(options: StorageApiOptions) {
       const data: FolderCreate = { key: body.data.id, type: 'folder' };
       const result = await runTaskWithMetadata(repo.createFolder(data));
       if (Result.isFailure(result)) {
-        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 400;
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
         return failResponse(result, status);
       }
       return respondResourceWithConverter(
@@ -545,7 +545,7 @@ export function buildJsonApi(options: StorageApiOptions) {
       const result = await runTaskWithMetadata(repo.getObject(key));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
-          ?? 400;
+          ?? 500;
         return failResponse(result, status);
       }
       return respondResourceWithConverter(
@@ -559,7 +559,7 @@ export function buildJsonApi(options: StorageApiOptions) {
       const result = await runTaskWithMetadata(repo.getFolder(key));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
-          ?? 400;
+          ?? 500;
         return failResponse(result, status);
       }
       return respondResourceWithConverter(
@@ -602,7 +602,7 @@ export function buildJsonApi(options: StorageApiOptions) {
       };
       const result = await runTaskWithMetadata(repo.createObject(data));
       if (Result.isFailure(result)) {
-        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 400;
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
         return failResponse(result, status);
       }
       return respondResourceWithConverter(
@@ -650,7 +650,7 @@ export function buildJsonApi(options: StorageApiOptions) {
       };
       const result = await runTaskWithMetadata(repo.updateObject(data));
       if (Result.isFailure(result)) {
-        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 400;
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
         return failResponse(result, status);
       }
       return respondResourceWithConverter(
@@ -667,7 +667,7 @@ export function buildJsonApi(options: StorageApiOptions) {
       }
       const result = await runStream(repo.removeAtoms([pathKey]));
       if (Result.isFailure(result)) {
-        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 400;
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
         return failResponse(result, status);
       }
       if (result.success.done.removed === 0) {
