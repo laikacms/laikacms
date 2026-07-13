@@ -279,6 +279,20 @@ describe('GET /capabilities', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
   });
+
+  it('returns 500 JSON:API error when repo throws InternalError on getCapabilities', async () => {
+    const repo = {
+      getCapabilities: () => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/capabilities'));
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -761,6 +775,32 @@ describe('POST /unpublished', () => {
     expect(body.errors[0]!.code).toBe('bad_request');
     expect(body.errors[0]!.detail).toMatch(/data\.id is required/);
   });
+
+  it('returns 500 JSON:API error when repo throws InternalError on createUnpublished', async () => {
+    const repo = {
+      createUnpublished: vi.fn(() => LaikaTask.make(() => Effect.fail(new InternalError('storage failure')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'unpublished',
+            id: 'posts/draft',
+            attributes: { status: 'draft', content: { title: 'Draft' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1123,6 +1163,20 @@ describe('GET /unpublished/:key', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
   });
+
+  it('returns 500 JSON:API error when repo throws InternalError on getUnpublished', async () => {
+    const repo = {
+      getUnpublished: (_key: string) => LaikaTask.make(() => Effect.fail(new InternalError('storage failure'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/unpublished/posts%2Fdraft'));
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1430,6 +1484,21 @@ describe('GET /revisions/:key', () => {
     expect(body.errors[0]!.status).toBe('404');
     expect(body.errors[0]!.code).toBe('not_found');
   });
+
+  it('returns 500 JSON:API error when repo throws InternalError on listRevisions', async () => {
+    const repo = {
+      listRevisions: (_key: string, _options: unknown) =>
+        LaikaStream.make<RevisionSummary, ListRevisionsDone>(() => Effect.fail(new InternalError('storage failure'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello'));
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1599,6 +1668,21 @@ describe('GET /revisions/:key/:revisionId', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
     expect(body.errors[0]!.code).toBe('not_found');
+  });
+
+  it('returns 500 JSON:API error when repo throws InternalError on getRevision', async () => {
+    const repo = {
+      getRevision: (_key: string, _revisionId: string) =>
+        LaikaTask.make(() => Effect.fail(new InternalError('storage failure'))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello/rev-1'));
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]!.status).toBe('500');
   });
 });
 
