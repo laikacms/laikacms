@@ -1620,15 +1620,15 @@ List all assets and folders under a given folder prefix.
 
 **Query Parameters**
 
-| Parameter                    | Type   | Default | Description                                                                   |
-| ---------------------------- | ------ | ------- | ----------------------------------------------------------------------------- |
-| `folder` or `filter[prefix]` | string | `""`    | Folder key prefix to list                                                     |
-| `filter[depth]` or `depth`   | number | `1`     | Traversal depth (minimum 1)                                                   |
-| `page[after]`                | string | —       | Forward cursor for pagination                                                 |
-| `page[before]`               | string | —       | Backward cursor for pagination                                                |
-| `page[size]`                 | number | `100`   | Items per page                                                                |
-| `include`                    | string | —       | Comma-separated: `urls` (or `asset-url`), `variations` (or `asset-variation`) |
-| `meta`                       | string | —       | Set `meta=true` to inline asset metadata onto `data.meta`                     |
+| Parameter                                       | Type   | Default | Description                                                                          |
+| ----------------------------------------------- | ------ | ------- | ------------------------------------------------------------------------------------ |
+| `folder`, `filter[folder]`, or `filter[prefix]` | string | `""`    | Folder key prefix to list (priority: `folder` > `filter[folder]` > `filter[prefix]`) |
+| `filter[depth]` or `depth`                      | number | `1`     | Traversal depth (minimum 1)                                                          |
+| `page[after]`                                   | string | —       | Forward cursor for pagination                                                        |
+| `page[before]`                                  | string | —       | Backward cursor for pagination                                                       |
+| `page[size]`                                    | number | `100`   | Items per page                                                                       |
+| `include`                                       | string | —       | Comma-separated: `urls` (or `asset-url`), `variations` (or `asset-variation`)        |
+| `meta`                                          | string | —       | Set `meta=true` to inline asset metadata onto `data.meta`                            |
 
 **Response** — collection of `asset` and `folder` resources with optional `included`
 
