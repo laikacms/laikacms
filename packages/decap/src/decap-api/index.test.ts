@@ -688,6 +688,24 @@ describe('cors option — CORS headers on regular responses', () => {
     // Vary: Origin is not meaningful with wildcard — browser caching not affected by origin
     expect(res.headers.get('Vary') ?? '').not.toContain('Origin');
   });
+
+  it('CORS response body is intact after CORS headers are injected (LCMS-437)', async () => {
+    // Regression: withHeaders() forwarded response.body (a ReadableStream) into a new
+    // Response(), causing Node's HTTP layer to send Transfer-Encoding: chunked instead of
+    // Content-Length. Chromium then aborted cross-origin /session requests with
+    // ERR_CONTENT_LENGTH_MISMATCH, preventing the admin UI from authenticating.
+    // Fix: buffer via arrayBuffer() so the body is known-size when serialised on the wire.
+    // Here we verify the body is readable and correct after withHeaders() runs.
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      makeRequest('/health', { Origin: 'http://localhost:5000' }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5000');
+    const body = await res.json();
+    expect(body).toMatchObject({ status: 'ok' });
+  });
 });
 
 // ---------------------------------------------------------------------------
