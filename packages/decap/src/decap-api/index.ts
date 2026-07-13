@@ -145,11 +145,20 @@ function resolveCorsHeaders(
 
 /**
  * Clone a Response and merge extra headers into it.
+ *
+ * We buffer via arrayBuffer() rather than forwarding response.body (a ReadableStream)
+ * because passing a stream to new Response() produces Transfer-Encoding: chunked — the
+ * Content-Length from the original headers is ignored by Node's HTTP layer, and Chromium
+ * aborts cross-origin requests with ERR_CONTENT_LENGTH_MISMATCH. Buffering preserves the
+ * known length and keeps the response non-chunked.
  */
-function withHeaders(response: Response, extra: Record<string, string>): Response {
+async function withHeaders(response: Response, extra: Record<string, string>): Promise<Response> {
   const merged = new Headers(response.headers);
   for (const [k, v] of Object.entries(extra)) merged.set(k, v);
-  return new Response(response.body, {
+  // A null-body status (204/304/…) rejects *any* body, including a zero-length
+  // buffer — so the body has to stay null rather than becoming an empty ArrayBuffer.
+  const body = response.body === null ? null : await response.arrayBuffer();
+  return new Response(body, {
     status: response.status,
     statusText: response.statusText,
     headers: merged,
@@ -263,12 +272,13 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       }
 
       // Helper: attach CORS headers to every outgoing response when configured.
-      const respond = (res: Response): Response => corsHeaders ? withHeaders(res, corsHeaders) : res;
+      const respond = (res: Response): Promise<Response> =>
+        corsHeaders ? withHeaders(res, corsHeaders) : Promise.resolve(res);
 
       // Health endpoint (no authentication required)
       if (pathname === healthEndpoint) {
         options.logger?.debug('Health check endpoint');
-        return respond(
+        return await respond(
           new Response(
             JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }),
             { status: 200, headers: { ...SECURITY_HEADERS, 'Content-Type': 'application/json' } },
@@ -279,7 +289,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       // All other endpoints require authentication
       const authenticated = await authenticateRequest(request);
       if (authenticated instanceof Response) {
-        return respond(authenticated);
+        return await respond(authenticated);
       }
       const user = authenticated;
 
@@ -290,7 +300,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         // The user is responsible for not passing in sensitive data, except for the passwordHash
         const { passwordHash: _passwordHash, ...safeUserData } = user;
 
-        return respond(
+        return await respond(
           new Response(
             JSON.stringify({
               data: {
@@ -306,20 +316,20 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         );
       } else if (pathname.startsWith(storageEndpoint)) {
         const storageApi = buildStorageApi({ repo: storage, basePath: `${base}/storage`, logger: options.logger });
-        return respond(await storageApi.fetch(request));
+        return await respond(await storageApi.fetch(request));
       } else if (pathname.startsWith(documentsEndpoint)) {
         const documentsApi = buildDocumentsApi({
           repo: documents,
           basePath: `${base}/documents`,
           logger: options.logger,
         });
-        return respond(await documentsApi.fetch(request));
+        return await respond(await documentsApi.fetch(request));
       } else if (assets && pathname.startsWith(assetsEndpoint)) {
         const assetsApi = buildAssetsApi({ repository: assets, basePath: `${base}/assets`, logger: options.logger });
-        return respond(await assetsApi.fetch(request));
+        return await respond(await assetsApi.fetch(request));
       } else {
         options.logger?.debug('Endpoint not found:', pathname);
-        return respond(
+        return await respond(
           new Response(
             JSON.stringify(errorToJsonApiMapper(new NotFoundError('Endpoint not found'))),
             { status: 404, headers: SECURITY_HEADERS },

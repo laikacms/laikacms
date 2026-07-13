@@ -688,6 +688,54 @@ describe('cors option — CORS headers on regular responses', () => {
     // Vary: Origin is not meaningful with wildcard — browser caching not affected by origin
     expect(res.headers.get('Vary') ?? '').not.toContain('Origin');
   });
+
+  it('CORS response body is intact after CORS headers are injected (LCMS-437)', async () => {
+    // Regression: withHeaders() forwarded response.body (a ReadableStream) into a new
+    // Response(), causing Node's HTTP layer to send Transfer-Encoding: chunked instead of
+    // Content-Length. Chromium then aborted cross-origin /session requests with
+    // ERR_CONTENT_LENGTH_MISMATCH, preventing the admin UI from authenticating.
+    // Fix: buffer via arrayBuffer() so the body is known-size when serialised on the wire.
+    // Here we verify the body is readable and correct after withHeaders() runs.
+    const api = decapApi(makeOptions({ cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      makeRequest('/health', { Origin: 'http://localhost:5000' }),
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5000');
+    const body = await res.json();
+    expect(body).toMatchObject({ status: 'ok' });
+  });
+
+  it('a 204 response survives the CORS path (LCMS-437)', async () => {
+    // The buffering above must not turn a null body into an empty ArrayBuffer: a
+    // null-body status rejects any body at all, so `new Response(new ArrayBuffer(0),
+    // { status: 204 })` throws. A clean cross-origin asset DELETE returns exactly that
+    // 204, which is why this is the assets path and not /health.
+    const assets = {
+      getResource: (key: string) =>
+        LaikaTask.succeed([{
+          type: 'asset' as const,
+          key,
+          createdAt: '2026-01-01T00:00:00Z',
+          updatedAt: '2026-01-01T00:00:00Z',
+          content: { size: 4, etag: 'e' },
+        }]),
+      deleteAsset: (_key: string) => LaikaTask.succeed(undefined),
+    } as unknown as AssetsRepository;
+
+    const api = decapApi(makeOptions({ assets, cors: { origins: ['http://localhost:5000'] } }));
+    const res = await api.fetch(
+      makeRequest(
+        '/assets/resources/pic.png',
+        { Origin: 'http://localhost:5000', Authorization: 'Bearer tok' },
+        'DELETE',
+      ),
+    );
+
+    expect(res.status).toBe(204);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('http://localhost:5000');
+  });
 });
 
 // ---------------------------------------------------------------------------
