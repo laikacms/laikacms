@@ -330,7 +330,9 @@ async function testNpm() {
   });
 
   try {
-    // Probe /api/health, not '/': '/' answers 401 and wedges the server for Node clients (LCMS-439).
+    // Probe /api/health rather than '/': '/' answered 401 and wedged the server for Node
+    // clients (LCMS-439 — fixed in develop, not yet in this published release). Revert to
+    // '/' once a release containing the fix is published.
     const apiUp = await waitForPort(API_PORT, '/api/health');
     const serveUp = await waitForPort(SERVE_PORT, '/'); // static file server — no auth, no 401
     if (!apiUp) {
@@ -409,7 +411,9 @@ async function testPnpm() {
   });
 
   try {
-    // Probe /api/health, not '/': '/' answers 401 and wedges the server for Node clients (LCMS-439).
+    // Probe /api/health rather than '/': '/' answered 401 and wedged the server for Node
+    // clients (LCMS-439 — fixed in develop, not yet in this published release). Revert to
+    // '/' once a release containing the fix is published.
     const apiUp = await waitForPort(API_PORT, '/api/health');
     const serveUp = await waitForPort(SERVE_PORT, '/'); // static file server — no auth, no 401
     if (!apiUp) {
