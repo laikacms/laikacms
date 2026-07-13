@@ -1584,7 +1584,7 @@ processing stopped at a failure). Remove operations return a `meta` entry.
 ## Assets API
 
 The Assets API manages binary files (assets) and folders. The default base path is `/api/assets`.
-All routes are mounted under `/resources`.
+Resource routes are mounted under `/resources`; `GET /capabilities` sits directly on the base path.
 
 ### Resource Types
 
@@ -1658,6 +1658,11 @@ evolves — clients may use it to detect incompatible backend versions.
 | -------------------------- | -------- | ------ | -------- |
 | `R2AssetsRepository`       | ✓        | ✓      | —        |
 | `ObsidianAssetsRepository` | ✓        | ✓      | —        |
+
+Two further backends advertise no fixed styles, so do not assume the table above covers you — call
+the endpoint. `ContentBaseAssetsRepository` forwards the pagination capability of whichever storage
+repository it wraps, and `AssetsJsonApiProxyRepository` returns whatever the upstream API's own
+`GET /capabilities` reports (falling back to all three styles when the upstream does not answer).
 
 **Error Responses**
 
