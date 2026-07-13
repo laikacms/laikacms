@@ -296,7 +296,7 @@ describe('decapAi()', () => {
       vi.mocked(callbacks.createSession).mockRejectedValueOnce(createError);
 
       const loggerError = vi.fn();
-      const config = makeConfig({ logger: { error: loggerError, warn: vi.fn(), info: vi.fn() }, callbacks });
+      const config = makeConfig({ logger: { error: loggerError }, callbacks });
 
       const req = makeRequest('/ai/chat', {
         method: 'POST',
@@ -320,7 +320,7 @@ describe('decapAi()', () => {
       vi.mocked(callbacks.getSession).mockRejectedValueOnce(getError);
 
       const loggerError = vi.fn();
-      const config = makeConfig({ logger: { error: loggerError, warn: vi.fn(), info: vi.fn() }, callbacks });
+      const config = makeConfig({ logger: { error: loggerError }, callbacks });
 
       const req = makeRequest('/ai/chat', {
         method: 'POST',
@@ -346,7 +346,7 @@ describe('decapAi()', () => {
       });
 
       const loggerError = vi.fn();
-      const adapter = decapAi(makeConfig({ logger: { error: loggerError, warn: vi.fn(), info: vi.fn() } }));
+      const adapter = decapAi(makeConfig({ logger: { error: loggerError } }));
 
       const req = makeRequest('/ai/chat', {
         method: 'POST',

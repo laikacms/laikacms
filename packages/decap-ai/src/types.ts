@@ -109,12 +109,9 @@ export interface DocumentContext {
 }
 
 /**
- * Logger interface (same as decap-api)
+ * Logger interface — only `error` is called by the implementation.
  */
 export interface Logger {
-  debug(...args: unknown[]): void;
-  info(...args: unknown[]): void;
-  warn(...args: unknown[]): void;
   error(...args: unknown[]): void;
 }
 

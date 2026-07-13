@@ -59,7 +59,7 @@ API route. It exposes three endpoints:
 | `tools`                   | `ToolSet`                          | `{}`                         | Additional server-side tools (use `tool()` from `@laikacms/decap-ai`).                            |
 | `basePath`                | `string`                           | `'/api/ai'`                  | Base path for all AI endpoints.                                                                   |
 | `messages`                | `Translation`                      | English defaults             | Localized error messages and default system prompt. Import from `@laikacms/decap-ai/i18n/en` etc. |
-| `logger`                  | `Logger`                           | no-op                        | Pluggable structured logger (`debug`, `info`, `warn`, `error`).                                   |
+| `logger`                  | `Logger`                           | no-op                        | Pluggable error logger; only `error` is called by the implementation.                             |
 
 ```typescript
 import { decapAi } from '@laikacms/decap-ai';
@@ -122,7 +122,7 @@ export async function POST(request: Request) {
 | `maxOutputTokens`         | `number`             | `4096`      | Maximum tokens in the model response.                                                                                     |
 | `temperature`             | `number`             | `0.7`       | Sampling temperature (0–2); higher values increase randomness.                                                            |
 | `systemPrompt`            | `string`             | `undefined` | System prompt prepended to all conversations; overrides the default from `messages` translation.                          |
-| `logger`                  | `Logger`             | `undefined` | Optional logger instance for debug/info/warn/error output.                                                                |
+| `logger`                  | `Logger`             | `undefined` | Optional logger instance; only `error` is called by the implementation.                                                   |
 | `messages`                | `Translation`        | English     | Localized error messages and system prompt (English or Dutch i18n imports).                                               |
 
 #### Listing sessions
