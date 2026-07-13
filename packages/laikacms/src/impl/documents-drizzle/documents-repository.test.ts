@@ -2,7 +2,7 @@ import * as Effect from 'effect/Effect';
 import * as Result from 'effect/Result';
 import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { LaikaError } from 'laikacms/core';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { DrizzleDocumentsRepository } from './documents-repository.js';
 import type { DocumentModel, DrizzleDocumentsRepositoryOptions, RevisionModel } from './documents-repository.js';
 
@@ -108,7 +108,7 @@ function makeInMemoryOptions():
           }
           return deleted;
         },
-        async select({ where, limit, offset = 0 }) {
+        async select({ where, limit, offset = 0, excludeContent: _exclude }) {
           const filtered = revisions.filter(where);
           return filtered.slice(offset, limit !== undefined ? offset + limit : undefined);
         },
@@ -748,6 +748,22 @@ describe('DrizzleDocumentsRepository', () => {
 
       expect(collected.data.length).toBe(2);
       expect(collected.done.total).toBe(5);
+    });
+
+    it('passes excludeContent: true to revisions.select', async () => {
+      const opts = makeInMemoryOptions();
+      const selectSpy = vi.fn(opts.callbacks.revisions.select);
+      opts.callbacks.revisions.select = selectSpy;
+      const spiedRepo = new DrizzleDocumentsRepository(opts);
+
+      await resolveTask(
+        spiedRepo.createRevision({ key: 'spy-doc', type: 'revision', revision: 'v1', content: {}, language: 'en' }),
+      );
+      await Effect.runPromise(
+        LaikaStream.runCollect(spiedRepo.listRevisions('spy-doc', { pagination: { offset: 0, limit: 10 } })),
+      );
+
+      expect(selectSpy).toHaveBeenCalledWith(expect.objectContaining({ excludeContent: true }));
     });
   });
 });
