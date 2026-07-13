@@ -5,7 +5,12 @@
  *   1. Fresh install following the quickstart verbatim
  *   2. esbuild bundles admin/index.ts → admin/bundle.js
  *   3. Server starts and /api/health returns 200
- *   4. Playwright confirms the Decap CMS admin UI renders (#nc-root found)
+ *   4. Playwright confirms the Decap CMS admin UI really booted (Posts collection visible,
+ *      no authentication error) — not merely that #nc-root mounted
+ *
+ * Note: this installs the PUBLISHED packages from npm, exactly as a reader of the quickstart would.
+ * It therefore tests the last release, not the current workspace — a fix on develop does not turn
+ * this harness green until it ships.
  *
  * Prerequisites:
  *   cd browser-sim && npm install   (installs playwright)
@@ -139,13 +144,23 @@ function kill(proc) {
   } catch {}
 }
 
-/** Wait for a port to become reachable. */
-async function waitForPort(port, ms = 10000) {
+/**
+ * Wait for `path` on `port` to answer with a non-5xx.
+ *
+ * Probe only an endpoint that returns 200. Once the API answers a 401, every following request to
+ * it from Node (`fetch` and `http.get` alike) fails with "terminated: other side closed" /
+ * ECONNRESET, and the browser's /api/session fails too — so the old `/` probe, which is
+ * unauthenticated and 401s, was breaking the very checks that ran after it. See LCMS-439.
+ */
+async function waitForPort(port, path = '/', ms = 10000) {
   const deadline = Date.now() + ms;
   while (Date.now() < deadline) {
     try {
-      const r = await fetch(`http://localhost:${port}/`);
-      if (r.ok || r.status < 500) return true;
+      const r = await fetch(`http://localhost:${port}${path}`);
+      if (r.status < 500) {
+        await r.arrayBuffer(); // drain, so the connection is not left half-read
+        return true;
+      }
       // eslint-disable-next-line no-empty
     } catch {}
     await new Promise(r => setTimeout(r, 300));
@@ -156,48 +171,50 @@ async function waitForPort(port, ms = 10000) {
 /**
  * Assert GET /api/health returns 200 with status:"ok".
  *
- * Retries transport errors: waitForPort() leaves a keep-alive socket in undici's pool that the
- * server may already have closed, so the first request here can be torn down mid-body ("terminated"
- * / "other side closed"). The retry lands on a fresh connection. A non-200 or a bad payload is a
- * real failure and is not retried.
+ * No retry: waitForPort() has already seen this endpoint answer, so a transport error here is a
+ * real failure. Retrying one was how the harness used to swallow LCMS-439.
  */
-async function checkHealth(label, attempts = 3) {
-  let lastError = '';
-  for (let i = 0; i < attempts; i++) {
-    let raw;
-    try {
-      const r = await fetch(`http://localhost:${API_PORT}/api/health`);
-      if (r.status !== 200) {
-        fail(`${label} /api/health`, `HTTP ${r.status}`);
-        return false;
-      }
-      raw = await r.text();
-    } catch (e) {
-      lastError = e.message.split('\n')[0];
-      await new Promise(r => setTimeout(r, 300));
-      continue;
-    }
-    let body;
-    try {
-      body = JSON.parse(raw);
-    } catch {
-      lastError = `unparseable body: ${JSON.stringify(raw.slice(0, 120))}`;
-      await new Promise(r => setTimeout(r, 300));
-      continue;
-    }
-    if (body?.status !== 'ok') {
-      fail(`${label} /api/health`, `unexpected body: ${raw.slice(0, 120)}`);
-      return false;
-    }
-    ok(`${label} GET /api/health → 200 {"status":"ok",...}`);
-    return true;
+async function checkHealth(label) {
+  let status;
+  let raw;
+  try {
+    const r = await fetch(`http://localhost:${API_PORT}/api/health`);
+    status = r.status;
+    raw = await r.text();
+  } catch (e) {
+    fail(`${label} /api/health`, `${e.message}${e.cause ? `: ${e.cause.message}` : ''}`.slice(0, 200));
+    return false;
   }
-  fail(`${label} /api/health`, lastError.slice(0, 200));
-  return false;
+  if (status !== 200) {
+    fail(`${label} /api/health`, `HTTP ${status}`);
+    return false;
+  }
+  let body;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    fail(`${label} /api/health`, `unparseable body: ${JSON.stringify(raw.slice(0, 120))}`);
+    return false;
+  }
+  if (body?.status !== 'ok') {
+    fail(`${label} /api/health`, `unexpected body: ${raw.slice(0, 120)}`);
+    return false;
+  }
+  ok(`${label} GET /api/health → 200 {"status":"ok",...}`);
+  return true;
 }
 
-/** Launch headless Chromium and verify the Decap admin UI renders. */
+/**
+ * Launch headless Chromium and report what the Decap admin UI actually rendered.
+ *
+ * Deliberately does NOT treat `#nc-root` as proof of success. Decap mounts that element before it
+ * talks to the API, so it is present on a blank error screen too — an auth failure renders #nc-root
+ * plus an "Authentication failed" toast and nothing else. Gating on it alone reported this harness
+ * green while the admin was an unusable error screen. The signal that the admin genuinely booted is
+ * the collection nav: `Posts` is only painted once config load and authentication have succeeded.
+ */
 async function checkUI(shotPrefix) {
+  const empty = { ncRoot: false, collections: false, authError: '', bodyText: '', launched: false };
   let browser;
   try {
     browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
@@ -206,24 +223,57 @@ async function checkUI(shotPrefix) {
     // failed assertion so the other path still runs, rather than aborting the whole harness.
     fail(
       `${shotPrefix} admin UI`,
-      `could not launch chromium (npx playwright install --with-deps chromium): ${e.message.split('\n')[0]}`,
+      `could not launch chromium (npx playwright install chromium): ${e.message.split('\n')[0]}`,
     );
-    return { ncRoot: false, bodyText: '', launched: false };
+    return empty;
   }
   const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
-  const errors = [];
-  page.on('pageerror', e => errors.push(e.message));
+  const failedRequests = [];
+  page.on('requestfailed', r => failedRequests.push(`${r.method()} ${r.url()} :: ${r.failure()?.errorText}`));
 
   try {
     await page.goto(`http://localhost:${SERVE_PORT}/`, { waitUntil: 'load', timeout: 15000 });
-    await page.waitForTimeout(7000);
+
+    // Wait for the real thing to appear rather than sleeping a fixed interval and hoping.
+    const collections = await page
+      .getByText('Posts', { exact: false })
+      .first()
+      .waitFor({ state: 'visible', timeout: 20000 })
+      .then(() => true, () => false);
+
+    // Screenshot AFTER the wait settles, so a failure shot shows the final error state.
     await page.screenshot({ path: join(SHOTS_DIR, `${shotPrefix}.png`), fullPage: false });
 
     const ncRoot = await page.evaluate(() => !!document.getElementById('nc-root'));
     const bodyText = await page.evaluate(() => document.body.innerText).catch(() => '');
-    return { ncRoot, bodyText: bodyText.slice(0, 400), launched: true };
+    const authError = /^.*Authentication failed.*$/im.exec(bodyText)?.[0]?.trim() ?? '';
+
+    return { ncRoot, collections, authError, bodyText: bodyText.slice(0, 400), launched: true, failedRequests };
   } finally {
     await browser.close();
+  }
+}
+
+/**
+ * Assert a checkUI() result. Ordered most-diagnostic first: an auth toast explains a missing
+ * collection nav, so report that rather than the symptom it causes.
+ */
+function assertUI(label, ui) {
+  if (!ui.launched) return; // checkUI() already reported the launch failure
+  const detail = ui.failedRequests?.length ? ` Failed requests: ${ui.failedRequests.slice(0, 3).join('; ')}` : '';
+
+  if (ui.authError) {
+    fail(`${label} admin UI`, `admin mounted but could not authenticate: "${ui.authError}".${detail}`);
+  } else if (!ui.ncRoot) {
+    fail(`${label} admin UI`, `#nc-root not found. Body: ${ui.bodyText.slice(0, 200)}${detail}`);
+  } else if (!ui.collections) {
+    fail(
+      `${label} admin UI`,
+      `#nc-root mounted but the "Posts" collection never rendered — the admin did not finish booting. `
+        + `Body: ${ui.bodyText.slice(0, 200)}${detail}`,
+    );
+  } else {
+    ok(`${label} admin UI renders (Posts collection visible, no auth error)`);
   }
 }
 
@@ -280,8 +330,9 @@ async function testNpm() {
   });
 
   try {
-    const apiUp = await waitForPort(API_PORT);
-    const serveUp = await waitForPort(SERVE_PORT);
+    // Probe /api/health, not '/': '/' answers 401 and wedges the server for Node clients (LCMS-439).
+    const apiUp = await waitForPort(API_PORT, '/api/health');
+    const serveUp = await waitForPort(SERVE_PORT, '/'); // static file server — no auth, no 401
     if (!apiUp) {
       fail('npm API server', 'did not start in time');
       return;
@@ -294,13 +345,7 @@ async function testNpm() {
 
     await checkHealth('npm');
 
-    const { ncRoot, bodyText, launched } = await checkUI('npm');
-    if (ncRoot) {
-      ok(`npm admin UI renders (#nc-root found)`);
-      log(`  body text: ${bodyText.slice(0, 100).replace(/\n/g, ' ')}`);
-    } else if (launched) {
-      fail('npm admin UI', `#nc-root not found. Body: ${bodyText.slice(0, 200)}`);
-    }
+    assertUI('npm', await checkUI('npm'));
   } finally {
     kill(server);
     kill(serve);
@@ -364,8 +409,9 @@ async function testPnpm() {
   });
 
   try {
-    const apiUp = await waitForPort(API_PORT);
-    const serveUp = await waitForPort(SERVE_PORT);
+    // Probe /api/health, not '/': '/' answers 401 and wedges the server for Node clients (LCMS-439).
+    const apiUp = await waitForPort(API_PORT, '/api/health');
+    const serveUp = await waitForPort(SERVE_PORT, '/'); // static file server — no auth, no 401
     if (!apiUp) {
       fail('pnpm API server', 'did not start in time');
       return;
@@ -378,13 +424,7 @@ async function testPnpm() {
 
     await checkHealth('pnpm');
 
-    const { ncRoot, bodyText, launched } = await checkUI('pnpm');
-    if (ncRoot) {
-      ok(`pnpm admin UI renders (#nc-root found)`);
-      log(`  body text: ${bodyText.slice(0, 100).replace(/\n/g, ' ')}`);
-    } else if (launched) {
-      fail('pnpm admin UI', `#nc-root not found. Body: ${bodyText.slice(0, 200)}`);
-    }
+    assertUI('pnpm', await checkUI('pnpm'));
   } finally {
     kill(server);
     kill(serve);
