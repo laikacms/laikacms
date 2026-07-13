@@ -139,6 +139,7 @@
     }
   },
   "devDependencies": {
+    "@hono/node-server": "catalog:server",
     "@types/jsonwebtoken": "catalog:types",
     "@types/jwt-decode": "catalog:types",
     "@types/node": "catalog:types",
