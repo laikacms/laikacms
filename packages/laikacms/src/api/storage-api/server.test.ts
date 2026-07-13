@@ -649,6 +649,18 @@ describe('GET /capabilities (LCMS-178)', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
   });
+
+  it('returns 500 JSON:API error when repo.getCapabilities raises InternalError (LCMS-427)', async () => {
+    const repo = {
+      getCapabilities: () => LaikaTask.make<Capabilities>(() => Effect.fail(new InternalError('storage outage'))),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/capabilities'));
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1024,6 +1036,26 @@ describe('PATCH /objects/:key (LCMS-218)', () => {
     expect(res.status).toBe(404);
     const body = await res.json() as { errors: Array<{ code: string }> };
     expect(body.errors[0]!.code).toBe('not_found');
+  });
+
+  it('returns 500 JSON:API error when repo.updateObject raises InternalError (LCMS-427)', async () => {
+    const repo = {
+      updateObject: () => LaikaTask.make<StorageObject>(() => Effect.fail(new InternalError('storage outage'))),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects/posts%2Fhello', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: { type: 'object', id: 'posts/hello', attributes: { content: {} } },
+        }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
   });
 });
 
