@@ -1,5 +1,4 @@
 import type * as Cause from 'effect/Cause';
-import * as Result from 'effect/Result';
 import type { TranslationKey } from 'laikacms/i18n';
 
 type ErrorSource = { pointer: string } | { parameter: string };
@@ -34,10 +33,6 @@ export abstract class LaikaError<C extends ErrorCode = ErrorCode, S extends numb
     // it on some runtimes when extending Error. Using `LaikaError.prototype`
     // here used to break every `instanceof NotFoundError` check downstream.
     Object.setPrototypeOf(this, new.target.prototype);
-  }
-
-  public toResult() {
-    return Result.fail(this);
   }
 }
 
