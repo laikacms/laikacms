@@ -19,6 +19,7 @@
 
 import { execSync, spawn } from 'node:child_process';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import * as http from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { chromium } from 'playwright';
@@ -139,15 +140,26 @@ function kill(proc) {
   } catch {}
 }
 
+/** Probe a port with a one-shot http.get (no keep-alive pool). */
+function probePort(port) {
+  return new Promise(resolve => {
+    const req = http.get({ hostname: 'localhost', port, path: '/', agent: false }, res => {
+      res.resume();
+      resolve(res.statusCode < 500);
+    });
+    req.on('error', () => resolve(false));
+    req.setTimeout(1000, () => {
+      req.destroy();
+      resolve(false);
+    });
+  });
+}
+
 /** Wait for a port to become reachable. */
 async function waitForPort(port, ms = 10000) {
   const deadline = Date.now() + ms;
   while (Date.now() < deadline) {
-    try {
-      const r = await fetch(`http://localhost:${port}/`);
-      if (r.ok || r.status < 500) return true;
-      // eslint-disable-next-line no-empty
-    } catch {}
+    if (await probePort(port)) return true;
     await new Promise(r => setTimeout(r, 300));
   }
   return false;
@@ -156,44 +168,56 @@ async function waitForPort(port, ms = 10000) {
 /**
  * Assert GET /api/health returns 200 with status:"ok".
  *
- * Retries transport errors: waitForPort() leaves a keep-alive socket in undici's pool that the
- * server may already have closed, so the first request here can be torn down mid-body ("terminated"
- * / "other side closed"). The retry lands on a fresh connection. A non-200 or a bad payload is a
- * real failure and is not retried.
+ * Uses http.get with agent:false (no keep-alive pool) so each attempt opens a fresh connection.
+ * waitForPort() probes via the same mechanism; there is no shared undici pool to poison.
  */
-async function checkHealth(label, attempts = 3) {
-  let lastError = '';
-  for (let i = 0; i < attempts; i++) {
-    let raw;
-    try {
-      const r = await fetch(`http://localhost:${API_PORT}/api/health`);
-      if (r.status !== 200) {
-        fail(`${label} /api/health`, `HTTP ${r.status}`);
-        return false;
-      }
-      raw = await r.text();
-    } catch (e) {
-      lastError = e.message.split('\n')[0];
-      await new Promise(r => setTimeout(r, 300));
-      continue;
-    }
-    let body;
-    try {
-      body = JSON.parse(raw);
-    } catch {
-      lastError = `unparseable body: ${JSON.stringify(raw.slice(0, 120))}`;
-      await new Promise(r => setTimeout(r, 300));
-      continue;
-    }
-    if (body?.status !== 'ok') {
-      fail(`${label} /api/health`, `unexpected body: ${raw.slice(0, 120)}`);
-      return false;
-    }
-    ok(`${label} GET /api/health → 200 {"status":"ok",...}`);
-    return true;
+function httpGet(path, port) {
+  return new Promise((resolve, reject) => {
+    const req = http.get({ hostname: 'localhost', port, path, agent: false }, res => {
+      let raw = '';
+      res.setEncoding('utf8');
+      res.on('data', c => {
+        raw += c;
+      });
+      // Use 'close' not 'end': @hono/node-server may emit a stale Content-Length in the
+      // response headers (larger than the actual body), which causes Node.js to wait
+      // indefinitely for bytes that never arrive. 'close' fires when the socket closes,
+      // which reliably signals the full body is available for Connection:close responses.
+      res.on('close', () => resolve({ status: res.statusCode, raw }));
+    });
+    req.on('error', reject);
+    req.setTimeout(3000, () => {
+      req.destroy();
+      reject(new Error('timeout'));
+    });
+  });
+}
+
+async function checkHealth(label) {
+  let result;
+  try {
+    result = await httpGet('/api/health', API_PORT);
+  } catch (e) {
+    fail(`${label} /api/health`, e.message.split('\n')[0].slice(0, 200));
+    return false;
   }
-  fail(`${label} /api/health`, lastError.slice(0, 200));
-  return false;
+  if (result.status !== 200) {
+    fail(`${label} /api/health`, `HTTP ${result.status}`);
+    return false;
+  }
+  let body;
+  try {
+    body = JSON.parse(result.raw);
+  } catch {
+    fail(`${label} /api/health`, `unparseable body: ${JSON.stringify(result.raw.slice(0, 120))}`);
+    return false;
+  }
+  if (body?.status !== 'ok') {
+    fail(`${label} /api/health`, `unexpected body: ${result.raw.slice(0, 120)}`);
+    return false;
+  }
+  ok(`${label} GET /api/health → 200 {"status":"ok",...}`);
+  return true;
 }
 
 /** Launch headless Chromium and verify the Decap admin UI renders. */
