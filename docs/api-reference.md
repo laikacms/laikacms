@@ -1588,13 +1588,14 @@ All routes are mounted under `/resources`.
 
 ### Resource Types
 
-| JSON:API type     | Description                                                               |
-| ----------------- | ------------------------------------------------------------------------- |
-| `asset`           | A binary file with optional metadata                                      |
-| `folder`          | A logical grouping of assets                                              |
-| `asset-metadata`  | Detailed metadata for an asset (included resource)                        |
-| `asset-url`       | Public/private access URLs for an asset (included resource)               |
-| `asset-variation` | Derived variations of an asset, e.g. image thumbnails (included resource) |
+| JSON:API type         | Description                                                                   |
+| --------------------- | ----------------------------------------------------------------------------- |
+| `asset`               | A binary file with optional metadata                                          |
+| `folder`              | A logical grouping of assets                                                  |
+| `asset-metadata`      | Detailed metadata for an asset (included resource)                            |
+| `asset-url`           | Public/private access URLs for an asset (included resource)                   |
+| `asset-variation`     | Derived variations of an asset, e.g. image thumbnails (included resource)     |
+| `assets-capabilities` | Repository capabilities (pagination support); returned by `GET /capabilities` |
 
 ### Included Resources
 
@@ -1611,6 +1612,59 @@ results. Both the canonical short name and the long-form JSON:API type name are 
 > resource's `data.meta` field instead.
 
 ### Endpoints
+
+---
+
+#### GET /capabilities
+
+Returns the capabilities advertised by the underlying assets repository. Clients should call this
+before attempting cursor pagination — the `attributes.pagination.styles.cursor` field indicates
+whether the backend supports `page[after]` / `page[before]`. Sending cursor params to a backend that
+does not support them returns a `400 Bad Request`.
+
+**Response** — a single `assets-capabilities` resource
+
+```json
+{
+  "data": {
+    "type": "assets-capabilities",
+    "id": "self",
+    "attributes": {
+      "compatibilityDate": "2026-05-11",
+      "pagination": {
+        "supported": true,
+        "description": "In-memory slicing applied after the full recursive walk; cursor pagination is not supported.",
+        "styles": {
+          "offset": true,
+          "page": true,
+          "cursor": false
+        }
+      }
+    },
+    "links": {
+      "self": "/api/assets/capabilities"
+    }
+  }
+}
+```
+
+When `pagination.supported` is `false` the `styles` field is absent and only `description` is
+present. The `compatibilityDate` is set by each backend and changes when the repository's contract
+evolves — clients may use it to detect incompatible backend versions.
+
+**Backend pagination support**
+
+| Backend                    | `offset` | `page` | `cursor` |
+| -------------------------- | -------- | ------ | -------- |
+| `R2AssetsRepository`       | ✓        | ✓      | —        |
+| `ObsidianAssetsRepository` | ✓        | ✓      | —        |
+
+**Error Responses**
+
+| Status | Condition                                         |
+| ------ | ------------------------------------------------- |
+| `404`  | Repository returns `NotFoundError`                |
+| `500`  | Repository returns an unrecognised internal error |
 
 ---
 
