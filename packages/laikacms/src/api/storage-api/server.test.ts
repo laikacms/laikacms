@@ -1,7 +1,7 @@
 import * as Effect from 'effect/Effect';
 import { describe, expect, it, vi } from 'vitest';
 
-import { BadRequestError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { BadRequestError, InternalError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type {
   Capabilities,
   Folder,
@@ -1305,5 +1305,25 @@ describe('GET /atom-summaries — filter[prefix] query param rejection (LCMS-322
     const api = buildJsonApi({ repo: partialRepo });
     const res = await api.fetch(new Request('http://localhost/atom-summaries/posts?filter%5Bprefix%5D=ignored'));
     expect(res.status).toBe(200);
+  });
+});
+
+describe('storage-api: unmapped error code falls back to 500, not 400 (LCMS-434)', () => {
+  it('returns 500 when createObject fails with an error code not in ErrorCodeToStatusMap', async () => {
+    // Simulate a future errorCode that has no entry in ErrorCodeToStatusMap yet.
+    // Before LCMS-434 this would have returned 400; after the fix it must return 500.
+    const unmappedErr = Object.assign(new InternalError('storage outage'), { code: 'synthetic_unmapped_code' });
+    const partialRepo = {
+      createObject: () => LaikaTask.make(() => Effect.fail(unmappedErr)),
+    } as unknown as StorageRepository;
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/objects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'object', id: 'p/doc', attributes: { content: {} } } }),
+      }),
+    );
+    expect(res.status).toBe(500);
   });
 });
