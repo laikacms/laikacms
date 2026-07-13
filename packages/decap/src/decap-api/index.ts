@@ -212,7 +212,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
             ),
           ),
         ),
-        { status: 401, headers: SECURITY_HEADERS },
+        { status: 401, headers: { ...SECURITY_HEADERS } },
       );
     }
 
@@ -251,7 +251,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       await addTimingJitter();
       return new Response(
         JSON.stringify(errorToJsonApiMapper(error)),
-        { status: 401, headers: SECURITY_HEADERS },
+        { status: 401, headers: { ...SECURITY_HEADERS } },
       );
     }
   };
@@ -332,7 +332,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         return await respond(
           new Response(
             JSON.stringify(errorToJsonApiMapper(new NotFoundError('Endpoint not found'))),
-            { status: 404, headers: SECURITY_HEADERS },
+            { status: 404, headers: { ...SECURITY_HEADERS } },
           ),
         );
       }

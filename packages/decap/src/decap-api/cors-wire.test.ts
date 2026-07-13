@@ -73,3 +73,43 @@ describe('CORS responses are serialised with Content-Length, not chunked (LCMS-4
     expect(res.headers.get('Content-Length')).toBe(String(Buffer.byteLength(body)));
   });
 });
+
+describe('A 401 does not corrupt subsequent responses (LCMS-439)', () => {
+  // The defect: @hono/node-server's responseViaCache mutates the plain-object headers
+  // passed to new Response(). SECURITY_HEADERS is a shared singleton, so after the first
+  // 401 (non-CORS path: no Origin → responseViaCache) it gained Content-Length: <401 body
+  // size>. Every following response — including /health at ~54 bytes — then declared that
+  // wrong length, causing ECONNRESET / "terminated: other side closed" on Node clients and
+  // ERR_CONTENT_LENGTH_MISMATCH on Chromium. curl was unaffected because it is more lenient
+  // about Content-Length mismatches. Fix: always spread SECURITY_HEADERS so each Response
+  // receives a fresh copy.
+
+  it('GET /health is served correctly after a 401 on the non-CORS path', async () => {
+    // Trigger a 401 WITHOUT an Origin header so it goes through responseViaCache
+    // (the path that would mutate a shared headers object before the fix).
+    const r401 = await fetch(`${baseUrl}/session`);
+    await r401.arrayBuffer(); // drain response body
+    expect(r401.status).toBe(401);
+
+    // The health endpoint must still return 200 with the correct Content-Length.
+    const r200 = await fetch(`${baseUrl}/health`);
+    const body = await r200.text();
+    expect(r200.status).toBe(200);
+    expect(r200.headers.get('Content-Length')).toBe(String(Buffer.byteLength(body)));
+    expect(JSON.parse(body)).toMatchObject({ status: 'ok' });
+  });
+
+  it('GET /health Content-Length matches its own body, not the prior 401 body', async () => {
+    // Belt-and-suspenders: explicitly verify the Content-Length isn't the 401 body size.
+    const r401 = await fetch(`${baseUrl}/session`);
+    const body401 = await r401.text();
+
+    const r200 = await fetch(`${baseUrl}/health`);
+    const body200 = await r200.text();
+
+    expect(r200.status).toBe(200);
+    // Before the fix: Content-Length was the 401 body length, not the 200 body length.
+    expect(r200.headers.get('Content-Length')).not.toBe(String(Buffer.byteLength(body401)));
+    expect(r200.headers.get('Content-Length')).toBe(String(Buffer.byteLength(body200)));
+  });
+});
