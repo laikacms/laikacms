@@ -57,8 +57,23 @@ const repo = new DrizzleDocumentsRepository({
       insert: ({ values }) => db.insert(revisionsTable).values(values).returning(),
       update: ({ where, values }) => db.update(revisionsTable).set(values).where(where).returning(),
       delete: ({ where }) => db.delete(revisionsTable).where(where).returning(),
-      select: ({ where, limit, offset = 0 }) =>
-        db.select().from(revisionsTable).where(where).limit(limit ?? 100).offset(offset),
+      select: ({ where, limit, offset = 0, excludeContent }) =>
+        db
+          .select(
+            excludeContent
+              ? {
+                key: revisionsTable.key,
+                revision: revisionsTable.revision,
+                language: revisionsTable.language,
+                createdAt: revisionsTable.createdAt,
+                updatedAt: revisionsTable.updatedAt,
+              }
+              : undefined,
+          )
+          .from(revisionsTable)
+          .where(where)
+          .limit(limit ?? 100)
+          .offset(offset),
       count: ({ where }) =>
         db.select({ count: count() }).from(revisionsTable).where(where)
           .then(([r]) => r?.count ?? 0),
@@ -190,5 +205,6 @@ Valid `pagination` shapes:
   to enable efficient depth-limited queries without regex filtering.
 - **Content serialization.** `StorageObjectContent` is stored as a JSON string; invalid JSON on read
   surfaces as an `InvalidData` error.
-- **Summary listings.** `listRecordSummaries` passes `excludeContent: true` to the `select` callback
-  so the `content` column can be omitted from the SQL projection, reducing data transfer.
+- **Summary listings.** `listRecordSummaries` and `listRevisions` both pass `excludeContent: true`
+  to their respective `select` callbacks so the `content` column can be omitted from the SQL
+  projection, reducing data transfer.

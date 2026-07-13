@@ -498,7 +498,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
           : 100;
         const where = qb.keyEquals(key);
         const [rows, fullCount] = yield* Effect.all([
-          Effect.promise(() => this.options.callbacks.revisions.select({ where, limit, offset })),
+          Effect.promise(() => this.options.callbacks.revisions.select({ where, limit, offset, excludeContent: true })),
           this.options.callbacks.revisions.count
             ? Effect.promise(() => this.options.callbacks.revisions.count!({ where }))
             : Effect.succeed(null),
