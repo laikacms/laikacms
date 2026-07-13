@@ -13,7 +13,15 @@ import type {
 } from 'laikacms/assets';
 import { describe, expect, it, vi } from 'vitest';
 
-import { BadRequestError, ForbiddenError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import {
+  BadRequestError,
+  ForbiddenError,
+  InternalError,
+  InvalidData,
+  LaikaStream,
+  LaikaTask,
+  NotFoundError,
+} from 'laikacms/core';
 
 import { buildAssetsApi } from './server.js';
 
@@ -399,6 +407,20 @@ describe('GET /capabilities', () => {
     const body = await res.json() as { errors: Array<{ status: string }> };
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
+  });
+
+  it('returns 500 JSON:API error when repo.getCapabilities throws InternalError (LCMS-429)', async () => {
+    const partialRepo = {
+      getCapabilities: () => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/capabilities'));
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
   });
 });
 
@@ -904,6 +926,25 @@ describe('PATCH /resources/:key', () => {
     expect(body.errors[0]?.status).toBe('400');
     expect(body.errors[0]?.code).toBe('bad_request');
   });
+
+  it('returns 500 JSON:API error when repo.updateAsset throws InternalError (LCMS-429)', async () => {
+    const partialRepo = {
+      updateAsset: () => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/photo.jpg', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ data: { type: 'asset', attributes: { cacheControl: 'no-cache' } } }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1015,6 +1056,31 @@ describe('DELETE /resources/:key', () => {
     );
     expect(res.status).toBe(204);
     expect(capturedRecursive).toBe(false);
+  });
+
+  it('returns 500 JSON:API error when deleteAsset throws InternalError (LCMS-429/LCMS-430)', async () => {
+    const partialRepo = {
+      getResource: (key: string) =>
+        LaikaTask.make<ReadonlyArray<Resource>>(() =>
+          Effect.succeed([{
+            type: 'asset' as const,
+            key,
+            createdAt: '2026-01-01T00:00:00Z',
+            updatedAt: '2026-01-01T00:00:00Z',
+            content: { size: 100, etag: 'abc' },
+          }])
+        ),
+      deleteAsset: () => LaikaTask.make(() => Effect.fail(new InternalError('storage outage'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources/photo.jpg', { method: 'DELETE' }),
+    );
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
   });
 });
 

@@ -424,7 +424,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         }),
       );
       if (Result.isFailure(batch)) {
-        return respondError(batch.failure, errorStatus.BAD_REQUEST);
+        const status = ErrorCodeToStatusMap[batch.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return respondError(batch.failure, status, logger);
       }
       const batchData = batch.success.data;
       const batchDone = batch.success.done;
@@ -499,7 +500,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
 
       const result = await firstResultWithMetadata(repository.getResource(key, { hints }));
       if (Result.isFailure(result)) {
-        return respondError(result.failure, errorStatus.NOT_FOUND);
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return respondError(result.failure, status, logger);
       }
       const resourceData = result.success.value[0];
       if (!resourceData) {
@@ -607,7 +609,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           cacheControl,
         }));
         if (Result.isFailure(result)) {
-          return respondError(result.failure, errorStatus.BAD_REQUEST);
+          const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+          return respondError(result.failure, status, logger);
         }
         return respondResource(
           assetToJsonApi(result.success.value),
@@ -645,7 +648,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           };
           const result = await firstResultWithMetadata(repository.createFolder(folderCreate));
           if (Result.isFailure(result)) {
-            return respondError(result.failure, errorStatus.BAD_REQUEST);
+            const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+            return respondError(result.failure, status, logger);
           }
           return respondResource(
             folderToJsonApi(result.success.value),
@@ -695,7 +699,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
 
           const result = await firstResultWithMetadata(repository.createAsset(assetCreate));
           if (Result.isFailure(result)) {
-            return respondError(result.failure, errorStatus.BAD_REQUEST);
+            const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+            return respondError(result.failure, status, logger);
           }
           return respondResource(
             assetToJsonApi(result.success.value),
@@ -771,7 +776,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       // Try to determine if it's an asset or folder
       const resourceResult = await firstResult(repository.getResource(key));
       if (Result.isFailure(resourceResult)) {
-        return respondError(resourceResult.failure, errorStatus.NOT_FOUND);
+        const status = ErrorCodeToStatusMap[resourceResult.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return respondError(resourceResult.failure, status, logger);
       }
       const firstResource = resourceResult.success[0];
       if (!firstResource) {
@@ -784,7 +790,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         : repository.deleteAsset(key);
       const r = await firstResultWithMetadata(deleteTask);
       if (Result.isFailure(r)) {
-        return respondError(r.failure, errorStatus.BAD_REQUEST);
+        const status = ErrorCodeToStatusMap[r.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return respondError(r.failure, status, logger);
       }
       // Clean success → 204 No Content (back-compat). Partial success with
       // recoverable warnings → 200 + a small body so the warnings can ride
