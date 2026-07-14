@@ -570,7 +570,8 @@ describe('GET /resources/:key', () => {
 
   it('returns 500 JSON:API error when repo.getResource raises InternalError (LCMS-433)', async () => {
     const partialRepo = {
-      getResource: () => LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.fail(new InternalError('storage unavailable'))),
+      getResource: () =>
+        LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.fail(new InternalError('storage unavailable'))),
     } as unknown as AssetsRepository;
 
     const api = buildAssetsApi({ repository: partialRepo });

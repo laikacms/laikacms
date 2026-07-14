@@ -887,6 +887,55 @@ describe('POST /revisions', () => {
   });
 });
 
+describe('POST /revisions — repo failure', () => {
+  const body = JSON.stringify({
+    data: {
+      type: 'revision',
+      id: 'posts/hello',
+      attributes: { revision: 'rev-1', content: { title: 'Hello v1' }, createdAt: '2026-01-01T00:00:00Z' },
+    },
+  });
+  const headers = { 'Content-Type': 'application/vnd.api+json' };
+
+  it('returns 404 when createRevision raises NotFoundError', async () => {
+    const repo = {
+      createRevision: vi.fn(() => LaikaTask.make(() => Effect.fail(new NotFoundError('document not found')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions', { method: 'POST', headers, body }));
+    expect(res.status).toBe(404);
+    const json = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(json.errors[0]!.status).toBe('404');
+    expect(json.errors[0]!.code).toBe('not_found');
+  });
+
+  it('returns 500 when createRevision raises InternalError', async () => {
+    const repo = {
+      createRevision: vi.fn(() => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions', { method: 'POST', headers, body }));
+    expect(res.status).toBe(500);
+    const json = await res.json() as { errors: Array<{ status: string }> };
+    expect(json.errors[0]!.status).toBe('500');
+  });
+
+  it('returns 400 when createRevision raises BadRequestError', async () => {
+    const repo = {
+      createRevision: vi.fn(() => LaikaTask.make(() => Effect.fail(new BadRequestError('invalid revision data')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions', { method: 'POST', headers, body }));
+    expect(res.status).toBe(400);
+    const json = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(json.errors[0]!.status).toBe('400');
+    expect(json.errors[0]!.code).toBe('bad_request');
+  });
+});
+
 // ---------------------------------------------------------------------------
 // 404 on unknown endpoint
 // ---------------------------------------------------------------------------
