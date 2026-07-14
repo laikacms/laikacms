@@ -369,6 +369,20 @@ describe('GET /resources — meta.page.total', () => {
     };
     expect(body.meta?.page).toBeUndefined();
   });
+
+  it('returns 500 JSON:API error when repo.listResources raises InternalError (LCMS-433)', async () => {
+    const partialRepo = {
+      listResources: () => LaikaStream.fail(new InternalError('storage unavailable')),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -553,6 +567,20 @@ describe('GET /resources/:key', () => {
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
     expect(body.errors[0]?.status).toBe('404');
   });
+
+  it('returns 500 JSON:API error when repo.getResource raises InternalError (LCMS-433)', async () => {
+    const partialRepo = {
+      getResource: () => LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.fail(new InternalError('storage unavailable'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources/photo.jpg'));
+    expect(res.status).toBe(500);
+
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -642,6 +670,31 @@ describe('POST /resources — asset via JSON:API', () => {
     expect(body.errors[0]?.code).toBe('bad_request');
     expect(body.errors[0]?.detail).toContain('storage quota exceeded');
   });
+
+  it('returns 500 JSON:API error when repo.createAsset raises InternalError (LCMS-433)', async () => {
+    const partialRepo = {
+      createAsset: () => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'asset',
+            id: 'uploads/photo.txt',
+            attributes: { mimeType: 'text/plain', content: btoa('data') },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -704,6 +757,31 @@ describe('POST /resources — folder via JSON:API', () => {
     const body = await res.json() as { errors: Array<{ code: string, detail: string }> };
     expect(body.errors[0]?.code).toBe('bad_request');
     expect(body.errors[0]?.detail).toContain('folder already exists');
+  });
+
+  it('returns 500 JSON:API error when repo.createFolder raises InternalError (LCMS-433)', async () => {
+    const partialRepo = {
+      createFolder: () => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'folder',
+            id: 'new-folder/',
+            attributes: {},
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(500);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('500');
+    expect(body.errors[0]?.code).toBe('internal_error');
   });
 });
 
