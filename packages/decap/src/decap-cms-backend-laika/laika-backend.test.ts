@@ -945,6 +945,43 @@ describe('LaikaBackend.persistEntry()', () => {
     );
   });
 
+  // LCMS-448: Decap omits the file extension from dataFile.path for folder collections;
+  // the storage backend appends it server-side. A `format: json` collection sends a valid
+  // JSON string but the path has no extension, so the old /\.json$/ check was false —
+  // the string was stored as-is and then spread into character-indexed keys by the repo.
+  it('parses JSON content from an extension-less path (LCMS-448)', async () => {
+    mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
+
+    const raw = JSON.stringify({ title: 'My first user-sim post', body: 'Hello from user-sim!' });
+    await backend.persistEntry(
+      { dataFiles: [{ path: 'posts/my-first-user-sim-post', raw }], assets: [] },
+      { newEntry: true, useWorkflow: false },
+    );
+
+    expect(mockDocRepo.createDocument).toHaveBeenCalledWith(
+      expect.objectContaining({
+        content: { title: 'My first user-sim post', body: 'Hello from user-sim!' },
+      }),
+    );
+  });
+
+  it('passes YAML frontmatter on extension-less path as raw string (not silently corrupts — LCMS-448)', async () => {
+    mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
+
+    const raw = '---\ntitle: My first user-sim post\n---\nHello from user-sim!';
+    await backend.persistEntry(
+      { dataFiles: [{ path: 'posts/my-first-user-sim-post', raw }], assets: [] },
+      { newEntry: true, useWorkflow: false },
+    );
+
+    // Raw YAML frontmatter cannot be JSON.parsed; it is passed through as a string.
+    // The repository's defensive guard will reject it — this test confirms no character-
+    // indexed corruption: the mock receives the full raw string, not { "0": "-", ... }.
+    expect(mockDocRepo.createDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ content: raw }),
+    );
+  });
+
   it('persists a markdown/frontmatter entry as a raw string without JSON.parse', async () => {
     mockDocRepo.createDocument.mockImplementation(() => succeed(undefined));
 
