@@ -1569,6 +1569,58 @@ describe('LaikaBackend.unpublishedEntryDataFile()', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Suite: unpublishedEntryMediaFile
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend.unpublishedEntryMediaFile()', () => {
+  let mockAssetsRepo: ReturnType<typeof makeMockAssetsRepository>;
+  let backend: any;
+
+  beforeEach(() => {
+    mockAssetsRepo = makeMockAssetsRepository();
+    const LaikaBackend = createLaikaBackend({
+      getDocumentsRepository: () => makeMockDocumentsRepository() as any,
+      getAssetsRepository: () => mockAssetsRepo as any,
+    });
+    backend = new LaikaBackend(makeConfig());
+    (backend as any).assetsRepository = mockAssetsRepo;
+    (backend as any).tokenPromise = () => Promise.resolve('fake-token');
+  });
+
+  it('returns ImplementationMediaFile shape via getMediaFile', async () => {
+    const asset = { key: 'media/img.png', content: { size: 1024 } };
+    mockAssetsRepo.getAsset.mockReturnValue(succeed(asset));
+    mockAssetsRepo.getMetadata.mockReturnValue(
+      LaikaStream.succeedMany([{ metadata: { mimeType: 'image/png' } }] as any, { total: 1 }),
+    );
+    mockAssetsRepo.getUrls.mockReturnValue(
+      LaikaStream.succeedMany([{ url: 'https://cdn.example.com/media/img.png' }] as any, { total: 1 }),
+    );
+
+    const result = await backend.unpublishedEntryMediaFile('posts', 'hello', 'media/img.png', 'posts/hello');
+
+    expect(result).toMatchObject({
+      id: 'media/img.png',
+      name: 'img.png',
+      path: 'media/img.png',
+      displayURL: 'https://cdn.example.com/media/img.png',
+      url: 'https://cdn.example.com/media/img.png',
+    });
+    expect(result.file).toBeInstanceOf(File);
+    expect(result.file.name).toBe('img.png');
+    expect(result.file.type).toBe('image/png');
+  });
+
+  it('throws APIError when the underlying asset repo fails', async () => {
+    mockAssetsRepo.getAsset.mockReturnValue(fail({ message: 'Not found' }));
+
+    await expect(
+      backend.unpublishedEntryMediaFile('posts', 'hello', 'missing.png', 'posts/hello'),
+    ).rejects.toMatchObject({ name: API_ERROR });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Suite: updateUnpublishedEntryStatus
 // ---------------------------------------------------------------------------
 
