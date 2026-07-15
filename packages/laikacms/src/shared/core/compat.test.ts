@@ -15,6 +15,18 @@ describe('runTask', () => {
     const error = new InvalidData('bad');
     await expect(runTask(LaikaTask.fail(error))).rejects.toBe(error);
   });
+
+  it('silently discards metadata when onProgress is omitted', async () => {
+    const recErr = new InvalidData('recoverable');
+    const task = LaikaTask.make<number>(emit =>
+      Effect.gen(function*() {
+        yield* emit.progress({ stage: 'start', current: 0 });
+        yield* emit.recoverableError(recErr);
+        return 99;
+      })
+    );
+    await expect(runTask(task)).resolves.toBe(99);
+  });
 });
 
 describe('runTask with onProgress', () => {
@@ -47,6 +59,22 @@ describe('collectStream', () => {
     const result = await collectStream(stream);
     expect(result.items).toEqual([1, 2, 3]);
     expect(result.done).toEqual({});
+  });
+
+  it('silently discards metadata when onProgress is omitted', async () => {
+    const recErr = new InvalidData('warn');
+    const stream = LaikaStream.make<string, { total: number }>(emit =>
+      Effect.gen(function*() {
+        yield* emit.progress({ stage: 'loading' });
+        yield* emit.data('a');
+        yield* emit.recoverableError(recErr);
+        yield* emit.data('b');
+        return { total: 2 };
+      })
+    );
+    const result = await collectStream(stream);
+    expect(result.items).toEqual(['a', 'b']);
+    expect(result.done).toEqual({ total: 2 });
   });
 
   it('returns empty items for an empty stream', async () => {
