@@ -86,7 +86,8 @@
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepack": "node ../../scripts/check-no-catalog-deps.mjs"
   },
   "dependencies": {
     "laikacms": "workspace:*",
