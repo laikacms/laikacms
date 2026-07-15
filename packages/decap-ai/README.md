@@ -188,13 +188,26 @@ directly:
 ```typescript
 import {
   convertToModelMessages,
+  DefaultChatTransport,
   generateId,
   isTextUIPart,
   isToolUIPart,
+  lastAssistantMessageIsCompleteWithToolCalls,
   streamText,
   tool,
 } from '@laikacms/decap-ai';
 ```
+
+| Export                                        | Description                                                                  |
+| --------------------------------------------- | ---------------------------------------------------------------------------- |
+| `convertToModelMessages`                      | Convert UI messages to model-compatible format.                              |
+| `DefaultChatTransport`                        | Default fetch-based transport for the AI SDK chat client.                    |
+| `generateId`                                  | Generate a unique ID (used for message and session IDs).                     |
+| `isTextUIPart`                                | Type guard for text UI parts in a message.                                   |
+| `isToolUIPart`                                | Type guard for tool-call UI parts in a message.                              |
+| `lastAssistantMessageIsCompleteWithToolCalls` | Returns `true` when the last assistant message has finished with tool calls. |
+| `streamText`                                  | Stream a text generation response from a language model.                     |
+| `tool`                                        | Define a server-side tool with an input schema and execute function.         |
 
 ## i18n
 
