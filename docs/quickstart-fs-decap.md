@@ -262,6 +262,7 @@ collections:
     label: Posts
     folder: posts
     create: true
+    format: json
     fields:
       - { name: title, label: Title, widget: string }
       - { name: body,  label: Body,  widget: markdown }

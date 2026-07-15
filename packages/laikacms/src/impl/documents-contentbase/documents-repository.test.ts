@@ -217,6 +217,25 @@ describe('ContentBaseDocumentsRepository', () => {
         expect(getResult.success.content.language).toBe('nl');
       }
     });
+
+    // LCMS-448: spreading a string content into { ...str, language } produces character-indexed keys.
+    // The guard rejects non-object content before the spread so the failure is loud, not silent.
+    it('rejects string content with BadRequestError (LCMS-448 guard)', async () => {
+      const result = await resolveTask(
+        repo.createDocument({
+          key: 'posts/corrupt',
+          type: 'published',
+          status: 'published',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          content: '---\ntitle: T\n---\nB\n' as any,
+          language: 'en',
+        }),
+      );
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe(BadRequestError.CODE);
+      }
+    });
   });
 
   describe('getDocument', () => {

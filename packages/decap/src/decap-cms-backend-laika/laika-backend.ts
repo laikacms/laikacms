@@ -777,10 +777,28 @@ export default function createLaikaBackend(
         // dataFile.raw is the serialized file content as Decap produced it:
         // - JSON collections: a JSON string that should be parsed back to an object
         // - Markdown/YAML/TOML collections: the raw file text, passed through as-is
+        //
+        // Important: Decap omits the file extension from dataFile.path for extension-less
+        // logical keys (the storage backend appends it). A folder collection configured with
+        // `format: json` sends a JSON string but the path ends in no extension, so the naive
+        // /\.json$/ check is false and the string would be passed as-is — then spread into
+        // character-indexed keys by the repository. Try JSON.parse for extension-less paths
+        // so `format: json` collections work even when the path has no dot segment.
         const isJsonFile = /\.json$/i.test(dataFile.path);
+        const hasKnownTextExtension = /\.(md|yaml|yml|toml|txt)$/i.test(dataFile.path);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const content: any = typeof dataFile.raw === 'string'
-          ? isJsonFile ? JSON.parse(dataFile.raw) : dataFile.raw
+          ? isJsonFile
+            ? JSON.parse(dataFile.raw)
+            : hasKnownTextExtension
+            ? dataFile.raw
+            : (() => {
+              try {
+                return JSON.parse(dataFile.raw as string);
+              } catch {
+                return dataFile.raw;
+              }
+            })()
           : dataFile.raw ?? {};
 
         const entryKey = normalizeKey(dataFile.path);

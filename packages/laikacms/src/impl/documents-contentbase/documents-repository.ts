@@ -175,6 +175,14 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
+        if (typeof create.content !== 'object' || create.content === null || Array.isArray(create.content)) {
+          return yield* Effect.fail(
+            new BadRequestError(
+              `createDocument: content must be a plain object; got ${typeof create
+                .content}. Serialize the document to a structured object before calling createDocument.`,
+            ),
+          );
+        }
         const path = yield* this.getDocumentPath(create.key, emit);
         const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({
@@ -273,6 +281,11 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
+        if (typeof create.content !== 'object' || create.content === null || Array.isArray(create.content)) {
+          return yield* Effect.fail(
+            new BadRequestError(`createUnpublished: content must be a plain object; got ${typeof create.content}.`),
+          );
+        }
         const path = yield* this.getUnpublishedPath(create.key, create.status, emit);
         const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({
@@ -601,6 +614,11 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   createRevision(create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
     return LaikaTask.make<Revision>(emit =>
       Effect.gen({ self: this }, function*() {
+        if (typeof create.content !== 'object' || create.content === null || Array.isArray(create.content)) {
+          return yield* Effect.fail(
+            new BadRequestError(`createRevision: content must be a plain object; got ${typeof create.content}.`),
+          );
+        }
         const path = yield* this.getRevisionPath(create.key, emit, create.revision);
         const obj = yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({
