@@ -88,17 +88,35 @@ const makeBucket = () => {
 // ---------------------------------------------------------------------------
 
 const makeThrowingBucket = (msg = 'bucket failure'): unknown => ({
-  async head() { throw new Error(msg); },
-  async get() { throw new Error(msg); },
-  async put() { throw new Error(msg); },
-  async delete() { throw new Error(msg); },
-  async list() { throw new Error(msg); },
-  createMultipartUpload() { throw new Error(msg); },
+  async head() {
+    throw new Error(msg);
+  },
+  async get() {
+    throw new Error(msg);
+  },
+  async put() {
+    throw new Error(msg);
+  },
+  async delete() {
+    throw new Error(msg);
+  },
+  async list() {
+    throw new Error(msg);
+  },
+  createMultipartUpload() {
+    throw new Error(msg);
+  },
   resumeMultipartUpload() {
     return {
-      async uploadPart() { throw new Error(msg); },
-      async complete() { throw new Error(msg); },
-      async abort() { throw new Error(msg); },
+      async uploadPart() {
+        throw new Error(msg);
+      },
+      async complete() {
+        throw new Error(msg);
+      },
+      async abort() {
+        throw new Error(msg);
+      },
     };
   },
 });
@@ -155,7 +173,11 @@ describe('R2AssetsDataSource — InternalError paths', () => {
   });
 
   it('getObjectMeta — non-Error thrown → message is String(error)', async () => {
-    const bucket: unknown = { async head() { throw 42; }, };
+    const bucket: unknown = {
+      async head() {
+        throw 42;
+      },
+    };
     const ds = new R2AssetsDataSource(bucket as R2Bucket);
     const result = await ds.getObjectMeta('key');
     expect(Result.isFailure(result)).toBe(true);

@@ -8,7 +8,8 @@
  *
  * @example
  * ```typescript
- * import { decapAi, tool, anthropic } from '@laikacms/decap-ai';
+ * import { decapAi, tool } from '@laikacms/decap-ai';
+ * import { anthropic } from '@laikacms/decap-ai/providers';
  * import { z } from 'zod';
  *
  * const ai = decapAi({
