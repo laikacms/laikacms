@@ -288,9 +288,17 @@ export class FileSystemStorageRepository extends StorageRepository {
               }
               resolvedEntries.push({ path: key, type: 'file' });
             } catch {
-              // Not a raw path — try with each known extension
-              const lastDot = key.lastIndexOf('.');
-              const keyWithoutExt = lastDot > 0 ? key.slice(0, lastDot) : key;
+              // Not a raw path — try with each known extension. Only strip a
+              // trailing dot-segment that matches a registered serializer
+              // extension; a dot that is part of the key itself (e.g.
+              // releases/v1.2-notes) must not be consumed (LCMS-278).
+              let keyWithoutExt = key;
+              for (const ext of availableExtensions) {
+                if (key.endsWith(`.${ext}`)) {
+                  keyWithoutExt = key.slice(0, -(ext.length + 1));
+                  break;
+                }
+              }
               let found = false;
               for (const ext of availableExtensions) {
                 const candidate = `${keyWithoutExt}.${ext}`;

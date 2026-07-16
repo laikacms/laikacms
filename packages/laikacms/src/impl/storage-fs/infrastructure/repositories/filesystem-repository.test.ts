@@ -221,6 +221,46 @@ describe('FileSystemStorageRepository rawSerializer extra-field error propagatio
   });
 });
 
+// LCMS-278: removeAtoms must not blindly strip the last dot-segment from a key
+// that happens to contain a dot (e.g. releases/v1.2-notes). Only a suffix that
+// matches a registered serializer extension should be stripped when probing for
+// the physical file, otherwise the delete misses the file entirely.
+describe('FileSystemStorageRepository removeAtoms dotted-key (LCMS-278)', () => {
+  it('removes a dotted key whose dot-segment is not a known extension', async () => {
+    const repo = new FileSystemStorageRepository(tmpDir, { raw: rawSerializer }, 'raw');
+
+    // Write two keys whose names contain dots that are NOT serializer extensions.
+    await LaikaTask.runPromise(
+      repo.createObject({ key: 'releases/v1.2-notes', type: 'object', content: { body: 'v1.2' } }),
+    );
+    await LaikaTask.runPromise(
+      repo.createObject({ key: 'releases/v1.9-notes', type: 'object', content: { body: 'v1.9' } }),
+    );
+
+    // Confirm both files exist independently.
+    const before = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('releases', { pagination: { offset: 0, limit: 100 } }),
+    );
+    expect(before.data.map(s => s.key)).toContain('releases/v1.2-notes');
+    expect(before.data.map(s => s.key)).toContain('releases/v1.9-notes');
+
+    // Delete only the first one.
+    const removed = await LaikaStream.runPromiseCollect(
+      repo.removeAtoms(['releases/v1.2-notes']),
+    );
+    expect(removed.done.removed).toBe(1);
+    expect(removed.done.skipped).toBe(0);
+
+    // v1.2-notes gone, v1.9-notes untouched.
+    const after = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('releases', { pagination: { offset: 0, limit: 100 } }),
+    );
+    const keys = after.data.map(s => s.key);
+    expect(keys).not.toContain('releases/v1.2-notes');
+    expect(keys).toContain('releases/v1.9-notes');
+  });
+});
+
 describe('FileSystemStorageRepository — getCapabilities', () => {
   it('returns a compatibilityDate string and a pagination object', async () => {
     const repo = makeRepo();
