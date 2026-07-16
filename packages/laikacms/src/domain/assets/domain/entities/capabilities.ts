@@ -1,5 +1,5 @@
 import * as S from 'effect/Schema';
-import { PaginationCapabilitySchema } from 'laikacms/storage';
+import { ChangesCapabilitySchema, PaginationCapabilitySchema, VersionTrackingCapabilitySchema } from 'laikacms/storage';
 
 /**
  * Compatibility-date brand for the Assets domain. Distinct from the Storage and
@@ -16,6 +16,15 @@ export type AssetsCompatibilityDate = S.Schema.Type<typeof AssetsCompatibilityDa
 export const AssetsCapabilitiesSchema = S.toStandardSchemaV1(S.Struct({
   compatibilityDate: AssetsCompatibilityDate,
   pagination: PaginationCapabilitySchema,
+
+  /**
+   * Whether the repository attaches an opaque per-record `version` token to
+   * the assets it returns.
+   */
+  versionTracking: VersionTrackingCapabilitySchema,
+
+  /** Change-signal surface (`getSyncToken` / `listChanges`). */
+  changes: ChangesCapabilitySchema,
 }));
 
 export type AssetsCapabilities = S.Schema.Type<typeof AssetsCapabilitiesSchema>;

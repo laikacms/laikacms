@@ -228,6 +228,14 @@ export class ObsidianAssetsRepository extends AssetsRepository {
         description: 'In-memory slicing applied after the directory walk; cursor pagination is not supported.',
         styles: { offset: true, page: true, cursor: false },
       },
+      versionTracking: {
+        supported: false,
+        description: 'The filesystem walk does not attach version tokens.',
+      },
+      changes: {
+        supported: false,
+        description: 'No change feed over the vault; getSyncToken/listChanges are not implemented.',
+      },
     });
   }
 

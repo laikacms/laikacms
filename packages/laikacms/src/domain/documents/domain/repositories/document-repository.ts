@@ -1,5 +1,6 @@
-import type { LaikaDone, LaikaStream, LaikaTask, Pagination } from 'laikacms/core';
-import type { Key } from 'laikacms/storage';
+import type { LaikaDone, Pagination } from 'laikacms/core';
+import { LaikaStream, LaikaTask, NotImplementedError } from 'laikacms/core';
+import type { ChangeSummary, Key, SyncToken } from 'laikacms/storage';
 import type {
   Document,
   DocumentCreate,
@@ -37,6 +38,28 @@ export type ListRecordSummaries = ListRecordsOptions;
 export type ListRecordsDone = LaikaDone;
 export type ListRevisionsDone = LaikaDone;
 
+export interface GetSyncTokenOptions {
+  /** Scope the token to a folder; omit for the whole store. */
+  folder?: string;
+}
+
+export interface ListChangesOptions {
+  /** A token previously obtained from `getSyncToken` or `listChanges`. */
+  since: SyncToken;
+  /** Scope the feed to a folder; omit for the whole store. */
+  folder?: string;
+}
+
+/**
+ * Done value returned by `listChanges`. Carries the sync token that captures
+ * the state of the scope after the listed changes; pass it as `since` on the
+ * next call to resume the feed. Pagination on the base follows the
+ * `ListRecordsDone` precedent.
+ */
+export interface ListChangesDone extends LaikaDone {
+  readonly syncToken: SyncToken;
+}
+
 export abstract class DocumentsRepository {
   /**
    * Describe what this repository can do — currently which `Pagination` shapes it
@@ -71,4 +94,44 @@ export abstract class DocumentsRepository {
     key: Key,
     options: ListRevisionsOptions,
   ): LaikaStream.LaikaStream<RevisionSummary, ListRevisionsDone>;
+
+  // Change signals (capability-gated; see DocumentsCapabilities.changes)
+
+  /**
+   * Return an opaque token for the given scope (a folder, or the whole store
+   * when omitted) that changes whenever anything inside the scope changes.
+   * Compare tokens only by equality. A git implementation returns the branch
+   * head sha; a database implementation returns a sequence or max(updatedAt).
+   *
+   * Non-abstract on purpose: existing subclasses stay source-compatible. The
+   * base implementation fails with `NotImplementedError`; check
+   * `getCapabilities().changes` before calling.
+   */
+  getSyncToken(options?: GetSyncTokenOptions): LaikaTask.LaikaTask<SyncToken> {
+    void options;
+    return LaikaTask.fail(
+      new NotImplementedError(
+        'getSyncToken is not supported by this documents repository. '
+          + 'Consult getCapabilities().changes before calling.',
+      ),
+    );
+  }
+
+  /**
+   * Enumerate what changed inside the scope since a previously obtained sync
+   * token. The done value carries the new sync token to resume from.
+   *
+   * Non-abstract on purpose: existing subclasses stay source-compatible. The
+   * base implementation fails with `NotImplementedError`; check
+   * `getCapabilities().changes` before calling.
+   */
+  listChanges(options: ListChangesOptions): LaikaStream.LaikaStream<ChangeSummary, ListChangesDone> {
+    void options;
+    return LaikaStream.fail(
+      new NotImplementedError(
+        'listChanges is not supported by this documents repository. '
+          + 'Consult getCapabilities().changes before calling.',
+      ),
+    );
+  }
 }

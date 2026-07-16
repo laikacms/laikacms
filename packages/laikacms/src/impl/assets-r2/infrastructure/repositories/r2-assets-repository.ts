@@ -81,6 +81,14 @@ export class R2AssetsRepository extends AssetsRepository {
         description: 'In-memory slicing applied after the full recursive walk; cursor pagination is not supported.',
         styles: { offset: true, page: true, cursor: false },
       },
+      versionTracking: {
+        supported: false,
+        description: 'R2 ETags are not surfaced as version tokens.',
+      },
+      changes: {
+        supported: false,
+        description: 'R2 offers no change feed; getSyncToken/listChanges are not implemented.',
+      },
     });
   }
 

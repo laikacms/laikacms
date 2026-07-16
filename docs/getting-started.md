@@ -23,6 +23,25 @@ export default { fetch: api.fetch };
 > Passing any other fields (e.g. `title`, `tags`) will throw an error at write time to prevent
 > silent data loss. If you need to persist multi-field content, use `jsonSerializer` instead.
 
+### The `body` convention
+
+Content in laikacms is always an object — you cannot store a raw string directly. When all you have
+is a raw string (plain text, markdown, HTML, …), the convention is to wrap it in a `body` field:
+
+```json
+{ "body": "<content>" }
+```
+
+Markdown with frontmatter follows the same shape — frontmatter fields sit alongside `body`:
+
+```json
+{ "title": "Hello", "tags": ["intro"], "body": "# Hello\n\nMy first post." }
+```
+
+This is just a convention: the protocol itself never interprets the `content` object. Serializers,
+however, build on it — `rawSerializer` persists exactly the `body` field as plain text, and the
+markdown serializer writes `body` as the document body with the remaining fields as frontmatter.
+
 ## Cloudflare Workers
 
 ```typescript

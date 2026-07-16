@@ -316,6 +316,11 @@ Content-Type: application/vnd.api+json
 > **Note:** When using `rawSerializer` (the default in the Getting Started guide), only the `body`
 > field is persisted. Passing any other fields (e.g. `title`) will throw an error at write time. Use
 > `jsonSerializer` if you need to store multi-field content.
+>
+> `content` must always be an object — raw strings cannot be stored directly. To transport a raw
+> string, the convention is to wrap it as `{ "body": "<content>" }`; markdown with frontmatter
+> becomes `{ ...frontmatter, "body": "<markdown>" }`. See
+> [the `body` convention](./getting-started.md#the-body-convention).
 
 | Field                     | Type       | Required | Description                               |
 | ------------------------- | ---------- | -------- | ----------------------------------------- |

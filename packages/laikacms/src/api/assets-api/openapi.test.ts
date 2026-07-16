@@ -41,9 +41,11 @@ describe('GET /openapi.json', () => {
     const doc = await res.json() as OpenApiDocument;
     expect(Object.keys(doc.paths).sort()).toEqual([
       '/capabilities',
+      '/changes',
       '/openapi.json',
       '/resources',
       '/resources/{key}',
+      '/sync-token',
     ]);
   });
 

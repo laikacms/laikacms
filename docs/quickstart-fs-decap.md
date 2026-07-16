@@ -200,8 +200,8 @@ pnpm add -D esbuild
 > recorded in `pnpm-workspace.yaml`. Without those grants `pnpm` exits with
 > `ERR_PNPM_IGNORED_BUILDS` and the install step fails.
 
-> The `laika` backend lives at the `@laikacms/decap/decap-cms-backend-laika` subpath export. There
-> is no separate `@laikacms/decap-cms-backend-laika` package on npm.
+> The `laika` backend lives at the `@laikacms/decap-cms/backends/laika` subpath export of the Decap
+> CMS fork. There is no separate backend package on npm.
 >
 > `@laikacms/decap-cms` is the scoped Decap CMS fork that provides the
 > `@laikacms/decap-cms/lib-util`, `/lib-auth`, `/ui-default`, and `/core` subpaths required by the
@@ -231,7 +231,7 @@ The static file server needs an `index.html` to load your compiled bundle:
 
 ```typescript
 // admin/index.ts
-import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
+import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
 import CMS from 'decap-cms-app';
 
 // No explicit documentsApiBaseUrl / assetsApiBaseUrl needed: the backend
@@ -298,7 +298,7 @@ npx serve admin/
 ```
 
 esbuild bundles `admin/index.ts` together with `decap-cms-app` and
-`@laikacms/decap/decap-cms-backend-laika` into a single `admin/bundle.js` that the browser can load
+`@laikacms/decap-cms/backends/laika` into a single `admin/bundle.js` that the browser can load
 directly. The `serve` step then hosts `admin/index.html` (and `bundle.js`) at
 `http://localhost:5000`.
 

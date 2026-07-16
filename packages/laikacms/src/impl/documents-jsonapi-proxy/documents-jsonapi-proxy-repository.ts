@@ -16,6 +16,9 @@ import {
   DocumentsCompatibilityDate,
   DocumentsRepository,
   type DocumentUpdate,
+  type GetSyncTokenOptions,
+  type ListChangesDone,
+  type ListChangesOptions,
   type ListRecordsDone,
   type ListRecordsOptions,
   type ListRevisionsDone,
@@ -49,6 +52,7 @@ import {
   type UnpublishedSummaryJsonApi,
   unpublishedUpdateToJsonApi,
 } from 'laikacms/documents/api';
+import { type ChangeSummary, SyncToken } from 'laikacms/storage';
 
 import { paginationCodec } from '../../shared/json-api/pagination-codec.js';
 import { warningsFromMeta } from '../../shared/json-api/utilities.js';
@@ -218,6 +222,14 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
             supported: true,
             description: 'JSON:API pagination is forwarded to the remote endpoint.',
             styles: { offset: true, page: true, cursor: true },
+          },
+          versionTracking: {
+            supported: false,
+            description: 'The remote endpoint did not advertise its capabilities.',
+          },
+          changes: {
+            supported: false,
+            description: 'The remote endpoint did not advertise its capabilities.',
           },
         };
         this.cachedCapabilities = fallback;
@@ -510,6 +522,69 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
           try: () => revisionFromJsonApi(raw),
           catch: e => new InvalidData((e as Error).message),
         });
+      })
+    );
+  }
+
+  // ===== CHANGE SIGNALS =====
+
+  override getSyncToken(options?: GetSyncTokenOptions): LaikaTask.LaikaTask<SyncToken> {
+    return LaikaTask.make<SyncToken>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const params = new URLSearchParams();
+        if (options?.folder) params.set('filter[folder]', options.folder);
+        const qs = params.size > 0 ? `?${params}` : '';
+        const raw = yield* this.fetchResourceWithWarnings<{ attributes?: { syncToken?: unknown } }>(
+          `/sync-token${qs}`,
+          { method: 'GET' },
+          emit,
+        );
+        const token = raw?.attributes?.syncToken;
+        if (typeof token !== 'string') {
+          return yield* Effect.fail(
+            new InvalidData('Upstream /sync-token response is missing attributes.syncToken'),
+          );
+        }
+        return SyncToken.make(token);
+      })
+    );
+  }
+
+  override listChanges(
+    options: ListChangesOptions,
+  ): LaikaStream.LaikaStream<ChangeSummary, ListChangesDone> {
+    return LaikaStream.make<ChangeSummary, ListChangesDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const params = new URLSearchParams();
+        params.set('filter[since]', options.since);
+        if (options.folder) params.set('filter[folder]', options.folder);
+
+        const json = yield* this.fetchJson(`/changes?${params}`);
+        const collection = json as unknown as JsonApiCollectionResponse & {
+          meta?: { syncToken?: unknown, page?: { total?: number } },
+        };
+        for (const w of warningsFromMeta(collection.meta)) yield* emit.recoverableError(w);
+
+        let emitted = 0;
+        for (const item of collection.data) {
+          const entry = item as { id: string, attributes?: { deleted?: unknown, version?: unknown } };
+          const version = entry.attributes?.version;
+          yield* emit.data({
+            key: entry.id,
+            deleted: entry.attributes?.deleted === true,
+            ...(typeof version === 'string' ? { version } : {}),
+          });
+          emitted += 1;
+        }
+
+        const token = collection.meta?.syncToken;
+        if (typeof token !== 'string') {
+          return yield* Effect.fail(new InvalidData('Upstream /changes response is missing meta.syncToken'));
+        }
+        return {
+          syncToken: SyncToken.make(token),
+          total: collection.meta?.page?.total ?? emitted,
+        };
       })
     );
   }

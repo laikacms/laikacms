@@ -36,7 +36,7 @@ The `@laikacms/decap` package gives you the primitives for each layer:
 
 - **`decapApi(...)`** (`@laikacms/decap/decap-api`) — the Decap-compatible HTTP API over your repos.
   Returns `{ fetch, authenticateRequest }`; mount `.fetch` on a catch-all route.
-- **`createLaikaBackend()`** (`@laikacms/decap/decap-cms-backend-laika`) — the Decap CMS backend the
+- **`createLaikaBackend()`** (`@laikacms/decap-cms/backends/laika`) — the Decap CMS backend the
   admin UI registers to talk to that API.
 - **`decapOauth2(...)`** (`@laikacms/decap/decap-oauth2`) — an optional PKCE OAuth2 server for
   production login.
@@ -278,8 +278,8 @@ These are the things that consistently bite first-time integrators:
      `import { FileSystemStorageRepository } from
      'laikacms/storage-fs'`. Same for
      `laikacms/storage-api`, `laikacms/documents-api`, `laikacms/storage-serializers-*`, etc.
-   - The Decap backend lives at `@laikacms/decap/decap-cms-backend-laika` — a subpath of
-     `@laikacms/decap`, NOT a separate `@laikacms/decap-cms-backend-laika` package.
+   - The Decap backend lives at `@laikacms/decap-cms/backends/laika` — a subpath of the
+     `@laikacms/decap-cms` fork, NOT of `@laikacms/decap` and NOT a separate package.
 
 4. **`FileSystemStorageRepository` is Node-only.** It needs `node:fs` and a writable local
    filesystem, so it can't run in Workers/edge code. On the edge, construct an edge-compatible

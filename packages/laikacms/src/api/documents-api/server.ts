@@ -27,6 +27,7 @@ import {
   parsePaginationQuery,
   recoverableErrorsToWarnings,
 } from 'laikacms/json-api';
+import { SyncToken } from 'laikacms/storage';
 import {
   documentCreateFromJsonApi,
   type DocumentCreateJsonApi,
@@ -91,6 +92,8 @@ const docsSelfPathFor = (type: string, id: string): string | undefined => {
       return `/revisions/${encoded}`;
     case 'documents-capabilities':
       return `/capabilities`;
+    case 'sync-token':
+      return `/sync-token`;
     default:
       return undefined;
   }
@@ -206,7 +209,7 @@ async function respondCollection<T, R extends JsonApiResource>(
   transformer: (item: T) => R,
   baseUrl: string,
   basePath: string,
-  done?: { total?: number },
+  done?: { total?: number, syncToken?: string },
   recoverableErrors?: ReadonlyArray<LaikaError>,
 ) {
   const url = new URL(request.url);
@@ -224,10 +227,18 @@ async function respondCollection<T, R extends JsonApiResource>(
   const links = buildPaginationLinks(baseUrl, pagination, hasMore, lastCursor);
 
   // `meta.page` carries aggregate counts; `meta.warnings` carries per-item
-  // recoverable errors collected during the stream.
+  // recoverable errors collected during the stream; `meta.syncToken` carries
+  // the new sync token on change-feed responses.
   const warnings = recoverableErrors ? recoverableErrorsToWarnings(recoverableErrors) : undefined;
   const page = typeof done?.total === 'number' ? { total: done.total } : undefined;
-  const meta = page || warnings ? { ...(page ? { page } : {}), ...(warnings ? { warnings } : {}) } : undefined;
+  const syncToken = done?.syncToken;
+  const meta = page || warnings || syncToken
+    ? {
+      ...(page ? { page } : {}),
+      ...(syncToken ? { syncToken } : {}),
+      ...(warnings ? { warnings } : {}),
+    }
+    : undefined;
 
   const response: JsonApiCollectionResponse = {
     data: items.map(item => withDocsSelfLink(transformer(item), basePath)),
@@ -594,6 +605,16 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                 description: 'Underlying documents repository capabilities',
               },
               {
+                path: '/sync-token',
+                methods: ['GET'],
+                description: 'Get an opaque per-scope change token (capability-gated)',
+              },
+              {
+                path: '/changes',
+                methods: ['GET'],
+                description: 'List changes since a sync token (capability-gated)',
+              },
+              {
                 path: '/records',
                 methods: ['GET'],
                 description: 'List full records (published + unpublished view per key)',
@@ -822,6 +843,62 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           links: { self: `${basePath}/capabilities` },
         },
       });
+    }
+
+    // ===== CHANGE SIGNALS =====
+    // Capability-gated: repositories that don't support change signals fail
+    // with NotImplementedError, which maps to HTTP 501 and re-hydrates into
+    // the same typed error on the proxy side.
+    if (resource === 'sync-token' && request.method === 'GET') {
+      const folder = queryParams['filter[folder]'];
+      return respondResourceWithWarnings(
+        repo.getSyncToken(folder ? { folder } : undefined),
+        token => ({
+          type: 'sync-token',
+          id: folder ?? 'self',
+          attributes: { syncToken: token as string, ...(folder ? { folder } : {}) },
+        }),
+        basePath,
+        onError,
+        undefined,
+        logger,
+      );
+    }
+
+    if (resource === 'changes' && request.method === 'GET') {
+      const since = queryParams['filter[since]'];
+      if (!since) {
+        return failResponse(
+          Result.fail(
+            new BadRequestError('filter[since] is required: pass a sync token obtained from GET /sync-token'),
+          ),
+          400,
+        );
+      }
+      const folder = queryParams['filter[folder]'];
+      const result = await runStreamWithDone(
+        repo.listChanges({ since: SyncToken.make(since), ...(folder ? { folder } : {}) }),
+      );
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return failResponse(result, status);
+      }
+      return respondCollection(
+        request,
+        result.success.data,
+        change => ({
+          type: 'change-summary',
+          id: change.key,
+          attributes: {
+            deleted: change.deleted,
+            ...(change.version !== undefined ? { version: change.version } : {}),
+          },
+        }),
+        `${url.origin}${url.pathname}`,
+        basePath,
+        { total: result.success.done.total, syncToken: result.success.done.syncToken as string },
+        result.success.recoverableErrors,
+      );
     }
 
     // ===== RECORDS =====

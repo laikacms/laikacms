@@ -31,8 +31,8 @@ by hand:
 
 - `@laikacms/decap/decap-api` — `decapApi(...)`, the Decap-compatible HTTP API over your storage
   repos. Mount its `.fetch` on a catch-all route.
-- `@laikacms/decap/decap-cms-backend-laika` — `createLaikaBackend()`, the Decap CMS backend the
-  admin UI registers to talk to that API.
+- `@laikacms/decap-cms/backends/laika` — `createLaikaBackend()`, the Decap CMS backend the admin UI
+  registers to talk to that API.
 - `@laikacms/decap/decap-oauth2` — `decapOauth2(...)`, an optional PKCE OAuth2 login server.
 - A `StorageRepository` for your runtime — `laikacms/storage/fs` (Node), `laikacms/storage/r2`
   (Workers / R2), `laikacms/storage/drizzle`, `laikacms/storage/webdav`, etc.

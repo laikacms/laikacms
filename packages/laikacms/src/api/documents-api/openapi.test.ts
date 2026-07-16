@@ -13,6 +13,8 @@ const expectedPaths = [
   '/',
   '/openapi.json',
   '/capabilities',
+  '/sync-token',
+  '/changes',
   '/records',
   '/record-summaries',
   '/published',

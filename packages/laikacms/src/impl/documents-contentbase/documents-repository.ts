@@ -62,6 +62,14 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
         return {
           compatibilityDate: DocumentsCompatibilityDate.make('2026-05-11'),
           pagination: caps.pagination,
+          versionTracking: {
+            supported: false,
+            description: 'The underlying storage repository does not expose version tokens.',
+          },
+          changes: {
+            supported: false,
+            description: 'The underlying storage repository does not expose a change feed.',
+          },
         };
       })
     );

@@ -126,7 +126,7 @@ Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives
 
 | Subpath                                                     | Description                                                      |
 | ----------------------------------------------------------- | ---------------------------------------------------------------- |
-| `@laikacms/decap/decap-cms-backend-laika`                   | Decap CMS backend                                                |
+| `@laikacms/decap-cms/backends/laika`                        | Decap CMS backend                                                |
 | `@laikacms/decap/decap-api`                                 | Decap-compatible API                                             |
 | `@laikacms/decap/decap-oauth2`                              | OAuth2 server with PKCE                                          |
 | `@laikacms/decap/decap-oauth2/i18n`                         | i18n bundle index for the OAuth2 UI                              |

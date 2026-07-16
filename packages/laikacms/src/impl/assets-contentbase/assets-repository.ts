@@ -91,6 +91,14 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
         return {
           compatibilityDate: AssetsCompatibilityDate.make('2026-05-11'),
           pagination: caps.pagination,
+          versionTracking: {
+            supported: false,
+            description: 'The underlying storage repository does not expose version tokens.',
+          },
+          changes: {
+            supported: false,
+            description: 'The underlying storage repository does not expose a change feed.',
+          },
         };
       })
     );

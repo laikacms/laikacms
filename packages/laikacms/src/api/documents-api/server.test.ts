@@ -20,6 +20,8 @@ import {
   NotFoundError,
 } from 'laikacms/core';
 
+import { InMemoryDocumentsRepository } from '../../domain/documents/testing/in-memory-documents.js';
+
 import { buildJsonApi } from './server.js';
 
 const stubRepo = {} as DocumentsRepository;
@@ -2870,5 +2872,110 @@ describe('GET /record-summaries — invalid query params return invalid_data/400
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
     expect(body.errors[0]!.code).toBe('invalid_data');
     expect(body.errors[0]!.status).toBe('400');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Change signals: GET /sync-token and GET /changes
+// ---------------------------------------------------------------------------
+
+describe('documents-api change signals', () => {
+  const seed = async (repo: InMemoryDocumentsRepository) => {
+    await LaikaTask.runPromise(
+      repo.createDocument({
+        key: 'posts/hello',
+        type: 'published',
+        status: 'published',
+        content: { title: 'Hello' },
+        language: 'en',
+      }),
+    );
+  };
+
+  it('GET /sync-token returns the repository token with a self link', async () => {
+    const repo = new InMemoryDocumentsRepository();
+    await seed(repo);
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/sync-token'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      data: { type: string, id: string, attributes: { syncToken: string }, links?: { self?: string } },
+    };
+    expect(body.data.type).toBe('sync-token');
+    expect(body.data.id).toBe('self');
+    expect(typeof body.data.attributes.syncToken).toBe('string');
+    expect(body.data.links?.self).toBe('/sync-token');
+  });
+
+  it('GET /sync-token forwards filter[folder] as the scope', async () => {
+    const repo = new InMemoryDocumentsRepository();
+    await seed(repo);
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/sync-token?filter%5Bfolder%5D=posts'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { id: string, attributes: { syncToken: string, folder?: string } } };
+    expect(body.data.id).toBe('posts');
+    expect(body.data.attributes.folder).toBe('posts');
+    expect(body.data.attributes.syncToken).toBe(
+      await LaikaTask.runPromise(repo.getSyncToken({ folder: 'posts' })) as string,
+    );
+  });
+
+  it('GET /sync-token maps the base NotImplementedError default to HTTP 501', async () => {
+    // A repository that implements none of the change-signal surface: the
+    // non-abstract base defaults answer for it.
+    const repo = Object.create(
+      (await import('laikacms/documents')).DocumentsRepository.prototype,
+    ) as DocumentsRepository;
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/sync-token'));
+    expect(res.status).toBe(501);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.code).toBe('not_implemented');
+  });
+
+  it('GET /changes without filter[since] returns 400', async () => {
+    const api = buildJsonApi({ repo: new InMemoryDocumentsRepository() });
+    const res = await api.fetch(new Request('http://localhost/changes'));
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string }> };
+    expect(body.errors[0]!.code).toBe('bad_request');
+  });
+
+  it('GET /changes returns change summaries and meta.syncToken', async () => {
+    const repo = new InMemoryDocumentsRepository();
+    const since = await LaikaTask.runPromise(repo.getSyncToken());
+    await seed(repo);
+    await LaikaTask.runPromise(repo.deleteDocument('posts/hello'));
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(
+      new Request(`http://localhost/changes?filter%5Bsince%5D=${encodeURIComponent(since)}`),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      data: Array<{ type: string, id: string, attributes: { deleted: boolean, version?: string } }>,
+      meta?: { syncToken?: string, page?: { total?: number } },
+    };
+    expect(body.data).toHaveLength(1);
+    expect(body.data[0]).toMatchObject({ type: 'change-summary', id: 'posts/hello' });
+    expect(body.data[0]!.attributes.deleted).toBe(true);
+    expect(body.meta?.syncToken).toBe(await LaikaTask.runPromise(repo.getSyncToken()) as string);
+    expect(body.meta?.page?.total).toBe(1);
+  });
+
+  it('GET /changes maps the base NotImplementedError default to HTTP 501', async () => {
+    const repo = Object.create(
+      (await import('laikacms/documents')).DocumentsRepository.prototype,
+    ) as DocumentsRepository;
+    const api = buildJsonApi({ repo });
+
+    const res = await api.fetch(new Request('http://localhost/changes?filter%5Bsince%5D=0'));
+    expect(res.status).toBe(501);
+    const body = await res.json() as { errors: Array<{ code: string }> };
+    expect(body.errors[0]!.code).toBe('not_implemented');
   });
 });

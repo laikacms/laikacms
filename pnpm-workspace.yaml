@@ -99,7 +99,6 @@ catalogs:
 
   schema:
     "json-schema": "^0.4.0"
-    "ajv": "^8.18.0"
     "@standard-schema/spec": "^1.1.0"
 
   octokit:

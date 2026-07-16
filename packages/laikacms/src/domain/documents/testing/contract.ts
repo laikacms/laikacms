@@ -1,7 +1,7 @@
 import type { Document, DocumentsRepository, Revision, RevisionSummary, Unpublished } from 'laikacms/documents';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { collectStream, runTask } from '../../../shared/core/compat.js';
-import { NotFoundError } from '../../../shared/core/index.js';
+import { NotFoundError, NotImplementedError } from '../../../shared/core/index.js';
 
 export type DocumentsContractCapability =
   | 'createDocument'
@@ -62,6 +62,8 @@ export function runDocumentsRepositoryContract(testCase: DocumentsContractCase):
       expect(caps).toBeDefined();
       expect(typeof caps.compatibilityDate).toBe('string');
       expect(caps.pagination).toBeDefined();
+      expect(caps.versionTracking).toBeDefined();
+      expect(caps.changes).toBeDefined();
     });
 
     // --- createDocument then getDocument ---
@@ -355,6 +357,83 @@ export function runDocumentsRepositoryContract(testCase: DocumentsContractCase):
       for (const rev of revs) {
         expect(returnedRevs).toContain(rev);
       }
+    });
+
+    // --- version tracking (capability-gated) ---
+    it('version: a new version token appears on every content change (when supported)', async () => {
+      const caps = await runTask(repo.getCapabilities());
+      if (!caps.versionTracking.supported) return; // soft-skip: not advertised
+
+      const key = keyIn(collectionFolder, `version-${Date.now()}`);
+      const created: Document = await runTask(
+        repo.createDocument({ key, type: 'published', status: 'published', content: { v: 1 }, language: 'en' }),
+      );
+      expect(typeof created.version).toBe('string');
+
+      const updated: Document = await runTask(repo.updateDocument({ key, content: { v: 2 } }));
+      expect(typeof updated.version).toBe('string');
+      expect(updated.version).not.toBe(created.version);
+
+      // Version is stable across reads without intervening writes.
+      const fetched: Document = await runTask(repo.getDocument(key));
+      expect(fetched.version).toBe(updated.version);
+    });
+
+    // --- sync token (capability-gated) ---
+    it('getSyncToken: token changes after a write (when supported)', async () => {
+      const caps = await runTask(repo.getCapabilities());
+      if (!caps.changes.supported || !caps.changes.syncToken) return; // soft-skip
+
+      const before = await runTask(repo.getSyncToken());
+      const key = keyIn(collectionFolder, `sync-${Date.now()}`);
+      await runTask(
+        repo.createDocument({ key, type: 'published', status: 'published', content: {}, language: 'en' }),
+      );
+      const after = await runTask(repo.getSyncToken());
+      expect(after).not.toBe(before);
+
+      // Without intervening writes the token is stable.
+      const again = await runTask(repo.getSyncToken());
+      expect(again).toBe(after);
+    });
+
+    it('getSyncToken: fails with NotImplementedError when not advertised', async () => {
+      const caps = await runTask(repo.getCapabilities());
+      if (caps.changes.supported && caps.changes.syncToken) return; // soft-skip: supported
+
+      await expect(runTask(repo.getSyncToken())).rejects.toMatchObject({ code: NotImplementedError.CODE });
+    });
+
+    // --- change feed (capability-gated) ---
+    it('listChanges: reports keys changed since a sync token (when supported)', async () => {
+      const caps = await runTask(repo.getCapabilities());
+      if (!caps.changes.supported || !caps.changes.changeFeed) return; // soft-skip
+
+      const since = await runTask(repo.getSyncToken());
+      const key = keyIn(collectionFolder, `changes-${Date.now()}`);
+      await runTask(
+        repo.createDocument({ key, type: 'published', status: 'published', content: { a: 1 }, language: 'en' }),
+      );
+
+      const { items, done } = await collectStream(repo.listChanges({ since }));
+      const changed = items.find(c => c.key === key);
+      expect(changed).toBeDefined();
+      expect(changed!.deleted).toBe(false);
+      expect(typeof done.syncToken).toBe('string');
+
+      // Resuming from the returned token yields no further changes for the key.
+      const next = await collectStream(repo.listChanges({ since: done.syncToken }));
+      expect(next.items.find(c => c.key === key)).toBeUndefined();
+    });
+
+    it('listChanges: fails with NotImplementedError when not advertised', async () => {
+      const caps = await runTask(repo.getCapabilities());
+      if (caps.changes.supported && caps.changes.changeFeed) return; // soft-skip: supported
+
+      const since = await runTask(repo.getSyncToken()).catch(() => undefined);
+      await expect(
+        collectStream(repo.listChanges({ since: (since ?? '0') as Parameters<typeof repo.listChanges>[0]['since'] })),
+      ).rejects.toMatchObject({ code: NotImplementedError.CODE });
     });
   });
 }

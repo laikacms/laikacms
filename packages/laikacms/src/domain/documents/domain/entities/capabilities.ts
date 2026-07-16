@@ -1,5 +1,5 @@
 import * as S from 'effect/Schema';
-import { PaginationCapabilitySchema } from 'laikacms/storage';
+import { ChangesCapabilitySchema, PaginationCapabilitySchema, VersionTrackingCapabilitySchema } from 'laikacms/storage';
 
 /**
  * Compatibility-date brand for the Documents domain. Distinct from the Storage brand
@@ -18,6 +18,15 @@ export type DocumentsCompatibilityDate = S.Schema.Type<typeof DocumentsCompatibi
 export const DocumentsCapabilitiesSchema = S.toStandardSchemaV1(S.Struct({
   compatibilityDate: DocumentsCompatibilityDate,
   pagination: PaginationCapabilitySchema,
+
+  /**
+   * Whether the repository attaches an opaque per-record `version` token to
+   * the documents, unpublished records, and summaries it returns.
+   */
+  versionTracking: VersionTrackingCapabilitySchema,
+
+  /** Change-signal surface (`getSyncToken` / `listChanges`). */
+  changes: ChangesCapabilitySchema,
 }));
 
 export type DocumentsCapabilities = S.Schema.Type<typeof DocumentsCapabilitiesSchema>;

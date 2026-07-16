@@ -45,13 +45,6 @@ export const DocumentCollectionSettingsSchema = S.toStandardSchemaV1(S.Struct({
    * Directory for storing revisions (version history)
    */
   revisionDirectory: S.optional(S.String),
-  // Legacy fields - kept for backwards compatibility but deprecated
-  /** @deprecated Use unpublishedStatuses instead */
-  draftDirectory: S.optional(S.String),
-  /** @deprecated Use unpublishedStatuses instead */
-  archiveDirectory: S.optional(S.String),
-  /** @deprecated Use unpublishedStatuses instead */
-  trashDirectory: S.optional(S.String),
 }));
 
 export type DocumentCollectionSettings = S.Schema.Type<typeof DocumentCollectionSettingsSchema>;

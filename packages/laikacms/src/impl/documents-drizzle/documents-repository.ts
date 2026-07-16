@@ -144,6 +144,14 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
         description: 'Backed by SQL OFFSET/LIMIT and page-based windowing.',
         styles: { offset: true, page: true, cursor: false },
       },
+      versionTracking: {
+        supported: false,
+        description: 'Rows carry no version token column.',
+      },
+      changes: {
+        supported: false,
+        description: 'No change log table; getSyncToken/listChanges are not implemented.',
+      },
     });
   }
 

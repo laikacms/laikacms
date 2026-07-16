@@ -852,3 +852,87 @@ describe('AssetsJsonApiProxyRepository.getMetadata', () => {
     expect(fetchMock).toHaveBeenCalledTimes(callsAfterFirst);
   });
 });
+
+describe('AssetsJsonApiProxyRepository change signals', () => {
+  it('getSyncToken parses attributes.syncToken and forwards filter[folder]', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        data: { type: 'sync-token', id: 'images', attributes: { syncToken: 'tok-7', folder: 'images' } },
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const token = await LaikaTask.runPromise(proxy.getSyncToken({ folder: 'images' }));
+
+    expect(token).toBe('tok-7');
+    const calledUrl = decodeURIComponent(String(fetchMock.mock.calls[0]![0]));
+    expect(calledUrl).toContain('/sync-token');
+    expect(calledUrl).toContain('filter[folder]=images');
+  });
+
+  it('getSyncToken re-hydrates NotImplementedError from a 501 response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          {
+            errors: [{
+              status: '501',
+              code: 'not_implemented',
+              title: 'Not Implemented',
+              detail: 'getSyncToken is not supported by this assets repository.',
+            }],
+          },
+          501,
+        )
+      ),
+    );
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await expect(LaikaTask.runPromise(proxy.getSyncToken())).rejects.toMatchObject({
+      code: 'not_implemented',
+    });
+  });
+
+  it('listChanges emits change summaries and returns meta.syncToken in the done value', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          data: [
+            { type: 'change-summary', id: 'images/a.jpg', attributes: { deleted: false, version: 'etag-1' } },
+            { type: 'change-summary', id: 'images/b.jpg', attributes: { deleted: true } },
+          ],
+          meta: { syncToken: 'tok-8', page: { total: 2 } },
+        })
+      ),
+    );
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(
+      proxy.listChanges({ since: 'tok-7' as Parameters<typeof proxy.listChanges>[0]['since'] }),
+    );
+
+    expect(collected.data).toEqual([
+      { key: 'images/a.jpg', deleted: false, version: 'etag-1' },
+      { key: 'images/b.jpg', deleted: true },
+    ]);
+    expect(collected.done.syncToken).toBe('tok-8');
+    expect(collected.done.total).toBe(2);
+  });
+
+  it('listChanges fails with InvalidData when meta.syncToken is missing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ data: [], meta: {} })),
+    );
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await expect(
+      LaikaStream.runPromiseCollect(
+        proxy.listChanges({ since: 'tok-7' as Parameters<typeof proxy.listChanges>[0]['since'] }),
+      ),
+    ).rejects.toBeInstanceOf(InvalidData);
+  });
+});

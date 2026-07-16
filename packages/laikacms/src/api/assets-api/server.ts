@@ -91,6 +91,7 @@ const runStreamWithDone = async <A, D extends LaikaDone>(
 };
 import { buildPaginationLinks, parsePaginationQuery } from 'laikacms/json-api';
 import type { FolderCreate } from 'laikacms/storage';
+import { SyncToken } from 'laikacms/storage';
 import type { JsonApiCollectionResponse, JsonApiResource, JsonApiResponse } from './jsonapi.js';
 import {
   assetToJsonApi,
@@ -172,6 +173,8 @@ const assetsSelfPathFor = (basePath: string, type: string, id: string): string |
       return undefined;
     case 'assets-capabilities':
       return `${basePath}/capabilities`;
+    case 'sync-token':
+      return `${basePath}/sync-token`;
     default:
       return undefined;
   }
@@ -348,6 +351,65 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         attributes: result.success,
         links: { self: `${basePath}/capabilities` },
       });
+    }
+
+    // Route: GET /sync-token
+    // Capability-gated: repositories that don't support change signals fail
+    // with NotImplementedError, which maps to HTTP 501 and re-hydrates into
+    // the same typed error on the proxy side.
+    if (path === `${basePath}/sync-token` && method === 'GET') {
+      const folder = str(query['filter[folder]']);
+      const result = await firstResultWithMetadata(repository.getSyncToken(folder ? { folder } : undefined));
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return respondError(result.failure, status, logger);
+      }
+      return respondResource(
+        {
+          type: 'sync-token',
+          id: folder ?? 'self',
+          attributes: { syncToken: result.success.value as string, ...(folder ? { folder } : {}) },
+        },
+        undefined,
+        basePath,
+        result.success.recoverableErrors,
+      );
+    }
+
+    // Route: GET /changes
+    // List changes since a sync token; `meta.syncToken` carries the new token.
+    if (path === `${basePath}/changes` && method === 'GET') {
+      const since = str(query['filter[since]']);
+      if (!since) {
+        return respondError(
+          new BadRequestError('filter[since] is required: pass a sync token obtained from GET /sync-token'),
+          errorStatus.BAD_REQUEST,
+        );
+      }
+      const folder = str(query['filter[folder]']);
+      const batch = await runStreamWithDone(
+        repository.listChanges({ since: SyncToken.make(since), ...(folder ? { folder } : {}) }),
+      );
+      if (Result.isFailure(batch)) {
+        const status = ErrorCodeToStatusMap[batch.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return respondError(batch.failure, status, logger);
+      }
+      const resources: JsonApiResource[] = batch.success.data.map(change => ({
+        type: 'change-summary',
+        id: change.key,
+        attributes: {
+          deleted: change.deleted,
+          ...(change.version !== undefined ? { version: change.version } : {}),
+        },
+      }));
+      const done = batch.success.done;
+      const warnings = recoverableErrorsToWarnings(batch.success.recoverableErrors);
+      const meta: Record<string, unknown> = {
+        ...(typeof done.total === 'number' ? { page: { total: done.total } } : {}),
+        syncToken: done.syncToken as string,
+        ...(warnings ? { warnings } : {}),
+      };
+      return respondCollection(resources, undefined, undefined, meta, basePath);
     }
 
     // Route: GET /resources

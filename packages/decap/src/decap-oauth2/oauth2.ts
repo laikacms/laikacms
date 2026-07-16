@@ -712,9 +712,7 @@ export async function handleAuthorize(
 
     // Pending TOTP session is single-use: delete it now so a stolen
     // session token cannot be replayed within its natural expiry window.
-    if (config.totp.callbacks.deletePendingTotpSession) {
-      await config.totp.callbacks.deletePendingTotpSession(totpSession);
-    }
+    await config.totp.callbacks.deletePendingTotpSession(totpSession);
 
     // TOTP verified - generate authorization code
     const code = generateSecureRandomString(SECURITY_CONSTANTS.MIN_AUTH_CODE_LENGTH);

@@ -188,7 +188,7 @@ const capabilitiesResourceSchema: OpenApiSchema = {
     id: { type: 'string', const: 'self' },
     attributes: {
       type: 'object',
-      required: ['compatibilityDate', 'pagination'],
+      required: ['compatibilityDate', 'pagination', 'versionTracking', 'changes'],
       properties: {
         compatibilityDate: { type: 'string' },
         pagination: {
@@ -220,9 +220,122 @@ const capabilitiesResourceSchema: OpenApiSchema = {
             },
           ],
         },
+        versionTracking: {
+          oneOf: [
+            {
+              type: 'object',
+              required: ['supported', 'description'],
+              properties: {
+                supported: { type: 'boolean', const: false },
+                description: { type: 'string' },
+              },
+            },
+            {
+              type: 'object',
+              required: ['supported', 'description'],
+              properties: {
+                supported: { type: 'boolean', const: true },
+                description: { type: 'string' },
+              },
+            },
+          ],
+        },
+        changes: {
+          oneOf: [
+            {
+              type: 'object',
+              required: ['supported', 'description'],
+              properties: {
+                supported: { type: 'boolean', const: false },
+                description: { type: 'string' },
+              },
+            },
+            {
+              type: 'object',
+              required: ['supported', 'description', 'syncToken', 'changeFeed'],
+              properties: {
+                supported: { type: 'boolean', const: true },
+                description: { type: 'string' },
+                syncToken: { type: 'boolean' },
+                changeFeed: { type: 'boolean' },
+              },
+            },
+          ],
+        },
       },
     },
     links: ref('ResourceLinks'),
+  },
+};
+
+const syncTokenDocumentSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['data'],
+  properties: {
+    data: {
+      type: 'object',
+      required: ['type', 'id', 'attributes'],
+      properties: {
+        type: { type: 'string', const: 'sync-token' },
+        id: { type: 'string', description: 'The folder scope, or "self" for the whole store.' },
+        attributes: {
+          type: 'object',
+          required: ['syncToken'],
+          properties: {
+            syncToken: {
+              type: 'string',
+              description: 'Opaque per-scope change token; compare only by equality.',
+            },
+            folder: { type: 'string', description: 'Folder scope, when the token was scoped.' },
+          },
+        },
+        links: ref('ResourceLinks'),
+      },
+    },
+    meta: {
+      type: 'object',
+      properties: { warnings: ref('Warnings') },
+    },
+  },
+};
+
+const changeSummaryResourceSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['type', 'id', 'attributes'],
+  properties: {
+    type: { type: 'string', const: 'change-summary' },
+    id: { type: 'string', description: 'The key that changed.' },
+    attributes: {
+      type: 'object',
+      required: ['deleted'],
+      properties: {
+        deleted: { type: 'boolean', description: 'True when the record was removed from the scope.' },
+        version: {
+          type: 'string',
+          description: 'Opaque per-record version token after the change. Omitted for deletions and on '
+            + 'backends without version tracking.',
+        },
+      },
+    },
+  },
+};
+
+const changesCollectionDocumentSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['data'],
+  properties: {
+    data: { type: 'array', items: ref('ChangeSummaryResource') },
+    meta: {
+      type: 'object',
+      properties: {
+        page: {
+          type: 'object',
+          properties: { total: { type: 'integer' } },
+        },
+        syncToken: { type: 'string', description: 'The new sync token to resume from.' },
+        warnings: ref('Warnings'),
+      },
+    },
   },
 };
 
@@ -442,6 +555,7 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
     tags: [
       { name: 'Resources', description: 'Assets and folders.' },
       { name: 'Capabilities', description: 'Introspection of what the underlying assets backend supports.' },
+      { name: 'Changes', description: 'Capability-gated change signals (sync tokens + change feed).' },
       { name: 'Meta', description: 'API self-description.' },
     ],
     paths: {
@@ -479,6 +593,66 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
             default: errorResponse(
               'Repository failure, with the HTTP status mapped from the LaikaError code (e.g. 404, 500).',
             ),
+          },
+        },
+      },
+      '/sync-token': {
+        get: {
+          operationId: 'getSyncToken',
+          summary: 'Get an opaque change token for a scope',
+          description: 'Returns a token that changes whenever anything inside the scope (a folder, or the whole '
+            + 'store when filter[folder] is omitted) changes. Compare tokens only by equality. Capability-gated: '
+            + 'backends without change-signal support answer 501 (consult GET /capabilities, `changes`).',
+          tags: ['Changes'],
+          parameters: [
+            {
+              name: 'filter[folder]',
+              in: 'query',
+              description: 'Scope the token to a folder. Omit for the whole store.',
+              schema: { type: 'string' },
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'The current sync token for the scope.',
+              content: jsonApiContent('SyncTokenDocument'),
+            },
+            '501': errorResponse('The backing repository does not support sync tokens.'),
+            '500': internalErrorResponse,
+          },
+        },
+      },
+      '/changes': {
+        get: {
+          operationId: 'listChanges',
+          summary: 'List changes since a sync token',
+          description: 'Enumerates what changed inside the scope since a previously obtained sync token. '
+            + '`meta.syncToken` on the response carries the new token to resume from. Capability-gated: backends '
+            + 'without a change feed answer 501 (consult GET /capabilities, `changes`).',
+          tags: ['Changes'],
+          parameters: [
+            {
+              name: 'filter[since]',
+              in: 'query',
+              required: true,
+              description: 'A sync token previously obtained from GET /sync-token or a prior GET /changes.',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'filter[folder]',
+              in: 'query',
+              description: 'Scope the feed to a folder. Omit for the whole store.',
+              schema: { type: 'string' },
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Change summary collection; `meta.syncToken` carries the new token.',
+              content: jsonApiContent('ChangesCollectionDocument'),
+            },
+            '400': errorResponse('Missing filter[since] or an unrecognized sync token.'),
+            '501': errorResponse('The backing repository does not support a change feed.'),
+            '500': internalErrorResponse,
           },
         },
       },
@@ -738,6 +912,9 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
         AssetVariationResource: assetVariationResourceSchema,
         IncludedResource: { oneOf: [ref('AssetUrlResource'), ref('AssetVariationResource')] },
         CapabilitiesResource: capabilitiesResourceSchema,
+        SyncTokenDocument: syncTokenDocumentSchema,
+        ChangeSummaryResource: changeSummaryResourceSchema,
+        ChangesCollectionDocument: changesCollectionDocumentSchema,
         ResourceDocument: resourceDocumentSchema,
         AssetDocument: assetDocumentSchema,
         FolderDocument: folderDocumentSchema,

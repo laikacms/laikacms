@@ -365,7 +365,6 @@
   },
   "dependencies": {
     "@standard-schema/spec": "catalog:schema",
-    "ajv": "catalog:schema",
     "bcryptjs": "catalog:",
     "effect": "catalog:default",
     "gray-matter": "catalog:",

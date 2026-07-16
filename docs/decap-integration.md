@@ -203,10 +203,10 @@ The admin UI requires a compiled browser bundle — compile the Laika backend an
 with esbuild, then serve the resulting files as static assets.
 
 > **Why not esm.sh / import maps?** esm.sh re-bundles packages on the fly but does not fully resolve
-> deep `export *` barrel chains. The `@laikacms/decap/decap-cms-backend-laika` subpath depends on
-> symbols re-exported through several barrel layers (e.g. `DocumentsCompatibilityDate`) that
-> esm.sh's bundler drops, so the admin silently fails to load. esbuild resolves all transitive
-> imports at build time and produces a self-contained bundle with no runtime CDN dependency.
+> deep `export *` barrel chains. The `@laikacms/decap-cms/backends/laika` subpath depends on symbols
+> re-exported through several barrel layers (e.g. `DocumentsCompatibilityDate`) that esm.sh's
+> bundler drops, so the admin silently fails to load. esbuild resolves all transitive imports at
+> build time and produces a self-contained bundle with no runtime CDN dependency.
 
 ### Install build dependencies
 
@@ -222,7 +222,7 @@ Without it the esbuild step will fail with "Could not resolve" errors.
 
 ```typescript
 // admin/index.ts
-import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
+import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
 import CMS from 'decap-cms-app';
 
 const LaikaBackend = createLaikaBackend();
@@ -288,9 +288,9 @@ For full control (custom widgets, the Decap React tree) you can instead render a
 
 ```ts
 // src/components/DecapAdmin.tsx (a React island)
+import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
 import DecapCmsCore, { App, DecapCmsProvider } from '@laikacms/decap-cms/core';
 import DEFAULT_WIDGET_STRING from '@laikacms/decap-cms/widget-string';
-import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 // …other widgets…
 
 import { decapConfig } from '~/lib/decap-config.ts';
@@ -1059,7 +1059,7 @@ SvelteKit has no `c.html()` equivalent for serving a raw admin shell. The correc
     script.src = 'https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js';
     script.onload = async () => {
       const { default: createLaikaBackend } = await import(
-        '@laikacms/decap/decap-cms-backend-laika'
+        '@laikacms/decap-cms/backends/laika'
       );
       window.CMS.registerBackend('laika', createLaikaBackend());
       window.CMS.init({ config: { /* your decap config */ } });

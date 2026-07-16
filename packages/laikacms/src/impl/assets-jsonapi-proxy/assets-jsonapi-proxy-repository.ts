@@ -12,13 +12,24 @@ import {
   type AssetVariations,
   type DeleteAssetsDone,
   type GetResourceOptions,
+  type GetSyncTokenOptions,
+  type ListChangesDone,
+  type ListChangesOptions,
   type ListResourcesDone,
   type ListResourcesOptions,
   type Resource,
 } from 'laikacms/assets';
-import { InternalError, InvalidData, type LaikaDone, type LaikaError, LaikaStream, LaikaTask } from 'laikacms/core';
+import {
+  ErrorCodeToClassMap,
+  InternalError,
+  InvalidData,
+  type LaikaDone,
+  type LaikaError,
+  LaikaStream,
+  LaikaTask,
+} from 'laikacms/core';
 import { type JsonApiCollectionResponse, warningsFromMeta } from 'laikacms/json-api';
-import { type Folder, type FolderCreate } from 'laikacms/storage';
+import { type ChangeSummary, type Folder, type FolderCreate, SyncToken } from 'laikacms/storage';
 
 import { parseAsset, parseAssetUrl, parseAssetVariations, parseFolder, parseResource } from './jsonapi.js';
 
@@ -69,6 +80,14 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
   private fetchJson<T = Record<string, unknown>>(
     path: string,
     init: { method: string, body?: unknown, multipart?: FormData } = { method: 'GET' },
+    opts?: {
+      /**
+       * Re-hydrate the upstream error's typed LaikaError subclass from its
+       * `code` field (falling back to InvalidData). Opt-in so the historic
+       * InvalidData-only behavior of the existing routes stays untouched.
+       */
+      rehydrateErrorCodes?: boolean,
+    },
   ): Effect.Effect<T, LaikaError> {
     return Effect.gen({ self: this }, function*() {
       const headers = yield* Effect.promise(() => this.getHeaders());
@@ -104,11 +123,17 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       const json = yield* Effect.promise(() => response.json() as Promise<Record<string, unknown>>);
       if (!response.ok || (Array.isArray(json.errors) && json.errors.length > 0)) {
         const errors = (Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }]) as Array<
-          { detail?: string, title?: string }
+          { detail?: string, title?: string, code?: string }
         >;
-        return yield* Effect.fail(
-          new InvalidData(errors.map(e => e.detail || e.title || 'Unknown error').join(', ')),
-        );
+        const detail = errors.map(e => e.detail || e.title || 'Unknown error').join(', ');
+        if (opts?.rehydrateErrorCodes) {
+          const firstCode = errors[0]?.code;
+          const ErrorCtor = firstCode
+            ? (ErrorCodeToClassMap as Record<string, new(msg: string) => LaikaError>)[firstCode]
+            : undefined;
+          return yield* Effect.fail(ErrorCtor ? new ErrorCtor(detail) : new InvalidData(detail));
+        }
+        return yield* Effect.fail(new InvalidData(detail));
       }
       return json as T;
     });
@@ -188,9 +213,79 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
             description: 'JSON:API pagination is forwarded to the remote endpoint.',
             styles: { offset: true, page: true, cursor: true },
           },
+          versionTracking: {
+            supported: false,
+            description: 'The remote endpoint did not advertise its capabilities.',
+          },
+          changes: {
+            supported: false,
+            description: 'The remote endpoint did not advertise its capabilities.',
+          },
         };
         this.cachedCapabilities = fallback;
         return fallback;
+      })
+    );
+  }
+
+  // ===== CHANGE SIGNALS =====
+
+  override getSyncToken(options?: GetSyncTokenOptions): LaikaTask.LaikaTask<SyncToken> {
+    return LaikaTask.make<SyncToken>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const params = new URLSearchParams();
+        if (options?.folder) params.set('filter[folder]', options.folder);
+        const qs = params.size > 0 ? `?${params}` : '';
+        const json = yield* this.fetchJson<{
+          data?: { attributes?: { syncToken?: unknown } },
+          meta?: Record<string, unknown>,
+        }>(`/sync-token${qs}`, { method: 'GET' }, { rehydrateErrorCodes: true });
+        for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
+        const token = json.data?.attributes?.syncToken;
+        if (typeof token !== 'string') {
+          return yield* Effect.fail(
+            new InvalidData('Upstream /sync-token response is missing attributes.syncToken'),
+          );
+        }
+        return SyncToken.make(token);
+      })
+    );
+  }
+
+  override listChanges(
+    options: ListChangesOptions,
+  ): LaikaStream.LaikaStream<ChangeSummary, ListChangesDone> {
+    return LaikaStream.make<ChangeSummary, ListChangesDone>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const params = new URLSearchParams();
+        params.set('filter[since]', options.since);
+        if (options.folder) params.set('filter[folder]', options.folder);
+
+        const json = yield* this.fetchJson<
+          JsonApiCollectionResponse & { meta?: { syncToken?: unknown, page?: { total?: number } } }
+        >(`/changes?${params}`, { method: 'GET' }, { rehydrateErrorCodes: true });
+        for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
+
+        let emitted = 0;
+        for (const item of json.data ?? []) {
+          const entry = item as { id: string, attributes?: { deleted?: unknown, version?: unknown } };
+          const version = entry.attributes?.version;
+          yield* emit.data({
+            key: entry.id,
+            deleted: entry.attributes?.deleted === true,
+            ...(typeof version === 'string' ? { version } : {}),
+          });
+          emitted += 1;
+        }
+
+        const token = json.meta?.syncToken;
+        if (typeof token !== 'string') {
+          return yield* Effect.fail(new InvalidData('Upstream /changes response is missing meta.syncToken'));
+        }
+        return {
+          syncToken: SyncToken.make(token),
+          total: json.meta?.page?.total ?? emitted,
+        };
       })
     );
   }

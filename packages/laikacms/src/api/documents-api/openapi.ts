@@ -181,6 +181,10 @@ const schemas: Record<string, OpenApiSchema> = {
           total: { type: 'integer', description: 'Total number of items across all pages, when the backend knows it.' },
         },
       },
+      syncToken: {
+        type: 'string',
+        description: 'On change-feed responses: the new sync token to resume from.',
+      },
       warnings: ref('Warnings'),
     },
   },
@@ -217,6 +221,105 @@ const schemas: Record<string, OpenApiSchema> = {
         },
       },
     ],
+  },
+  VersionTrackingCapability: {
+    oneOf: [
+      {
+        type: 'object',
+        required: ['supported', 'description'],
+        properties: {
+          supported: { const: false },
+          description: { type: 'string' },
+        },
+      },
+      {
+        type: 'object',
+        required: ['supported', 'description'],
+        properties: {
+          supported: { const: true },
+          description: { type: 'string' },
+        },
+      },
+    ],
+  },
+  ChangesCapability: {
+    oneOf: [
+      {
+        type: 'object',
+        required: ['supported', 'description'],
+        properties: {
+          supported: { const: false },
+          description: { type: 'string' },
+        },
+      },
+      {
+        type: 'object',
+        required: ['supported', 'description', 'syncToken', 'changeFeed'],
+        properties: {
+          supported: { const: true },
+          description: { type: 'string' },
+          syncToken: { type: 'boolean' },
+          changeFeed: { type: 'boolean' },
+        },
+      },
+    ],
+  },
+  SyncTokenResource: {
+    type: 'object',
+    required: ['type', 'id', 'attributes'],
+    properties: {
+      type: { const: 'sync-token' },
+      id: { type: 'string', description: 'The folder scope, or "self" for the whole store.' },
+      attributes: {
+        type: 'object',
+        required: ['syncToken'],
+        properties: {
+          syncToken: {
+            type: 'string',
+            description: 'Opaque per-scope change token; compare only by equality.',
+          },
+          folder: { type: 'string', description: 'Folder scope, when the token was scoped.' },
+        },
+      },
+      links: ref('ResourceLinks'),
+    },
+  },
+  SyncTokenResponse: {
+    type: 'object',
+    required: ['data'],
+    properties: {
+      data: ref('SyncTokenResource'),
+      meta: ref('ResourceMeta'),
+    },
+  },
+  ChangeSummaryResource: {
+    type: 'object',
+    required: ['type', 'id', 'attributes'],
+    properties: {
+      type: { const: 'change-summary' },
+      id: { type: 'string', description: 'The key that changed.' },
+      attributes: {
+        type: 'object',
+        required: ['deleted'],
+        properties: {
+          deleted: { type: 'boolean', description: 'True when the record was removed from the scope.' },
+          version: {
+            type: 'string',
+            description: 'Opaque per-record version token after the change. Omitted for deletions and on backends '
+              + 'without version tracking.',
+          },
+        },
+      },
+    },
+  },
+  ChangesCollectionResponse: {
+    type: 'object',
+    required: ['data', 'links'],
+    properties: {
+      data: { type: 'array', items: ref('ChangeSummaryResource') },
+      links: ref('PaginationLinks'),
+      meta: ref('CollectionMeta'),
+    },
   },
   PublishedResource: resource(
     'published',
@@ -268,10 +371,12 @@ const schemas: Record<string, OpenApiSchema> = {
       id: { const: 'self' },
       attributes: {
         type: 'object',
-        required: ['compatibilityDate', 'pagination'],
+        required: ['compatibilityDate', 'pagination', 'versionTracking', 'changes'],
         properties: {
           compatibilityDate: { type: 'string' },
           pagination: ref('PaginationCapability'),
+          versionTracking: ref('VersionTrackingCapability'),
+          changes: ref('ChangesCapability'),
         },
       },
       links: ref('ResourceLinks'),
@@ -682,6 +787,7 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
     tags: [
       { name: 'info', description: 'API self-description.' },
       { name: 'capabilities', description: 'Backend capability introspection.' },
+      { name: 'changes', description: 'Capability-gated change signals (sync tokens + change feed).' },
       { name: 'records', description: 'Combined published + unpublished listings.' },
       { name: 'published', description: 'Published documents.' },
       { name: 'unpublished', description: 'Unpublished drafts.' },
@@ -727,6 +833,68 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
             },
             '400': errorResponse('Repository failure mapped from its error code.'),
             '404': errorResponse('Capabilities unavailable.'),
+            '500': errorResponse('Internal repository failure.'),
+          },
+        },
+      },
+      '/sync-token': {
+        get: {
+          operationId: 'getSyncToken',
+          summary: 'Get an opaque change token for a scope',
+          description: 'Returns a token that changes whenever anything inside the scope (a folder, or the whole '
+            + 'store when filter[folder] is omitted) changes. Compare tokens only by equality. Capability-gated: '
+            + 'backends without change-signal support answer 501 (consult GET /capabilities, `changes`).',
+          tags: ['changes'],
+          parameters: [
+            {
+              name: 'filter[folder]',
+              in: 'query',
+              description: 'Scope the token to a folder. Omit for the whole store.',
+              schema: { type: 'string' },
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'The current sync token for the scope.',
+              content: jsonApiContent(ref('SyncTokenResponse')),
+            },
+            '400': errorResponse('Repository failure mapped from its error code.'),
+            '501': errorResponse('The backing repository does not support sync tokens.'),
+            '500': errorResponse('Internal repository failure.'),
+          },
+        },
+      },
+      '/changes': {
+        get: {
+          operationId: 'listChanges',
+          summary: 'List changes since a sync token',
+          description: 'Enumerates what changed inside the scope since a previously obtained sync token. '
+            + '`meta.syncToken` on the response carries the new token to resume from. Capability-gated: backends '
+            + 'without a change feed answer 501 (consult GET /capabilities, `changes`).',
+          tags: ['changes'],
+          parameters: [
+            {
+              name: 'filter[since]',
+              in: 'query',
+              required: true,
+              description: 'A sync token previously obtained from GET /sync-token or a prior GET /changes.',
+              schema: { type: 'string' },
+            },
+            {
+              name: 'filter[folder]',
+              in: 'query',
+              description: 'Scope the feed to a folder. Omit for the whole store.',
+              schema: { type: 'string' },
+            },
+            ...paginationParameters,
+          ],
+          responses: {
+            '200': {
+              description: 'Change summary collection; `meta.syncToken` carries the new token.',
+              content: jsonApiContent(ref('ChangesCollectionResponse')),
+            },
+            '400': errorResponse('Missing filter[since], an unrecognized sync token, or a bad-request failure.'),
+            '501': errorResponse('The backing repository does not support a change feed.'),
             '500': errorResponse('Internal repository failure.'),
           },
         },

@@ -778,3 +778,126 @@ describe('DocumentsJsonApiProxyRepository.createRevision', () => {
     expect(collected.recoverableErrors).toEqual([]);
   });
 });
+
+describe('DocumentsJsonApiProxyRepository change signals', () => {
+  it('getSyncToken parses attributes.syncToken and forwards filter[folder]', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        data: { type: 'sync-token', id: 'posts', attributes: { syncToken: 'tok-42', folder: 'posts' } },
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const token = await LaikaTask.runPromise(proxy.getSyncToken({ folder: 'posts' }));
+
+    expect(token).toBe('tok-42');
+    const calledUrl = String(fetchMock.mock.calls[0]![0]);
+    expect(calledUrl).toContain('/sync-token');
+    expect(decodeURIComponent(calledUrl)).toContain('filter[folder]=posts');
+  });
+
+  it('getSyncToken re-hydrates NotImplementedError from a 501 response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          {
+            errors: [{
+              status: '501',
+              code: 'not_implemented',
+              title: 'Not Implemented',
+              detail: 'getSyncToken is not supported by this documents repository.',
+            }],
+          },
+          501,
+        )
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await expect(LaikaTask.runPromise(proxy.getSyncToken())).rejects.toMatchObject({
+      code: 'not_implemented',
+    });
+  });
+
+  it('getSyncToken fails with InvalidData when the token is missing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ data: { type: 'sync-token', id: 'self', attributes: {} } })),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await expect(LaikaTask.runPromise(proxy.getSyncToken())).rejects.toBeInstanceOf(InvalidData);
+  });
+
+  it('listChanges emits change summaries and returns meta.syncToken in the done value', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        data: [
+          { type: 'change-summary', id: 'posts/a', attributes: { deleted: false, version: 'v7' } },
+          { type: 'change-summary', id: 'posts/b', attributes: { deleted: true } },
+        ],
+        meta: { syncToken: 'tok-99', page: { total: 2 } },
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(
+      proxy.listChanges({ since: 'tok-42' as Parameters<typeof proxy.listChanges>[0]['since'] }),
+    );
+
+    expect(collected.data).toEqual([
+      { key: 'posts/a', deleted: false, version: 'v7' },
+      { key: 'posts/b', deleted: true },
+    ]);
+    expect(collected.done.syncToken).toBe('tok-99');
+    expect(collected.done.total).toBe(2);
+    const calledUrl = decodeURIComponent(String(fetchMock.mock.calls[0]![0]));
+    expect(calledUrl).toContain('/changes');
+    expect(calledUrl).toContain('filter[since]=tok-42');
+  });
+
+  it('listChanges fails with InvalidData when meta.syncToken is missing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ data: [], meta: {} })),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await expect(
+      LaikaStream.runPromiseCollect(
+        proxy.listChanges({ since: 'tok-42' as Parameters<typeof proxy.listChanges>[0]['since'] }),
+      ),
+    ).rejects.toBeInstanceOf(InvalidData);
+  });
+});
+
+describe('DocumentsJsonApiProxyRepository version passthrough', () => {
+  it('getDocument surfaces the version attribute from the upstream resource', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          data: {
+            type: 'published',
+            id: 'posts/hello',
+            attributes: {
+              type: 'published',
+              status: 'published',
+              language: 'en',
+              content: { title: 'Hello' },
+              version: 'v7',
+            },
+          },
+        })
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const doc = await LaikaTask.runPromise(proxy.getDocument('posts/hello'));
+
+    expect(doc.version).toBe('v7');
+  });
+});

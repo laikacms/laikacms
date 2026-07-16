@@ -89,18 +89,17 @@ export interface OAuthTotpCallbacks {
   /**
    * Delete a pending TOTP session. Called after the session has been consumed
    * (a TOTP code was successfully verified) so the same session token cannot be
-   * replayed. Optional for backward compatibility — implementations that omit
-   * this rely on natural expiry, which the security audit flags as Medium.
+   * replayed.
    */
-  deletePendingTotpSession?(sessionId: string): Promise<void>;
+  deletePendingTotpSession(sessionId: string): Promise<void>;
   /**
    * Return the most recently consumed TOTP time step for the user, or null if
    * none has been recorded. Together with `setLastTotpStep` this provides
-   * RFC 6238 §5.2 replay protection. Optional for backward compatibility.
+   * RFC 6238 §5.2 replay protection.
    */
-  getLastTotpStep?(userId: string): Promise<number | null>;
+  getLastTotpStep(userId: string): Promise<number | null>;
   /** Record the time step of a successfully consumed TOTP code. */
-  setLastTotpStep?(userId: string, step: number): Promise<void>;
+  setLastTotpStep(userId: string, step: number): Promise<void>;
 }
 
 /**
@@ -317,8 +316,8 @@ export async function verifyTOTPWithStep(
 
 /**
  * Verify a TOTP code against the OAuth callbacks with RFC 6238 §5.2 replay
- * protection. If `getLastTotpStep`/`setLastTotpStep` are provided, codes whose
- * time step is less than or equal to the previously consumed step are rejected.
+ * protection: codes whose time step is less than or equal to the previously
+ * consumed step are rejected.
  */
 export async function verifyOAuthTOTPWithReplayProtection(
   userId: string,
@@ -336,16 +335,12 @@ export async function verifyOAuthTOTPWithReplayProtection(
     return { valid: false };
   }
 
-  if (callbacks.getLastTotpStep) {
-    const last = await callbacks.getLastTotpStep(userId);
-    if (last !== null && result.step <= last) {
-      return { valid: false, replay: true };
-    }
+  const last = await callbacks.getLastTotpStep(userId);
+  if (last !== null && result.step <= last) {
+    return { valid: false, replay: true };
   }
 
-  if (callbacks.setLastTotpStep) {
-    await callbacks.setLastTotpStep(userId, result.step);
-  }
+  await callbacks.setLastTotpStep(userId, result.step);
 
   return { valid: true };
 }

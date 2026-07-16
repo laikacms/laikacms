@@ -87,9 +87,6 @@ export const DocumentCollectionJsonApiSchema = S.toStandardSchemaV1(S.Struct({
       }),
     )),
     revisionDirectory: S.optional(S.String),
-    draftDirectory: S.optional(S.String),
-    archiveDirectory: S.optional(S.String),
-    trashDirectory: S.optional(S.String),
   }),
 }));
 

@@ -1,8 +1,9 @@
 # @laikacms/decap
 
 [Decap CMS](https://decapcms.org/) integrations for
-[Laika CMS](https://www.npmjs.com/package/laikacms): backend adapter, OAuth2 server, custom widgets,
-and an AI chat assistant.
+[Laika CMS](https://www.npmjs.com/package/laikacms): OAuth2 server, custom widgets, and an AI chat
+assistant. The `laika` Decap backend itself lives in the `@laikacms/decap-cms` fork at
+`@laikacms/decap-cms/backends/laika`.
 
 ```bash
 pnpm add @laikacms/decap
@@ -38,11 +39,13 @@ type PageProps = ExtractFieldsType<PagesCollection['fields']>;
 
 ### Backend & API
 
-| Export                                    | Purpose                                             |
-| ----------------------------------------- | --------------------------------------------------- |
-| `@laikacms/decap/decap-api`               | Decap-compatible HTTP API on top of a Laika storage |
-| `@laikacms/decap/decap-cms-backend-laika` | Decap CMS backend that talks to `decap-api`         |
-| `@laikacms/decap/decap-oauth2`            | OAuth2 server (GitHub-style) for Decap login        |
+| Export                         | Purpose                                             |
+| ------------------------------ | --------------------------------------------------- |
+| `@laikacms/decap/decap-api`    | Decap-compatible HTTP API on top of a Laika storage |
+| `@laikacms/decap/decap-oauth2` | OAuth2 server (GitHub-style) for Decap login        |
+
+The Decap CMS backend that talks to `decap-api` lives in the fork:
+`@laikacms/decap-cms/backends/laika`.
 
 #### `decap-api` options
 

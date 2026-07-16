@@ -59,6 +59,8 @@ export function runAssetsRepositoryContract(testCase: AssetsContractCase): void 
       expect(caps).toBeDefined();
       expect(typeof caps.compatibilityDate).toBe('string');
       expect(caps.pagination).toBeDefined();
+      expect(caps.versionTracking).toBeDefined();
+      expect(caps.changes).toBeDefined();
     });
 
     // --- createAsset then getAsset ---

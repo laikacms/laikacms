@@ -38,6 +38,8 @@ features:
 - [Architecture](./architecture.md) — How Laika CMS is structured
 - [API Reference](./api-reference.md) — Complete API documentation
 - [Packages](./packages.md) — Overview of all packages
+- [Glossary](./glossary.md): shared vocabulary (protocol, repository, adapter, version, sync token,
+  change feed)
 - [Decap CMS Integration](./decap-integration.md) — Using Decap CMS as a frontend
 - [Deployment](./deployment.md) — Production deployment guides
 - [Security](./SECURITY.md) — Security best practices
