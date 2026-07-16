@@ -1,5 +1,68 @@
 # laikacms
 
+## 1.2.0
+
+### Minor Changes
+
+- 827ffe2: **BREAKING (alpha): `documents-api` POST `/operations` — fail-fast batch semantics
+  (ADR-004, LCMS-402)**
+
+  The `/operations` endpoint has been updated to drop the JSON:API Atomic Operations vocabulary and
+  implement honest fail-fast batch semantics:
+
+  - **Request key renamed**: `atomic:operations` → `operations`
+  - **Response key renamed**: `atomic:results` → `results`
+  - **Pre-flight validation**: all operations are shape-validated before any I/O; a batch with any
+    malformed op (e.g. `add` missing `data.id`) returns HTTP 400 with zero writes
+  - **Sequential application**: operations are now applied in order rather than concurrently; the
+    first repository failure stops processing — no subsequent ops run
+  - **Explicit semantics**: a mid-batch repository failure leaves previously-applied ops applied;
+    this endpoint is a fail-fast batch, not a transaction
+
+  This is a wire-breaking change to a public export (`laikacms/documents/api`) of a published
+  package, shipped as `minor` because the project is in alpha and breaking changes are expected.
+  There are no in-repo consumers of the old vocabulary — the Decap backend does not call
+  `/operations`, and `storage-jsonapi-proxy` targets the _storage-api_ `/operations` endpoint, whose
+  `atomic:*` vocabulary is deliberately unchanged.
+
+  **Migration:** rename the request key `atomic:operations` → `operations` and read results from
+  `results` instead of `atomic:results`. Batches that previously returned `200` with a mix of
+  successes and per-op errors now return `400` with zero writes if any op is shape-invalid, and stop
+  at the first repository failure otherwise.
+
+  Note: the **storage-api** `/operations` endpoint is untouched and still speaks `atomic:operations`
+  / `atomic:results`. Only the documents-api endpoint changes.
+
+- **BREAKING (alpha): version tracking and change-signal capabilities, required everywhere**
+
+  `laikacms`:
+
+  - Documents and assets repositories can now advertise per-record `version` tokens
+    (`versionTracking`) and a change-signal surface (`changes`: `getSyncToken` / `listChanges`).
+  - `DocumentsCapabilitiesSchema` and `AssetsCapabilitiesSchema` require the new `versionTracking`
+    and `changes` fields — they are no longer optional. Every repository implementation must
+    explicitly declare `{ supported: false, description }` instead of omitting the field. The
+    documents-api and assets-api `/capabilities` responses now always include both fields.
+  - The deprecated `draftDirectory`, `archiveDirectory`, and `trashDirectory` document-collection
+    settings have been removed. Use `unpublishedStatuses` instead.
+
+  `@laikacms/decap`:
+
+  - `OAuthTotpCallbacks.deletePendingTotpSession`, `getLastTotpStep`, and `setLastTotpStep` are now
+    required. RFC 6238 §5.2 replay protection and single-use pending TOTP sessions are always
+    enforced; implementations can no longer opt out by omitting the callbacks.
+  - The unused `decap-cms-backend-laika` backend has been removed from the package.
+
+  **Migration:**
+
+  - Custom `DocumentsRepository` / `AssetsRepository` implementations: add explicit
+    `versionTracking` and `changes` entries to `getCapabilities()` —
+    `{ supported: false,
+description: '...' }` if unsupported.
+  - TOTP integrations: implement the three callbacks; a minimal store keyed by user id suffices.
+  - Replace any `draftDirectory`/`archiveDirectory`/`trashDirectory` settings with
+    `unpublishedStatuses`.
+
 ## 1.1.0
 
 ### Minor Changes

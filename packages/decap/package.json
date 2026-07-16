@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/decap",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Decap CMS integrations for Laika CMS: OAuth2, widgets, server adapters. AI chat lives in @laikacms/decap-ai. The Decap CMS shell itself (App, DecapCmsProvider, widgets) and the laika backend (`backends/laika`) live in the upstream-named `@laikacms/decap-cms` fork.",
   "keywords": [
     "decap-cms",

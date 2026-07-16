@@ -1,5 +1,13 @@
 # @laikacms/decap-ai
 
+## 1.2.0
+
+### Patch Changes
+
+- Updated dependencies [827ffe2]
+- Updated dependencies
+  - laikacms@1.2.0
+
 ## 1.1.0
 
 ### Patch Changes
