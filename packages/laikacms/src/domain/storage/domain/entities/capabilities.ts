@@ -48,6 +48,40 @@ export const PaginationCapabilitySchema = S.Union([UnsupportedCapability, Pagina
 export type PaginationCapability = S.Schema.Type<typeof PaginationCapabilitySchema>;
 
 /**
+ * Describes one named filter a listing endpoint honors. Filters are
+ * discovered by `name`; the set of names is open — new filters are added as
+ * new descriptors without changing this schema or existing consumers.
+ * Filter values are always strings (they travel as `filter[<name>]` query
+ * parameters); each descriptor's `description` documents the value's
+ * semantics.
+ */
+export const FilterDescriptorSchema = S.Struct({
+  /** Wire name of the filter, e.g. `search`. */
+  name: S.String,
+  /** Human-readable semantics of the filter's value. */
+  description: S.String,
+});
+export type FilterDescriptor = S.Schema.Type<typeof FilterDescriptorSchema>;
+
+/**
+ * Advertises which named filters a listing endpoint honors. Callers must only
+ * pass filters whose `name` appears in `filters`; implementations fail with
+ * `InvalidData` on undeclared names rather than silently ignoring them, so a
+ * filtered listing is never quietly unfiltered.
+ *
+ * Shared between Storage, Documents, and Assets so a single semantic is used
+ * everywhere.
+ */
+export const FilteringSupportEnabled = S.Struct({
+  supported: S.Literal(true),
+  description: S.String,
+  filters: S.Array(FilterDescriptorSchema),
+});
+
+export const FilteringCapabilitySchema = S.Union([UnsupportedCapability, FilteringSupportEnabled]);
+export type FilteringCapability = S.Schema.Type<typeof FilteringCapabilitySchema>;
+
+/**
  * Advertises whether the repository attaches an opaque per-record `version`
  * token to the entities it returns (documents, unpublished, summaries, assets).
  *

@@ -148,10 +148,13 @@ export const make = <A, D extends LaikaDone, R = never>(
           dataMany: values => Effect.asVoid(Queue.offerAll(queue, values.map(Element.data))),
         };
 
+        // matchCauseEffect (not matchEffect): a builder that dies with a
+        // defect must still terminate the queue — otherwise the forked fiber
+        // ends silently and every consumer of the stream hangs forever.
         const builder = build(emit).pipe(
-          Effect.matchEffect({
+          Effect.matchCauseEffect({
             onSuccess: done => Queue.fail(queue, Cause.Done(done)),
-            onFailure: error => Queue.fail(queue, error),
+            onFailure: cause => Queue.failCause(queue, cause as Cause.Cause<LaikaError | Cause.Done<D>>),
           }),
         );
         yield* Effect.forkIn(builder, scope);

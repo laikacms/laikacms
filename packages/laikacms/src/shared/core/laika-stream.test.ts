@@ -178,6 +178,15 @@ describe('LaikaStream — make builder', () => {
     await expect(it.next()).rejects.toBe(err);
   });
 
+  it('a builder that dies with a defect rejects instead of hanging', async () => {
+    const stream = make<number, LaikaDone>(() =>
+      Effect.sync(() => {
+        throw new TypeError('boom — not a LaikaError');
+      })
+    );
+    await expect(runPromise(stream)).rejects.toThrow('boom — not a LaikaError');
+  });
+
   it('dataMany emits all items', async () => {
     const stream = make<number, LaikaDone>(emit =>
       Effect.gen(function*() {

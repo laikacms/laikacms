@@ -1,5 +1,10 @@
 import * as S from 'effect/Schema';
-import { ChangesCapabilitySchema, PaginationCapabilitySchema, VersionTrackingCapabilitySchema } from 'laikacms/storage';
+import {
+  ChangesCapabilitySchema,
+  FilteringCapabilitySchema,
+  PaginationCapabilitySchema,
+  VersionTrackingCapabilitySchema,
+} from 'laikacms/storage';
 
 /**
  * Compatibility-date brand for the Assets domain. Distinct from the Storage and
@@ -25,6 +30,12 @@ export const AssetsCapabilitiesSchema = S.toStandardSchemaV1(S.Struct({
 
   /** Change-signal surface (`getSyncToken` / `listChanges`). */
   changes: ChangesCapabilitySchema,
+
+  /**
+   * Named filters honored by `listResources` (e.g. `search`). Optional so
+   * existing capability literals stay valid; absent means unsupported.
+   */
+  filtering: S.optional(FilteringCapabilitySchema),
 }));
 
 export type AssetsCapabilities = S.Schema.Type<typeof AssetsCapabilitiesSchema>;

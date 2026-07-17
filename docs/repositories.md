@@ -240,6 +240,40 @@ This allows:
 - Consistent serialization/deserialization
 - Unified error handling and retry logic
 
+### HTTP Connection Reuse in Proxy Repositories
+
+The `*-jsonapi-proxy` repositories (storage, documents, assets) send every request through an Effect
+`HttpClient` (`effect/unstable/http`) owned by a shared `JsonApiHttpTransport`
+(`laikacms/json-api`). Each repository accepts an optional `httpClient` in its constructor options;
+when omitted, a process-wide default backed by `globalThis.fetch` is used, which already reuses
+connections on Node ≥ 18 (undici's pooled fetch) and on Cloudflare Workers (runtime-managed).
+
+To tune TCP/TLS session reuse on Node, build one client at the composition root and share it across
+every proxy repository so they draw from a single connection pool:
+
+```ts
+import { httpClientFromFetch } from 'laikacms/json-api';
+import { Agent, fetch as undiciFetch } from 'undici';
+
+const dispatcher = new Agent({ keepAliveTimeout: 30_000, connections: 128 });
+const httpClient = httpClientFromFetch(
+  (input, init) => undiciFetch(input, { ...init, dispatcher }),
+);
+
+const storage = new StorageJsonApiProxyRepository({ baseUrl, httpClient });
+const documents = new DocumentsJsonApiProxyRepository({ baseUrl, httpClient });
+const assets = new AssetsJsonApiProxyRepository({ baseUrl, httpClient });
+```
+
+Any `HttpClient.HttpClient` works here — including clients built from `@effect/platform-node`'s
+`NodeHttpClient` layers — so retry, tracing, and rate-limiting middleware
+(`HttpClient.retryTransient`, `HttpClient.withRateLimiter`, …) can be composed onto the client
+without touching the repositories.
+
+`storage-webdav` is the one HTTP adapter that stays on raw `fetch` (injectable via its `fetch`
+config option): WebDAV verbs like `PROPFIND` are outside the `HttpMethod` union the Effect client
+accepts.
+
 ## Key Benefits
 
 1. **Flexibility**: Swap storage backends without changing application code

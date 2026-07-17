@@ -262,6 +262,39 @@ const capabilitiesResourceSchema: OpenApiSchema = {
             },
           ],
         },
+        filtering: {
+          description: 'Named listing filters honored by GET /resources as filter[<name>] query '
+            + 'parameters. Absent means unsupported. Undeclared filter names are rejected with 400.',
+          oneOf: [
+            {
+              type: 'object',
+              required: ['supported', 'description'],
+              properties: {
+                supported: { type: 'boolean', const: false },
+                description: { type: 'string' },
+              },
+            },
+            {
+              type: 'object',
+              required: ['supported', 'description', 'filters'],
+              properties: {
+                supported: { type: 'boolean', const: true },
+                description: { type: 'string' },
+                filters: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    required: ['name', 'description'],
+                    properties: {
+                      name: { type: 'string', description: "Wire name, used as filter[<name>] (e.g. 'search')." },
+                      description: { type: 'string' },
+                    },
+                  },
+                },
+              },
+            },
+          ],
+        },
       },
     },
     links: ref('ResourceLinks'),
@@ -695,6 +728,15 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
               schema: { type: 'integer', minimum: 1, default: 1 },
             },
             {
+              name: 'filter[search]',
+              in: 'query',
+              description: 'Listing filter (when declared by the backend): case-insensitive substring match '
+                + 'on the resource key. Listing filters are generic — any filter[<name>] declared in GET '
+                + '/capabilities under `filtering.filters` is forwarded to the backend; undeclared names are '
+                + 'rejected with 400.',
+              schema: { type: 'string' },
+            },
+            {
               name: 'page[size]',
               in: 'query',
               description: 'Items per page. Defaults to 100.',
@@ -709,8 +751,9 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
             {
               name: 'page[after]',
               in: 'query',
-              description: 'Cursor: return items after this resource key. Rejected with 400 when the '
-                + 'backend declares cursor pagination unsupported (see GET /capabilities).',
+              description: 'Cursor: return items after this opaque cursor position. Pass an empty value to '
+                + 'start a cursor iteration from the beginning; follow links.next to continue it. Rejected '
+                + 'with 400 when the backend declares cursor pagination unsupported (see GET /capabilities).',
               schema: { type: 'string' },
             },
             {

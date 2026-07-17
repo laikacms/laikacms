@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { LaikaStream, LaikaTask } from 'laikacms/core';
+import { InvalidData, LaikaStream, LaikaTask } from 'laikacms/core';
 
 import { R2AssetsRepository } from './r2-assets-repository.js';
 
@@ -37,19 +37,28 @@ const makeBucket = (forbiddenPrefix?: string) => {
       store.set(key, stored);
       return toR2(stored);
     },
-    async list(opts: { prefix?: string, delimiter?: string, cursor?: string }) {
+    async list(opts: { prefix?: string, delimiter?: string, cursor?: string, limit?: number }) {
       if (forbiddenPrefix !== undefined && opts.prefix === forbiddenPrefix) {
         throw new Error('boom: forbidden prefix');
       }
       const prefix = opts.prefix ?? '';
       const delim = opts.delimiter;
+      const limit = opts.limit ?? 1000;
       const matching = Array.from(store.values())
         .filter(a => a.key.startsWith(prefix))
         .sort((a, b) => (a.key < b.key ? -1 : a.key > b.key ? 1 : 0));
 
+      // Cursor semantics mirror InMemoryR2AssetsBucket (testing.ts): the
+      // cursor is the key of the next unreturned object; resuming from it
+      // includes that object.
+      const startIdx = opts.cursor ? matching.findIndex(a => a.key === opts.cursor) : 0;
+      const sliceStart = startIdx === -1 ? matching.length : startIdx;
+
       const objects: ReturnType<typeof toR2>[] = [];
       const delimitedPrefixSet = new Set<string>();
-      for (const a of matching) {
+      let i = sliceStart;
+      for (; i < matching.length && objects.length < limit; i++) {
+        const a = matching[i]!;
         if (delim) {
           const tail = a.key.slice(prefix.length);
           const sepIdx = tail.indexOf(delim);
@@ -60,11 +69,12 @@ const makeBucket = (forbiddenPrefix?: string) => {
         }
         objects.push(toR2(a));
       }
+      const truncated = i < matching.length;
       return {
         objects,
         delimitedPrefixes: Array.from(delimitedPrefixSet).sort(),
-        truncated: false,
-        cursor: undefined,
+        truncated,
+        cursor: truncated ? matching[i]!.key : undefined,
       };
     },
   };
@@ -238,6 +248,140 @@ describe('R2AssetsRepository.listResources', () => {
   });
 });
 
+describe('R2AssetsRepository.listResources — native cursor pagination', () => {
+  /** Extract the `after` cursor from a done value's pagination, if any. */
+  const afterOf = (done: { pagination?: unknown }): string | undefined => {
+    const p = done.pagination as { after?: string } | undefined;
+    return p && 'after' in p ? p.after : undefined;
+  };
+
+  const makeRepoWithFiveAssets = async () => {
+    const bucket = makeBucket();
+    for (let i = 0; i < 5; i++) await bucket.put(`img${i}.png`, PNG);
+    const repo = new R2AssetsRepository({
+      bucket: bucket as unknown as R2Bucket,
+      dangerouslyAllowAllFiles: true,
+    });
+    return repo;
+  };
+
+  it('first cursor page emits perPage assets and done.pagination carries the next cursor', async () => {
+    const repo = await makeRepoWithFiveAssets();
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listResources('', { depth: 10, pagination: { after: undefined, perPage: 2 } }),
+    );
+
+    expect(collected.data).toHaveLength(2);
+    expect(collected.data.every(r => r.type === 'asset')).toBe(true);
+    const pagination = collected.done.pagination as { after?: string, perPage?: number } | undefined;
+    expect(pagination).toBeDefined();
+    expect(typeof pagination!.after).toBe('string');
+    expect(pagination!.perPage).toBe(2);
+  });
+
+  it('resuming with done.pagination.after walks all pages exactly once until exhaustion', async () => {
+    const repo = await makeRepoWithFiveAssets();
+
+    const seen: string[] = [];
+    let after: string | undefined = undefined;
+    let lastDone: { pagination?: unknown } = {};
+    // Iterate defensively bounded: 5 assets at perPage 2 must finish in 3 pages.
+    for (let page = 0; page < 10; page++) {
+      const collected = await LaikaStream.runPromiseCollect(
+        repo.listResources('', { depth: 10, pagination: { after, perPage: 2 } }),
+      );
+      seen.push(...collected.data.map(r => r.key));
+      lastDone = collected.done;
+      after = afterOf(collected.done);
+      if (after === undefined) break;
+    }
+
+    // Final done has no continuation.
+    expect(lastDone.pagination).toBeUndefined();
+    // Union across pages is the full listing, without duplicates.
+    expect(seen).toHaveLength(5);
+    expect(new Set(seen).size).toBe(5);
+    expect([...seen].sort()).toEqual(['img0.png', 'img1.png', 'img2.png', 'img3.png', 'img4.png']);
+  });
+
+  it('skips .keep folder markers in cursor mode', async () => {
+    const bucket = makeBucket();
+    await bucket.put('root.png', PNG);
+    await bucket.put('sub/.keep', new Uint8Array(0));
+    await bucket.put('sub/b.png', PNG);
+    const repo = new R2AssetsRepository({
+      bucket: bucket as unknown as R2Bucket,
+      dangerouslyAllowAllFiles: true,
+    });
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listResources('', { depth: 10, pagination: { after: undefined, perPage: 10 } }),
+    );
+
+    const keys = collected.data.map(r => r.key).sort();
+    expect(keys).toEqual(['root.png', 'sub/b.png']);
+    expect(collected.done.pagination).toBeUndefined();
+  });
+});
+
+describe('R2AssetsRepository.listResources — filters', () => {
+  const makeRepoWithMixedKeys = async () => {
+    const bucket = makeBucket();
+    await bucket.put('Logo-Big.png', PNG);
+    await bucket.put('logo-small.png', PNG);
+    await bucket.put('photo.jpg', PNG);
+    return new R2AssetsRepository({
+      bucket: bucket as unknown as R2Bucket,
+      dangerouslyAllowAllFiles: true,
+    });
+  };
+
+  it('search filter matches keys case-insensitively on the cursor path', async () => {
+    const repo = await makeRepoWithMixedKeys();
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listResources('', {
+        depth: 10,
+        pagination: { after: undefined, perPage: 10 },
+        filters: { search: 'logo' },
+      }),
+    );
+
+    expect(collected.data.map(r => r.key).sort()).toEqual(['Logo-Big.png', 'logo-small.png']);
+    expect(collected.done.pagination).toBeUndefined();
+  });
+
+  it('search filter matches keys case-insensitively on the offset path and total counts the filtered set', async () => {
+    const repo = await makeRepoWithMixedKeys();
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listResources('', {
+        depth: 1,
+        pagination: { offset: 0, limit: 10 },
+        filters: { search: 'LOGO' },
+      }),
+    );
+
+    expect(collected.data.map(r => r.key).sort()).toEqual(['Logo-Big.png', 'logo-small.png']);
+    expect(collected.done.total).toBe(2);
+  });
+
+  it('fails with InvalidData on an undeclared filter name', async () => {
+    const repo = await makeRepoWithMixedKeys();
+
+    await expect(
+      LaikaStream.runPromiseCollect(
+        repo.listResources('', {
+          depth: 1,
+          pagination: { offset: 0, limit: 10 },
+          filters: { bogus: 'x' },
+        }),
+      ),
+    ).rejects.toBeInstanceOf(InvalidData);
+  });
+});
+
 describe('R2AssetsRepository — getCapabilities', () => {
   it('returns a compatibilityDate string and a pagination object', async () => {
     const bucket = makeBucket();
@@ -250,6 +394,19 @@ describe('R2AssetsRepository — getCapabilities', () => {
     expect(caps.compatibilityDate.length).toBeGreaterThan(0);
     expect(caps.pagination).toBeDefined();
     expect(caps.pagination.supported).toBe(true);
+  });
+
+  it('declares the search filter under filtering.filters', async () => {
+    const bucket = makeBucket();
+    const repo = new R2AssetsRepository({
+      bucket: bucket as unknown as R2Bucket,
+      dangerouslyAllowAllFiles: true,
+    });
+    const caps = await LaikaTask.runPromise(repo.getCapabilities());
+    expect(caps.filtering?.supported).toBe(true);
+    if (caps.filtering?.supported) {
+      expect(caps.filtering.filters.map(f => f.name)).toContain('search');
+    }
   });
 });
 

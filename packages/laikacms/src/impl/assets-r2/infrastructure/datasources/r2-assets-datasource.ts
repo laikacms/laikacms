@@ -298,6 +298,62 @@ export class R2AssetsDataSource {
   }
 
   /**
+   * List one native R2 page of objects under a prefix, recursively (no
+   * delimiter), surfacing R2's own continuation cursor instead of draining.
+   * Returns only files (`.keep` folder markers are skipped, so a page may
+   * carry slightly fewer entries than `limit`); a returned `cursor` means the
+   * listing is truncated and can be resumed from that exact position.
+   */
+  async listPage(
+    prefix: string,
+    options?: { cursor?: string, limit?: number, includeMetadata?: boolean },
+  ): Promise<LaikaResult<{ entries: R2AssetEntry[], cursor?: string }>> {
+    const normalizedPrefix = this.normalizeKey(prefix);
+    const searchPrefix = normalizedPrefix ? `${normalizedPrefix}/` : '';
+
+    try {
+      const listed = await this.bucket.list({
+        prefix: searchPrefix,
+        cursor: options?.cursor,
+        limit: options?.limit,
+        include: options?.includeMetadata ? ['httpMetadata', 'customMetadata'] : undefined,
+      });
+
+      const entries: R2AssetEntry[] = [];
+      for (const object of listed.objects) {
+        if (object.key.endsWith('/.keep') || object.key === '.keep') {
+          continue;
+        }
+        entries.push({
+          type: 'file',
+          key: object.key,
+          size: object.size,
+          etag: object.etag,
+          uploaded: object.uploaded,
+          httpMetadata: object.httpMetadata
+            ? {
+              contentType: object.httpMetadata.contentType,
+            }
+            : undefined,
+          customMetadata: object.customMetadata,
+        });
+      }
+
+      return Result.succeed({
+        entries,
+        cursor: listed.truncated ? listed.cursor : undefined,
+      });
+    } catch (error) {
+      console.error(error);
+      return Result.fail(
+        new InternalError(`Failed to list page: ${error instanceof Error ? error.message : String(error)}`, {
+          cause: Cause.fail(error),
+        }),
+      );
+    }
+  }
+
+  /**
    * Check if a key represents a directory (has objects with that prefix)
    */
   async isDirectory(key: string): Promise<boolean> {

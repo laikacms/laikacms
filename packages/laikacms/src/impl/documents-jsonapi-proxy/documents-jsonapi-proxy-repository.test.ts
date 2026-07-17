@@ -23,6 +23,11 @@ const revisionDoc = (id = 'posts/hello', revision = 'rev-abc') => ({
   attributes: { type: 'revision', revision, language: 'en', content: {}, createdAt: '2026-01-01T00:00:00Z' },
 });
 
+/** Decode a captured fetch body (string or encoded Uint8Array) back to JSON. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors JSON.parse's return type
+const parseBody = (body: unknown): any =>
+  JSON.parse(typeof body === 'string' ? body : new TextDecoder().decode(body as Uint8Array));
+
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -106,8 +111,8 @@ describe('DocumentsJsonApiProxyRepository.listRecords', () => {
     let capturedUrl = '';
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL) => {
+        capturedUrl = String(url);
         return jsonResponse({ data: [], meta: { page: { total: 0 } } });
       }),
     );
@@ -124,8 +129,8 @@ describe('DocumentsJsonApiProxyRepository.listRecords', () => {
     let capturedUrl = '';
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL) => {
+        capturedUrl = String(url);
         return jsonResponse({ data: [], meta: { page: { total: 0 } } });
       }),
     );
@@ -174,8 +179,8 @@ describe('DocumentsJsonApiProxyRepository.listRecordSummaries', () => {
     let capturedUrl = '';
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL) => {
+        capturedUrl = String(url);
         return jsonResponse({ data: [], meta: { page: { total: 0 } } });
       }),
     );
@@ -192,8 +197,8 @@ describe('DocumentsJsonApiProxyRepository.listRecordSummaries', () => {
     let capturedUrl = '';
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL) => {
+        capturedUrl = String(url);
         return jsonResponse({ data: [], meta: { page: { total: 0 } } });
       }),
     );
@@ -319,8 +324,8 @@ describe('DocumentsJsonApiProxyRepository.getDocument', () => {
     let capturedUrl = '';
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL) => {
+        capturedUrl = String(url);
         return jsonResponse({ data: publishedDoc('posts/hello world') });
       }),
     );
@@ -375,7 +380,7 @@ describe('DocumentsJsonApiProxyRepository.createDocument', () => {
     );
     expect(doc.key).toBe('posts/new');
     expect(capturedInit?.method).toBe('POST');
-    const body = JSON.parse(capturedInit?.body as string);
+    const body = parseBody(capturedInit?.body);
     expect(body.data.type).toBe('published');
     expect(body.data.id).toBe('posts/new');
   });
@@ -407,8 +412,8 @@ describe('DocumentsJsonApiProxyRepository.updateDocument', () => {
     let capturedInit: RequestInit | undefined;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: RequestInit) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL, init: RequestInit) => {
+        capturedUrl = String(url);
         capturedInit = init;
         return jsonResponse({ data: publishedDoc('posts/hello') });
       }),
@@ -429,8 +434,8 @@ describe('DocumentsJsonApiProxyRepository.getUnpublished', () => {
     let capturedUrl = '';
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL) => {
+        capturedUrl = String(url);
         return jsonResponse({ data: unpublishedDoc('drafts/hello') });
       }),
     );
@@ -449,8 +454,8 @@ describe('DocumentsJsonApiProxyRepository.createUnpublished', () => {
     let capturedInit: RequestInit | undefined;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: RequestInit) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL, init: RequestInit) => {
+        capturedUrl = String(url);
         capturedInit = init;
         return jsonResponse({ data: unpublishedDoc('drafts/new', 'draft') });
       }),
@@ -464,7 +469,7 @@ describe('DocumentsJsonApiProxyRepository.createUnpublished', () => {
     expect(doc.status).toBe('draft');
     expect(capturedUrl).toContain('/unpublished');
     expect(capturedInit?.method).toBe('POST');
-    const body = JSON.parse(capturedInit?.body as string);
+    const body = parseBody(capturedInit?.body);
     expect(body.data.type).toBe('unpublished');
   });
 });
@@ -475,8 +480,8 @@ describe('DocumentsJsonApiProxyRepository.updateUnpublished', () => {
     let capturedInit: RequestInit | undefined;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: RequestInit) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL, init: RequestInit) => {
+        capturedUrl = String(url);
         capturedInit = init;
         return jsonResponse({ data: unpublishedDoc('drafts/hello', 'pending_review') });
       }),
@@ -497,8 +502,8 @@ describe('DocumentsJsonApiProxyRepository.deleteUnpublished', () => {
     let capturedUrl = '';
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL) => {
+        capturedUrl = String(url);
         return jsonResponse({
           meta: {
             deleted: true,
@@ -529,8 +534,8 @@ describe('DocumentsJsonApiProxyRepository.publish', () => {
     let capturedInit: RequestInit | undefined;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: RequestInit) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL, init: RequestInit) => {
+        capturedUrl = String(url);
         capturedInit = init;
         return jsonResponse({ data: publishedDoc('posts/hello') });
       }),
@@ -551,8 +556,8 @@ describe('DocumentsJsonApiProxyRepository.unpublish', () => {
     let capturedInit: RequestInit | undefined;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: RequestInit) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL, init: RequestInit) => {
+        capturedUrl = String(url);
         capturedInit = init;
         return jsonResponse({ data: unpublishedDoc('posts/hello', 'archived') });
       }),
@@ -564,7 +569,7 @@ describe('DocumentsJsonApiProxyRepository.unpublish', () => {
     expect(doc.status).toBe('archived');
     expect(capturedUrl).toContain('/published/posts%2Fhello/unpublish');
     expect(capturedInit?.method).toBe('POST');
-    const body = JSON.parse(capturedInit?.body as string);
+    const body = parseBody(capturedInit?.body);
     expect(body.data.attributes.status).toBe('archived');
   });
 });
@@ -574,8 +579,8 @@ describe('DocumentsJsonApiProxyRepository.getRevision', () => {
     let capturedUrl = '';
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL) => {
+        capturedUrl = String(url);
         return jsonResponse({ data: revisionDoc('posts/hello', 'rev-abc') });
       }),
     );
@@ -591,8 +596,8 @@ describe('DocumentsJsonApiProxyRepository.getRevision', () => {
     let capturedUrl = '';
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL) => {
+        capturedUrl = String(url);
         return jsonResponse({ data: revisionDoc('posts/a b', 'rev 1') });
       }),
     );
@@ -694,8 +699,8 @@ describe('DocumentsJsonApiProxyRepository.createRevision', () => {
 
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (url: string, init: RequestInit) => {
-        capturedUrl = url;
+      vi.fn(async (url: string | URL, init: RequestInit) => {
+        capturedUrl = String(url);
         capturedInit = init;
         return jsonResponse({ data: revisionDoc('posts/hello', 'rev-new') });
       }),
@@ -716,7 +721,7 @@ describe('DocumentsJsonApiProxyRepository.createRevision', () => {
     expect(capturedUrl).toContain('/revisions');
     expect(capturedInit?.method).toBe('POST');
 
-    const body = JSON.parse(capturedInit?.body as string);
+    const body = parseBody(capturedInit?.body);
     expect(body.data.type).toBe('revision');
     expect(body.data.id).toBe('posts/hello');
     expect(body.data.attributes.revision).toBe('rev-new');

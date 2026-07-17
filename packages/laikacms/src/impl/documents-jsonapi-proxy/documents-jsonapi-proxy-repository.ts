@@ -1,7 +1,7 @@
 import * as Effect from 'effect/Effect';
+import type * as HttpClient from 'effect/unstable/http/HttpClient';
 
 import {
-  ErrorCodeToClassMap,
   IllegalStateException,
   InternalError,
   InvalidData,
@@ -54,6 +54,7 @@ import {
 } from 'laikacms/documents/api';
 import { type ChangeSummary, SyncToken } from 'laikacms/storage';
 
+import { JsonApiHttpTransport } from '../../shared/json-api/http-transport.js';
 import { paginationCodec } from '../../shared/json-api/pagination-codec.js';
 import { warningsFromMeta } from '../../shared/json-api/utilities.js';
 
@@ -62,33 +63,27 @@ export interface DocumentsJsonApiProxyRepositoryOptions {
   authToken?: string;
   /** Dynamic token provider — called before each request. */
   tokenPromise?: () => Promise<string>;
+  /**
+   * Effect `HttpClient` used for every request. Provide one client per
+   * process (see `httpClientFromFetch` in `laikacms/json-api`) so all proxy
+   * repositories share a single connection pool. Defaults to a client backed
+   * by `globalThis.fetch`.
+   */
+  httpClient?: HttpClient.HttpClient;
 }
 
 /**
  * Proxies all document operations through a remote JSON:API endpoint.
  */
 export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
-  private readonly baseUrl: string;
-  private readonly staticHeaders: HeadersInit;
-  private readonly tokenPromise?: () => Promise<string>;
+  private readonly transport: JsonApiHttpTransport;
 
   constructor(options: DocumentsJsonApiProxyRepositoryOptions) {
     super();
-    this.baseUrl = options.baseUrl.replace(/\/$/, '');
-    this.tokenPromise = options.tokenPromise;
-    this.staticHeaders = {
-      'Content-Type': 'application/vnd.api+json',
-      Accept: 'application/vnd.api+json',
-      ...(options.authToken ? { Authorization: `Bearer ${options.authToken}` } : {}),
-    };
-  }
-
-  private async getHeaders(): Promise<HeadersInit> {
-    if (this.tokenPromise) {
-      const token = await this.tokenPromise();
-      return { ...this.staticHeaders, Authorization: `Bearer ${token}` };
-    }
-    return this.staticHeaders;
+    this.transport = new JsonApiHttpTransport({
+      ...options,
+      networkError: message => new InternalError(message),
+    });
   }
 
   /** Execute an HTTP request and return the JSON:API resource or fail. */
@@ -124,50 +119,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
     path: string,
     init: { method: string, body?: unknown } = { method: 'GET' },
   ): Effect.Effect<{ data?: unknown, errors?: unknown[] } & Record<string, unknown>, LaikaError> {
-    return Effect.gen({ self: this }, function*() {
-      const headers = yield* Effect.promise(() => this.getHeaders());
-      const response = yield* Effect.tryPromise({
-        try: () =>
-          fetch(`${this.baseUrl}${path}`, {
-            method: init.method,
-            headers,
-            body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
-          }),
-        catch: e => new InternalError((e as Error).message),
-      });
-      const contentType = response.headers.get('content-type');
-      const isJson = contentType?.includes('application/vnd.api+json')
-        || contentType?.includes('application/json');
-      if (!isJson) {
-        const bodySnippet = yield* Effect.promise(() =>
-          response.text().then(t => t.slice(0, 500)).catch(() => '<unreadable>')
-        );
-        return yield* Effect.fail(
-          new InvalidData(
-            `${init.method} ${path} → ${response.status} ${response.statusText} `
-              + `(content-type: ${contentType ?? 'none'}): ${bodySnippet}`,
-          ),
-        );
-      }
-      const json = yield* Effect.promise(() => response.json() as Promise<Record<string, unknown>>);
-      if (!response.ok || (Array.isArray(json.errors) && json.errors.length > 0)) {
-        const errors = (Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }]) as Array<
-          { detail?: string, title?: string, code?: string }
-        >;
-        const detail = errors.map(e => e.detail || e.title || 'Unknown error').join(', ');
-        // Re-hydrate the original typed LaikaError subclass using the code field
-        // so consumers can instanceof-check (e.g. NotFoundError). Falls back to
-        // InvalidData when the code is absent or unknown.
-        const firstCode = errors[0]?.code;
-        const ErrorCtor = firstCode
-          ? (ErrorCodeToClassMap as Record<string, new(msg: string) => LaikaError>)[firstCode]
-          : undefined;
-        return yield* Effect.fail(
-          ErrorCtor ? new ErrorCtor(detail) : new InvalidData(detail),
-        );
-      }
-      return json as { data?: unknown, errors?: unknown[] } & Record<string, unknown>;
-    });
+    return this.transport.fetchJson(path, init, { rehydrateErrorCodes: true });
   }
 
   /** Issue a void/DELETE request and verify the response is OK. */

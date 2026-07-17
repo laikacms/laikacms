@@ -189,7 +189,7 @@ describe('StorageJsonApiProxyRepository.createOrUpdateObject', () => {
     // calls updateObject. Both inner tasks may emit warnings if the upstream
     // attached meta.warnings to either response. The delegation should
     // forward both into the outer task — not drop them at runValue.
-    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+    const fetchMock = vi.fn(async (url: string | URL, init?: RequestInit) => {
       const u = new URL(url);
       if (u.pathname === '/objects/notes%2Fhello' && (!init || init.method === 'GET')) {
         // getObject upstream succeeds — but emits a warning on the read
@@ -333,7 +333,7 @@ describe('StorageJsonApiProxyRepository.getObject', () => {
     const proxy = new StorageJsonApiProxyRepository({ baseUrl: 'http://upstream' });
     await LaikaTask.runPromiseCollect(proxy.getObject('notes/hello world'));
 
-    const calledUrl: string = fetchMock.mock.calls[0]?.[0] as string;
+    const calledUrl: string = String(fetchMock.mock.calls[0]?.[0]);
     expect(calledUrl).toContain(encodeURIComponent('notes/hello world'));
   });
 
@@ -583,7 +583,7 @@ describe('StorageJsonApiProxyRepository.createFolder', () => {
     expect(collected.value.key).toBe('drafts');
     expect(collected.value.type).toBe('folder');
     // POSTed to /atoms, not /folders
-    const calledUrl: string = fetchMock.mock.calls[0]?.[0] as string;
+    const calledUrl: string = String(fetchMock.mock.calls[0]?.[0]);
     expect(calledUrl).toMatch(/\/atoms$/);
     expect(collected.recoverableErrors).toHaveLength(0);
   });
@@ -668,7 +668,7 @@ describe('StorageJsonApiProxyRepository.getAtom', () => {
   });
 
   it('falls back to getFolder when getObject fails, returning the Folder', async () => {
-    const fetchMock = vi.fn(async (url: string) => {
+    const fetchMock = vi.fn(async (url: string | URL) => {
       const u = new URL(url);
       if (u.pathname.startsWith('/objects/')) {
         return new Response(

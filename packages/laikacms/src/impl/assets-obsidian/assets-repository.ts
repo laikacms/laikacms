@@ -21,7 +21,7 @@ import type {
   ListResourcesOptions,
   Resource,
 } from 'laikacms/assets';
-import { AssetsCompatibilityDate, AssetsRepository } from 'laikacms/assets';
+import { AssetsCompatibilityDate, AssetsRepository, validateListFilters } from 'laikacms/assets';
 import {
   BadRequestError,
   extNameToMimeType,
@@ -34,6 +34,18 @@ import {
 } from 'laikacms/core';
 import type { Folder, FolderCreate, Key } from 'laikacms/storage';
 import { applyPagination, naturalCompare } from 'laikacms/storage';
+
+/** Filters honored by `listResources`; advertised via `getCapabilities().filtering`. */
+const OBSIDIAN_FILTERING_CAPABILITY = {
+  supported: true,
+  description: 'Filters compose (AND) and apply to resource keys during the in-memory walk.',
+  filters: [
+    {
+      name: 'search',
+      description: 'Case-insensitive substring match on the resource key.',
+    },
+  ],
+} as const;
 
 /** Lift a `Promise<LaikaResult<A>>` into `Effect<A, LaikaError>`. */
 const liftResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
@@ -236,6 +248,7 @@ export class ObsidianAssetsRepository extends AssetsRepository {
         supported: false,
         description: 'No change feed over the vault; getSyncToken/listChanges are not implemented.',
       },
+      filtering: OBSIDIAN_FILTERING_CAPABILITY,
     });
   }
 
@@ -266,10 +279,18 @@ export class ObsidianAssetsRepository extends AssetsRepository {
   ): LaikaStream.LaikaStream<Resource, ListResourcesDone> {
     return LaikaStream.make<Resource, ListResourcesDone>(emit =>
       Effect.gen({ self: this }, function*() {
+        const filterError = validateListFilters(options.filters, OBSIDIAN_FILTERING_CAPABILITY);
+        if (filterError) {
+          return yield* Effect.fail(filterError);
+        }
+        const search = options.filters?.['search']?.toLowerCase();
         const maxDepth = Math.max(1, options.depth ?? 1);
         const { resources, warnings } = yield* liftResult(this.walk(folderKey, maxDepth));
         for (const w of warnings) yield* emit.recoverableError(w);
-        const sorted = [...resources].sort((a, b) => naturalCompare(a.key, b.key));
+        const filtered = search
+          ? resources.filter(r => r.key.toLowerCase().includes(search))
+          : resources;
+        const sorted = [...filtered].sort((a, b) => naturalCompare(a.key, b.key));
         const page = applyPagination(sorted, options.pagination);
         for (const resource of page) yield* emit.data(resource);
         return { total: sorted.length };

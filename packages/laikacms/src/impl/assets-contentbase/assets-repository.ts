@@ -18,6 +18,7 @@ import {
   type ListResourcesDone,
   type ListResourcesOptions,
   type Resource,
+  validateListFilters,
 } from 'laikacms/assets';
 import type { ContentBaseSettingsProvider, MediaCollectionSettings } from 'laikacms/contentbase-settings';
 import type { LaikaDone, LaikaError } from 'laikacms/core';
@@ -98,6 +99,10 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
           changes: {
             supported: false,
             description: 'The underlying storage repository does not expose a change feed.',
+          },
+          filtering: {
+            supported: false,
+            description: 'The underlying storage repository does not support listing filters.',
           },
         };
       })
@@ -238,6 +243,10 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
   ): LaikaStream.LaikaStream<Resource, ListResourcesDone> {
     return LaikaStream.make<Resource, ListResourcesDone>(emit =>
       Effect.gen({ self: this }, function*() {
+        const filterError = validateListFilters(options.filters, undefined);
+        if (filterError) {
+          return yield* Effect.fail(filterError);
+        }
         const { collection, remainder } = this.parseKey(folderKey);
         if (!collection) {
           return yield* Effect.fail(
@@ -258,7 +267,10 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
         for (const atom of summaries) {
           yield* emit.data(this.summaryToResource(atom, resolved.directory, collection));
         }
-        return { total: storageDone.total ?? summaries.length };
+        return {
+          total: storageDone.total ?? summaries.length,
+          ...(storageDone.pagination ? { pagination: storageDone.pagination } : {}),
+        };
       })
     );
   }

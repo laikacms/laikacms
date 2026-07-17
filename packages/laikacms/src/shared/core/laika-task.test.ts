@@ -90,6 +90,15 @@ describe('LaikaTask — make builder', () => {
     expect(first.done).toBe(false);
     await expect(it.next()).rejects.toBe(err);
   });
+
+  it('a builder that dies with a defect rejects instead of hanging', async () => {
+    const task = Task.make<string>(() =>
+      Effect.sync(() => {
+        throw new TypeError('boom — not a LaikaError');
+      })
+    );
+    await expect(Task.runPromise(task)).rejects.toThrow('boom — not a LaikaError');
+  });
 });
 
 describe('LaikaTask — run helpers', () => {

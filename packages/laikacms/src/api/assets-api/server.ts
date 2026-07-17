@@ -108,6 +108,14 @@ import { buildAssetsOpenApi } from './openapi.js';
 // Types
 // ============================================
 
+/**
+ * `filter[...]` keys with structural meaning (folder/prefix scope the
+ * listing, depth bounds the traversal, since drives /changes). Every other
+ * `filter[<name>]` is a repository-declared listing filter and is forwarded
+ * generically after validation against `getCapabilities().filtering`.
+ */
+const RESERVED_FILTER_KEYS = new Set(['folder', 'prefix', 'depth', 'since']);
+
 export interface AssetsApi {
   fetch(req: Request): Promise<Response>;
 }
@@ -443,6 +451,41 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       const depthParam = str(query['filter[depth]']) || str(query['depth']);
       const depth = depthParam ? Math.max(1, parseInt(depthParam, 10) || 1) : 1;
 
+      // Generic filter forwarding: every `filter[<name>]` param that is not a
+      // structural key (folder/prefix/depth are routing/traversal concerns
+      // parsed above) is validated against the repository's declared
+      // filtering capability and forwarded verbatim. The server needs no
+      // changes when a repository adds a new filter — it only relays names
+      // the repository has declared.
+      const filters: Record<string, string> = {};
+      for (const [paramKey, paramValue] of Object.entries(query)) {
+        const match = /^filter\[(.+)\]$/.exec(paramKey);
+        if (!match || RESERVED_FILTER_KEYS.has(match[1])) continue;
+        const value = str(paramValue);
+        if (value !== undefined) filters[match[1]] = value;
+      }
+      if (Object.keys(filters).length > 0) {
+        // Mirrors the cursor guard above: reject undeclared filters with a
+        // pointer to /capabilities; fail open when capabilities are
+        // unavailable (the repository still fails loudly on undeclared
+        // names, so a filtered listing is never quietly unfiltered).
+        const capsResult = await firstResult(repository.getCapabilities());
+        if (Result.isSuccess(capsResult)) {
+          const filtering = capsResult.success.filtering;
+          const declared = new Set(filtering?.supported ? filtering.filters.map(f => f.name) : []);
+          const unsupported = Object.keys(filters).filter(name => !declared.has(name));
+          if (unsupported.length > 0) {
+            return respondError(
+              new InvalidData(
+                `Unsupported filter(s): ${unsupported.join(', ')}. `
+                  + 'Consult GET /capabilities for the filters this assets backend supports.',
+              ),
+              400,
+            );
+          }
+        }
+      }
+
       // Build pagination options from the shared pagination union. Forward
       // cursor (`after`) maps directly; backward cursor (`before`) is treated
       // as forward from that point for repository calls that only support
@@ -468,10 +511,16 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         : pagination;
       // Convert page-based pagination to offset for the backend call.
       // page[number]=N → offset=(N-1)*perPage so page advances correctly.
+      // Cursor-shaped requests stay cursor-shaped even when `after` is still
+      // undefined (start of a cursor iteration, requested as an empty
+      // page[after]=): backends with native cursors must take their cursor
+      // path from the first page or their next-page cursor never exists.
       const pageNum = 'page' in pagination && typeof pagination.page === 'number' ? pagination.page : undefined;
       const paginationOptions: { offset: number, limit: number } | { after: string | undefined, perPage: number } =
-        afterCursor !== undefined
+        'after' in pagination
           ? { after: afterCursor, perPage }
+          : 'offset' in pagination
+          ? { offset: pagination.offset, limit: perPage }
           : { offset: pageNum && pageNum > 1 ? (pageNum - 1) * perPage : 0, limit: perPage };
 
       const included: JsonApiResource[] = [];
@@ -483,6 +532,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           pagination: paginationOptions,
           depth,
           hints,
+          ...(Object.keys(filters).length > 0 ? { filters } : {}),
         }),
       );
       if (Result.isFailure(batch)) {
@@ -520,8 +570,19 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         })
       );
 
+      // Prefer the repository's own done.pagination: a repo with native
+      // cursors (e.g. R2) returns the exact opaque cursor for the next page,
+      // and its absence on a cursor-style request authoritatively means the
+      // listing is exhausted (last-key heuristics would fabricate a cursor
+      // the backend cannot resolve). The length heuristic remains for
+      // offset/page requests against repos that never populate
+      // done.pagination.
       const effectivePageSize = 'limit' in paginationOptions ? paginationOptions.limit : paginationOptions.perPage;
-      if (batchData.length >= effectivePageSize) {
+      const donePagination = batchDone.pagination;
+      if (donePagination && 'after' in donePagination && donePagination.after !== undefined) {
+        hasMore = true;
+        nextCursor = donePagination.after;
+      } else if (!('after' in paginationOptions) && batchData.length >= effectivePageSize) {
         hasMore = true;
         nextCursor = batchData[batchData.length - 1]?.key;
       }

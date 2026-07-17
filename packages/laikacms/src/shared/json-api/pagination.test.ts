@@ -58,6 +58,26 @@ describe('parsePaginationQuery', () => {
     const result = parsePaginationQuery({ 'page[after]': 'A', 'page[before]': 'B' });
     expect(result).toEqual({ after: 'A', perPage: undefined });
   });
+
+  it('treats a present-but-empty page[after]= as cursor start ({ after: undefined })', () => {
+    const result = parsePaginationQuery({ 'page[after]': '' });
+    // Must be cursor-SHAPED (the `after` key exists) so native-cursor backends
+    // take their cursor path from the very first page.
+    expect('after' in result).toBe(true);
+    expect(result).toEqual({ after: undefined, perPage: undefined });
+  });
+
+  it('empty page[after]= keeps page[size] as perPage', () => {
+    const result = parsePaginationQuery({ 'page[after]': '', 'page[size]': '20' });
+    expect('after' in result).toBe(true);
+    expect(result).toEqual({ after: undefined, perPage: 20 });
+  });
+
+  it('absent page[after] does NOT produce a cursor-shaped result (default unchanged)', () => {
+    const result = parsePaginationQuery({});
+    expect('after' in result).toBe(false);
+    expect(result).toEqual({ page: 1, perPage: 10 });
+  });
 });
 
 describe('buildPaginationLinks', () => {

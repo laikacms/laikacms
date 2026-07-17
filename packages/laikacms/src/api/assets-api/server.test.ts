@@ -212,6 +212,50 @@ describe('assets-api meta.warnings', () => {
     expect(body3.links.next).toBeFalsy(); // absent on last page (undefined or null)
   });
 
+  it('honours explicit page[offset]/page[limit] instead of restarting at offset 0', async () => {
+    // Regression: an offset-shaped request used to be rebuilt from page[number]
+    // (absent → offset 0), so every page returned the same first slice and
+    // clients paging via page[offset] looped forever.
+    const allResources: Resource[] = ['a', 'b', 'c', 'd', 'e'].map(k => ({
+      type: 'asset',
+      key: `${k}.jpg`,
+      createdAt: '2026-01-01T00:00:00Z',
+      updatedAt: '2026-01-01T00:00:00Z',
+      content: { size: 1, etag: k },
+    }));
+
+    const partialRepo = {
+      getCapabilities: () =>
+        LaikaTask.succeed({
+          compatibilityDate:
+            '2026-01-01' as unknown as import('laikacms/assets').AssetsCapabilities['compatibilityDate'],
+          pagination: { supported: true, description: 'offset', styles: { offset: true, page: false, cursor: false } },
+        }),
+      listResources: (_folderKey: string, options: ListResourcesOptions) =>
+        LaikaStream.make<Resource, ListResourcesDone>(emit =>
+          Effect.gen(function*() {
+            const p = options.pagination as { offset: number, limit: number };
+            for (const r of allResources.slice(p.offset, p.offset + p.limit)) yield* emit.data(r);
+            return { total: allResources.length };
+          })
+        ),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[offset]=2&page[limit]=2'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: Array<{ id: string }> };
+    expect(body.data.map(d => d.id)).toEqual(['c.jpg', 'd.jpg']);
+
+    // Past the end of the listing: empty page, no next link → pagers terminate.
+    const resEnd = await api.fetch(new Request('http://localhost/api/assets/resources?page[offset]=5&page[limit]=2'));
+    expect(resEnd.status).toBe(200);
+    const bodyEnd = await resEnd.json() as { data: Array<{ id: string }>, links: { next?: string | null } };
+    expect(bodyEnd.data).toEqual([]);
+    expect(bodyEnd.links.next).toBeFalsy();
+  });
+
   it('still returns 204 No Content on a clean delete with no warnings', async () => {
     const partialRepo = {
       getResource: (key: string) =>
@@ -1583,6 +1627,166 @@ describe('GET /resources — filter[depth] forwarding', () => {
     expect(res.status).toBe(200);
     expect(spy).toHaveBeenCalledOnce();
     expect(spy.mock.calls[0]![1].depth).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /resources — generic filter[<name>] forwarding
+// ---------------------------------------------------------------------------
+
+describe('GET /resources — generic filter forwarding', () => {
+  const filteringCaps = {
+    compatibilityDate: '2026-01-01' as unknown as import('laikacms/assets').AssetsCapabilities['compatibilityDate'],
+    pagination: {
+      supported: true as const,
+      description: 'cursor+offset',
+      styles: { offset: true, page: true, cursor: true },
+    },
+    filtering: {
+      supported: true as const,
+      description: 'key filters',
+      filters: [{ name: 'search', description: 'substring match on keys' }],
+    },
+  };
+
+  const makeResourcesStream = () =>
+    LaikaStream.make<Resource, ListResourcesDone>(
+      () => Effect.succeed({ total: 0 } as ListResourcesDone),
+    );
+
+  it('?filter[search]=x forwards options.filters={search:"x"} to listResources', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({
+      repository: {
+        getCapabilities: () => LaikaTask.succeed(filteringCaps),
+        listResources: spy,
+      } as unknown as AssetsRepository,
+    });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bsearch%5D=x'));
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].filters).toEqual({ search: 'x' });
+  });
+
+  it('?filter[bogus]=1 against a repo declaring only "search" → 400 naming the filter', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({
+      repository: {
+        getCapabilities: () => LaikaTask.succeed(filteringCaps),
+        listResources: spy,
+      } as unknown as AssetsRepository,
+    });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bbogus%5D=1'));
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ code: string, detail: string }> };
+    expect(body.errors[0]?.code).toBe('invalid_data');
+    expect(body.errors[0]?.detail).toContain('bogus');
+    expect(spy).not.toHaveBeenCalled();
+  });
+
+  it('reserved filter keys (folder/prefix/depth) are NOT forwarded as options.filters', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
+    const api = buildAssetsApi({
+      repository: {
+        getCapabilities: () => LaikaTask.succeed(filteringCaps),
+        listResources: spy,
+      } as unknown as AssetsRepository,
+    });
+
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources?filter%5Bfolder%5D=images&filter%5Bdepth%5D=2'),
+    );
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![1].filters).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /resources — done.pagination drives cursor next links
+// ---------------------------------------------------------------------------
+
+describe('GET /resources — repository done.pagination cursor links', () => {
+  const cursorCaps = {
+    compatibilityDate: '2026-01-01' as unknown as import('laikacms/assets').AssetsCapabilities['compatibilityDate'],
+    pagination: {
+      supported: true as const,
+      description: 'native cursor',
+      styles: { offset: true, page: false, cursor: true },
+    },
+  };
+
+  const makeAsset = (key: string): Resource => ({
+    type: 'asset',
+    key,
+    createdAt: '2026-01-01T00:00:00Z',
+    updatedAt: '2026-01-01T00:00:00Z',
+    content: { size: 1, etag: key },
+  });
+
+  const makeCursorDoneRepo = (done: ListResourcesDone): AssetsRepository =>
+    ({
+      getCapabilities: () => LaikaTask.succeed(cursorCaps),
+      listResources: (_folderKey: string, _options: ListResourcesOptions) =>
+        LaikaStream.make<Resource, ListResourcesDone>(emit =>
+          Effect.gen(function*() {
+            yield* emit.data(makeAsset('a.jpg'));
+            yield* emit.data(makeAsset('b.jpg'));
+            return done;
+          })
+        ),
+    }) as unknown as AssetsRepository;
+
+  it('done.pagination.after becomes links.next with page[after] and page[size]', async () => {
+    const api = buildAssetsApi({
+      repository: makeCursorDoneRepo({ pagination: { after: 'CUR2', perPage: 2 } }),
+    });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources?page%5Bafter%5D=&page%5Bsize%5D=2'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { links: { next?: string } };
+    expect(body.links.next).toBeDefined();
+    expect(body.links.next).toContain('page[after]=CUR2');
+    expect(body.links.next).toContain('page[size]=2');
+  });
+
+  it('a full cursor page with done {} (exhausted) emits NO links.next', async () => {
+    const api = buildAssetsApi({ repository: makeCursorDoneRepo({}) });
+    // The page is "full" (2 items at page[size]=2) — the old length>=pageSize
+    // heuristic must not fabricate a cursor on a cursor-shaped request.
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources?page%5Bafter%5D=&page%5Bsize%5D=2'),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { links: { next?: string | null } };
+    expect(body.links.next).toBeFalsy();
+  });
+
+  it('empty page[after]= reaches the repository as cursor-shaped pagination with after undefined', async () => {
+    const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) =>
+      LaikaStream.make<Resource, ListResourcesDone>(
+        () => Effect.succeed({} as ListResourcesDone),
+      )
+    );
+    const api = buildAssetsApi({
+      repository: {
+        getCapabilities: () => LaikaTask.succeed(cursorCaps),
+        listResources: spy,
+      } as unknown as AssetsRepository,
+    });
+
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources?page%5Bafter%5D=&page%5Bsize%5D=5'),
+    );
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledOnce();
+    const pagination = spy.mock.calls[0]![1].pagination as { after?: string, perPage?: number };
+    expect('after' in pagination).toBe(true);
+    expect(pagination.after).toBeUndefined();
+    expect(pagination.perPage).toBe(5);
   });
 });
 

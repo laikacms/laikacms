@@ -17,7 +17,7 @@ import type {
   ListResourcesOptions,
   Resource,
 } from 'laikacms/assets';
-import { AssetsCompatibilityDate, AssetsRepository } from 'laikacms/assets';
+import { AssetsCompatibilityDate, AssetsRepository, validateListFilters } from 'laikacms/assets';
 import {
   BadRequestError,
   type LaikaDone,
@@ -35,6 +35,31 @@ import { R2AssetsDataSource } from '../datasources/r2-assets-datasource.js';
 
 const liftResult = <A>(p: Promise<LaikaResult<A>>): Effect.Effect<A, LaikaError> =>
   Effect.flatMap(Effect.promise(() => p), Effect.fromResult);
+
+/**
+ * Filters honored by `listResources`, advertised via
+ * `getCapabilities().filtering`. Extend by appending descriptors and handling
+ * the new name in `buildKeyPredicate` — nothing else needs to change.
+ */
+const SUPPORTED_LIST_FILTERS = [
+  {
+    name: 'search',
+    description: 'Case-insensitive substring match on the object key.',
+  },
+] as const;
+
+/** Compose declared filters into a single key predicate. */
+function buildKeyPredicate(filters: Readonly<Record<string, string>> | undefined): (key: string) => boolean {
+  const search = filters?.['search']?.toLowerCase();
+  if (!search) return () => true;
+  return key => key.toLowerCase().includes(search);
+}
+
+const R2_FILTERING_CAPABILITY = {
+  supported: true,
+  description: 'Filters compose (AND) and apply to resource keys during listing.',
+  filters: SUPPORTED_LIST_FILTERS,
+} as const;
 
 export type R2AssetsRepositoryOptions =
   | {
@@ -78,9 +103,13 @@ export class R2AssetsRepository extends AssetsRepository {
       compatibilityDate: AssetsCompatibilityDate.make('2026-05-11'),
       pagination: {
         supported: true,
-        description: 'In-memory slicing applied after the full recursive walk; cursor pagination is not supported.',
-        styles: { offset: true, page: true, cursor: false },
+        description: "Cursor pagination (`after`) maps to R2's native list cursor: each page is one R2 list call, "
+          + 'no full walk. Cursor pages list recursively in flat key order and emit assets only (no folder '
+          + 'resources); `depth` is honored by dropping deeper keys. Offset/page styles fall back to in-memory '
+          + 'slicing after a full recursive walk. Backward cursors (`before`) are not supported.',
+        styles: { offset: true, page: true, cursor: true },
       },
+      filtering: R2_FILTERING_CAPABILITY,
       versionTracking: {
         supported: false,
         description: 'R2 ETags are not surfaced as version tokens.',
@@ -119,7 +148,63 @@ export class R2AssetsRepository extends AssetsRepository {
   ): LaikaStream.LaikaStream<Resource, ListResourcesDone> {
     return LaikaStream.make<Resource, ListResourcesDone>(emit =>
       Effect.gen({ self: this }, function*() {
+        const filterError = validateListFilters(options.filters, R2_FILTERING_CAPABILITY);
+        if (filterError) {
+          return yield* Effect.fail(filterError);
+        }
+        const hasFilters = Object.keys(options.filters ?? {}).length > 0;
+        const matchesKey = buildKeyPredicate(options.filters);
         const depth = Math.max(1, options.depth ?? 1);
+
+        // Forward-cursor pagination maps to R2's native list cursor: one R2
+        // list call per requested page instead of a full recursive walk per
+        // page. Lists recursively (no delimiter) in flat key order, emitting
+        // assets only; `depth` is honored by dropping deeper keys. With
+        // filters, batches keep being fetched until the page fills or the
+        // listing is exhausted — pages only ever end on an R2 batch boundary,
+        // so the returned cursor never skips unemitted matches (a filtered
+        // page may therefore carry slightly more than `perPage` items).
+        if ('after' in options.pagination) {
+          const perPage = options.pagination.perPage ?? 100;
+          const batchLimit = hasFilters ? Math.max(perPage, 500) : perPage;
+          const normalizedFolder = folderKey.replace(/^\/+|\/+$/g, '');
+          const searchPrefix = normalizedFolder ? `${normalizedFolder}/` : '';
+          const withinDepth = (key: string): boolean =>
+            depth === Infinity || key.slice(searchPrefix.length).split('/').length <= depth;
+
+          let cursor: string | undefined = options.pagination.after;
+          let emitted = 0;
+          while (true) {
+            const page = yield* liftResult(
+              this.datasource.listPage(folderKey, { cursor, limit: batchLimit, includeMetadata: true }),
+            );
+            for (const entry of page.entries) {
+              if (!withinDepth(entry.key)) continue;
+              if (!matchesKey(entry.key)) continue;
+              yield* emit.data({
+                type: 'asset',
+                key: entry.key,
+                createdAt: entry.uploaded?.toISOString() ?? new Date().toISOString(),
+                updatedAt: entry.uploaded?.toISOString() ?? new Date().toISOString(),
+                content: {
+                  size: entry.size,
+                  etag: entry.etag,
+                  contentType: entry.httpMetadata?.contentType,
+                  customMetadata: entry.customMetadata,
+                },
+              });
+              emitted++;
+            }
+            cursor = page.cursor;
+            if (cursor === undefined) {
+              // Exhausted: no next-page pagination on the done value.
+              return {};
+            }
+            if (emitted >= perPage) {
+              return { pagination: { after: cursor, perPage } };
+            }
+          }
+        }
 
         const listDirectory = (key: string): Effect.Effect<ReadonlyArray<Resource>, LaikaError> =>
           Effect.gen({ self: this }, function*() {
@@ -171,9 +256,10 @@ export class R2AssetsRepository extends AssetsRepository {
           });
 
         const all = yield* listRecursive(folderKey, 1);
-        const paginated = applyPagination(all, options.pagination);
+        const filtered = hasFilters ? all.filter(r => matchesKey(r.key)) : all;
+        const paginated = applyPagination(filtered, options.pagination);
         for (const r of paginated) yield* emit.data(r);
-        return { total: all.length };
+        return { total: filtered.length };
       })
     );
   }

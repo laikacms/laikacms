@@ -189,9 +189,13 @@ export function parsePaginationQuery(query: Record<string, string | string[] | u
   const pageOffset = query['page[offset]'];
   const pageLimit = query['page[limit]'];
 
-  if (pageAfter) {
+  // Present-but-empty `page[after]=` means "start a cursor iteration": the
+  // shape is cursor-based with no position yet, so backends with native
+  // cursors take their cursor path from the very first page instead of
+  // falling back to an offset walk.
+  if (pageAfter !== undefined) {
     return {
-      after: firstStr(pageAfter),
+      after: firstStr(pageAfter) || undefined,
       perPage: safeIntOpt(firstStr(pageSize)),
     };
   }

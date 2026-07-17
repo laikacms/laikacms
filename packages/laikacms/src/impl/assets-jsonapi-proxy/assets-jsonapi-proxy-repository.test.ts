@@ -4,6 +4,11 @@ import { InternalError, InvalidData, LaikaStream, LaikaTask, NotFoundError } fro
 
 import { AssetsJsonApiProxyRepository } from './assets-jsonapi-proxy-repository.js';
 
+/** Decode a captured fetch body (string or encoded Uint8Array) back to JSON. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any -- mirrors JSON.parse's return type
+const parseBody = (body: unknown): any =>
+  JSON.parse(typeof body === 'string' ? body : new TextDecoder().decode(body as Uint8Array));
+
 const jsonResponse = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
@@ -55,7 +60,7 @@ describe('AssetsJsonApiProxyRepository.deleteAsset', () => {
 
 describe('AssetsJsonApiProxyRepository.deleteAssets', () => {
   it('re-emits per-key meta.warnings while reporting removed count', async () => {
-    const fetchMock = vi.fn(async (url: string) => {
+    const fetchMock = vi.fn(async (url: string | URL) => {
       const u = new URL(url);
       if (u.pathname.endsWith('/orphan.png')) {
         return jsonResponse({
@@ -78,6 +83,84 @@ describe('AssetsJsonApiProxyRepository.deleteAssets', () => {
     expect(collected.done).toEqual({ removed: 2, skipped: 0 });
     expect(collected.recoverableErrors).toHaveLength(1);
     expect(collected.recoverableErrors[0]!.message).toContain('thumbnail missed');
+  });
+});
+
+describe('AssetsJsonApiProxyRepository.listResources — filters & cursor pagination', () => {
+  const assetItem = (id: string) => ({
+    type: 'asset',
+    id,
+    attributes: { type: 'asset', content: {} },
+  });
+
+  it('serializes options.filters as filter[<name>] query params', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ data: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await LaikaStream.runPromiseCollect(
+      proxy.listResources('', {
+        depth: 1,
+        pagination: { offset: 0, limit: 10 },
+        filters: { search: 'logo' },
+      }),
+    );
+
+    const calledUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(calledUrl.searchParams.get('filter[search]')).toBe('logo');
+  });
+
+  it('cursor start ({ after: undefined }) sends an empty-but-present page[after]= param', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ data: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    await LaikaStream.runPromiseCollect(
+      proxy.listResources('', { depth: 1, pagination: { after: undefined, perPage: 100 } }),
+    );
+
+    const calledUrl = new URL(String(fetchMock.mock.calls[0]![0]));
+    expect(calledUrl.searchParams.has('page[after]')).toBe(true);
+    expect(calledUrl.searchParams.get('page[after]')).toBe('');
+    expect(calledUrl.searchParams.get('page[size]')).toBe('100');
+  });
+
+  it('parses links.next into done.pagination { after, perPage } and omits the total', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          data: [assetItem('a.png'), assetItem('b.png')],
+          links: { next: 'http://upstream/resources?page%5Bafter%5D=ABC&page%5Bsize%5D=50' },
+        })
+      ),
+    );
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(
+      proxy.listResources('', { depth: 1, pagination: { after: undefined, perPage: 50 } }),
+    );
+
+    expect(collected.data).toHaveLength(2);
+    expect(collected.done.pagination).toEqual({ after: 'ABC', perPage: 50 });
+    // With a continuation pending and no meta.page.total, the emitted count
+    // must not masquerade as a total.
+    expect(collected.done.total).toBeUndefined();
+  });
+
+  it('without links.next, done has no pagination and total falls back to the emitted count', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ data: [assetItem('a.png'), assetItem('b.png')] })),
+    );
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(
+      proxy.listResources('', { depth: 1, pagination: { after: undefined, perPage: 50 } }),
+    );
+
+    expect(collected.done.pagination).toBeUndefined();
+    expect(collected.done.total).toBe(2);
   });
 });
 
@@ -182,6 +265,9 @@ describe('AssetsJsonApiProxyRepository.getCapabilities', () => {
     const { value } = await LaikaTask.runPromiseCollect(proxy.getCapabilities());
 
     expect(value.pagination.supported).toBe(true);
+    // The conservative default must not advertise filters the unknown
+    // upstream may not honor.
+    expect(value.filtering?.supported).toBe(false);
   });
 });
 
@@ -206,7 +292,7 @@ describe('AssetsJsonApiProxyRepository.getResource', () => {
     expect(collected.value).toHaveLength(1);
     expect(collected.value[0]!.key).toBe('images/photo.jpg');
     expect(collected.value[0]!.type).toBe('asset');
-    const calledUrl: string = fetchMock.mock.calls[0]?.[0] as string;
+    const calledUrl: string = String(fetchMock.mock.calls[0]?.[0]);
     expect(calledUrl).toContain(encodeURIComponent('images/photo.jpg'));
   });
 
@@ -269,7 +355,7 @@ describe('AssetsJsonApiProxyRepository.getResource', () => {
       proxy.getResource('images/photo.jpg', { hints: { variations: true, urls: true } }),
     );
 
-    const calledUrl: string = fetchMock.mock.calls[0]?.[0] as string;
+    const calledUrl: string = String(fetchMock.mock.calls[0]?.[0]);
     expect(calledUrl).toContain('include=variations%2Curls');
   });
 });
@@ -332,7 +418,8 @@ describe('AssetsJsonApiProxyRepository.createAsset', () => {
     expect(collected.value.key).toBe('images/new.png');
     expect(collected.value.type).toBe('asset');
 
-    const [calledUrl, calledInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [rawUrl, calledInit] = fetchMock.mock.calls[0] as [string | URL, RequestInit];
+    const calledUrl = String(rawUrl);
     expect(calledUrl).toMatch(/\/resources$/);
     expect(calledInit.method).toBe('POST');
     expect(calledInit.body).toBeInstanceOf(FormData);
@@ -394,10 +481,11 @@ describe('AssetsJsonApiProxyRepository.updateAsset', () => {
     );
 
     expect(collected.value.key).toBe('images/photo.jpg');
-    const [calledUrl, calledInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [rawUrl, calledInit] = fetchMock.mock.calls[0] as [string | URL, RequestInit];
+    const calledUrl = String(rawUrl);
     expect(calledUrl).toContain(encodeURIComponent('images/photo.jpg'));
     expect(calledInit.method).toBe('PATCH');
-    const body = JSON.parse(calledInit.body as string) as { data: { type: string, id: string } };
+    const body = parseBody(calledInit.body) as { data: { type: string, id: string } };
     expect(body.data.type).toBe('asset');
     expect(body.data.id).toBe('images/photo.jpg');
   });
@@ -456,7 +544,8 @@ describe('AssetsJsonApiProxyRepository.deleteFolder', () => {
     const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
     await LaikaTask.runPromiseCollect(proxy.deleteFolder('images/'));
 
-    const [calledUrl, calledInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [rawUrl, calledInit] = fetchMock.mock.calls[0] as [string | URL, RequestInit];
+    const calledUrl = String(rawUrl);
     expect(calledUrl).toContain(encodeURIComponent('images/'));
     expect(calledUrl).not.toContain('recursive');
     expect(calledInit.method).toBe('DELETE');
@@ -469,7 +558,7 @@ describe('AssetsJsonApiProxyRepository.deleteFolder', () => {
     const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
     await LaikaTask.runPromiseCollect(proxy.deleteFolder('images/', true));
 
-    const calledUrl: string = fetchMock.mock.calls[0]?.[0] as string;
+    const calledUrl: string = String(fetchMock.mock.calls[0]?.[0]);
     expect(calledUrl).toContain('recursive=true');
   });
 
@@ -573,10 +662,11 @@ describe('AssetsJsonApiProxyRepository.createFolder', () => {
     expect(collected.value.key).toBe('uploads/');
     expect(collected.value.type).toBe('folder');
 
-    const [calledUrl, calledInit] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const [rawUrl, calledInit] = fetchMock.mock.calls[0] as [string | URL, RequestInit];
+    const calledUrl = String(rawUrl);
     expect(calledUrl).toMatch(/\/resources$/);
     expect(calledInit.method).toBe('POST');
-    const body = JSON.parse(calledInit.body as string) as { data: { type: string, id: string } };
+    const body = parseBody(calledInit.body) as { data: { type: string, id: string } };
     expect(body.data.type).toBe('folder');
     expect(body.data.id).toBe('uploads/');
   });
@@ -754,7 +844,7 @@ describe('AssetsJsonApiProxyRepository.getUrls', () => {
   });
 
   it('serves cached URLs without a second fetch for multi-asset input', async () => {
-    const fetchMock = vi.fn(async (url: string) => {
+    const fetchMock = vi.fn(async (url: string | URL) => {
       const u = new URL(url);
       const key = decodeURIComponent(u.pathname.replace('/resources/', ''));
       return jsonResponse({

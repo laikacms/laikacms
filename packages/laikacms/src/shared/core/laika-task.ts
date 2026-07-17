@@ -115,10 +115,13 @@ export const make = <A, R = never>(
           progress: progress => Effect.asVoid(Queue.offer(queue, progressMetadata(progress))),
         };
 
+        // matchCauseEffect (not matchEffect): a builder that dies with a
+        // defect must still terminate the queue — otherwise the forked fiber
+        // ends silently and every consumer of the task hangs forever.
         const builder = build(emit).pipe(
-          Effect.matchEffect({
+          Effect.matchCauseEffect({
             onSuccess: value => Queue.fail(queue, Cause.Done(value)),
-            onFailure: error => Queue.fail(queue, error),
+            onFailure: cause => Queue.failCause(queue, cause as Cause.Cause<LaikaError | Cause.Done<A>>),
           }),
         );
         yield* Effect.forkIn(builder, scope);

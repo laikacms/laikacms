@@ -26,5 +26,9 @@ export * from './utilities.js';
 
 export * from './errors.js';
 
+// Export the Effect HttpClient-based transport shared by the *-jsonapi-proxy
+// repositories (connection reuse via an injectable, layer-built client)
+export * from './http-transport.js';
+
 // Export OpenAPI authoring types (used by the api/* packages' openapi.ts specs)
 export * from './openapi.js';

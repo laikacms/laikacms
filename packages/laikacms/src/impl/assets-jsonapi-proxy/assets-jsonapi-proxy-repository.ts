@@ -1,5 +1,6 @@
 import * as Effect from 'effect/Effect';
 
+import type * as HttpClient from 'effect/unstable/http/HttpClient';
 import {
   type Asset,
   type AssetCreate,
@@ -19,17 +20,12 @@ import {
   type ListResourcesOptions,
   type Resource,
 } from 'laikacms/assets';
-import {
-  ErrorCodeToClassMap,
-  InternalError,
-  InvalidData,
-  type LaikaDone,
-  type LaikaError,
-  LaikaStream,
-  LaikaTask,
-} from 'laikacms/core';
+
+import { InternalError, InvalidData, type LaikaDone, type LaikaError, LaikaStream, LaikaTask } from 'laikacms/core';
 import { type JsonApiCollectionResponse, warningsFromMeta } from 'laikacms/json-api';
+
 import { type ChangeSummary, type Folder, type FolderCreate, SyncToken } from 'laikacms/storage';
+import { JsonApiHttpTransport } from '../../shared/json-api/http-transport.js';
 
 import { parseAsset, parseAssetUrl, parseAssetVariations, parseFolder, parseResource } from './jsonapi.js';
 
@@ -38,6 +34,13 @@ export interface AssetsJsonApiProxyRepositoryOptions {
   authToken?: string;
   /** Dynamic token provider — called before each request. */
   tokenPromise?: () => Promise<string>;
+  /**
+   * Effect `HttpClient` used for every request. Provide one client per
+   * process (see `httpClientFromFetch` in `laikacms/json-api`) so all proxy
+   * repositories share a single connection pool. Defaults to a client backed
+   * by `globalThis.fetch`.
+   */
+  httpClient?: HttpClient.HttpClient;
 }
 
 interface JsonApiResource {
@@ -50,9 +53,7 @@ interface JsonApiResource {
  * Proxies all assets operations through a remote JSON:API endpoint.
  */
 export class AssetsJsonApiProxyRepository extends AssetsRepository {
-  private readonly baseUrl: string;
-  private readonly staticHeaders: Record<string, string>;
-  private readonly tokenPromise?: () => Promise<string>;
+  private readonly transport: JsonApiHttpTransport;
 
   private metadata: Map<string, AssetMetadata> = new Map();
   private variations: Map<string, AssetVariations> = new Map();
@@ -60,21 +61,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
 
   constructor(options: AssetsJsonApiProxyRepositoryOptions) {
     super();
-    this.baseUrl = options.baseUrl.replace(/\/$/, '');
-    this.tokenPromise = options.tokenPromise;
-    this.staticHeaders = {
-      'Content-Type': 'application/vnd.api+json',
-      'Accept': 'application/vnd.api+json',
-      ...(options.authToken ? { 'Authorization': `Bearer ${options.authToken}` } : {}),
-    };
-  }
-
-  private async getHeaders(): Promise<Record<string, string>> {
-    if (this.tokenPromise) {
-      const token = await this.tokenPromise();
-      return { ...this.staticHeaders, 'Authorization': `Bearer ${token}` };
-    }
-    return this.staticHeaders;
+    this.transport = new JsonApiHttpTransport(options);
   }
 
   private fetchJson<T = Record<string, unknown>>(
@@ -89,54 +76,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       rehydrateErrorCodes?: boolean,
     },
   ): Effect.Effect<T, LaikaError> {
-    return Effect.gen({ self: this }, function*() {
-      const headers = yield* Effect.promise(() => this.getHeaders());
-      let finalHeaders: Record<string, string> = headers;
-      let body: BodyInit | undefined;
-      if (init.multipart) {
-        const { 'Content-Type': _ct, ...rest } = headers;
-        finalHeaders = rest;
-        body = init.multipart;
-      } else if (init.body !== undefined) {
-        body = JSON.stringify(init.body);
-      }
-      const response = yield* Effect.tryPromise({
-        try: () => fetch(`${this.baseUrl}${path}`, { method: init.method, headers: finalHeaders, body }),
-        catch: e => new InvalidData(`Network error: ${(e as Error).message}`),
-      });
-      const contentType = response.headers.get('content-type');
-      const isJson = contentType?.includes('application/vnd.api+json')
-        || contentType?.includes('application/json');
-      if (!isJson) {
-        // Non-JSON response (often a stack trace on 500). Include the body so
-        // the caller can actually see what went wrong on the server.
-        const bodySnippet = yield* Effect.promise(() =>
-          response.text().then(t => t.slice(0, 500)).catch(() => '<unreadable>')
-        );
-        return yield* Effect.fail(
-          new InvalidData(
-            `${init.method} ${path} → ${response.status} ${response.statusText} `
-              + `(content-type: ${contentType ?? 'none'}): ${bodySnippet}`,
-          ),
-        );
-      }
-      const json = yield* Effect.promise(() => response.json() as Promise<Record<string, unknown>>);
-      if (!response.ok || (Array.isArray(json.errors) && json.errors.length > 0)) {
-        const errors = (Array.isArray(json.errors) ? json.errors : [{ detail: 'Unknown error' }]) as Array<
-          { detail?: string, title?: string, code?: string }
-        >;
-        const detail = errors.map(e => e.detail || e.title || 'Unknown error').join(', ');
-        if (opts?.rehydrateErrorCodes) {
-          const firstCode = errors[0]?.code;
-          const ErrorCtor = firstCode
-            ? (ErrorCodeToClassMap as Record<string, new(msg: string) => LaikaError>)[firstCode]
-            : undefined;
-          return yield* Effect.fail(ErrorCtor ? new ErrorCtor(detail) : new InvalidData(detail));
-        }
-        return yield* Effect.fail(new InvalidData(detail));
-      }
-      return json as T;
-    });
+    return this.transport.fetchJson(path, init, opts) as Effect.Effect<T, LaikaError>;
   }
 
   private fetchVoid(
@@ -159,15 +99,15 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     emit?: LaikaTask.LaikaMetadataEmit,
   ): Effect.Effect<void, LaikaError> {
     return Effect.gen({ self: this }, function*() {
-      const headers = yield* Effect.promise(() => this.getHeaders());
-      const response = yield* Effect.tryPromise({
-        try: () => fetch(`${this.baseUrl}${path}`, { method: init.method, headers }),
-        catch: e => new InvalidData(`Network error: ${(e as Error).message}`),
-      });
-      if (!response.ok) {
-        const json = yield* Effect.promise(() => response.json().catch(() => ({}))) as Effect.Effect<
-          { errors?: Array<{ detail?: string, title?: string }> }
-        >;
+      const response = yield* this.transport.request(path, init);
+      // `response.json` yields null on an empty body and fails on malformed
+      // JSON — both collapse to {} to mirror the old `.json().catch(() => ({}))`.
+      const readJson = Effect.map(
+        Effect.result(response.json as Effect.Effect<Record<string, unknown> | null, unknown>),
+        r => r._tag === 'Success' && r.success !== null ? r.success : {} as Record<string, unknown>,
+      );
+      if (response.status < 200 || response.status >= 300) {
+        const json = (yield* readJson) as { errors?: Array<{ detail?: string, title?: string }> };
         const errors = json.errors || [{ detail: 'Request failed' }];
         return yield* Effect.fail(
           new InvalidData(errors.map(e => e.detail || e.title || 'Unknown error').join(', ')),
@@ -175,11 +115,9 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
       }
       // 204 No Content carries no body; 200 + JSON may have meta.warnings.
       if (!emit || response.status === 204) return;
-      const contentType = response.headers.get('content-type');
+      const contentType = response.headers['content-type'];
       if (!contentType?.includes('json')) return;
-      const json = yield* Effect.promise(() => response.json().catch(() => ({}))) as Effect.Effect<
-        Record<string, unknown>
-      >;
+      const json = yield* readJson;
       for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
     });
   }
@@ -218,6 +156,10 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
             description: 'The remote endpoint did not advertise its capabilities.',
           },
           changes: {
+            supported: false,
+            description: 'The remote endpoint did not advertise its capabilities.',
+          },
+          filtering: {
             supported: false,
             description: 'The remote endpoint did not advertise its capabilities.',
           },
@@ -359,6 +301,13 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         if (folderKey) params.set('filter[prefix]', folderKey);
         const depth = Math.max(1, options?.depth ?? 1);
         if (depth > 1) params.set('filter[depth]', String(depth));
+        // Named listing filters travel as filter[<name>] params, verbatim.
+        // The server validates names against the backend's declared
+        // filtering capability, so this stays generic — new filters need no
+        // proxy changes.
+        for (const [name, value] of Object.entries(options?.filters ?? {})) {
+          params.set(`filter[${name}]`, value);
+        }
 
         if (options?.pagination) {
           const p = options.pagination;
@@ -369,7 +318,10 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
             params.set('page[number]', String(p.page));
             if (p.perPage) params.set('page[size]', String(p.perPage));
           } else if ('after' in p) {
-            if (p.after) params.set('page[after]', p.after);
+            // An empty page[after]= is meaningful: it tells the server to
+            // start a cursor iteration (cursor-shaped from the first page),
+            // so backends with native cursors never fall back to a walk.
+            params.set('page[after]', p.after ?? '');
             if (p.perPage) params.set('page[size]', String(p.perPage));
           } else if ('before' in p) {
             if (p.before) params.set('page[before]', p.before);
@@ -396,7 +348,32 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
           emitted += 1;
         }
         this.storeIncludedResources(json.included as JsonApiResource[] | undefined);
-        return { total: json.meta?.page?.total ?? emitted };
+
+        // Surface the server's links.next as done.pagination so callers can
+        // continue a cursor iteration without knowing the link format.
+        let nextPagination: { after: string, perPage?: number } | undefined;
+        const nextLink = (json.links as { next?: string } | undefined)?.next;
+        if (typeof nextLink === 'string') {
+          try {
+            const nextUrl = new URL(nextLink, 'http://relative-link.invalid');
+            const after = nextUrl.searchParams.get('page[after]');
+            if (after) {
+              const size = Number.parseInt(nextUrl.searchParams.get('page[size]') ?? '', 10);
+              nextPagination = { after, ...(Number.isFinite(size) ? { perPage: size } : {}) };
+            }
+          } catch {
+            // Malformed next link: treat as no continuation rather than fail the page.
+          }
+        }
+
+        // With a continuation pending, the upstream total (when present) is
+        // authoritative; `emitted` is just this page's size, so don't let it
+        // masquerade as a total.
+        const total = json.meta?.page?.total ?? (nextPagination ? undefined : emitted);
+        return {
+          ...(typeof total === 'number' ? { total } : {}),
+          ...(nextPagination ? { pagination: nextPagination } : {}),
+        };
       })
     );
   }

@@ -1,7 +1,8 @@
 import type { ChangeSummary, Folder, FolderCreate, Key, SyncToken } from 'laikacms/storage';
 
-import type { LaikaDone, Pagination } from 'laikacms/core';
-import { LaikaStream, LaikaTask, NotImplementedError } from 'laikacms/core';
+import type { LaikaDone, LaikaError, Pagination } from 'laikacms/core';
+import { InvalidData, LaikaStream, LaikaTask, NotImplementedError } from 'laikacms/core';
+import type { FilteringCapability } from 'laikacms/storage';
 import type {
   Asset,
   AssetCreate,
@@ -30,6 +31,14 @@ export interface ListResourcesOptions {
   pagination: Pagination;
   depth: number;
   hints?: FetchHints;
+  /**
+   * Named filter values, keyed by the wire names declared in
+   * `getCapabilities().filtering.filters` (e.g. `{ search: 'logo' }`).
+   * Implementations MUST fail with `InvalidData` on undeclared names rather
+   * than silently ignore them — a filtered listing must never be quietly
+   * unfiltered.
+   */
+  filters?: Readonly<Record<string, string>>;
 }
 
 export type ListResourcesDone = LaikaDone;
@@ -58,6 +67,31 @@ export interface ListChangesDone extends LaikaDone {
 export interface DeleteAssetsDone extends LaikaDone {
   readonly removed: number;
   readonly skipped: number;
+}
+
+/**
+ * Validate requested `ListResourcesOptions.filters` against a declared
+ * filtering capability. Returns `undefined` when every requested filter name
+ * is declared (or none were requested); otherwise returns an `InvalidData`
+ * error naming the offending filters. Implementations call this at the top of
+ * `listResources` so undeclared filters fail loudly instead of silently
+ * returning unfiltered results.
+ */
+export function validateListFilters(
+  filters: Readonly<Record<string, string>> | undefined,
+  filtering: FilteringCapability | undefined,
+): LaikaError | undefined {
+  const requested = Object.keys(filters ?? {});
+  if (requested.length === 0) return undefined;
+  const declared = new Set(
+    filtering?.supported ? filtering.filters.map(f => f.name) : [],
+  );
+  const unsupported = requested.filter(name => !declared.has(name));
+  if (unsupported.length === 0) return undefined;
+  return new InvalidData(
+    `Unsupported filter(s): ${unsupported.join(', ')}. `
+      + 'Consult getCapabilities().filtering for the filters this repository supports.',
+  );
 }
 
 /**
