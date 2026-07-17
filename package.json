@@ -14,8 +14,7 @@
     "lint:fix": "eslint --fix --cache --config eslint.config.mjs .",
     "format": "dprint fmt",
     "format:check": "dprint check",
-    "release": "pnpm -r publish --publish-branch develop",
-    "release:alpha": "pnpm -r publish --publish-branch develop --tag alpha",
+    "release": "changeset publish",
     "prepare": "husky"
   },
   "devDependencies": {

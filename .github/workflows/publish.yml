@@ -36,26 +36,17 @@ jobs:
       - name: Build
         run: pnpm run build
 
-      # Prerelease tags (v1.3.0-alpha.0) publish under their prerelease
-      # identifier as the npm dist-tag (alpha, beta, rc); stable tags go
-      # to latest.
-      - name: Determine npm dist-tag
-        id: dist_tag
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          if [[ "$VERSION" == *-* ]]; then
-            PRERELEASE="${VERSION#*-}"
-            echo "tag=${PRERELEASE%%.*}" >> "$GITHUB_OUTPUT"
-          else
-            echo "tag=latest" >> "$GITHUB_OUTPUT"
-          fi
-
-      # Must publish with pnpm (not npm) so catalog: dependency ranges are
+      # `changeset publish` detects pnpm via the root packageManager field and
+      # runs `pnpm publish` per package, so catalog: dependency ranges are
       # resolved in the tarballs — see scripts/check-no-catalog-deps.mjs.
-      # pnpm >= 10.13 picks up npm OIDC trusted publishing automatically,
-      # so no NODE_AUTH_TOKEN is needed. Private workspace packages
-      # (root, docs) are skipped by `pnpm -r publish`.
+      # pnpm >= 10.13 picks up npm OIDC trusted publishing automatically, so
+      # no NODE_AUTH_TOKEN is needed. Already-published versions are skipped
+      # (safe to re-run), private workspace packages are never published, and
+      # in changesets pre mode the prerelease dist-tag (alpha/beta/rc) is used
+      # automatically; stable versions go to latest. The per-package git tags
+      # changeset publish creates in the runner are intentionally not pushed —
+      # the v* tag that triggered this workflow is the release marker.
       - name: Publish to npm
-        run: pnpm -r publish --access public --no-git-checks --tag "${{ steps.dist_tag.outputs.tag }}"
+        run: pnpm changeset publish
         env:
           NPM_CONFIG_PROVENANCE: 'true'
