@@ -1,0 +1,61 @@
+name: Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write # Required for npm OIDC trusted publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: production # Optional: adds approval requirements and deployment protection
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint, typecheck, and unit tests
+        run: pnpm run lint && pnpm run typecheck && pnpm run test
+
+      - name: Build
+        run: pnpm run build
+
+      # Prerelease tags (v1.3.0-alpha.0) publish under their prerelease
+      # identifier as the npm dist-tag (alpha, beta, rc); stable tags go
+      # to latest.
+      - name: Determine npm dist-tag
+        id: dist_tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          if [[ "$VERSION" == *-* ]]; then
+            PRERELEASE="${VERSION#*-}"
+            echo "tag=${PRERELEASE%%.*}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Must publish with pnpm (not npm) so catalog: dependency ranges are
+      # resolved in the tarballs — see scripts/check-no-catalog-deps.mjs.
+      # pnpm >= 10.13 picks up npm OIDC trusted publishing automatically,
+      # so no NODE_AUTH_TOKEN is needed. Private workspace packages
+      # (root, docs) are skipped by `pnpm -r publish`.
+      - name: Publish to npm
+        run: pnpm -r publish --access public --no-git-checks --tag "${{ steps.dist_tag.outputs.tag }}"
+        env:
+          NPM_CONFIG_PROVENANCE: 'true'

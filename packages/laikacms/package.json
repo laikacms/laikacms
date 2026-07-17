@@ -1,6 +1,9 @@
 {
   "name": "laikacms",
   "version": "1.2.0",
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "The basis for modern content management.",
   "keywords": [
     "headless-cms",
