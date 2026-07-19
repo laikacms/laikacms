@@ -4,23 +4,24 @@ import { InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/cor
 
 import { DocumentsJsonApiProxyRepository } from './documents-jsonapi-proxy-repository.js';
 
-// Minimal valid JSON:API resource shapes reused across tests
+// Minimal valid JSON:API resource shapes reused across tests.
+// Per JSON:API §7.2.2, `type` must not appear inside `attributes`.
 const publishedDoc = (id = 'posts/hello') => ({
   type: 'published',
   id,
-  attributes: { type: 'published', status: 'published', language: 'en', content: { title: 'Hello' } },
+  attributes: { status: 'published', language: 'en', content: { title: 'Hello' } },
 });
 
 const unpublishedDoc = (id = 'drafts/hello', status = 'draft') => ({
   type: 'unpublished',
   id,
-  attributes: { type: 'unpublished', status, language: 'en', content: { title: 'Draft' } },
+  attributes: { status, language: 'en', content: { title: 'Draft' } },
 });
 
 const revisionDoc = (id = 'posts/hello', revision = 'rev-abc') => ({
   type: 'revision',
   id,
-  attributes: { type: 'revision', revision, language: 'en', content: {}, createdAt: '2026-01-01T00:00:00Z' },
+  attributes: { revision, language: 'en', content: {}, createdAt: '2026-01-01T00:00:00Z' },
 });
 
 /** Decode a captured fetch body (string or encoded Uint8Array) back to JSON. */

@@ -43,7 +43,7 @@ export {
 export interface JsonApiStorageObject {
   type: 'object';
   id: string;
-  attributes: Omit<StorageObject, 'key' | 'metadata'>;
+  attributes: Omit<StorageObject, 'key' | 'type' | 'metadata'>;
   meta?: NonNullable<StorageObject['metadata']>;
 }
 
@@ -64,30 +64,30 @@ export interface JsonApiStorageObjectUpdate {
 export interface JsonApiFolder {
   type: 'folder';
   id: string;
-  attributes: Omit<Folder, 'key'>;
+  attributes: Omit<Folder, 'key' | 'type'>;
 }
 
 export interface JsonApiFolderCreate {
   type: 'folder';
   id: string;
-  attributes: Omit<FolderCreate, 'key'>;
+  attributes: Omit<FolderCreate, 'key' | 'type'>;
 }
 
 export interface JsonApiStorageObjectSummary {
   type: 'object-summary';
   id: string;
-  attributes: Omit<StorageObjectSummary, 'key'>;
+  attributes: Omit<StorageObjectSummary, 'key' | 'type'>;
 }
 
 export interface JsonApiFolderSummary {
   type: 'folder-summary';
   id: string;
-  attributes: Omit<FolderSummary, 'key'>;
+  attributes: Omit<FolderSummary, 'key' | 'type'>;
 }
 
 // To JSON:API converters
 export function storageObjectToJsonApi(obj: StorageObject): JsonApiStorageObject {
-  const { key, metadata, ...attributes } = obj;
+  const { key, type: _type, metadata, ...attributes } = obj;
   return { type: 'object', id: key, attributes, ...(metadata ? { meta: metadata } : {}) };
 }
 
@@ -102,28 +102,29 @@ export function storageObjectUpdateToJsonApi(obj: StorageObjectUpdate): JsonApiS
 }
 
 export function folderToJsonApi(folder: Folder): JsonApiFolder {
-  const { key, ...attributes } = folder;
+  const { key, type: _type, ...attributes } = folder;
   return { type: 'folder', id: key, attributes };
 }
 
 export function folderCreateToJsonApi(folder: FolderCreate): JsonApiFolderCreate {
-  const { key, ...attributes } = folder;
-  return { type: 'folder', id: key, attributes };
+  const { key, type: _type, ...attributes } = folder as FolderCreate & { type?: unknown };
+  return { type: 'folder', id: key as string, attributes: attributes as Omit<FolderCreate, 'key' | 'type'> };
 }
 
 export function storageObjectSummaryToJsonApi(obj: StorageObjectSummary): JsonApiStorageObjectSummary {
-  const { key, ...attributes } = obj;
+  const { key, type: _type, ...attributes } = obj;
   return { type: 'object-summary', id: key, attributes };
 }
 
 export function folderSummaryToJsonApi(folder: FolderSummary): JsonApiFolderSummary {
-  const { key, ...attributes } = folder;
+  const { key, type: _type, ...attributes } = folder;
   return { type: 'folder-summary', id: key, attributes };
 }
 
 // From JSON:API converters
 export function storageObjectFromJsonApi(jsonApi: JsonApiStorageObject): StorageObject {
   return {
+    type: jsonApi.type,
     key: jsonApi.id,
     ...jsonApi.attributes,
     ...(jsonApi.meta ? { metadata: jsonApi.meta } : {}),
@@ -147,7 +148,7 @@ export function storageObjectUpdateFromJsonApi(jsonApi: JsonApiStorageObjectUpda
 }
 
 export function folderFromJsonApi(jsonApi: JsonApiFolder): Folder {
-  return { key: jsonApi.id, ...jsonApi.attributes } as Folder;
+  return { type: jsonApi.type, key: jsonApi.id, ...jsonApi.attributes } as Folder;
 }
 
 export function folderCreateFromJsonApi(jsonApi: JsonApiFolderCreate): FolderCreate {
@@ -155,11 +156,11 @@ export function folderCreateFromJsonApi(jsonApi: JsonApiFolderCreate): FolderCre
 }
 
 export function storageObjectSummaryFromJsonApi(jsonApi: JsonApiStorageObjectSummary): StorageObjectSummary {
-  return { key: jsonApi.id, ...jsonApi.attributes } as StorageObjectSummary;
+  return { type: jsonApi.type, key: jsonApi.id, ...jsonApi.attributes } as StorageObjectSummary;
 }
 
 export function folderSummaryFromJsonApi(jsonApi: JsonApiFolderSummary): FolderSummary {
-  return { key: jsonApi.id, ...jsonApi.attributes } as FolderSummary;
+  return { type: jsonApi.type, key: jsonApi.id, ...jsonApi.attributes } as FolderSummary;
 }
 
 // Union types for atoms

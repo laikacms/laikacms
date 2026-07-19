@@ -29,37 +29,37 @@ export {
 export interface JsonApiAsset {
   type: 'asset';
   id: string;
-  attributes: Omit<Asset, 'key'>;
+  attributes: Omit<Asset, 'key' | 'type'>;
 }
 
 export interface JsonApiAssetCreate {
   type: 'asset';
   id: string;
-  attributes: Omit<AssetCreate, 'key'>;
+  attributes: Omit<AssetCreate, 'key' | 'type'>;
 }
 
 export interface JsonApiAssetUpdate {
   type: 'asset';
   id: string;
-  attributes: Omit<AssetUpdate, 'key'>;
+  attributes: Omit<AssetUpdate, 'key' | 'type'>;
 }
 
 export interface JsonApiFolder {
   type: 'folder';
   id: string;
-  attributes: Omit<Folder, 'key'>;
+  attributes: Omit<Folder, 'key' | 'type'>;
 }
 
 export interface JsonApiFolderCreate {
   type: 'folder';
   id: string;
-  attributes: Omit<FolderCreate, 'key'>;
+  attributes: Omit<FolderCreate, 'key' | 'type'>;
 }
 
 export interface JsonApiFolderSummary {
   type: 'folder-summary';
   id: string;
-  attributes: Omit<FolderSummary, 'key'>;
+  attributes: Omit<FolderSummary, 'key' | 'type'>;
 }
 
 // `JsonApiAssetMetadata` was removed — asset metadata is now folded onto
@@ -82,7 +82,7 @@ export interface JsonApiAssetVariations {
 // ============================================
 
 export function assetToJsonApi(asset: Asset): JsonApiAsset {
-  const { key, ...attributes } = asset;
+  const { key, type: _type, ...attributes } = asset;
   return { type: 'asset', id: key, attributes };
 }
 
@@ -97,17 +97,17 @@ export function assetUpdateToJsonApi(asset: AssetUpdate): JsonApiAssetUpdate {
 }
 
 export function folderToJsonApi(folder: Folder): JsonApiFolder {
-  const { key, ...attributes } = folder;
+  const { key, type: _type, ...attributes } = folder;
   return { type: 'folder', id: key, attributes };
 }
 
 export function folderCreateToJsonApi(folder: FolderCreate): JsonApiFolderCreate {
-  const { key, ...attributes } = folder;
+  const { key, type: _type, ...attributes } = folder;
   return { type: 'folder', id: key, attributes };
 }
 
 export function folderSummaryToJsonApi(folder: FolderSummary): JsonApiFolderSummary {
-  const { key, ...attributes } = folder;
+  const { key, type: _type, ...attributes } = folder;
   return { type: 'folder-summary', id: key, attributes };
 }
 
@@ -135,11 +135,11 @@ export function resourceToJsonApi(resource: Asset | Folder): JsonApiAsset | Json
 // ============================================
 
 export function assetFromJsonApi(jsonApi: JsonApiAsset): Asset {
-  return { key: jsonApi.id, ...jsonApi.attributes } as Asset;
+  return { type: jsonApi.type, key: jsonApi.id, ...jsonApi.attributes } as Asset;
 }
 
 export function assetCreateFromJsonApi(jsonApi: JsonApiAssetCreate): AssetCreate {
-  return { key: jsonApi.id, ...jsonApi.attributes } as AssetCreate;
+  return { type: jsonApi.type, key: jsonApi.id, ...jsonApi.attributes } as AssetCreate;
 }
 
 export function assetUpdateFromJsonApi(jsonApi: JsonApiAssetUpdate): AssetUpdate {
@@ -147,7 +147,7 @@ export function assetUpdateFromJsonApi(jsonApi: JsonApiAssetUpdate): AssetUpdate
 }
 
 export function folderFromJsonApi(jsonApi: JsonApiFolder): Folder {
-  return { key: jsonApi.id, ...jsonApi.attributes } as Folder;
+  return { type: jsonApi.type, key: jsonApi.id, ...jsonApi.attributes } as Folder;
 }
 
 export function folderCreateFromJsonApi(jsonApi: JsonApiFolderCreate): FolderCreate {
@@ -155,8 +155,7 @@ export function folderCreateFromJsonApi(jsonApi: JsonApiFolderCreate): FolderCre
 }
 
 export function folderSummaryFromJsonApi(jsonApi: JsonApiFolderSummary): FolderSummary {
-  const { type: _type, ...rest } = jsonApi.attributes;
-  return { key: jsonApi.id, type: 'folder-summary', ...rest } as FolderSummary;
+  return { type: jsonApi.type, key: jsonApi.id, ...jsonApi.attributes } as FolderSummary;
 }
 
 // `assetMetadataFromJsonApi` removed — read `JsonApiAsset.meta` instead.

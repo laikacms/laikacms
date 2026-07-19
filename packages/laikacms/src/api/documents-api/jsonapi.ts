@@ -32,113 +32,113 @@ export { fromJsonApi, type JsonApiCollectionResponse, type JsonApiError, toJsonA
 export interface StorageObjectJsonApi {
   type: 'object';
   id: string;
-  attributes: Omit<StorageObject, 'key'>;
+  attributes: Omit<StorageObject, 'key' | 'type'>;
 }
 
 export interface StorageObjectCreateJsonApi {
   type: 'object';
   id: string;
-  attributes: Omit<StorageObjectCreate, 'key'>;
+  attributes: Omit<StorageObjectCreate, 'key' | 'type'>;
 }
 
 export interface StorageObjectUpdateJsonApi {
   type: 'object';
   id: string;
-  attributes: Omit<StorageObjectUpdate, 'key'>;
+  attributes: Omit<StorageObjectUpdate, 'key' | 'type'>;
 }
 
 export interface StorageObjectSummaryJsonApi {
   type: 'object-summary';
   id: string;
-  attributes: Omit<StorageObjectSummary, 'key'>;
+  attributes: Omit<StorageObjectSummary, 'key' | 'type'>;
 }
 
 // Document JSON:API types
 export interface DocumentJsonApi {
   type: 'published';
   id: string;
-  attributes: Omit<Document, 'key'>;
+  attributes: Omit<Document, 'key' | 'type'>;
 }
 
 export interface DocumentCreateJsonApi {
   type: 'published';
   id: string;
-  attributes: Omit<DocumentCreate, 'key'>;
+  attributes: Omit<DocumentCreate, 'key' | 'type'>;
 }
 
 export interface DocumentUpdateJsonApi {
   type: 'published';
   id: string;
-  attributes: Omit<DocumentUpdate, 'key'>;
+  attributes: Omit<DocumentUpdate, 'key' | 'type'>;
 }
 
 export interface DocumentSummaryJsonApi {
   type: 'published-summary';
   id: string;
-  attributes: Omit<DocumentSummary, 'key'>;
+  attributes: Omit<DocumentSummary, 'key' | 'type'>;
 }
 
 // Unpublished JSON:API types
 export interface UnpublishedJsonApi {
   type: 'unpublished';
   id: string;
-  attributes: Omit<Unpublished, 'key'>;
+  attributes: Omit<Unpublished, 'key' | 'type'>;
 }
 
 export interface UnpublishedCreateJsonApi {
   type: 'unpublished';
   id: string;
-  attributes: Omit<UnpublishedCreate, 'key'>;
+  attributes: Omit<UnpublishedCreate, 'key' | 'type'>;
 }
 
 export interface UnpublishedUpdateJsonApi {
   type: 'unpublished';
   id: string;
-  attributes: Omit<UnpublishedUpdate, 'key'>;
+  attributes: Omit<UnpublishedUpdate, 'key' | 'type'>;
 }
 
 export interface UnpublishedSummaryJsonApi {
   type: 'unpublished-summary';
   id: string;
-  attributes: Omit<UnpublishedSummary, 'key'>;
+  attributes: Omit<UnpublishedSummary, 'key' | 'type'>;
 }
 
 // Folder JSON:API types
 export interface FolderJsonApi {
   type: 'folder';
   id: string;
-  attributes: Omit<Folder, 'key'>;
+  attributes: Omit<Folder, 'key' | 'type'>;
 }
 
 export interface FolderCreateJsonApi {
   type: 'folder';
   id: string;
-  attributes: Omit<FolderCreate, 'key'>;
+  attributes: Omit<FolderCreate, 'key' | 'type'>;
 }
 
 export interface FolderSummaryJsonApi {
   type: 'folder-summary';
   id: string;
-  attributes: Omit<FolderSummary, 'key'>;
+  attributes: Omit<FolderSummary, 'key' | 'type'>;
 }
 
 // Revision JSON:API types
 export interface RevisionJsonApi {
   type: 'revision';
   id: string;
-  attributes: Omit<Revision, 'key'>;
+  attributes: Omit<Revision, 'key' | 'type'>;
 }
 
 export interface RevisionCreateJsonApi {
   type: 'revision';
   id: string;
-  attributes: Omit<RevisionCreate, 'key'>;
+  attributes: Omit<RevisionCreate, 'key' | 'type'>;
 }
 
 export interface RevisionSummaryJsonApi {
   type: 'revision-summary';
   id: string;
-  attributes: Omit<RevisionSummary, 'key'>;
+  attributes: Omit<RevisionSummary, 'key' | 'type'>;
 }
 
 // ===== TRANSFORMER FUNCTIONS =====
@@ -251,7 +251,6 @@ export const DocumentJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('published'),
   id: S.String,
   attributes: S.Struct({
-    type: S.Literal('published'),
     status: S.Literal('published'),
     content: S.Record(S.String, S.Unknown),
     createdAt: S.optional(S.String),
@@ -263,7 +262,6 @@ export const DocumentSummaryJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Union([S.Literal('published'), S.Literal('published-summary')]),
   id: S.String,
   attributes: S.Struct({
-    type: S.Union([S.Literal('published-summary'), S.Literal('published')]),
     status: S.Literal('published'),
     createdAt: S.optional(S.String),
     updatedAt: S.optional(S.String),
@@ -275,7 +273,6 @@ export const UnpublishedJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('unpublished'),
   id: S.String,
   attributes: S.Struct({
-    type: S.Literal('unpublished'),
     status: S.String,
     content: S.Record(S.String, S.Unknown),
     createdAt: S.optional(S.String),
@@ -287,7 +284,6 @@ export const UnpublishedSummaryJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Union([S.Literal('unpublished'), S.Literal('unpublished-summary')]),
   id: S.String,
   attributes: S.Struct({
-    type: S.Union([S.Literal('unpublished-summary'), S.Literal('unpublished')]),
     status: S.String,
     createdAt: S.optional(S.String),
     updatedAt: S.optional(S.String),
@@ -299,7 +295,6 @@ export const RevisionJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Literal('revision'),
   id: S.String,
   attributes: S.Struct({
-    type: S.Literal('revision'),
     revision: S.String,
     content: S.Record(S.String, S.Unknown),
     createdAt: S.String,
@@ -311,7 +306,6 @@ export const RevisionSummaryJsonApiSchema = S.toStandardSchemaV1(S.Struct({
   type: S.Union([S.Literal('revision'), S.Literal('revision-summary')]),
   id: S.String,
   attributes: S.Struct({
-    type: S.Union([S.Literal('revision-summary'), S.Literal('revision')]),
     revision: S.String,
     createdAt: S.String,
     updatedAt: S.optional(S.String),
