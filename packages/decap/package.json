@@ -4,12 +4,11 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "Decap CMS integrations for Laika CMS: OAuth2, widgets, server adapters. AI chat lives in @laikacms/decap-ai. The Decap CMS shell itself (App, DecapCmsProvider, widgets) and the laika backend (`backends/laika`) live in the upstream-named `@laikacms/decap-cms` fork.",
+  "description": "Decap CMS server-side integrations for Laika CMS: OAuth2 and the decap-api server adapter. The Decap CMS shell, widgets (incl. AI chat), config types and the laika backend live in the upstream-named `@laikacms/decap-cms` fork.",
   "keywords": [
     "decap-cms",
     "headless-cms",
-    "oauth2",
-    "widgets"
+    "oauth2"
   ],
   "author": {
     "name": "Sem Postma",
@@ -36,31 +35,6 @@
       "types": "./dist/decap-api/index.d.ts",
       "import": "./dist/decap-api/index.js",
       "default": "./dist/decap-api/index.js"
-    },
-    "./decap-config-types": {
-      "types": "./dist/decap-config-types/index.d.ts",
-      "import": "./dist/decap-config-types/index.js",
-      "default": "./dist/decap-config-types/index.js"
-    },
-    "./decap-cms-editor-component-embedded-entry": {
-      "types": "./dist/decap-cms-editor-component-embedded-entry/index.d.ts",
-      "import": "./dist/decap-cms-editor-component-embedded-entry/index.js",
-      "default": "./dist/decap-cms-editor-component-embedded-entry/index.js"
-    },
-    "./decap-cms-locale-nl": {
-      "types": "./dist/decap-cms-locale-nl/index.d.ts",
-      "import": "./dist/decap-cms-locale-nl/index.js",
-      "default": "./dist/decap-cms-locale-nl/index.js"
-    },
-    "./decap-cms-widget-lucide-icon": {
-      "types": "./dist/decap-cms-widget-lucide-icon/index.d.ts",
-      "import": "./dist/decap-cms-widget-lucide-icon/index.js",
-      "default": "./dist/decap-cms-widget-lucide-icon/index.js"
-    },
-    "./decap-cms-widget-radix-icon": {
-      "types": "./dist/decap-cms-widget-radix-icon/index.d.ts",
-      "import": "./dist/decap-cms-widget-radix-icon/index.js",
-      "default": "./dist/decap-cms-widget-radix-icon/index.js"
     },
     "./decap-oauth2": {
       "types": "./dist/decap-oauth2/index.d.ts",
@@ -101,57 +75,10 @@
     "yaml": "catalog:",
     "zod": "catalog:"
   },
-  "peerDependencies": {
-    "@emotion/css": "catalog:legacy",
-    "@emotion/react": "catalog:legacy",
-    "@laikacms/decap-cms": "catalog:decap",
-    "@octokit/rest": "catalog:octokit",
-    "@radix-ui/react-icons": "catalog:icons",
-    "lucide-react": "catalog:icons",
-    "react": "catalog:react",
-    "react-dom": "catalog:react",
-    "react-redux": "catalog:legacy"
-  },
-  "peerDependenciesMeta": {
-    "@emotion/css": {
-      "optional": true
-    },
-    "@emotion/react": {
-      "optional": true
-    },
-    "@laikacms/decap-cms": {
-      "optional": true
-    },
-    "@octokit/rest": {
-      "optional": true
-    },
-    "@radix-ui/react-icons": {
-      "optional": true
-    },
-    "lucide-react": {
-      "optional": true
-    },
-    "react": {
-      "optional": true
-    },
-    "react-dom": {
-      "optional": true
-    },
-    "react-redux": {
-      "optional": true
-    }
-  },
   "devDependencies": {
     "@hono/node-server": "catalog:server",
-    "@laikacms/decap-cms": "catalog:decap",
     "@types/jsonwebtoken": "catalog:types",
-    "@types/jwt-decode": "catalog:types",
     "@types/node": "catalog:types",
-    "@types/react": "catalog:types",
-    "@types/react-dom": "catalog:types",
-    "@types/react-redux": "catalog:types",
-    "@types/uuid": "catalog:types",
-    "immutable": "catalog:legacy",
     "rimraf": "catalog:tools",
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"

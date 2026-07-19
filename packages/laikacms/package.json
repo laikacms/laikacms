@@ -394,7 +394,6 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:types",
-    "@types/bcryptjs": "catalog:types",
     "@types/js-yaml": "catalog:types",
     "@types/json-schema": "catalog:types",
     "@types/node": "catalog:types",

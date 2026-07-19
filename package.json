@@ -28,7 +28,6 @@
     "eslint": "catalog:lint",
     "globals": "catalog:lint",
     "husky": "^9.1.7",
-    "immutable": "catalog:legacy",
     "rimraf": "catalog:tools",
     "turbo": "catalog:tools",
     "typescript": "catalog:tools",

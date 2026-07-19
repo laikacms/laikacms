@@ -5,8 +5,7 @@
   "fixed": [
     [
       "laikacms",
-      "@laikacms/decap",
-      "@laikacms/decap-ai"
+      "@laikacms/decap"
     ]
   ],
   "linked": [],

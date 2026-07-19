@@ -3,9 +3,10 @@
 Most functionality lives in `laikacms` as subpath exports; specialized integrations live in their
 own packages.
 
-> **Repository layout (June 2026).** This monorepo now carries only the three core packages —
-> `laikacms`, `@laikacms/decap`, and `@laikacms/decap-ai`. The other packages documented below
-> (`@laikacms/aws`, `@laikacms/github`, `@laikacms/git-gateway`, `laikacli`,
+> **Repository layout (June 2026, updated July 2026).** This monorepo now carries only the two core
+> packages — `laikacms` and `@laikacms/decap` (`@laikacms/decap-ai` and the client-side decap extras
+> moved into the `@laikacms/decap-cms` fork in July 2026, DCMS-492). The other packages documented
+> below (`@laikacms/aws`, `@laikacms/github`, `@laikacms/git-gateway`, `laikacli`,
 > `decap-cms-widget-lexicaleditor`, `decap-cms-widget-portabletext-editor`,
 > `decap-cms-lexical-core`, and the rest of the adapters) are still published to npm under the same
 > names but are now developed in **separate repositories**. See
@@ -101,42 +102,24 @@ AWS service implementations.
 | `@laikacms/aws/storage-ddb`              | DynamoDB single-table StorageRepository                                                |
 | `@laikacms/aws/assets-s3`                | S3-backed AssetsRepository                                                             |
 
-## `@laikacms/decap-ai`
-
-AI chat integration for Decap CMS. Bundles the Vercel AI SDK so consumers share one `ai` runtime.
-Provides a runtime-agnostic server adapter, a React widget, and document-manipulation tools.
-
-| Subpath                                | Description                                                                             |
-| -------------------------------------- | --------------------------------------------------------------------------------------- |
-| `@laikacms/decap-ai`                   | `decapAi()` server adapter factory + Vercel AI SDK re-exports (`tool`, `streamText`, …) |
-| `@laikacms/decap-ai/tools`             | Built-in client-side document tools (`getDocumentData`, `updateDocument`)               |
-| `@laikacms/decap-ai/providers`         | Model provider re-exports (`anthropic`, `openai` and their factories)                   |
-| `@laikacms/decap-ai/widget`            | React widget (`WidgetAiChat`, `AiChatControl`, `AiChatPreview`, `useChat`)              |
-| `@laikacms/decap-ai/widget/i18n/types` | TypeScript types for widget translation strings                                         |
-| `@laikacms/decap-ai/widget/i18n/en`    | English widget UI strings                                                               |
-| `@laikacms/decap-ai/widget/i18n/nl`    | Dutch widget UI strings                                                                 |
-| `@laikacms/decap-ai/i18n/types`        | TypeScript types for server-side translation strings                                    |
-| `@laikacms/decap-ai/i18n/en`           | English server-side strings (errors + default system prompt)                            |
-| `@laikacms/decap-ai/i18n/nl`           | Dutch server-side strings                                                               |
-
 ## `@laikacms/decap`
 
-Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives in the separate
-`@laikacms/decap-ai` package.
+Decap CMS server-side integrations: the Decap-compatible API and the OAuth2 server.
 
-| Subpath                                                     | Description                                                      |
-| ----------------------------------------------------------- | ---------------------------------------------------------------- |
-| `@laikacms/decap-cms/backends/laika`                        | Decap CMS backend                                                |
-| `@laikacms/decap/decap-api`                                 | Decap-compatible API                                             |
-| `@laikacms/decap/decap-oauth2`                              | OAuth2 server with PKCE                                          |
-| `@laikacms/decap/decap-oauth2/i18n`                         | i18n bundle index for the OAuth2 UI                              |
-| `@laikacms/decap/decap-oauth2/i18n/en`                      | English translations for the OAuth2 UI                           |
-| `@laikacms/decap/decap-oauth2/i18n/nl`                      | Dutch translations for the OAuth2 UI                             |
-| `@laikacms/decap/decap-cms-widget-lucide-icon`              | Lucide icon picker                                               |
-| `@laikacms/decap/decap-cms-widget-radix-icon`               | Radix icon picker                                                |
-| `@laikacms/decap/decap-cms-locale-nl`                       | Dutch locale                                                     |
-| `@laikacms/decap/decap-cms-editor-component-embedded-entry` | Embedded entry editor component                                  |
-| `@laikacms/decap/decap-config-types`                        | TypeScript type utilities derived from a Decap CMS config object |
+> **Moved (July 2026, DCMS-492):** AI chat (`@laikacms/decap-ai`, now discontinued), the icon
+> widgets, the Dutch locale, the embedded-entry editor component, and the config type utilities all
+> moved into the `@laikacms/decap-cms` fork: `@laikacms/decap-cms/ai`, `…/widgets/aichat`,
+> `…/widgets/lucide-icon`, `…/widgets/radix-icon`, `…/locales/nl`,
+> `…/editor-component-embedded-entry`, and `…/config-types`.
+
+| Subpath                                | Description                            |
+| -------------------------------------- | -------------------------------------- |
+| `@laikacms/decap-cms/backends/laika`   | Decap CMS backend (lives in the fork)  |
+| `@laikacms/decap/decap-api`            | Decap-compatible API                   |
+| `@laikacms/decap/decap-oauth2`         | OAuth2 server with PKCE                |
+| `@laikacms/decap/decap-oauth2/i18n`    | i18n bundle index for the OAuth2 UI    |
+| `@laikacms/decap/decap-oauth2/i18n/en` | English translations for the OAuth2 UI |
+| `@laikacms/decap/decap-oauth2/i18n/nl` | Dutch translations for the OAuth2 UI   |
 
 ## `decap-cms-lexical-core`
 

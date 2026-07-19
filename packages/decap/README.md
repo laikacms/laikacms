@@ -1,41 +1,22 @@
 # @laikacms/decap
 
-[Decap CMS](https://decapcms.org/) integrations for
-[Laika CMS](https://www.npmjs.com/package/laikacms): OAuth2 server, custom widgets, and an AI chat
-assistant. The `laika` Decap backend itself lives in the `@laikacms/decap-cms` fork at
+[Decap CMS](https://decapcms.org/) server-side integrations for
+[Laika CMS](https://www.npmjs.com/package/laikacms): the OAuth2 server and the Decap-compatible
+`decap-api` adapter. The `laika` Decap backend itself lives in the `@laikacms/decap-cms` fork at
 `@laikacms/decap-cms/backends/laika`.
+
+> **Moved (July 2026, DCMS-492):** the client-side pieces that used to live here now ship with the
+> `@laikacms/decap-cms` fork: icon widgets (`@laikacms/decap-cms/widgets/lucide-icon`,
+> `…/widgets/radix-icon`), the AI chat widget (`…/widgets/aichat`) and server adapter (`…/ai`), the
+> embedded-entry editor component (`…/editor-component-embedded-entry`), config type utilities
+> (`…/config-types`), and the Dutch locale (`…/locales/nl`, bundled with all other locales). The
+> `@laikacms/decap-ai` package is discontinued.
 
 ```bash
 pnpm add @laikacms/decap
 ```
 
 ## Exports
-
-### Type utilities
-
-| Export                               | Purpose                                                                                                                                      |
-| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@laikacms/decap/decap-config-types` | `ExtractFieldsType<T>`, `ExtractCollectionType<T>` — TypeScript utilities to derive typed frontmatter from a const-asserted Decap CMS config |
-
-#### `decap-config-types` usage
-
-```ts
-import { ExtractCollectionType, ExtractFieldsType } from '@laikacms/decap/decap-config-types';
-import config from './config.gen';
-
-// Pick a collection by name from the const-asserted config
-type PagesCollection = Extract<
-  typeof config['collections'][number],
-  { name: 'pages' }
->;
-
-// Derive the entry type — fields only
-type PageEntry = ExtractCollectionType<PagesCollection>;
-// Equivalent to: ExtractFieldsType<PagesCollection['fields']>
-
-// You can also go field-level directly
-type PageProps = ExtractFieldsType<PagesCollection['fields']>;
-```
 
 ### Backend & API
 
@@ -62,32 +43,7 @@ Key options accepted by `decapApi(options)`:
 | `logger`                  | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | no       | Receives structured diagnostic output; forwarded to storage, documents, and assets API sub-handlers                                                                    |
 | `cors`                    | `CorsOptions`                                     | no       | CORS configuration; required when the admin UI is served from a different origin than the API. Set `origins: '*'` for local dev, explicit origins list for production. |
 
-### Widgets
-
-| Export                                                      | Purpose                       |
-| ----------------------------------------------------------- | ----------------------------- |
-| `@laikacms/decap/decap-cms-widget-lucide-icon`              | Lucide icon picker widget     |
-| `@laikacms/decap/decap-cms-widget-radix-icon`               | Radix icon picker widget      |
-| `@laikacms/decap/decap-cms-editor-component-embedded-entry` | Embed entries inside Markdown |
-
-### AI
-
-AI features live in the separate
-[`@laikacms/decap-ai`](https://www.npmjs.com/package/@laikacms/decap-ai) package:
-
-```bash
-pnpm add @laikacms/decap-ai
-```
-
-| Export                      | Purpose                                                      |
-| --------------------------- | ------------------------------------------------------------ |
-| `@laikacms/decap-ai`        | AI chat backend (model-agnostic; any Vercel AI SDK provider) |
-| `@laikacms/decap-ai/tools`  | Tool definitions for the AI chat                             |
-| `@laikacms/decap-ai/widget` | AI chat widget for in-editor assistance                      |
-
-### Locales
-
-`@laikacms/decap/decap-cms-locale-nl` — Dutch locale for Decap CMS.
+### i18n
 
 i18n bundles are exposed per-module: `…/decap-oauth2/i18n`, `…/decap-oauth2/i18n/en`,
 `…/decap-oauth2/i18n/nl`.
@@ -95,8 +51,8 @@ i18n bundles are exposed per-module: `…/decap-oauth2/i18n`, `…/decap-oauth2/
 ## Companion packages
 
 - [`laikacms`](https://www.npmjs.com/package/laikacms) — core domain, APIs, serializers
-- [`@laikacms/decap-ai`](https://www.npmjs.com/package/@laikacms/decap-ai) — AI chat backend and
-  widget for Decap CMS
+- [`@laikacms/decap-cms`](https://www.npmjs.com/package/@laikacms/decap-cms) — the Decap CMS fork:
+  app shell, widgets (incl. AI chat), laika backend, config types
 - [`@laikacms/github`](https://www.npmjs.com/package/@laikacms/github) — GitHub storage
 - [`@laikacms/aws`](https://www.npmjs.com/package/@laikacms/aws) — AWS implementations
 
