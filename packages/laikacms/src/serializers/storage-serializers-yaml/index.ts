@@ -1,4 +1,4 @@
-import yaml from 'js-yaml';
+import { dump, JSON_SCHEMA, load } from 'js-yaml';
 import type { JSONSchema7 } from 'json-schema';
 import type { StorageFormat, StorageObjectContent, StorageSerializer } from 'laikacms/storage';
 
@@ -8,13 +8,13 @@ export const yamlSerializer: StorageSerializer<StorageFormat> = {
     content: StorageObjectContent,
     _schema: JSONSchema7,
   ): Promise<string> {
-    return yaml.dump(content, { noRefs: true });
+    return dump(content, { noRefs: true });
   },
   async deserializeDocumentFileContents(
     raw: string,
     _schema: JSONSchema7,
   ): Promise<StorageObjectContent> {
-    return yaml.load(raw, { schema: yaml.JSON_SCHEMA }) as StorageObjectContent;
+    return load(raw, { schema: JSON_SCHEMA }) as StorageObjectContent;
   },
 };
 
