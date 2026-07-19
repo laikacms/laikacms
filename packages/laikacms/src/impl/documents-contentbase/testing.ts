@@ -8,7 +8,7 @@ import {
 } from 'laikacms/contentbase-settings';
 import { LaikaTask, NotFoundError } from 'laikacms/core';
 
-import { type DocumentsContractCase, documentsContractRegistry } from '../../domain/documents/testing/index.js';
+import type { DocumentsContractCase } from '../../domain/documents/testing/index.js';
 import { InMemoryStorageRepository } from '../../domain/storage/testing/in-memory-storage.js';
 
 import { ContentBaseDocumentsRepository } from './documents-repository.js';
@@ -73,5 +73,3 @@ export const contentBaseDocumentsContractCase: DocumentsContractCase = {
     return new ContentBaseDocumentsRepository(storage, settings);
   },
 };
-
-documentsContractRegistry.push(contentBaseDocumentsContractCase);

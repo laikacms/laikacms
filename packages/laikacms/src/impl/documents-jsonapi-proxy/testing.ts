@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 
 import { buildJsonApi } from '../../api/documents-api/server.js';
 import { InMemoryDocumentsRepository } from '../../domain/documents/testing/in-memory-documents.js';
-import { type DocumentsContractCase, documentsContractRegistry } from '../../domain/documents/testing/index.js';
+import type { DocumentsContractCase } from '../../domain/documents/testing/index.js';
 import { InMemoryStorageRepository } from '../../domain/storage/testing/in-memory-storage.js';
 import { ContentBaseDocumentsRepository } from '../documents-contentbase/documents-repository.js';
 import { TestSettingsProvider } from '../documents-contentbase/testing.js';
@@ -57,8 +57,6 @@ export const jsonApiProxyDocumentsContractCase: DocumentsContractCase = {
   },
 };
 
-documentsContractRegistry.push(jsonApiProxyDocumentsContractCase);
-
 const CHANGES_ORIGIN = 'http://laika-documents-changes.test';
 
 let originalFetchChanges: typeof fetch | null = null;
@@ -101,5 +99,3 @@ export const jsonApiProxyChangesContractCase: DocumentsContractCase = {
     originalFetchChanges = null;
   },
 };
-
-documentsContractRegistry.push(jsonApiProxyChangesContractCase);

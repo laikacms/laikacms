@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { type AssetsContractCase, assetsContractRegistry } from '../../domain/assets/testing/index.js';
+import type { AssetsContractCase } from '../../domain/assets/testing/index.js';
 
 import { ObsidianAssetsRepository } from './assets-repository.js';
 
@@ -26,5 +26,3 @@ export const obsidianAssetsContractCase: AssetsContractCase = {
    */
   skip: ['updateAsset'],
 };
-
-assetsContractRegistry.push(obsidianAssetsContractCase);

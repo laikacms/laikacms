@@ -1,4 +1,4 @@
-import { type AssetsContractCase, assetsContractRegistry } from '../../domain/assets/testing/index.js';
+import type { AssetsContractCase } from '../../domain/assets/testing/index.js';
 
 import { R2AssetsRepository } from './infrastructure/repositories/r2-assets-repository.js';
 
@@ -196,5 +196,3 @@ export const r2AssetsContractCase: AssetsContractCase = {
    */
   skip: ['deleteAssetsTracksSkipped'],
 };
-
-assetsContractRegistry.push(r2AssetsContractCase);

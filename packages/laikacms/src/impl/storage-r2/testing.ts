@@ -1,4 +1,4 @@
-import { type StorageContractCase, storageContractRegistry } from '../../domain/storage/testing/index.js';
+import type { StorageContractCase } from '../../domain/storage/testing/index.js';
 import { jsonSerializer } from '../../serializers/storage-serializers-json/index.js';
 
 import { R2StorageRepository } from './infrastructure/repositories/r2-storage-repository.js';
@@ -100,5 +100,3 @@ export const r2StorageContractCase: StorageContractCase = {
    */
   skip: ['removeAtoms'],
 };
-
-storageContractRegistry.push(r2StorageContractCase);

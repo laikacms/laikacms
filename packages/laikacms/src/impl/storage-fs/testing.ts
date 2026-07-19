@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { type StorageContractCase, storageContractRegistry } from '../../domain/storage/testing/index.js';
+import type { StorageContractCase } from '../../domain/storage/testing/index.js';
 import { jsonSerializer } from '../../serializers/storage-serializers-json/index.js';
 
 import { FileSystemStorageRepository } from './infrastructure/repositories/filesystem-repository.js';
@@ -22,5 +22,3 @@ export const fileSystemStorageContractCase: StorageContractCase = {
     );
   },
 };
-
-storageContractRegistry.push(fileSystemStorageContractCase);
