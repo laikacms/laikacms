@@ -310,12 +310,13 @@ describe('POST /atoms (create folder)', () => {
     expect(res.status).toBe(201);
 
     const body = await res.json() as {
-      data: { type: string, id: string, attributes: { type: string } },
+      data: { type: string, id: string, attributes: Record<string, unknown> },
     };
 
     expect(body.data.type).toBe('folder');
     expect(body.data.id).toBe('posts/drafts');
-    expect(body.data.attributes.type).toBe('folder');
+    // `type` must not appear in attributes per JSON:API §7.2.2
+    expect('type' in body.data.attributes).toBe(false);
   });
 
   it('returns 400 when the request body fails validation', async () => {

@@ -90,7 +90,7 @@ describe('AssetsJsonApiProxyRepository.listResources — filters & cursor pagina
   const assetItem = (id: string) => ({
     type: 'asset',
     id,
-    attributes: { type: 'asset', content: {} },
+    attributes: { content: {} },
   });
 
   it('serializes options.filters as filter[<name>] query params', async () => {
@@ -280,7 +280,7 @@ describe('AssetsJsonApiProxyRepository.getResource', () => {
         data: {
           type: 'asset',
           id: 'images/photo.jpg',
-          attributes: { type: 'asset' },
+          attributes: {},
         },
       })
     );
@@ -304,7 +304,7 @@ describe('AssetsJsonApiProxyRepository.getResource', () => {
           data: {
             type: 'asset',
             id: 'images/photo.jpg',
-            attributes: { type: 'asset' },
+            attributes: {},
           },
           meta: {
             warnings: [
@@ -345,7 +345,7 @@ describe('AssetsJsonApiProxyRepository.getResource', () => {
   it('adds include=variations,urls query params when hints are set', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({
-        data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset' } },
+        data: { type: 'asset', id: 'images/photo.jpg', attributes: {} },
       })
     );
     vi.stubGlobal('fetch', fetchMock);
@@ -368,7 +368,7 @@ describe('AssetsJsonApiProxyRepository.getAsset', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset' } },
+          data: { type: 'asset', id: 'images/photo.jpg', attributes: {} },
         })
       ),
     );
@@ -386,7 +386,7 @@ describe('AssetsJsonApiProxyRepository.getAsset', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'folder', id: 'images/', attributes: { type: 'folder' } },
+          data: { type: 'folder', id: 'images/', attributes: {} },
         })
       ),
     );
@@ -404,7 +404,7 @@ describe('AssetsJsonApiProxyRepository.createAsset', () => {
   it('POSTs multipart FormData and returns the created Asset', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({
-        data: { type: 'asset', id: 'images/new.png', attributes: { type: 'asset' } },
+        data: { type: 'asset', id: 'images/new.png', attributes: {} },
       })
     );
     vi.stubGlobal('fetch', fetchMock);
@@ -430,7 +430,7 @@ describe('AssetsJsonApiProxyRepository.createAsset', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'asset', id: 'images/new.png', attributes: { type: 'asset' } },
+          data: { type: 'asset', id: 'images/new.png', attributes: {} },
           meta: {
             warnings: [
               { code: 'not_found', status: '404', title: 'Not Found', detail: 'thumbnail generation skipped' },
@@ -470,7 +470,7 @@ describe('AssetsJsonApiProxyRepository.updateAsset', () => {
   it('PATCHes the resource and returns the updated Asset', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({
-        data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset', mimeType: 'image/jpeg' } },
+        data: { type: 'asset', id: 'images/photo.jpg', attributes: { mimeType: 'image/jpeg' } },
       })
     );
     vi.stubGlobal('fetch', fetchMock);
@@ -495,7 +495,7 @@ describe('AssetsJsonApiProxyRepository.updateAsset', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset' } },
+          data: { type: 'asset', id: 'images/photo.jpg', attributes: {} },
           meta: {
             warnings: [
               { code: 'not_found', status: '404', title: 'Not Found', detail: 'stale cache cleared' },
@@ -594,7 +594,7 @@ describe('AssetsJsonApiProxyRepository.getFolder', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'folder', id: 'images/', attributes: { type: 'folder' } },
+          data: { type: 'folder', id: 'images/', attributes: {} },
         })
       ),
     );
@@ -612,7 +612,7 @@ describe('AssetsJsonApiProxyRepository.getFolder', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset' } },
+          data: { type: 'asset', id: 'images/photo.jpg', attributes: {} },
         })
       ),
     );
@@ -649,7 +649,7 @@ describe('AssetsJsonApiProxyRepository.createFolder', () => {
   it('POSTs a folder resource to /resources and returns the created Folder', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({
-        data: { type: 'folder', id: 'uploads/', attributes: { type: 'folder' } },
+        data: { type: 'folder', id: 'uploads/', attributes: {} },
       })
     );
     vi.stubGlobal('fetch', fetchMock);
@@ -676,7 +676,7 @@ describe('AssetsJsonApiProxyRepository.createFolder', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'folder', id: 'uploads/', attributes: { type: 'folder' } },
+          data: { type: 'folder', id: 'uploads/', attributes: {} },
           meta: {
             warnings: [
               { code: 'not_found', status: '404', title: 'Not Found', detail: 'parent path created on-demand' },
@@ -723,7 +723,7 @@ describe('AssetsJsonApiProxyRepository.getVariations', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset' } },
+          data: { type: 'asset', id: 'images/photo.jpg', attributes: {} },
           included: [
             {
               type: 'asset-variants',
@@ -750,7 +750,7 @@ describe('AssetsJsonApiProxyRepository.getVariations', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset' } },
+          data: { type: 'asset', id: 'images/photo.jpg', attributes: {} },
           // no included
         })
       ),
@@ -769,7 +769,7 @@ describe('AssetsJsonApiProxyRepository.getVariations', () => {
   it('serves cached variations without a second fetch', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse({
-        data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset' } },
+        data: { type: 'asset', id: 'images/photo.jpg', attributes: {} },
         included: [
           {
             type: 'asset-variants',
@@ -802,7 +802,7 @@ describe('AssetsJsonApiProxyRepository.getUrls', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset' } },
+          data: { type: 'asset', id: 'images/photo.jpg', attributes: {} },
           included: [
             {
               type: 'asset-url',
@@ -829,7 +829,7 @@ describe('AssetsJsonApiProxyRepository.getUrls', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset' } },
+          data: { type: 'asset', id: 'images/photo.jpg', attributes: {} },
         })
       ),
     );
@@ -848,7 +848,7 @@ describe('AssetsJsonApiProxyRepository.getUrls', () => {
       const u = new URL(url);
       const key = decodeURIComponent(u.pathname.replace('/resources/', ''));
       return jsonResponse({
-        data: { type: 'asset', id: key, attributes: { type: 'asset' } },
+        data: { type: 'asset', id: key, attributes: {} },
         included: [
           {
             type: 'asset-url',
@@ -883,7 +883,7 @@ describe('AssetsJsonApiProxyRepository.getMetadata', () => {
           data: {
             type: 'asset',
             id: 'images/photo.jpg',
-            attributes: { type: 'asset' },
+            attributes: {},
             meta: { kind: 'image', size: 12345, mimeType: 'image/jpeg', width: 800, height: 600 },
           },
         })
@@ -905,7 +905,7 @@ describe('AssetsJsonApiProxyRepository.getMetadata', () => {
       'fetch',
       vi.fn(async () =>
         jsonResponse({
-          data: { type: 'asset', id: 'images/photo.jpg', attributes: { type: 'asset' } },
+          data: { type: 'asset', id: 'images/photo.jpg', attributes: {} },
           // no meta on the resource
         })
       ),
@@ -926,7 +926,7 @@ describe('AssetsJsonApiProxyRepository.getMetadata', () => {
         data: {
           type: 'asset',
           id: 'images/photo.jpg',
-          attributes: { type: 'asset' },
+          attributes: {},
           meta: { kind: 'binary', size: 100, mimeType: 'application/octet-stream' },
         },
       })
