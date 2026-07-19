@@ -1,5 +1,24 @@
 # @laikacms/decap
 
+## 2.0.0
+
+### Major Changes
+
+- Remove all client-side Decap code; the package now only ships the server-side `decap-api` and
+  `decap-oauth2` modules.
+
+  Removed exports: `decap-cms-widget-lucide-icon`, `decap-cms-widget-radix-icon`,
+  `decap-cms-locale-nl`, `decap-config-types`, and `decap-cms-editor-component-embedded-entry`. The
+  `@laikacms/decap-ai` package has been removed from the workspace entirely and will no longer
+  receive releases.
+
+### Patch Changes
+
+- Updated dependencies
+- Updated dependencies
+- Updated dependencies
+  - laikacms@2.0.0
+
 ## 1.3.0
 
 ### Patch Changes

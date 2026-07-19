@@ -1,5 +1,21 @@
 # laikacms
 
+## 2.0.0
+
+### Patch Changes
+
+- Fix the ContentBase documents repository silently discarding content edits in combined "change
+  status + save content" PATCHes (LCMS-279). `updateUnpublishedStatus` now threads
+  `content`/`language` through the status-change branch with the same merge semantics as a plain
+  content update.
+- Use named js-yaml imports in the YAML storage serializer so it works with js-yaml v5, which no
+  longer provides a default export.
+- Strip the domain `type` discriminator (and `id`) from JSON:API resource attributes per JSON:API
+  §7.2.2 (LCMS-281). Previously the internal `type` field leaked into every `/documents`, `/assets`,
+  and atomic-operations response; `fromJsonApi` now reinjects `type` from the resource envelope. If
+  you were reading the non-spec `type` attribute off the wire, use the resource object's top-level
+  `type` instead.
+
 ## 1.3.0
 
 ### Minor Changes
