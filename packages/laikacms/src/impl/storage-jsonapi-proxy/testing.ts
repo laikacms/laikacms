@@ -2,7 +2,7 @@ import { vi } from 'vitest';
 
 import { buildJsonApi } from '../../api/storage-api/server.js';
 import { InMemoryStorageRepository } from '../../domain/storage/testing/in-memory-storage.js';
-import { type StorageContractCase, storageContractRegistry } from '../../domain/storage/testing/index.js';
+import type { StorageContractCase } from '../../domain/storage/testing/index.js';
 
 import { StorageJsonApiProxyRepository } from './storage-jsonapi-proxy-repository.js';
 
@@ -49,5 +49,3 @@ export const jsonApiProxyStorageContractCase: StorageContractCase = {
     originalFetch = null;
   },
 };
-
-storageContractRegistry.push(jsonApiProxyStorageContractCase);

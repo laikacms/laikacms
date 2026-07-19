@@ -1,4 +1,4 @@
-import { type DocumentsContractCase, documentsContractRegistry } from '../../domain/documents/testing/index.js';
+import type { DocumentsContractCase } from '../../domain/documents/testing/index.js';
 
 import {
   type DocumentModel,
@@ -139,5 +139,3 @@ export const drizzleDocumentsContractCase: DocumentsContractCase = {
     return repo;
   },
 };
-
-documentsContractRegistry.push(drizzleDocumentsContractCase);

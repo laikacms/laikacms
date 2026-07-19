@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as os from 'node:os';
 import * as path from 'node:path';
 
-import { type DocumentsContractCase, documentsContractRegistry } from '../../domain/documents/testing/index.js';
+import type { DocumentsContractCase } from '../../domain/documents/testing/index.js';
 import { markdownSerializer } from '../../serializers/storage-serializers-markdown/index.js';
 import { FileSystemStorageRepository } from '../storage-fs/infrastructure/repositories/filesystem-repository.js';
 
@@ -29,5 +29,3 @@ export const obsidianDocumentsContractCase: DocumentsContractCase = {
    */
   skip: ['createRevision', 'listRevisions'],
 };
-
-documentsContractRegistry.push(obsidianDocumentsContractCase);

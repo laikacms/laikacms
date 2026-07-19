@@ -1,4 +1,4 @@
-import { type StorageContractCase, storageContractRegistry } from '../../domain/storage/testing/index.js';
+import type { StorageContractCase } from '../../domain/storage/testing/index.js';
 import { jsonSerializer } from '../../serializers/storage-serializers-json/index.js';
 
 import type { WebDavConfig } from './infrastructure/datasources/webdav-datasource.js';
@@ -129,5 +129,3 @@ export const webDavStorageContractCase: StorageContractCase = {
     activeServer = null;
   },
 };
-
-storageContractRegistry.push(webDavStorageContractCase);
