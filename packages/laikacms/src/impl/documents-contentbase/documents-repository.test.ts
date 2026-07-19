@@ -489,6 +489,54 @@ describe('ContentBaseDocumentsRepository', () => {
       }
     });
 
+    it('applies content + language edits when changing status in the same call', async () => {
+      // Use a repo that has both draft and pending_review statuses configured.
+      const multiStatusStorage = makeMemoryStorage();
+      const multiStatusRepo = new ContentBaseDocumentsRepository(
+        multiStatusStorage,
+        makeSettingsProvider({
+          unpublishedStatuses: {
+            draft: { directory: 'draft', name: 'Draft' },
+            pending_review: { directory: 'pending-review', name: 'Pending Review' },
+          },
+        }),
+      );
+
+      await resolveTask(
+        multiStatusRepo.createUnpublished({
+          key: 'posts/draft-status-content',
+          type: 'unpublished',
+          content: { title: 'Original', body: 'old' },
+          language: 'en',
+          status: 'draft',
+        }),
+      );
+
+      const result = await resolveTask(
+        multiStatusRepo.updateUnpublished({
+          key: 'posts/draft-status-content',
+          status: 'pending_review',
+          content: { title: 'Edited', body: 'new' },
+          language: 'fr',
+        }),
+      );
+      expect(Result.isSuccess(result)).toBe(true);
+      if (Result.isSuccess(result)) {
+        expect(result.success.status).toBe('pending_review');
+        expect(result.success.language).toBe('fr');
+        expect(result.success.content).toMatchObject({ title: 'Edited', body: 'new' });
+      }
+
+      // Confirm the edit persisted after the status move
+      const readback = await resolveTask(multiStatusRepo.getUnpublished('posts/draft-status-content'));
+      expect(Result.isSuccess(readback)).toBe(true);
+      if (Result.isSuccess(readback)) {
+        expect(readback.success.status).toBe('pending_review');
+        expect(readback.success.language).toBe('fr');
+        expect(readback.success.content).toMatchObject({ title: 'Edited', body: 'new' });
+      }
+    });
+
     it('returns NotFoundError when updating a non-existent unpublished document', async () => {
       const result = await resolveTask(
         repo.updateUnpublished({ key: 'posts/no-such-draft', content: { x: 1 } }),
