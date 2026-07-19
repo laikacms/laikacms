@@ -27,7 +27,7 @@ import {
   type UnpublishedCreate,
   type UnpublishedUpdate,
 } from 'laikacms/documents';
-import type { StorageRepository } from 'laikacms/storage';
+import type { StorageObjectContent, StorageRepository } from 'laikacms/storage';
 import { basename, pathCombine, pathToSegments } from 'laikacms/storage';
 
 /** Lift a LaikaTask into an Effect, forwarding metadata to the outer emit. */
@@ -323,7 +323,10 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
         const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(update.key), emit);
 
         if (update.status && update.status !== existing.status) {
-          return yield* LaikaTask.runValueForwarding(this.updateUnpublishedStatus(update.key, update.status), emit);
+          return yield* LaikaTask.runValueForwarding(
+            this.updateUnpublishedStatus(update.key, update.status, update.content, update.language),
+            emit,
+          );
         }
 
         const newLanguage = update.language ?? existing.language;
@@ -346,19 +349,27 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  /** Move an unpublished document to a different status directory. */
-  private updateUnpublishedStatus(key: string, newStatus: string): LaikaTask.LaikaTask<Unpublished> {
+  /** Move an unpublished document to a different status directory, optionally applying content/language edits. */
+  private updateUnpublishedStatus(
+    key: string,
+    newStatus: string,
+    newContent?: StorageObjectContent,
+    newLanguage?: string,
+  ): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
         const oldPath = yield* this.getUnpublishedPath(key, existing.status, emit);
         const newPath = yield* this.getUnpublishedPath(key, newStatus, emit);
 
+        const language = newLanguage ?? existing.language;
+        const content = { ...(newContent ?? existing.content), language };
+
         yield* LaikaTask.runValueForwarding(
           this.storageRepository.createObject({
             type: 'object',
             key: newPath,
-            content: existing.content,
+            content,
           }),
           emit,
         );
@@ -366,6 +377,8 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
         return {
           ...existing,
+          content,
+          language,
           status: newStatus,
           updatedAt: new Date().toISOString(),
         };
