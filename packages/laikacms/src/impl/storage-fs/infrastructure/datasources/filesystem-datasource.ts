@@ -197,7 +197,15 @@ export class FileSystemDataSource {
       }
       successful.push(entry);
     }
-    await trash(successful.map(entry => path.join(basePath, entry.path)));
+    const paths = successful.map(entry => path.join(basePath, entry.path));
+    try {
+      await trash(paths);
+    } catch {
+      // trash unavailable (e.g. WSL without PowerShell); fall back to direct deletion
+      for (const p of paths) {
+        await fs.rm(p, { recursive: true, force: true });
+      }
+    }
     yield Result.succeed(successful);
   }
 
