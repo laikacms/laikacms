@@ -1074,6 +1074,16 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           400,
         );
       }
+      if (typeof data.attributes.revision !== 'string' || !data.attributes.revision) {
+        return failResponse(
+          Result.fail(
+            new BadRequestError(
+              "data.attributes.revision is required — provide a revision identifier (e.g. 'v1', 'rev-001')",
+            ),
+          ),
+          400,
+        );
+      }
       const createData = revisionCreateFromJsonApi({
         type: 'revision',
         id: data.id,
