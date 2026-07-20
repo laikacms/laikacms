@@ -3,7 +3,14 @@ import * as Result from 'effect/Result';
 
 import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
 import type { LaikaDone, LaikaError } from 'laikacms/core';
-import { BadRequestError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import {
+  BadRequestError,
+  EntryAlreadyExistsError,
+  InvalidData,
+  LaikaStream,
+  LaikaTask,
+  NotFoundError,
+} from 'laikacms/core';
 import type {
   ListRecordsDone,
   ListRecordsOptions,
@@ -200,6 +207,12 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
             content: { ...create.content, language: create.language },
           }),
           emit,
+        ).pipe(
+          Effect.mapError(e =>
+            e instanceof EntryAlreadyExistsError
+              ? new EntryAlreadyExistsError(`Already exists: ${create.key}`)
+              : e
+          ),
         );
         const now = new Date().toISOString();
         return {
@@ -302,6 +315,12 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
             content: { ...create.content, language: create.language },
           }),
           emit,
+        ).pipe(
+          Effect.mapError(e =>
+            e instanceof EntryAlreadyExistsError
+              ? new EntryAlreadyExistsError(`Already exists: ${create.key}`)
+              : e
+          ),
         );
         const now = new Date().toISOString();
         return {
@@ -372,6 +391,12 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
             content,
           }),
           emit,
+        ).pipe(
+          Effect.mapError(e =>
+            e instanceof EntryAlreadyExistsError
+              ? new EntryAlreadyExistsError(`Already exists: ${key}`)
+              : e
+          ),
         );
         yield* collectStreamData(this.storageRepository.removeAtoms([oldPath]), emit);
 
@@ -648,6 +673,12 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
             content: { ...create.content, language: create.language },
           }),
           emit,
+        ).pipe(
+          Effect.mapError(e =>
+            e instanceof EntryAlreadyExistsError
+              ? new EntryAlreadyExistsError(`Already exists: ${create.key}/${create.revision}`)
+              : e
+          ),
         );
         const now = new Date().toISOString();
         return {

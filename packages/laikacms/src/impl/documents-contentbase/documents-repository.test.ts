@@ -1,7 +1,7 @@
 import * as Result from 'effect/Result';
 import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
 import type { DocumentCollectionSettings } from 'laikacms/contentbase-settings';
-import { BadRequestError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { BadRequestError, EntryAlreadyExistsError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { LaikaError } from 'laikacms/core';
 import type { StorageRepository } from 'laikacms/storage';
 import type {
@@ -667,6 +667,63 @@ describe('ContentBaseDocumentsRepository', () => {
       );
       expect(done.total).toBe(4);
     });
+  });
+});
+
+describe('ContentBaseDocumentsRepository — EntryAlreadyExistsError detail remapping (LCMS-283/284)', () => {
+  function makeAlwaysConflictStorage(storageKey: string): StorageRepository {
+    return {
+      ...makeMemoryStorage(),
+      createObject() {
+        return LaikaTask.fail(new EntryAlreadyExistsError(`Already exists: ${storageKey}`));
+      },
+    } as unknown as StorageRepository;
+  }
+
+  it('createDocument remaps EntryAlreadyExistsError detail to domain key, not storage path (LCMS-283)', async () => {
+    // With directory: '_pub/posts', the storage key is '_pub/posts/hello' but the domain key is 'posts/hello'
+    const customSettings = makeSettingsProvider({ directory: '_pub/posts' });
+    const storage = makeAlwaysConflictStorage('_pub/posts/hello');
+    const repo = new ContentBaseDocumentsRepository(storage, customSettings);
+
+    const result = await resolveTask(
+      repo.createDocument({ key: 'posts/hello', type: 'published', status: 'published', content: {}, language: 'en' }),
+    );
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure instanceof EntryAlreadyExistsError).toBe(true);
+      expect(result.failure.message).toBe('Already exists: posts/hello');
+    }
+  });
+
+  it('createUnpublished remaps EntryAlreadyExistsError detail to domain key, not .contentbase/ path (LCMS-283)', async () => {
+    const storage = makeAlwaysConflictStorage('.contentbase/posts/draft/hello');
+    const repo = new ContentBaseDocumentsRepository(storage, makeSettingsProvider());
+
+    const result = await resolveTask(
+      repo.createUnpublished({ key: 'posts/hello', type: 'unpublished', status: 'draft', content: {}, language: 'en' }),
+    );
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure instanceof EntryAlreadyExistsError).toBe(true);
+      expect(result.failure.message).toBe('Already exists: posts/hello');
+      expect(result.failure.message).not.toContain('.contentbase');
+    }
+  });
+
+  it('createRevision remaps EntryAlreadyExistsError detail to key/revision, not storage path (LCMS-284)', async () => {
+    const storage = makeAlwaysConflictStorage('.contentbase/posts/revisions/hello/v1');
+    const repo = new ContentBaseDocumentsRepository(storage, makeSettingsProvider());
+
+    const result = await resolveTask(
+      repo.createRevision({ key: 'posts/hello', type: 'revision', revision: 'v1', content: {}, language: 'en' }),
+    );
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure instanceof EntryAlreadyExistsError).toBe(true);
+      expect(result.failure.message).toBe('Already exists: posts/hello/v1');
+      expect(result.failure.message).not.toContain('.contentbase');
+    }
   });
 });
 
