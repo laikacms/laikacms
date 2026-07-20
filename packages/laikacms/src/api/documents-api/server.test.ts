@@ -166,7 +166,7 @@ describe('documents-api meta.warnings', () => {
     expect(calledWith).toBeInstanceOf(NotFoundError);
   });
 
-  it('calls onError when the repo throws an unexpected synchronous error', async () => {
+  it('returns 500 (not 400) and calls onError when the repo throws an unexpected synchronous error (LCMS-275)', async () => {
     const onError = vi.fn();
     const partialRepo = {
       getDocument: (_key: string) => {
@@ -176,11 +176,14 @@ describe('documents-api meta.warnings', () => {
 
     const api = buildJsonApi({ repo: partialRepo, onError });
     const res = await api.fetch(new Request('http://localhost/published/boom'));
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(500);
     expect(onError).toHaveBeenCalledOnce();
     const [calledWith] = onError.mock.calls[0]!;
     expect(calledWith).toBeInstanceOf(Error);
     expect((calledWith as Error).message).toBe('unexpected synchronous defect');
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('500');
+    expect(body.errors[0]!.code).toBe('internal_error');
   });
 
   it('surfaces recoverableErrors on per-op meta.warnings for atomic remove results', async () => {

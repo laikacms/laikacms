@@ -557,7 +557,9 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         return await fetchInner(request);
       } catch (err) {
         onError?.(err);
-        return respondError(Result.fail(toLaikaError(err)), 400, logger);
+        const laikaErr = toLaikaError(err);
+        const status = ErrorCodeToStatusMap[laikaErr.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        return respondError(Result.fail(laikaErr), status, logger);
       }
     },
   };
