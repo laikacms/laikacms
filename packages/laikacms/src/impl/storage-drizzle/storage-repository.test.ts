@@ -1,5 +1,5 @@
 import * as Effect from 'effect/Effect';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import {
   EntryAlreadyExistsError,
@@ -540,5 +540,109 @@ describe('DrizzleStorageRepository.listAtomSummaries', () => {
     expect(collected.data[0]).toEqual({ type: 'object-summary', key: 'docs/a' });
     expect(collected.data[1]).toEqual({ type: 'object-summary', key: 'docs/b' });
     expect(collected.done.total).toBe(2);
+  });
+});
+
+describe('DrizzleStorageRepository logger', () => {
+  const makeRepoWithLogger = (logger: Pick<Console, 'error' | 'warn' | 'info' | 'debug'>) => {
+    return new DrizzleStorageRepository({
+      queryBuilders: defaultQueryBuilders,
+      logger,
+      callbacks: {
+        async insert({ values }) {
+          return [{ ...values }];
+        },
+        async update() {
+          return [];
+        },
+        async delete() {
+          return [];
+        },
+        async select() {
+          return [];
+        },
+      },
+    });
+  };
+
+  it('calls logger.debug on getObject', async () => {
+    const debug = vi.fn();
+    const repo = makeRepoWithLogger({ debug, error: vi.fn(), warn: vi.fn(), info: vi.fn() });
+    await Effect.runPromise(Effect.result(LaikaTask.runValue(repo.getObject('posts/hello'))));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('getObject'));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('posts/hello'));
+  });
+
+  it('calls logger.debug on createObject', async () => {
+    const debug = vi.fn();
+    let inserted: StorageModel | undefined;
+    const repo = new DrizzleStorageRepository({
+      queryBuilders: defaultQueryBuilders,
+      logger: { debug, error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+      callbacks: {
+        async insert({ values }) {
+          inserted = { ...values };
+          return [inserted];
+        },
+        async update() {
+          return [];
+        },
+        async delete() {
+          return [];
+        },
+        async select() {
+          return inserted ? [inserted] : [];
+        },
+      },
+    });
+    // First select returns [] (key doesn't exist yet), then after insert the readback select returns the row
+    // Reset inserted before calling so first select sees nothing
+    inserted = undefined;
+    await Effect.runPromise(
+      LaikaTask.runValue(repo.createObject({ key: 'posts/a', type: 'object', content: { data: {} } })),
+    );
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('createObject'));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('posts/a'));
+  });
+
+  it('calls logger.debug on listAtoms', async () => {
+    const debug = vi.fn();
+    const repo = makeRepoWithLogger({ debug, error: vi.fn(), warn: vi.fn(), info: vi.fn() });
+    await Effect.runPromise(
+      LaikaStream.runCollect(repo.listAtoms('docs', { depth: 1, pagination: { offset: 0, limit: 10 } })),
+    );
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('listAtoms'));
+  });
+
+  it('calls logger.error when removeAtoms delete callback throws', async () => {
+    const logError = vi.fn();
+    const repo = new DrizzleStorageRepository({
+      queryBuilders: defaultQueryBuilders,
+      logger: { debug: vi.fn(), error: logError, warn: vi.fn(), info: vi.fn() },
+      callbacks: {
+        async insert({ values }) {
+          return [{ ...values }];
+        },
+        async update() {
+          return [];
+        },
+        async delete() {
+          throw new Error('db gone');
+        },
+        async select() {
+          return [];
+        },
+      },
+    });
+    await Effect.runPromise(LaikaStream.runCollect(repo.removeAtoms(['posts/x'])));
+    expect(logError).toHaveBeenCalledWith(expect.stringContaining('removeAtoms'));
+    expect(logError).toHaveBeenCalledWith(expect.stringContaining('posts/x'));
+  });
+
+  it('does not throw when no logger is provided', async () => {
+    const repo = makeRepoFull();
+    await expect(
+      Effect.runPromise(Effect.result(LaikaTask.runValue(repo.getObject('any')))),
+    ).resolves.toBeDefined();
   });
 });

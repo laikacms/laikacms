@@ -76,6 +76,12 @@ export class DrizzleStorageRepository extends StorageRepository {
     super();
   }
 
+  private debug(op: string, key?: string): void {
+    if (!this.options.logger) return;
+    const msg = key !== undefined ? `[storage-drizzle] ${op} key="${key}"` : `[storage-drizzle] ${op}`;
+    this.options.logger.debug(msg);
+  }
+
   private calculateDepth(key: string): number {
     return key.split('/').length;
   }
@@ -110,6 +116,7 @@ export class DrizzleStorageRepository extends StorageRepository {
         let removed = 0;
         let skipped = 0;
         for (const key of keys) {
+          this.debug('removeAtoms:select-children', key);
           // Pre-check: refuse to delete if this key is a folder prefix (has children).
           // Must happen before the DELETE so a key that exists as both a DB row and a
           // folder prefix is correctly blocked (post-delete check would never fire then).
@@ -127,6 +134,7 @@ export class DrizzleStorageRepository extends StorageRepository {
             continue;
           }
 
+          this.debug('removeAtoms:delete', key);
           const attempt = yield* Effect.result(
             Effect.tryPromise({
               try: () =>
@@ -141,6 +149,7 @@ export class DrizzleStorageRepository extends StorageRepository {
             }),
           );
           if (Result.isFailure(attempt)) {
+            this.options.logger?.error(`[storage-drizzle] removeAtoms failed key="${key}": ${attempt.failure.message}`);
             yield* emit.recoverableError(attempt.failure);
             skipped += 1;
             continue;
@@ -161,6 +170,7 @@ export class DrizzleStorageRepository extends StorageRepository {
   getFolder(key: string): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('getFolder', key);
         const objects = yield* Effect.promise(() =>
           this.options.callbacks.select({
             where: this.options.queryBuilders.keyStartsWith(`${key}/`),
@@ -189,6 +199,7 @@ export class DrizzleStorageRepository extends StorageRepository {
   getObject(key: string): LaikaTask.LaikaTask<StorageObject> {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('getObject', key);
         const rows = yield* Effect.promise(() =>
           this.options.callbacks.select({
             where: this.options.queryBuilders.keyEquals(key),
@@ -206,6 +217,7 @@ export class DrizzleStorageRepository extends StorageRepository {
   updateObject(update: StorageObjectUpdate): LaikaTask.LaikaTask<StorageObject> {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('updateObject', update.key);
         if (update.content !== undefined) {
           const now = new Date().toISOString();
           yield* Effect.promise(() =>
@@ -223,6 +235,7 @@ export class DrizzleStorageRepository extends StorageRepository {
   createObject(create: StorageObjectCreate): LaikaTask.LaikaTask<StorageObject> {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('createObject', create.key);
         if (!create.content) {
           return yield* Effect.fail(new InvalidData('Object content is required for creation'));
         }
@@ -278,6 +291,7 @@ export class DrizzleStorageRepository extends StorageRepository {
   createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder> {
     return LaikaTask.make<Folder>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('createFolder', folderCreate.key);
         const keepKey = pathCombine(folderCreate.key, '.keep');
         const now = new Date().toISOString();
         yield* Effect.promise(() =>
@@ -319,6 +333,7 @@ export class DrizzleStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<Atom, ListAtomsDone> {
     return LaikaStream.make<Atom, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
+        this.debug('listAtoms', folderKey);
         const pattern = folderKey ? `${folderKey}/` : '';
         const baseDepth = folderKey ? this.calculateDepth(folderKey) : 0;
         const maxDepth = baseDepth + options.depth;
