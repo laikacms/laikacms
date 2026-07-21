@@ -60,12 +60,13 @@ Return whatever your Drizzle version produces — the types are `unknown` at the
 
 ### `DrizzleStorageCallbacks`
 
-| Field    | Signature                                                                          | Description                                         |
-| -------- | ---------------------------------------------------------------------------------- | --------------------------------------------------- |
-| `insert` | `({ values: StorageModel }) => Promise<StorageModel[]>`                            | Insert a single row; return the inserted rows.      |
-| `update` | `({ where: unknown, values: Partial<StorageModel> }) => Promise<StorageModel[]>`   | Update rows matching `where`; return affected rows. |
-| `delete` | `({ where: unknown }) => Promise<StorageModel[]>`                                  | Delete rows matching `where`; return deleted rows.  |
-| `select` | `({ where: unknown, limit?: number, offset?: number }) => Promise<StorageModel[]>` | Query rows; apply `LIMIT`/`OFFSET` when provided.   |
+| Field    | Signature                                                                          | Description                                                                                                                                                                                                                                                  |
+| -------- | ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `insert` | `({ values: StorageModel }) => Promise<StorageModel[]>`                            | Insert a single row; return the inserted rows.                                                                                                                                                                                                               |
+| `update` | `({ where: unknown, values: Partial<StorageModel> }) => Promise<StorageModel[]>`   | Update rows matching `where`; return affected rows.                                                                                                                                                                                                          |
+| `delete` | `({ where: unknown }) => Promise<StorageModel[]>`                                  | Delete rows matching `where`; return deleted rows.                                                                                                                                                                                                           |
+| `select` | `({ where: unknown, limit?: number, offset?: number }) => Promise<StorageModel[]>` | Query rows; apply `LIMIT`/`OFFSET` when provided.                                                                                                                                                                                                            |
+| `count`  | `({ where: unknown }) => Promise<number>` _(optional)_                             | Return the total row count matching `where` (no LIMIT/OFFSET). When provided, `listAtoms` / `listAtomSummaries` populate `done.total` with the full matching count instead of the page count, enabling correct `meta.total` in JSON:API paginated responses. |
 
 ### `StorageModel`
 
