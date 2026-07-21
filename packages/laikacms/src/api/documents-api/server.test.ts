@@ -837,7 +837,7 @@ describe('POST /revisions', () => {
 
     const body = await res.json() as { data: { type: string, id: string } };
     expect(body.data.type).toBe('revision');
-    expect(body.data.id).toBe('posts/hello');
+    expect(body.data.id).toBe('posts/hello/rev-1');
   });
 
   it('returns 400 invalid_data on wrong data.type', async () => {
@@ -1524,8 +1524,8 @@ describe('GET /revisions/:key', () => {
     };
     expect(body.data).toHaveLength(2);
     expect(body.data[0]!.type).toBe('revision-summary');
-    expect(body.data[0]!.id).toBe('posts/hello');
-    expect(body.data[1]!.id).toBe('posts/hello');
+    expect(body.data[0]!.id).toBe('posts/hello/rev-1');
+    expect(body.data[1]!.id).toBe('posts/hello/rev-2');
     expect(body.meta.page.total).toBe(2);
   });
 
@@ -1574,6 +1574,70 @@ describe('GET /revisions/:key', () => {
     const body = await res.json() as { errors: Array<{ status: string }> };
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('500');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// LCMS-286 — revision ids and self-links must be unique per revision
+// ---------------------------------------------------------------------------
+
+describe('LCMS-286 — revision collection ids and self-links are unique', () => {
+  it('emits unique composite ids and per-revision self-links for a 3-revision list', async () => {
+    const summaries = [
+      makeRevisionSummary('posts/hello', 'rev-a'),
+      makeRevisionSummary('posts/hello', 'rev-b'),
+      makeRevisionSummary('posts/hello', 'rev-c'),
+    ];
+    const repo = {
+      listRevisions: (_key: string, _options: unknown) =>
+        LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
+          Effect.gen(function*() {
+            for (const s of summaries) yield* emit.data(s);
+            return { total: 3 };
+          })
+        ),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      data: Array<{ type: string, id: string, links: { self: string }, attributes: { key: string, revision: string } }>,
+    };
+    expect(body.data).toHaveLength(3);
+
+    const ids = body.data.map(d => d.id);
+    expect(new Set(ids).size).toBe(3);
+
+    expect(ids[0]).toBe('posts/hello/rev-a');
+    expect(ids[1]).toBe('posts/hello/rev-b');
+    expect(ids[2]).toBe('posts/hello/rev-c');
+
+    // each self-link must point to the individual revision URL
+    for (const item of body.data) {
+      const revisionId = item.attributes.revision;
+      expect(item.links.self).toMatch(new RegExp(`/revisions/[^/]+/${encodeURIComponent(revisionId)}$`));
+    }
+  });
+
+  it('single-revision GET returns composite id and self-link pointing to its own URL', async () => {
+    const rev = makeRevision('posts/hello', 'rev-a');
+    const repo = {
+      getRevision: (_key: string, _revisionId: string) => LaikaTask.make(() => Effect.succeed(rev)),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello/rev-a'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      data: { type: string, id: string, links: { self: string }, attributes: { key: string, revision: string } },
+    };
+    expect(body.data.id).toBe('posts/hello/rev-a');
+    expect(body.data.attributes.key).toBe('posts/hello');
+    expect(body.data.attributes.revision).toBe('rev-a');
+    expect(body.data.links.self).toMatch(/\/revisions\/[^/]+\/rev-a$/);
   });
 });
 
@@ -1724,9 +1788,12 @@ describe('GET /revisions/:key/:revisionId', () => {
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello/rev-1'));
     expect(res.status).toBe(200);
 
-    const body = await res.json() as { data: { type: string, id: string, attributes: { revision: string } } };
+    const body = await res.json() as {
+      data: { type: string, id: string, attributes: { key: string, revision: string } },
+    };
     expect(body.data.type).toBe('revision');
-    expect(body.data.id).toBe('posts/hello');
+    expect(body.data.id).toBe('posts/hello/rev-1');
+    expect(body.data.attributes.key).toBe('posts/hello');
     expect(body.data.attributes.revision).toBe('rev-1');
   });
 

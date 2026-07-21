@@ -123,10 +123,11 @@ export interface FolderSummaryJsonApi {
 }
 
 // Revision JSON:API types
+// id is composite "key/revision" to satisfy JSON:API §7.2.1 uniqueness — see LCMS-286
 export interface RevisionJsonApi {
   type: 'revision';
   id: string;
-  attributes: Omit<Revision, 'key' | 'type'>;
+  attributes: Omit<Revision, 'type'>;
 }
 
 export interface RevisionCreateJsonApi {
@@ -138,7 +139,7 @@ export interface RevisionCreateJsonApi {
 export interface RevisionSummaryJsonApi {
   type: 'revision-summary';
   id: string;
-  attributes: Omit<RevisionSummary, 'key' | 'type'>;
+  attributes: Omit<RevisionSummary, 'type'>;
 }
 
 // ===== TRANSFORMER FUNCTIONS =====
@@ -228,9 +229,17 @@ export const folderSummaryFromJsonApi = (jsonApi: FolderSummaryJsonApi): FolderS
   fromJsonApi(jsonApi, 'folder-summary', 'key');
 
 // Revision transformers
-export const revisionToJsonApi = (rev: Revision): RevisionJsonApi => toJsonApi(rev, 'revision', 'key');
+// id uses composite "key/revision" to satisfy JSON:API §7.2.1 (LCMS-286).
+// key is kept in attributes so the proxy can reconstruct the domain entity without parsing the id.
+export const revisionToJsonApi = (rev: Revision): RevisionJsonApi => {
+  const { type: _type, ...attributes } = rev;
+  return { type: 'revision', id: `${rev.key}/${rev.revision}`, attributes };
+};
 
-export const revisionFromJsonApi = (jsonApi: RevisionJsonApi): Revision => fromJsonApi(jsonApi, 'revision', 'key');
+export const revisionFromJsonApi = (jsonApi: RevisionJsonApi): Revision => ({
+  type: 'revision',
+  ...jsonApi.attributes,
+});
 
 export const revisionCreateToJsonApi = (rev: RevisionCreate): RevisionCreateJsonApi =>
   toJsonApi(rev, 'revision', 'key');
@@ -238,11 +247,15 @@ export const revisionCreateToJsonApi = (rev: RevisionCreate): RevisionCreateJson
 export const revisionCreateFromJsonApi = (jsonApi: RevisionCreateJsonApi): RevisionCreate =>
   fromJsonApi(jsonApi, 'revision', 'key');
 
-export const revisionSummaryToJsonApi = (rev: RevisionSummary): RevisionSummaryJsonApi =>
-  toJsonApi(rev, 'revision-summary', 'key');
+export const revisionSummaryToJsonApi = (rev: RevisionSummary): RevisionSummaryJsonApi => {
+  const { type: _type, ...attributes } = rev;
+  return { type: 'revision-summary', id: `${rev.key}/${rev.revision}`, attributes };
+};
 
-export const revisionSummaryFromJsonApi = (jsonApi: RevisionSummaryJsonApi): RevisionSummary =>
-  fromJsonApi(jsonApi, 'revision-summary', 'key');
+export const revisionSummaryFromJsonApi = (jsonApi: RevisionSummaryJsonApi): RevisionSummary => ({
+  type: 'revision-summary',
+  ...jsonApi.attributes,
+});
 
 // ===== JSON:API SCHEMAS FOR VALIDATION =====
 
