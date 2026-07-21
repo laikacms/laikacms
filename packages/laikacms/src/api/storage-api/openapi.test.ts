@@ -97,4 +97,10 @@ describe('buildStorageOpenApi', () => {
     expect(buildStorageOpenApi({ basePath: '/api/storage' }).servers?.[0]?.url).toBe('/api/storage');
     expect(buildStorageOpenApi().servers?.[0]?.url).toBe('/');
   });
+
+  it('POST /objects declares an explicit 409 for duplicate-key conflict (LCMS-287)', () => {
+    const doc = buildStorageOpenApi();
+    const paths = doc.paths as Record<string, { post?: { responses: Record<string, unknown> } }>;
+    expect(Object.keys(paths['/objects']!.post!.responses)).toContain('409');
+  });
 });

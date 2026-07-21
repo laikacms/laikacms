@@ -137,4 +137,18 @@ describe('buildDocumentsOpenApi', () => {
     const schemas = doc.components!.schemas! as Record<string, { properties?: { data?: { required?: string[] } } }>;
     expect(schemas['RevisionCreateRequest']!.properties!.data!.required).toContain('id');
   });
+
+  it('POST create endpoints declare 409 for duplicate-key conflict (LCMS-287)', () => {
+    const doc = buildDocumentsOpenApi();
+    const paths = doc.paths as Record<string, { post?: { responses: Record<string, unknown> } }>;
+    expect(Object.keys(paths['/published']!.post!.responses)).toContain('409');
+    expect(Object.keys(paths['/unpublished']!.post!.responses)).toContain('409');
+    expect(Object.keys(paths['/revisions']!.post!.responses)).toContain('409');
+  });
+
+  it('DELETE /unpublished/{key} declares 404 for missing draft (LCMS-287)', () => {
+    const doc = buildDocumentsOpenApi();
+    const paths = doc.paths as Record<string, { delete?: { responses: Record<string, unknown> } }>;
+    expect(Object.keys(paths['/unpublished/{key}']!.delete!.responses)).toContain('404');
+  });
 });

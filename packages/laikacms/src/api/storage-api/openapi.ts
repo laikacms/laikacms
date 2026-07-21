@@ -652,6 +652,7 @@ const paths: Record<string, OpenApiPathItem> = {
       responses: {
         '201': jsonApiResponse('The created storage object, possibly with meta.warnings.', 'StorageObjectResponse'),
         '400': errorResponse('Invalid request body, unknown attribute key, or empty data.id.'),
+        '409': errorResponse('An object already exists at the requested key.'),
         default: mappedRepositoryError,
       },
     },
