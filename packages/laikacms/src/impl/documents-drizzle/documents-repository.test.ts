@@ -778,3 +778,80 @@ describe('DrizzleDocumentsRepository — getCapabilities', () => {
     expect(caps.pagination.supported).toBe(true);
   });
 });
+
+describe('DrizzleDocumentsRepository logger', () => {
+  const makeRepoWithLogger = (logger: Pick<Console, 'error' | 'warn' | 'info' | 'debug'>) => {
+    const opts = makeInMemoryOptions();
+    return new DrizzleDocumentsRepository({ ...opts, logger });
+  };
+
+  it('calls logger.debug on getDocument', async () => {
+    const debug = vi.fn();
+    const repo = makeRepoWithLogger({ debug, error: vi.fn(), warn: vi.fn(), info: vi.fn() });
+    await Effect.runPromise(Effect.result(LaikaTask.runValue(repo.getDocument('posts/hello'))));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('getDocument'));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('posts/hello'));
+  });
+
+  it('calls logger.debug on createDocument', async () => {
+    const debug = vi.fn();
+    const repo = makeRepoWithLogger({ debug, error: vi.fn(), warn: vi.fn(), info: vi.fn() });
+    await Effect.runPromise(
+      LaikaTask.runValue(repo.createDocument({ key: 'posts/new', type: 'document', content: {}, language: 'en' })),
+    );
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('createDocument'));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('posts/new'));
+  });
+
+  it('calls logger.debug on listRecords', async () => {
+    const debug = vi.fn();
+    const repo = makeRepoWithLogger({ debug, error: vi.fn(), warn: vi.fn(), info: vi.fn() });
+    await Effect.runPromise(
+      LaikaStream.runCollect(
+        repo.listRecords({ folder: 'posts', type: 'published', depth: 1, pagination: { offset: 0, limit: 10 } }),
+      ),
+    );
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('listRecords'));
+  });
+
+  it('calls logger.debug on listRecordSummaries', async () => {
+    const debug = vi.fn();
+    const repo = makeRepoWithLogger({ debug, error: vi.fn(), warn: vi.fn(), info: vi.fn() });
+    await Effect.runPromise(
+      LaikaStream.runCollect(
+        repo.listRecordSummaries({
+          folder: 'posts',
+          type: 'published',
+          depth: 1,
+          pagination: { offset: 0, limit: 10 },
+        }),
+      ),
+    );
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('listRecordSummaries'));
+  });
+
+  it('calls logger.debug on createRevision and listRevisions', async () => {
+    const debug = vi.fn();
+    const repo = makeRepoWithLogger({ debug, error: vi.fn(), warn: vi.fn(), info: vi.fn() });
+    await Effect.runPromise(
+      LaikaTask.runValue(
+        repo.createRevision({ key: 'posts/a', type: 'revision', revision: 'v1', content: {}, language: 'en' }),
+      ),
+    );
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('createRevision'));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('posts/a/v1'));
+
+    await Effect.runPromise(
+      LaikaStream.runCollect(repo.listRevisions('posts/a', { pagination: { offset: 0, limit: 10 } })),
+    );
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('listRevisions'));
+    expect(debug).toHaveBeenCalledWith(expect.stringContaining('posts/a'));
+  });
+
+  it('does not throw when no logger is provided', async () => {
+    const repo = new DrizzleDocumentsRepository(makeInMemoryOptions());
+    await expect(
+      Effect.runPromise(Effect.result(LaikaTask.runValue(repo.getDocument('any')))),
+    ).resolves.toBeDefined();
+  });
+});
