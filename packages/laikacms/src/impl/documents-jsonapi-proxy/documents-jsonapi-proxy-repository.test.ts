@@ -18,10 +18,11 @@ const unpublishedDoc = (id = 'drafts/hello', status = 'draft') => ({
   attributes: { status, language: 'en', content: { title: 'Draft' } },
 });
 
-const revisionDoc = (id = 'posts/hello', revision = 'rev-abc') => ({
+// LCMS-286: id is now composite "key/revision"; key is also in attributes for client reconstruction
+const revisionDoc = (key = 'posts/hello', revision = 'rev-abc') => ({
   type: 'revision',
-  id,
-  attributes: { revision, language: 'en', content: {}, createdAt: '2026-01-01T00:00:00Z' },
+  id: `${key}/${revision}`,
+  attributes: { key, revision, language: 'en', content: {}, createdAt: '2026-01-01T00:00:00Z' },
 });
 
 /** Decode a captured fetch body (string or encoded Uint8Array) back to JSON. */
@@ -222,9 +223,9 @@ describe('DocumentsJsonApiProxyRepository.listRevisions', () => {
           data: [
             {
               type: 'revision-summary',
-              id: 'posts/a',
+              id: 'posts/a/rev-1',
               attributes: {
-                type: 'revision-summary',
+                key: 'posts/a',
                 language: 'en',
                 revision: 'rev-1',
               },

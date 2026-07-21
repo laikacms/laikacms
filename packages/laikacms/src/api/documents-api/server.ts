@@ -88,8 +88,11 @@ const docsSelfPathFor = (type: string, id: string): string | undefined => {
     case 'unpublished-summary':
       return `/unpublished/${encoded}`;
     case 'revision':
-    case 'revision-summary':
-      return `/revisions/${encoded}`;
+    case 'revision-summary': {
+      // id is composite "key/revision" (LCMS-286); split on last slash to rebuild the individual-revision URL
+      const lastSlash = id.lastIndexOf('/');
+      return `/revisions/${encodeURIComponent(id.slice(0, lastSlash))}/${encodeURIComponent(id.slice(lastSlash + 1))}`;
+    }
     case 'documents-capabilities':
       return `/capabilities`;
     case 'sync-token':
