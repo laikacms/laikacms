@@ -98,7 +98,7 @@ function writeAdminFiles(dir) {
   writeFileSync(
     join(dir, 'admin', 'index.ts'),
     `
-import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
+import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
 import CMS from 'decap-cms-app';
 const LaikaBackend = createLaikaBackend();
 CMS.registerBackend('laika', LaikaBackend);
