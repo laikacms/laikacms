@@ -281,6 +281,57 @@ describe('storage-api meta.warnings', () => {
     expect(body['atomic:results'][0]?.meta?.ref?.id).toBe('notes/a');
     expect(body['atomic:results'][1]?.meta?.ref?.id).toBe('notes/b');
   });
+
+  // LCMS-453: a failing individual op in a batch must be omitted from atomic:results;
+  // the response is HTTP 200 with a shorter result array (not a per-entry error entry).
+  it('omits a failed add op from atomic:results while keeping the successful op (LCMS-453)', async () => {
+    const partialRepo = {
+      createObject: (create: StorageObjectCreate) => {
+        if (create.key === 'notes/bad') {
+          return LaikaTask.make<StorageObject>(() => Effect.fail(new InternalError('simulated write failure')));
+        }
+        return LaikaTask.make<StorageObject>(() =>
+          Effect.succeed(
+            {
+              type: 'object' as const,
+              key: create.key,
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+              content: create.content ?? {},
+              metadata: { extension: 'json' },
+            } satisfies StorageObject,
+          )
+        );
+      },
+      removeAtoms: () =>
+        LaikaStream.make<string, { removed: number, skipped: number }>(() =>
+          Effect.succeed({ removed: 0, skipped: 0 })
+        ),
+    } as unknown as StorageRepository;
+
+    const api = buildJsonApi({ repo: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          'atomic:operations': [
+            { op: 'add', data: { type: 'object', id: 'notes/bad', attributes: { content: { v: 1 } } } },
+            { op: 'add', data: { type: 'object', id: 'notes/ok', attributes: { content: { v: 2 } } } },
+          ],
+        }),
+      }),
+    );
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      'atomic:results': Array<{ data?: { id: string }, meta?: unknown }>,
+    };
+
+    // failed op is omitted; only the successful op appears
+    expect(body['atomic:results']).toHaveLength(1);
+    expect(body['atomic:results'][0]?.data?.id).toBe('notes/ok');
+  });
 });
 
 describe('POST /atoms (create folder)', () => {

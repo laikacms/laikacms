@@ -526,8 +526,8 @@ GET /folders/posts%2Fdrafts
 #### POST /operations
 
 Execute a batch of atomic operations. Supports adding objects, adding folders, updating objects, and
-removing atoms. All operations are processed in order; failures for individual operations are
-surfaced per-entry in the response.
+removing atoms. All operations are processed in order; failed operations are omitted from
+`atomic:results` — the response is HTTP 200 with a shorter result array (matching the OpenAPI spec).
 
 **Request Headers**
 
