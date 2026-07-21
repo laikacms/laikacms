@@ -394,15 +394,26 @@ describe('GET /session', () => {
     expect(res.status).toBe(200);
   });
 
-  it('response body contains the user id and email', async () => {
+  it('response body contains the user id at resource level and email in attributes', async () => {
     const api = decapApi(makeOptions());
     const res = await api.fetch(
       makeRequest('/session', { Authorization: 'Bearer good-token' }),
     );
     const body = await res.json();
 
-    expect(body.data.attributes.id).toBe(MOCK_USER.id);
+    expect(body.data.id).toBe(MOCK_USER.id);
     expect(body.data.attributes.email).toBe(MOCK_USER.email);
+  });
+
+  it('JSON:API §7.2.2 compliance — attributes must not contain id or type (LCMS-282)', async () => {
+    const api = decapApi(makeOptions());
+    const res = await api.fetch(
+      makeRequest('/session', { Authorization: 'Bearer good-token' }),
+    );
+    const body = await res.json();
+
+    expect(body.data.attributes).not.toHaveProperty('id');
+    expect(body.data.attributes).not.toHaveProperty('type');
   });
 
   it('strips passwordHash from the /session response', async () => {
