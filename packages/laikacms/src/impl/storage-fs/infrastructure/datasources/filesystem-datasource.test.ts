@@ -136,6 +136,35 @@ describe('FileSystemDataSource.getFileMeta', () => {
     const result = await ds.getFileMeta(tmpDir, 'nope');
     expect(Result.isFailure(result)).toBe(true);
   });
+
+  it('createdAt is stable after a write (LCMS-285: should not equal updatedAt after overwrite)', async () => {
+    const ds = new FileSystemDataSource(['md'], 'md');
+    await ds.createOrUpdate(tmpDir, 'stable', 'v1', 'md');
+
+    const filePath = path.join(tmpDir, 'stable.md');
+
+    // Wait 5ms then advance mtime/atime to simulate a later write without relying on wall-clock.
+    // birthtimeMs stays fixed because utimes() only changes atime/mtime.
+    await new Promise(r => setTimeout(r, 5));
+    const futureTime = new Date(Date.now() + 10_000);
+    await fs.utimes(filePath, futureTime, futureTime);
+
+    const result = await ds.getFileMeta(tmpDir, 'stable');
+    expect(Result.isSuccess(result)).toBe(true);
+    if (Result.isSuccess(result)) {
+      const { createdAt, updatedAt } = result.success;
+      // On filesystems with real birth time support createdAt must predate updatedAt.
+      // On filesystems where birthtimeMs === 0 we fall back to ctime; skip the strict
+      // ordering check because ctime also advances on utimes() on those systems.
+      const rawStat = await fs.stat(filePath);
+      if (rawStat.birthtimeMs > 0) {
+        expect(createdAt.getTime()).toBeLessThan(updatedAt.getTime());
+      } else {
+        // Ensure the field is at least a valid Date.
+        expect(createdAt).toBeInstanceOf(Date);
+      }
+    }
+  });
 });
 
 describe('FileSystemDataSource.getDirMeta', () => {
