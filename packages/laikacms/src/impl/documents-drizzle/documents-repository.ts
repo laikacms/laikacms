@@ -136,6 +136,12 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
     super();
   }
 
+  private debug(op: string, key?: string): void {
+    if (!this.options.logger) return;
+    const msg = key !== undefined ? `[documents-drizzle] ${op} key="${key}"` : `[documents-drizzle] ${op}`;
+    this.options.logger.debug(msg);
+  }
+
   getCapabilities(): LaikaTask.LaikaTask<DocumentsCapabilities> {
     return LaikaTask.succeed<DocumentsCapabilities>({
       compatibilityDate: DocumentsCompatibilityDate.make('2026-05-11'),
@@ -158,6 +164,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   getDocument(key: string): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('getDocument', key);
         const qb = this.options.documentQueryBuilders;
         const rows = yield* Effect.promise(() =>
           this.options.callbacks.documents.select({
@@ -186,6 +193,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('createDocument', create.key);
         const now = new Date().toISOString();
         yield* Effect.promise(() =>
           this.options.callbacks.documents.insert({
@@ -208,6 +216,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('updateDocument', update.key);
         const qb = this.options.documentQueryBuilders;
         const now = new Date().toISOString();
         yield* Effect.promise(() =>
@@ -228,6 +237,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   deleteDocument(key: string): LaikaTask.LaikaTask<void> {
     return LaikaTask.make<void>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('deleteDocument', key);
         const qb = this.options.documentQueryBuilders;
         yield* Effect.promise(() => this.options.callbacks.documents.delete({ where: qb.keyEquals(key) }));
       })
@@ -237,6 +247,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   getUnpublished(key: string): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('getUnpublished', key);
         const qb = this.options.documentQueryBuilders;
         const rows = yield* Effect.promise(() =>
           this.options.callbacks.documents.select({
@@ -265,6 +276,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('createUnpublished', create.key);
         const now = new Date().toISOString();
         yield* Effect.promise(() =>
           this.options.callbacks.documents.insert({
@@ -287,6 +299,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   updateUnpublished(update: UnpublishedUpdate): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('updateUnpublished', update.key);
         const qb = this.options.documentQueryBuilders;
         const now = new Date().toISOString();
         const values: Partial<DocumentModelStrict> = {
@@ -309,6 +322,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   deleteUnpublished(key: string): LaikaTask.LaikaTask<void> {
     return LaikaTask.make<void>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('deleteUnpublished', key);
         const qb = this.options.documentQueryBuilders;
         yield* Effect.promise(() =>
           this.options.callbacks.documents.delete({
@@ -322,6 +336,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   publish(key: string): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('publish', key);
         // Verify unpublished exists
         yield* LaikaTask.runValue(this.getUnpublished(key));
         const qb = this.options.documentQueryBuilders;
@@ -340,6 +355,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   unpublish(key: string, status: string): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('unpublish', key);
         // Verify document exists
         yield* LaikaTask.runValue(this.getDocument(key));
         const qb = this.options.documentQueryBuilders;
@@ -371,6 +387,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   ): LaikaStream.LaikaStream<T, ListRecordsDone> {
     return LaikaStream.make<T, ListRecordsDone>(emit =>
       Effect.gen({ self: this }, function*() {
+        this.debug(summaryOnly ? 'listRecordSummaries' : 'listRecords', options.folder);
         const qb = this.options.documentQueryBuilders;
         const where = qb.and(...[
           options.type === 'published' ? qb.statusEquals(PUBLISHED_STATUS) : undefined,
@@ -439,6 +456,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   getRevision(key: string, revision: string): LaikaTask.LaikaTask<Revision> {
     return LaikaTask.make<Revision>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('getRevision', `${key}/${revision}`);
         const qb = this.options.revisionQueryBuilders;
         const rows = yield* Effect.promise(() =>
           this.options.callbacks.revisions.select({
@@ -467,6 +485,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   createRevision(create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
     return LaikaTask.make<Revision>(() =>
       Effect.gen({ self: this }, function*() {
+        this.debug('createRevision', `${create.key}/${create.revision}`);
         const now = new Date().toISOString();
         yield* Effect.promise(() =>
           this.options.callbacks.revisions.insert({
@@ -492,6 +511,7 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
   ): LaikaStream.LaikaStream<RevisionSummary, ListRevisionsDone> {
     return LaikaStream.make<RevisionSummary, ListRevisionsDone>(emit =>
       Effect.gen({ self: this }, function*() {
+        this.debug('listRevisions', key);
         const qb = this.options.revisionQueryBuilders;
         const pagination = options.pagination;
         const offset = 'offset' in pagination

@@ -132,12 +132,13 @@ practice you never need to name the type parameters explicitly.
 
 ### `callbacks.documents`
 
-| Field    | Signature                                                                       | Description                                                                                           |
-| -------- | ------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `insert` | `({ values: DocumentModelStrict }) => Promise<DocumentModel[]>`                 | Insert a document row; return inserted rows.                                                          |
-| `update` | `({ where, values: Partial<DocumentModelStrict> }) => Promise<DocumentModel[]>` | Update document rows matching `where`.                                                                |
-| `delete` | `({ where }) => Promise<DocumentModel[]>`                                       | Delete document rows matching `where`.                                                                |
-| `select` | `({ where, limit?, offset?, excludeContent? }) => Promise<DocumentModel[]>`     | Query documents; skip the `content` column when `excludeContent` is true (used for summary listings). |
+| Field    | Signature                                                                       | Description                                                                                                                                                                                                                                    |
+| -------- | ------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `insert` | `({ values: DocumentModelStrict }) => Promise<DocumentModel[]>`                 | Insert a document row; return inserted rows.                                                                                                                                                                                                   |
+| `update` | `({ where, values: Partial<DocumentModelStrict> }) => Promise<DocumentModel[]>` | Update document rows matching `where`.                                                                                                                                                                                                         |
+| `delete` | `({ where }) => Promise<DocumentModel[]>`                                       | Delete document rows matching `where`.                                                                                                                                                                                                         |
+| `select` | `({ where, limit?, offset?, excludeContent? }) => Promise<DocumentModel[]>`     | Query documents; skip the `content` column when `excludeContent` is true (used for summary listings).                                                                                                                                          |
+| `count`  | `({ where }) => Promise<number>` _(optional)_                                   | Return total matching rows (no LIMIT/OFFSET). When provided, `listRecords` / `listRecordSummaries` populate `done.total` with the full matching count instead of the page count, enabling correct `meta.page.total` in the Documents JSON:API. |
 
 ### `callbacks.revisions`
 
