@@ -295,9 +295,9 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       if (pathname.startsWith(sessionEndpoint)) {
         options.logger?.debug('Session endpoint for user:', user.id);
 
-        // Return user data (excluding sensitive fields like passwordHash)
-        // The user is responsible for not passing in sensitive data, except for the passwordHash
-        const { passwordHash: _passwordHash, ...safeUserData } = user;
+        // Return user data excluding sensitive fields and JSON:API §7.2.2 reserved keys.
+        // `id` must live at the resource level only, not inside `attributes`.
+        const { passwordHash: _passwordHash, id: _id, ...safeUserData } = user;
 
         return await respond(
           new Response(
