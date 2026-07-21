@@ -261,7 +261,10 @@ export class FileSystemDataSource {
       }
 
       const fullPath = path.join(basePath, resolvedPath);
-      const { size, ctime, mtime } = await fs.stat(fullPath);
+      const st = await fs.stat(fullPath);
+      // Use birth time when available (APFS/NTFS/ext4 ≥ 4.11); fall back to ctime
+      // only on filesystems that report birthtimeMs=0 (some tmpfs/network mounts).
+      const createdAt = st.birthtimeMs > 0 ? st.birthtime : st.ctime;
 
       // Extract extension from resolved path
       const lastDot = resolvedPath.lastIndexOf('.');
@@ -270,7 +273,7 @@ export class FileSystemDataSource {
       // Return path without extension for the interface
       const pathWithoutExt = this.stripExtension(resolvedPath);
 
-      return Result.succeed({ size, createdAt: ctime, updatedAt: mtime, path: pathWithoutExt, extension });
+      return Result.succeed({ size: st.size, createdAt, updatedAt: st.mtime, path: pathWithoutExt, extension });
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
@@ -290,8 +293,9 @@ export class FileSystemDataSource {
       return Result.fail(new InvalidData(TRAVERSAL_ERROR));
     }
     try {
-      const { ctime, mtime } = await fs.stat(fullPath);
-      return Result.succeed({ createdAt: ctime, updatedAt: mtime });
+      const st = await fs.stat(fullPath);
+      const createdAt = st.birthtimeMs > 0 ? st.birthtime : st.ctime;
+      return Result.succeed({ createdAt, updatedAt: st.mtime });
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
