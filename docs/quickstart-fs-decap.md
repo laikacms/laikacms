@@ -58,6 +58,14 @@ pnpm add --allow-build=esbuild --allow-build=msgpackr-extract \
 > **Other formats:** swap `laikacms/storage-serializers-json` for
 > `laikacms/storage-serializers-yaml` if you prefer YAML files, and change `'json'` to `'yaml'` in
 > the snippet below.
+>
+> **Supported Decap collection formats:** the storage layer above ships serializers for JSON,
+> YAML, markdown-frontmatter, and raw text — but the bundled `@laikacms/decap` Decap admin backend
+> (§4) currently only sends structured `content` to the documents API for collections with
+> **`format: json`**. Decap's default when a collection omits `format:` is markdown-frontmatter,
+> which this backend does not yet support — saving such an entry fails fast with a clear
+> client-side error rather than a raw file write. Always set `format: json` explicitly on every
+> collection in `admin/config.yml`, as the example in §4d does.
 
 ---
 
@@ -262,11 +270,16 @@ collections:
     label: Posts
     folder: posts
     create: true
-    format: json
+    format: json # required — the laika Decap backend only supports JSON-format collections today
     fields:
       - { name: title, label: Title, widget: string }
       - { name: body,  label: Body,  widget: markdown }
 ```
+
+> **`format: json` is required.** Omitting `format:` makes Decap default to markdown-frontmatter,
+> which the laika backend cannot yet persist (see the callout in §1). Saving an entry in such a
+> collection now fails with: `Laika backend currently only supports JSON-format collections; set
+> \`format: json\` on collection \`<name>\`.`
 
 The backend constructs its API URL as `base_url + api_root` → `http://localhost:3000/api`. All
 document, asset, storage, and health endpoints are served under that prefix by the `decapApi` server
