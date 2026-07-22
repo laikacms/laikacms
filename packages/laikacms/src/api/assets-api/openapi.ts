@@ -855,6 +855,7 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
               'Missing file or content, invalid body, unsupported Content-Type, invalid resource type, '
                 + 'or repository failure.',
             ),
+            '409': errorResponse('An asset or folder already exists at the requested key.'),
             '500': internalErrorResponse,
           },
         },
