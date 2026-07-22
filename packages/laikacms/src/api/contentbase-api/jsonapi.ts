@@ -42,11 +42,29 @@ export const documentCollectionToJsonApi = (collection: DocumentCollectionSettin
 // cannot rely on fromJsonApi's envelope injection and must hardcode the domain type here.
 export const documentCollectionFromJsonApi = (
   jsonApi: DocumentCollectionJsonApi,
-): DocumentCollectionSettings => ({
-  type: 'document',
-  key: jsonApi.id,
-  ...jsonApi.attributes,
-} as DocumentCollectionSettings);
+): DocumentCollectionSettings => {
+  const { draftDirectory, archiveDirectory, trashDirectory, unpublishedStatuses, ...rest } = jsonApi.attributes as
+    & typeof jsonApi.attributes
+    & {
+      draftDirectory?: string,
+      archiveDirectory?: string,
+      trashDirectory?: string,
+    };
+  // Build shorthand entries; explicit unpublishedStatuses keys win over shorthands.
+  const shorthand: Record<string, { directory: string, name: string }> = {};
+  if (draftDirectory) shorthand.draft = { directory: draftDirectory, name: 'Draft' };
+  if (archiveDirectory) shorthand.archived = { directory: archiveDirectory, name: 'Archived' };
+  if (trashDirectory) shorthand.trash = { directory: trashDirectory, name: 'Trash' };
+  const merged = (Object.keys(shorthand).length > 0 || unpublishedStatuses)
+    ? { ...shorthand, ...unpublishedStatuses }
+    : undefined;
+  return {
+    type: 'document',
+    key: jsonApi.id,
+    ...rest,
+    ...(merged ? { unpublishedStatuses: merged } : {}),
+  } as DocumentCollectionSettings;
+};
 
 // Media Collection transformers
 export const mediaCollectionToJsonApi = (collection: MediaCollectionSettings): MediaCollectionJsonApi =>
@@ -95,6 +113,11 @@ export const DocumentCollectionJsonApiSchema = S.toStandardSchemaV1(S.Struct({
       }),
     )),
     revisionDirectory: S.optional(S.String),
+    // Shorthand convenience fields — merged into unpublishedStatuses during decoding.
+    // Explicit unpublishedStatuses keys win over shorthands on the same status key.
+    draftDirectory: S.optional(S.String),
+    archiveDirectory: S.optional(S.String),
+    trashDirectory: S.optional(S.String),
   }),
 }));
 

@@ -666,3 +666,79 @@ describe('contentbase-api global error handler', () => {
     consoleSpy.mockRestore();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Shorthand directory fields — LCMS-462
+// ---------------------------------------------------------------------------
+
+describe('document-collection shorthand directory fields', () => {
+  it('merges draftDirectory/archiveDirectory/trashDirectory into unpublishedStatuses on POST', async () => {
+    let captured: DocumentCollectionSettings | undefined;
+    const repo = {
+      putDocumentCollectionSettings: (_key: string, settings: DocumentCollectionSettings) => {
+        captured = settings;
+        return LaikaTask.succeed(undefined);
+      },
+    } as unknown as ContentBaseSettingsProvider;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            type: 'document-collection',
+            id: 'posts',
+            attributes: {
+              type: 'document',
+              draftDirectory: 'my-drafts',
+              archiveDirectory: 'my-archive',
+              trashDirectory: 'my-trash',
+            },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+    expect(captured?.unpublishedStatuses).toEqual({
+      draft: { directory: 'my-drafts', name: 'Draft' },
+      archived: { directory: 'my-archive', name: 'Archived' },
+      trash: { directory: 'my-trash', name: 'Trash' },
+    });
+  });
+
+  it('explicit unpublishedStatuses wins over shorthand for the same key', async () => {
+    let captured: DocumentCollectionSettings | undefined;
+    const repo = {
+      putDocumentCollectionSettings: (_key: string, settings: DocumentCollectionSettings) => {
+        captured = settings;
+        return LaikaTask.succeed(undefined);
+      },
+    } as unknown as ContentBaseSettingsProvider;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/collections', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          data: {
+            type: 'document-collection',
+            id: 'posts',
+            attributes: {
+              type: 'document',
+              draftDirectory: 'shorthand-drafts',
+              unpublishedStatuses: {
+                draft: { directory: 'explicit-drafts', name: 'My Drafts' },
+              },
+            },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(201);
+    // Explicit unpublishedStatuses.draft beats the draftDirectory shorthand.
+    expect(captured?.unpublishedStatuses?.draft).toEqual({ directory: 'explicit-drafts', name: 'My Drafts' });
+  });
+});
