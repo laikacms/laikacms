@@ -288,9 +288,10 @@ For full control (custom widgets, the Decap React tree) you can instead render a
 
 ```ts
 // src/components/DecapAdmin.tsx (a React island)
+import { App } from '@laikacms/decap-cms/app';
 import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
-import DecapCmsCore, { App, DecapCmsProvider } from '@laikacms/decap-cms/core';
-import DEFAULT_WIDGET_STRING from '@laikacms/decap-cms/widget-string';
+import DecapCmsCore, { DecapCmsProvider } from '@laikacms/decap-cms/core';
+import DEFAULT_WIDGET_STRING from '@laikacms/decap-cms/widgets/string';
 // …other widgets…
 
 import { decapConfig } from '~/lib/decap-config.ts';
