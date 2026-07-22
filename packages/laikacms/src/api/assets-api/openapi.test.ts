@@ -81,4 +81,10 @@ describe('buildAssetsOpenApi', () => {
     const doc = buildAssetsOpenApi();
     expect(doc.info.description).toContain('no authentication');
   });
+
+  it('POST /resources declares an explicit 409 for duplicate-key conflict (LCMS-461)', () => {
+    const doc = buildAssetsOpenApi();
+    const paths = doc.paths as Record<string, OpenApiPathItem>;
+    expect(Object.keys(paths['/resources']!.post!.responses)).toContain('409');
+  });
 });

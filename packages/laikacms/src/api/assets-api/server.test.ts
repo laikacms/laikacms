@@ -15,6 +15,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   BadRequestError,
+  EntryAlreadyExistsError,
   ForbiddenError,
   InternalError,
   InvalidData,
@@ -739,6 +740,32 @@ describe('POST /resources — asset via JSON:API', () => {
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
     expect(body.errors[0]?.status).toBe('500');
     expect(body.errors[0]?.code).toBe('internal_error');
+  });
+
+  it('returns 409 JSON:API error when asset already exists (LCMS-461)', async () => {
+    const partialRepo = {
+      createAsset: () =>
+        LaikaTask.make(() => Effect.fail(new EntryAlreadyExistsError('uploads/photo.png already exists'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/resources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'asset',
+            id: 'uploads/photo.png',
+            attributes: { mimeType: 'image/png', content: btoa('data') },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]?.status).toBe('409');
+    expect(body.errors[0]?.code).toBe('entry_already_exists');
   });
 });
 
