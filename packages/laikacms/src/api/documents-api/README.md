@@ -83,6 +83,12 @@ interface DocumentsApiOptions {
 | GET    | `/revisions/{key}`              | 200    | List revisions for a document key (paginated)                         |
 | GET    | `/revisions/{key}/{revisionId}` | 200    | Read a specific revision                                              |
 | POST   | `/operations`                   | 200    | Atomic batch operations (add / update / remove + publish / unpublish) |
+| GET    | `/sync-token`                   | 200    | Opaque per-scope change token (capability-gated: `changes.syncToken`) |
+| GET    | `/changes`                      | 200    | List changes since a sync token (capability-gated: `changes.changeFeed`) |
+
+`/sync-token` and `/changes` are only reachable when the backing repository declares the matching
+`changes` capability in `GET /capabilities` (the `syncToken` flag for `/sync-token`, the `changeFeed`
+flag for `/changes`). Calling either on a repository without that support returns `501`.
 
 All responses carry `Content-Type: application/vnd.api+json` and `Cache-Control: no-store`.
 
@@ -110,6 +116,13 @@ declare cursor support in `GET /capabilities`. Use `page[number]` / `page[size]`
 
 Accepts the same pagination parameters as `/records`.
 
+### `GET /sync-token` and `GET /changes`
+
+| Parameter       | Type     | Default | Description                                                                           |
+| --------------- | -------- | ------- | ------------------------------------------------------------------------------------- |
+| `filter[folder]` | `string` | —       | Scope the token or change feed to a specific folder.                                  |
+| `filter[since]`  | `string` | —       | **Required for `/changes`**: opaque sync token from a prior `GET /sync-token` call.   |
+
 ## Resource types
 
 The API uses seven JSON:API resource types:
@@ -123,6 +136,8 @@ The API uses seven JSON:API resource types:
 | `revision`               | Revision create and detail                        |
 | `revision-summary`       | Revision list (`GET /revisions/{key}`)            |
 | `documents-capabilities` | `GET /capabilities`                               |
+| `sync-token`             | `GET /sync-token`                                 |
+| `changes`                | `GET /changes`                                    |
 
 ## Batch operations (`POST /operations`)
 
