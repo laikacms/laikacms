@@ -69,6 +69,21 @@ const schemas: Record<string, OpenApiSchema> = {
         additionalProperties: { $ref: '#/components/schemas/UnpublishedStatusConfig' },
       },
       revisionDirectory: { type: 'string', description: 'Directory for revision snapshots.' },
+      draftDirectory: {
+        type: 'string',
+        description:
+          'Shorthand for unpublishedStatuses.draft.directory (name defaults to "Draft"). Explicit unpublishedStatuses.draft wins if both are provided.',
+      },
+      archiveDirectory: {
+        type: 'string',
+        description:
+          'Shorthand for unpublishedStatuses.archived.directory (name defaults to "Archived"). Explicit unpublishedStatuses.archived wins if both are provided.',
+      },
+      trashDirectory: {
+        type: 'string',
+        description:
+          'Shorthand for unpublishedStatuses.trash.directory (name defaults to "Trash"). Explicit unpublishedStatuses.trash wins if both are provided.',
+      },
     },
     required: ['type'],
   },
