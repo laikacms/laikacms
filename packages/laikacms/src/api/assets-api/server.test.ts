@@ -37,6 +37,40 @@ describe('assets-api Cache-Control', () => {
   });
 });
 
+describe('assets-api error envelope consistency (LCMS-265)', () => {
+  it('404 response uses the same JSON:API envelope shape as documents/storage (has errors[].title and top-level status)', async () => {
+    const api = buildAssetsApi({ repository: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/does-not-exist'));
+    expect(res.status).toBe(404);
+    const body = await res.json() as {
+      errors: Array<{ title?: string, status?: string, code?: string }>,
+      status?: number,
+    };
+    expect(body.errors).toHaveLength(1);
+    expect(body.errors[0]?.title).toBeDefined();
+    expect(body.errors[0]?.code).toBe('not_found');
+    expect(body.status).toBe(404);
+  });
+
+  it('404 detail does not leak the raw METHOD /path of the request', async () => {
+    const api = buildAssetsApi({ repository: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/secret-path'));
+    const body = await res.json() as { errors: Array<{ detail?: string }> };
+    expect(body.errors[0]?.detail).not.toContain('GET /api/assets/secret-path');
+  });
+
+  it('GET /api/assets root returns 200 api-info resource', async () => {
+    const api = buildAssetsApi({ repository: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { type: string, id: string, attributes: { endpoints: unknown[] } } };
+    expect(body.data.type).toBe('api-info');
+    expect(body.data.id).toBe('assets');
+    expect(Array.isArray(body.data.attributes.endpoints)).toBe(true);
+    expect(body.data.attributes.endpoints.length).toBeGreaterThan(0);
+  });
+});
+
 describe('assets-api meta.warnings', () => {
   it('surfaces recoverableErrors from listResources into the response meta.warnings', async () => {
     const partialRepo = {

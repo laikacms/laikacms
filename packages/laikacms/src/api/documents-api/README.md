@@ -63,32 +63,33 @@ interface DocumentsApiOptions {
 
 ## Endpoints
 
-| Method | Path                            | Status | Description                                                           |
-| ------ | ------------------------------- | ------ | --------------------------------------------------------------------- |
-| GET    | `/`                             | 200    | API info + endpoint discovery                                         |
-| GET    | `/capabilities`                 | 200    | Repository capabilities (pagination styles, supported features)       |
-| GET    | `/records`                      | 200    | List full records (published + unpublished view per key)              |
-| GET    | `/record-summaries`             | 200    | List record summaries (lightweight listing, fewer attributes)         |
-| POST   | `/published`                    | 201    | Create a published document                                           |
-| GET    | `/published/{key}`              | 200    | Read a published document                                             |
-| PATCH  | `/published/{key}`              | 200    | Update a published document                                           |
-| DELETE | `/published/{key}`              | 200    | Delete a published document                                           |
-| POST   | `/published/{key}/unpublish`    | 200    | State transition: move a published document to unpublished            |
-| POST   | `/unpublished`                  | 201    | Create an unpublished draft                                           |
-| GET    | `/unpublished/{key}`            | 200    | Read an unpublished draft                                             |
-| PATCH  | `/unpublished/{key}`            | 200    | Update an unpublished draft                                           |
-| DELETE | `/unpublished/{key}`            | 200    | Delete an unpublished draft                                           |
-| POST   | `/unpublished/{key}/publish`    | 200    | State transition: publish an unpublished draft                        |
-| POST   | `/revisions`                    | 201    | Create a revision for a document                                      |
-| GET    | `/revisions/{key}`              | 200    | List revisions for a document key (paginated)                         |
-| GET    | `/revisions/{key}/{revisionId}` | 200    | Read a specific revision                                              |
-| POST   | `/operations`                   | 200    | Atomic batch operations (add / update / remove + publish / unpublish) |
-| GET    | `/sync-token`                   | 200    | Opaque per-scope change token (capability-gated: `changes.syncToken`) |
+| Method | Path                            | Status | Description                                                              |
+| ------ | ------------------------------- | ------ | ------------------------------------------------------------------------ |
+| GET    | `/`                             | 200    | API info + endpoint discovery                                            |
+| GET    | `/capabilities`                 | 200    | Repository capabilities (pagination styles, supported features)          |
+| GET    | `/records`                      | 200    | List full records (published + unpublished view per key)                 |
+| GET    | `/record-summaries`             | 200    | List record summaries (lightweight listing, fewer attributes)            |
+| POST   | `/published`                    | 201    | Create a published document                                              |
+| GET    | `/published/{key}`              | 200    | Read a published document                                                |
+| PATCH  | `/published/{key}`              | 200    | Update a published document                                              |
+| DELETE | `/published/{key}`              | 200    | Delete a published document                                              |
+| POST   | `/published/{key}/unpublish`    | 200    | State transition: move a published document to unpublished               |
+| POST   | `/unpublished`                  | 201    | Create an unpublished draft                                              |
+| GET    | `/unpublished/{key}`            | 200    | Read an unpublished draft                                                |
+| PATCH  | `/unpublished/{key}`            | 200    | Update an unpublished draft                                              |
+| DELETE | `/unpublished/{key}`            | 200    | Delete an unpublished draft                                              |
+| POST   | `/unpublished/{key}/publish`    | 200    | State transition: publish an unpublished draft                           |
+| POST   | `/revisions`                    | 201    | Create a revision for a document                                         |
+| GET    | `/revisions/{key}`              | 200    | List revisions for a document key (paginated)                            |
+| GET    | `/revisions/{key}/{revisionId}` | 200    | Read a specific revision                                                 |
+| POST   | `/operations`                   | 200    | Atomic batch operations (add / update / remove + publish / unpublish)    |
+| GET    | `/sync-token`                   | 200    | Opaque per-scope change token (capability-gated: `changes.syncToken`)    |
 | GET    | `/changes`                      | 200    | List changes since a sync token (capability-gated: `changes.changeFeed`) |
 
 `/sync-token` and `/changes` are only reachable when the backing repository declares the matching
-`changes` capability in `GET /capabilities` (the `syncToken` flag for `/sync-token`, the `changeFeed`
-flag for `/changes`). Calling either on a repository without that support returns `501`.
+`changes` capability in `GET /capabilities` (the `syncToken` flag for `/sync-token`, the
+`changeFeed` flag for `/changes`). Calling either on a repository without that support returns
+`501`.
 
 All responses carry `Content-Type: application/vnd.api+json` and `Cache-Control: no-store`.
 
@@ -118,10 +119,10 @@ Accepts the same pagination parameters as `/records`.
 
 ### `GET /sync-token` and `GET /changes`
 
-| Parameter       | Type     | Default | Description                                                                           |
-| --------------- | -------- | ------- | ------------------------------------------------------------------------------------- |
-| `filter[folder]` | `string` | —       | Scope the token or change feed to a specific folder.                                  |
-| `filter[since]`  | `string` | —       | **Required for `/changes`**: opaque sync token from a prior `GET /sync-token` call.   |
+| Parameter        | Type     | Default | Description                                                                         |
+| ---------------- | -------- | ------- | ----------------------------------------------------------------------------------- |
+| `filter[folder]` | `string` | —       | Scope the token or change feed to a specific folder.                                |
+| `filter[since]`  | `string` | —       | **Required for `/changes`**: opaque sync token from a prior `GET /sync-token` call. |
 
 ## Resource types
 
