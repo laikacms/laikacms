@@ -42,7 +42,6 @@ const repo = new DrizzleDocumentsRepository({
                 depth: documentsTable.depth,
                 status: documentsTable.status,
                 language: documentsTable.language,
-                content: documentsTable.content,
                 createdAt: documentsTable.createdAt,
                 updatedAt: documentsTable.updatedAt,
               }
@@ -63,6 +62,7 @@ const repo = new DrizzleDocumentsRepository({
             excludeContent
               ? {
                 key: revisionsTable.key,
+                depth: revisionsTable.depth,
                 revision: revisionsTable.revision,
                 language: revisionsTable.language,
                 createdAt: revisionsTable.createdAt,
