@@ -83,11 +83,12 @@ interface DocumentsApiOptions {
 | GET    | `/revisions/{key}`              | 200    | List revisions for a document key (paginated)                         |
 | GET    | `/revisions/{key}/{revisionId}` | 200    | Read a specific revision                                              |
 | POST   | `/operations`                   | 200    | Atomic batch operations (add / update / remove + publish / unpublish) |
-| GET    | `/sync-token`                   | 200    | Opaque per-scope change token (capability-gated: `changeFeed`)        |
-| GET    | `/changes`                      | 200    | List changes since a sync token (capability-gated: `changeFeed`)      |
+| GET    | `/sync-token`                   | 200    | Opaque per-scope change token (capability-gated: `changes.syncToken`) |
+| GET    | `/changes`                      | 200    | List changes since a sync token (capability-gated: `changes.changeFeed`) |
 
-`/sync-token` and `/changes` are only reachable when the backing repository declares `changeFeed`
-support in `GET /capabilities`. Calling either on a repository without that capability returns `400`.
+`/sync-token` and `/changes` are only reachable when the backing repository declares the matching
+`changes` capability in `GET /capabilities` (the `syncToken` flag for `/sync-token`, the `changeFeed`
+flag for `/changes`). Calling either on a repository without that support returns `501`.
 
 All responses carry `Content-Type: application/vnd.api+json` and `Cache-Control: no-store`.
 
