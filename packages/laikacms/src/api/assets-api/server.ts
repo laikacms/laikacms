@@ -329,6 +329,34 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       variations: includeHints.variations,
     };
 
+    // Route: GET / (api-info root)
+    // Self-describing resource listing available endpoints, mirroring the
+    // documents/storage sub-API roots so a client can discover routes uniformly.
+    if ((path === basePath || path === `${basePath}/`) && method === 'GET') {
+      return json({
+        data: {
+          type: 'api-info',
+          id: 'assets',
+          attributes: {
+            name: 'Assets API',
+            version: '1.0.0',
+            endpoints: [
+              { path: '/openapi.json', methods: ['GET'], description: 'OpenAPI 3.1 specification for this API' },
+              { path: '/capabilities', methods: ['GET'], description: 'Underlying assets repository capabilities' },
+              { path: '/sync-token', methods: ['GET'], description: 'Get an opaque change token (capability-gated)' },
+              { path: '/changes', methods: ['GET'], description: 'List changes since a sync token (capability-gated)' },
+              { path: '/resources', methods: ['GET', 'POST'], description: 'List or create assets and folders' },
+              {
+                path: '/resources/{key}',
+                methods: ['GET', 'PATCH', 'DELETE'],
+                description: 'Read, update, or delete a resource',
+              },
+            ],
+          },
+        },
+      });
+    }
+
     // Route: GET /openapi.json
     // Serve the machine-readable API description with `servers` rewritten to
     // the absolute mount point so the document is usable as-is by clients.
@@ -925,16 +953,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       return json({ meta: { deleted: true, warnings } });
     }
 
-    // 404 Not Found
-    return json(
-      {
-        errors: [{
-          status: '404',
-          code: 'not_found',
-          detail: `Route not found: ${method} ${path}`,
-        }],
-      },
-      404,
-    );
+    // 404 Not Found — use the shared error formatter for envelope consistency with documents/storage.
+    return respondError(new NotFoundError('Endpoint not found'), 404, logger);
   }
 }
