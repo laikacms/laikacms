@@ -88,7 +88,7 @@ All responses carry `Content-Type: application/vnd.api+json` and `Cache-Control:
 ### GET /capabilities
 
 Returns the underlying repository's capability flags so clients can introspect supported pagination
-modes and features without guessing.
+modes, version tracking, change signals, and named filters without guessing.
 
 ```json
 {
@@ -96,14 +96,27 @@ modes and features without guessing.
     "type": "assets-capabilities",
     "id": "self",
     "attributes": {
+      "compatibilityDate": "2026-05-11",
       "pagination": {
         "supported": true,
-        "styles": { "offset": true, "cursor": false }
+        "description": "In-memory slicing; cursor pagination not supported.",
+        "styles": { "offset": true, "page": true, "cursor": false }
+      },
+      "versionTracking": {
+        "supported": false,
+        "description": "This backend does not attach per-asset version tokens."
+      },
+      "changes": {
+        "supported": false,
+        "description": "This backend does not support change signals."
       }
     }
   }
 }
 ```
+
+`versionTracking` and `changes` are always present. `filtering` is present only when the backend
+declares named filters — when absent, no `filter[<name>]` params are accepted.
 
 ---
 
@@ -113,16 +126,17 @@ List all assets and folders under a given folder prefix.
 
 **Query Parameters**
 
-| Parameter       | Aliases                            | Type   | Default | Description                                                                                       |
-| --------------- | ---------------------------------- | ------ | ------- | ------------------------------------------------------------------------------------------------- |
-| `folder`        | `filter[folder]`, `filter[prefix]` | string | `""`    | Folder key prefix to list. Priority: `folder` > `filter[folder]` > `filter[prefix]`               |
-| `filter[depth]` | `depth`                            | number | `1`     | Traversal depth (minimum 1)                                                                       |
-| `page[size]`    | —                                  | number | `100`   | Items per page                                                                                    |
-| `page[number]`  | —                                  | number | —       | Page number for offset-based pagination (`page[number]=2` with `page[size]=10` → offset 10)       |
-| `page[after]`   | —                                  | string | —       | Forward cursor for cursor-based pagination (requires backend support — check `GET /capabilities`) |
-| `page[before]`  | —                                  | string | —       | Backward cursor for cursor-based pagination                                                       |
-| `include`       | —                                  | string | —       | Comma-separated: `urls` (alias `asset-url`), `variations` (alias `asset-variation`)               |
-| `meta`          | —                                  | string | —       | Set `meta=true` to inline asset metadata onto `data.meta`                                         |
+| Parameter        | Aliases                            | Type   | Default | Description                                                                                             |
+| ---------------- | ---------------------------------- | ------ | ------- | ------------------------------------------------------------------------------------------------------- |
+| `folder`         | `filter[folder]`, `filter[prefix]` | string | `""`    | Folder key prefix to list. Priority: `folder` > `filter[folder]` > `filter[prefix]`                     |
+| `filter[depth]`  | `depth`                            | number | `1`     | Traversal depth (minimum 1)                                                                             |
+| `filter[<name>]` | —                                  | string | —       | Named filter declared in `GET /capabilities` `filtering.filters[].name`. Undeclared names return `400`. |
+| `page[size]`     | —                                  | number | `100`   | Items per page                                                                                          |
+| `page[number]`   | —                                  | number | —       | Page number for offset-based pagination (`page[number]=2` with `page[size]=10` → offset 10)             |
+| `page[after]`    | —                                  | string | —       | Forward cursor for cursor-based pagination (requires backend support — check `GET /capabilities`)       |
+| `page[before]`   | —                                  | string | —       | Backward cursor for cursor-based pagination                                                             |
+| `include`        | —                                  | string | —       | Comma-separated: `urls` (alias `asset-url`), `variations` (alias `asset-variation`)                     |
+| `meta`           | —                                  | string | —       | Set `meta=true` to inline asset metadata onto `data.meta`                                               |
 
 > **Note on folder filter aliases:** Three query parameters select the folder prefix — `folder`,
 > `filter[folder]`, and `filter[prefix]` — and are evaluated in that priority order. Only the first
