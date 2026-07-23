@@ -61,6 +61,10 @@ const systemErrors = {
     publicMessage: 'Too many open files in system',
     laikaCode: 'service_unavailable',
   },
+  ENAMETOOLONG: {
+    publicMessage: 'Key or path segment too long (max 255 bytes per path component)',
+    laikaCode: 'bad_request',
+  },
   ENOENT: {
     publicMessage: 'No such file or directory',
     laikaCode: 'not_found',
