@@ -1,4 +1,11 @@
-import { ConflictError, ForbiddenError, InternalError, LaikaError, NotFoundError } from 'laikacms/core';
+import {
+  BadRequestError,
+  ConflictError,
+  ForbiddenError,
+  InternalError,
+  LaikaError,
+  NotFoundError,
+} from 'laikacms/core';
 import { describe, expect, it } from 'vitest';
 import { mapFsErrorToLaikaError } from './utilities.js';
 
@@ -27,6 +34,12 @@ describe('mapFsErrorToLaikaError', () => {
   it('maps EPERM to ForbiddenError', () => {
     const result = mapFsErrorToLaikaError(fsError('EPERM'));
     expect(result).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('maps ENAMETOOLONG to BadRequestError with actionable message', () => {
+    const result = mapFsErrorToLaikaError(fsError('ENAMETOOLONG'));
+    expect(result).toBeInstanceOf(BadRequestError);
+    expect(result.message).toContain('255');
   });
 
   it('maps unknown codes to InternalError', () => {
