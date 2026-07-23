@@ -289,6 +289,19 @@ collections:
 > ``Laika backend currently only supports JSON-format collections; set
 > `format: json` on collection `<name>`.``
 
+> **`language` field in stored content:** `ContentBaseDocumentsRepository` co-locates the document
+> language with its content in storage. When Decap saves an entry that has no i18n configuration, it
+> sends `language: "und"` (undetermined per BCP 47). As a result, every stored `.json` file includes
+> a `language: "und"` key alongside your declared fields:
+>
+> ```json
+> { "title": "My post", "body": "...", "language": "und" }
+> ```
+>
+> Treat `language` as a LaikaCMS-managed field — do not declare it in Decap's `fields:` list and
+> filter it out when reading content files directly for rendering. If you configure i18n, the field
+> will contain the active locale instead.
+
 The backend constructs its API URL as `base_url + api_root` → `http://localhost:3000/api`. All
 document, asset, storage, and health endpoints are served under that prefix by the `decapApi` server
 started in §2.

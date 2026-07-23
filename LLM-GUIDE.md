@@ -376,6 +376,20 @@ These are the things that consistently bite first-time integrators:
     callout in task (a) above and
     [docs/decap-integration.md → "Seeding the server-side Decap config"](./docs/decap-integration.md#seeding-the-server-side-decap-config).
 
+14. **`ContentBaseDocumentsRepository` injects a `language` field into every stored content
+    object.** The implementation co-locates the document language with its content in storage so
+    reads can recover it without a separate metadata file. When i18n is not configured, Decap sends
+    `language: "und"` (BCP 47 "undetermined"), so every saved `.json` file ends up with:
+    ```json
+    { "title": "My post", "body": "...", "language": "und" }
+    ```
+    This field will NOT be declared in your Decap `fields:` list — it appears alongside your data as
+    a LaikaCMS internal. Filter it out when reading content files directly for rendering:
+    ```ts
+    const { language: _, ...content } = doc.content; // strip before using
+    ```
+    If you configure i18n, the value will be the active locale rather than `"und"`.
+
 ---
 
 ## 5. Decision tree
