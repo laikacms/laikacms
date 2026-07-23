@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import * as Effect from 'effect/Effect';
 
-import { NotFoundError } from 'laikacms/core';
+import { InvalidData, NotFoundError } from 'laikacms/core';
 
 import { StorageJsonApiProxyRepository } from '../../impl/storage-jsonapi-proxy/storage-jsonapi-proxy-repository.js';
 import { LaikaTask } from '../core/index.js';
@@ -100,5 +100,78 @@ describe('JsonApiHttpTransport.fetchJson', () => {
 
     const headers = (fetchMock.mock.calls[0] as unknown as [unknown, { headers: Record<string, string> }])[1].headers;
     expect(new Headers(headers as HeadersInit).get('authorization')).toBe('Bearer fresh-token');
+  });
+
+  it('returns InvalidData with content-type and body snippet for non-JSON response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        new Response('<!DOCTYPE html><h1>Gateway Error</h1>', {
+          status: 502,
+          headers: { 'Content-Type': 'text/html' },
+        })
+      ),
+    );
+    const transport = new JsonApiHttpTransport({ baseUrl: 'http://upstream' });
+    const err = await Effect.runPromise(transport.fetchJson('/things/x')).catch(e => e);
+    expect(err).toBeInstanceOf(InvalidData);
+    expect((err as InvalidData).message).toContain('text/html');
+    expect((err as InvalidData).message).toContain('Gateway Error');
+  });
+
+  it('uses the custom networkError mapper for transport-level failures', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('DNS lookup failed');
+      }),
+    );
+    const customMapper = vi.fn((_msg: string) => new InvalidData('custom-network-error'));
+    const transport = new JsonApiHttpTransport({
+      baseUrl: 'http://upstream',
+      networkError: customMapper,
+    });
+    const err = await Effect.runPromise(transport.fetchJson('/things')).catch(e => e);
+    expect(customMapper).toHaveBeenCalled();
+    expect((err as InvalidData).message).toBe('custom-network-error');
+  });
+
+  it('sends static authToken as Authorization header on every request', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ data: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+    const transport = new JsonApiHttpTransport({
+      baseUrl: 'http://upstream',
+      authToken: 'my-static-token',
+    });
+    await Effect.runPromise(transport.fetchJson('/things'));
+
+    const headers = (fetchMock.mock.calls[0] as unknown as [unknown, { headers: Record<string, string> }])[1].headers;
+    expect(new Headers(headers as HeadersInit).get('authorization')).toBe('Bearer my-static-token');
+  });
+
+  it('omits Authorization header when neither authToken nor tokenPromise is set', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ data: [] }));
+    vi.stubGlobal('fetch', fetchMock);
+    const transport = new JsonApiHttpTransport({ baseUrl: 'http://upstream' });
+    await Effect.runPromise(transport.fetchJson('/things'));
+
+    const headers = (fetchMock.mock.calls[0] as unknown as [unknown, { headers: Record<string, string> }])[1].headers;
+    expect(new Headers(headers as HeadersInit).get('authorization')).toBeNull();
+  });
+
+  it('multipart body sends FormData without json:api Content-Type override', async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ data: {} }));
+    vi.stubGlobal('fetch', fetchMock);
+    const transport = new JsonApiHttpTransport({ baseUrl: 'http://upstream' });
+    const form = new FormData();
+    form.append('file', new Blob(['hello'], { type: 'text/plain' }), 'hello.txt');
+    await Effect.runPromise(transport.request('/upload', { method: 'POST', multipart: form }));
+
+    const [, init] = fetchMock.mock.calls[0] as unknown as [unknown, RequestInit];
+    // body should be FormData (or a string serialization), not a JSON string
+    expect(init.body).not.toEqual(JSON.stringify(form));
+    // Content-Type should not be explicitly set to json:api (the runtime sets the multipart boundary)
+    const ct = new Headers(init.headers as HeadersInit).get('content-type');
+    expect(ct).not.toBe('application/vnd.api+json');
   });
 });
