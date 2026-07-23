@@ -1,11 +1,11 @@
 # Releasing
 
-All three public packages (`laikacms`, `@laikacms/decap`, `@laikacms/decap-ai`) are version-fixed
-via changesets and released together with `changeset publish`. Publishing MUST go through pnpm
-(never `npm publish`): pnpm resolves `catalog:` dependency ranges into the tarball, npm does not —
-`prepack` guards against this via `scripts/check-no-catalog-deps.mjs`. `changeset publish` is safe
-here: it detects pnpm from the root `packageManager` field and runs `pnpm publish` per package. It
-also skips versions already on npm, so re-running it (or racing CI) is harmless.
+Both public packages (`laikacms`, `@laikacms/decap`) are version-fixed via changesets and released
+together with `changeset publish`. Publishing MUST go through pnpm (never `npm publish`): pnpm
+resolves `catalog:` dependency ranges into the tarball, npm does not — `prepack` guards against this
+via `scripts/check-no-catalog-deps.mjs`. `changeset publish` is safe here: it detects pnpm from the
+root `packageManager` field and runs `pnpm publish` per package. It also skips versions already on
+npm, so re-running it (or racing CI) is harmless.
 
 Pushing a `v*` tag triggers `.github/workflows/publish.yml`, which lints, typechecks, tests, builds,
 and runs `pnpm changeset publish` using npm OIDC trusted publishing (no token secret; each package
