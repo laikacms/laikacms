@@ -214,8 +214,8 @@ with esbuild, then serve the resulting files as static assets.
 npm install @laikacms/decap @laikacms/decap-cms decap-cms-app esbuild --save-dev
 ```
 
-`@laikacms/decap-cms` is the scoped Decap CMS fork that provides the `@laikacms/decap-cms/lib-util`,
-`/lib-auth`, `/ui-default`, and `/core` subpaths required by the Laika backend at bundle time.
+`@laikacms/decap-cms` is the scoped Decap CMS fork that provides the `@laikacms/decap-cms/lib/util`,
+`/lib/auth`, `/ui-default`, and `/core` subpaths required by the Laika backend at bundle time.
 Without it the esbuild step will fail with "Could not resolve" errors.
 
 ### Create the admin entry point
@@ -531,19 +531,19 @@ in their own repositories.
 
 ## Widgets
 
-| Widget       | Subpath                                        |
-| ------------ | ---------------------------------------------- |
-| AI Chat      | `@laikacms/decap-ai/widget`                    |
-| Lucide Icons | `@laikacms/decap/decap-cms-widget-lucide-icon` |
-| Radix Icons  | `@laikacms/decap/decap-cms-widget-radix-icon`  |
+| Widget       | Subpath                                   |
+| ------------ | ----------------------------------------- |
+| AI Chat      | `@laikacms/decap-cms/widgets/aichat`      |
+| Lucide Icons | `@laikacms/decap-cms/widgets/lucide-icon` |
+| Radix Icons  | `@laikacms/decap-cms/widgets/radix-icon`  |
 
 Each widget registers under a unique name (`lucide-icon` / `radix-icon`) so both can be used in the
 same app without one overwriting the other.
 
 ```ts
 import CMS from '@laikacms/decap-cms';
-import LucideWidgetIcon from '@laikacms/decap/decap-cms-widget-lucide-icon';
-import RadixWidgetIcon from '@laikacms/decap/decap-cms-widget-radix-icon';
+import LucideWidgetIcon from '@laikacms/decap-cms/widgets/lucide-icon';
+import RadixWidgetIcon from '@laikacms/decap-cms/widgets/radix-icon';
 
 // Registers as 'lucide-icon'
 CMS.registerWidget(LucideWidgetIcon.Widget());
@@ -576,7 +576,7 @@ collection and entry slugs.
 
 ```ts
 import CMS from '@laikacms/decap-cms';
-import { DecapCmsEditorComponentEmbeddedEntry } from '@laikacms/decap/decap-cms-editor-component-embedded-entry';
+import { DecapCmsEditorComponentEmbeddedEntry } from '@laikacms/decap-cms/editor-component-embedded-entry';
 
 CMS.registerEditorComponent(DecapCmsEditorComponentEmbeddedEntry);
 ```
