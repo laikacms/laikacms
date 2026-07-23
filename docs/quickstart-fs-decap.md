@@ -217,6 +217,12 @@ pnpm add -D esbuild
 > Laika backend. Without it the esbuild step will fail with "Could not resolve
 > `@laikacms/decap-cms/…`" errors and produce no `admin/bundle.js`.
 
+> **pnpm peer warnings:** after this install, `pnpm peers check` may report unmet peers for
+> `graphql` (`^16` wanted, `15.x` installed by `decap-cms-app@3`) and for `react`/`react-dom`
+> (`^16 || ^17 || ^18` from `react-scroll-sync` and similar transitive deps inside `decap-cms-app`).
+> These originate inside `decap-cms-app`'s own dependency tree and are harmless — the admin UI
+> starts and functions correctly with React 19. You can safely ignore them.
+
 ### 4b. Create the HTML entry point
 
 The static file server needs an `index.html` to load your compiled bundle:
