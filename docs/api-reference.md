@@ -1644,6 +1644,14 @@ does not support them returns a `400 Bad Request`.
           "page": true,
           "cursor": false
         }
+      },
+      "versionTracking": {
+        "supported": false,
+        "description": "This backend does not attach per-asset version tokens."
+      },
+      "changes": {
+        "supported": false,
+        "description": "This backend does not support change signals."
       }
     },
     "links": {
@@ -1653,9 +1661,34 @@ does not support them returns a `400 Bad Request`.
 }
 ```
 
+A backend that supports version tracking and named filters would include:
+
+```json
+{
+  "versionTracking": {
+    "supported": true,
+    "description": "ETag from the underlying storage is exposed as the asset version token."
+  },
+  "changes": {
+    "supported": true,
+    "description": "Sync tokens and change feeds are supported.",
+    "syncToken": true,
+    "changeFeed": true
+  },
+  "filtering": {
+    "supported": true,
+    "description": "Named filters forwarded to the repository as filter[<name>] query params.",
+    "filters": [
+      { "name": "search", "description": "Full-text search over asset keys and metadata." }
+    ]
+  }
+}
+```
+
 When `pagination.supported` is `false` the `styles` field is absent and only `description` is
-present. The `compatibilityDate` is set by each backend and changes when the repository's contract
-evolves — clients may use it to detect incompatible backend versions.
+present. `versionTracking` and `changes` are always present; `filtering` is absent when the backend
+does not declare any named filters. The `compatibilityDate` is set by each backend and changes when
+the repository's contract evolves — clients may use it to detect incompatible backend versions.
 
 **Backend pagination support**
 
@@ -1684,15 +1717,16 @@ List all assets and folders under a given folder prefix.
 
 **Query Parameters**
 
-| Parameter                                       | Type   | Default | Description                                                                          |
-| ----------------------------------------------- | ------ | ------- | ------------------------------------------------------------------------------------ |
-| `folder`, `filter[folder]`, or `filter[prefix]` | string | `""`    | Folder key prefix to list (priority: `folder` > `filter[folder]` > `filter[prefix]`) |
-| `filter[depth]` or `depth`                      | number | `1`     | Traversal depth (minimum 1)                                                          |
-| `page[after]`                                   | string | —       | Forward cursor for pagination                                                        |
-| `page[before]`                                  | string | —       | Backward cursor for pagination                                                       |
-| `page[size]`                                    | number | `100`   | Items per page                                                                       |
-| `include`                                       | string | —       | Comma-separated: `urls` (or `asset-url`), `variations` (or `asset-variation`)        |
-| `meta`                                          | string | —       | Set `meta=true` to inline asset metadata onto `data.meta`                            |
+| Parameter                                       | Type   | Default | Description                                                                                                                                             |
+| ----------------------------------------------- | ------ | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `folder`, `filter[folder]`, or `filter[prefix]` | string | `""`    | Folder key prefix to list (priority: `folder` > `filter[folder]` > `filter[prefix]`)                                                                    |
+| `filter[depth]` or `depth`                      | number | `1`     | Traversal depth (minimum 1)                                                                                                                             |
+| `filter[<name>]`                                | string | —       | Named filter declared by the backend in `GET /capabilities` `filtering.filters[].name`. Undeclared names return `400`. Check capabilities before using. |
+| `page[after]`                                   | string | —       | Forward cursor for pagination                                                                                                                           |
+| `page[before]`                                  | string | —       | Backward cursor for pagination                                                                                                                          |
+| `page[size]`                                    | number | `100`   | Items per page                                                                                                                                          |
+| `include`                                       | string | —       | Comma-separated: `urls` (or `asset-url`), `variations` (or `asset-variation`)                                                                           |
+| `meta`                                          | string | —       | Set `meta=true` to inline asset metadata onto `data.meta`                                                                                               |
 
 **Response** — collection of `asset` and `folder` resources with optional `included`
 
