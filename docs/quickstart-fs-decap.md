@@ -190,12 +190,13 @@ that the Laika backend imports at bundle time), and esbuild (used to compile the
 file into a browser bundle):
 
 ```bash
-# npm — --legacy-peer-deps is required: react-redux@^7 (optional peer from @laikacms/decap)
-# conflicts with decap-cms-app@3, and npm@9+ rejects the conflict by default.
-# codemirror@5 must be installed as a direct dependency so npm hoists v5 to the top level
-# and nests the @laikacms/decap-cms@4 requirement (codemirror@^6) underneath it. Without this,
-# npm@11 deduplicates both to codemirror@6 and esbuild fails with ~94 "Could not resolve
-# codemirror/keymap/…" errors from decap-cms-widget-code's v5-only subpath imports.
+# npm — --legacy-peer-deps is required because decap-cms-app@3 pulls in
+# codemirror@5 subpath imports (decap-cms-widget-code), while @laikacms/decap-cms@4
+# declares a codemirror@^6 peer; npm@9+ rejects the conflict by default.
+# codemirror@5 must also be installed as a direct dependency so npm hoists v5 to
+# the top level and nests the @laikacms/decap-cms@4 requirement (codemirror@^6)
+# underneath it — without this, npm@11 deduplicates both to codemirror@6 and
+# esbuild fails with ~94 "Could not resolve codemirror/keymap/…" errors.
 npm install --legacy-peer-deps decap-cms-app @laikacms/decap-cms codemirror@5
 npm install --legacy-peer-deps --save-dev esbuild
 
