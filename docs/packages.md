@@ -59,11 +59,11 @@ utilities. Imported via subpath exports.
 
 ### Testing utilities (`packages/laikacms/src/`)
 
-| Subpath                      | Description                                                     |
-| ---------------------------- | --------------------------------------------------------------- |
-| `laikacms/documents/testing` | Contract test harness for `DocumentsRepository` implementations |
-| `laikacms/storage/testing`   | Contract test harness for `StorageRepository` implementations   |
-| `laikacms/assets/testing`    | Contract test harness for `AssetsRepository` implementations    |
+| Subpath                      | Description                                                                                                                                                                                           |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laikacms/documents/testing` | Contract test harness + `InMemoryDocumentsRepository` reference implementation for `DocumentsRepository` — use as a fast in-memory backend in integration tests or as a contract-compliance reference |
+| `laikacms/storage/testing`   | Contract test harness for `StorageRepository` implementations                                                                                                                                         |
+| `laikacms/assets/testing`    | Contract test harness for `AssetsRepository` implementations                                                                                                                                          |
 
 ### Serializers (`packages/laikacms/src/serializers/`)
 
