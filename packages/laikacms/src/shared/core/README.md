@@ -90,8 +90,10 @@ import { collectStream, runTask } from 'laikacms/compat';
 const object = await runTask(repository.getObject(key));
 
 // Collect all data items from a LaikaStream — resolves with { items, done }
+// `offset` is required for offset-style pagination; `{ limit: 100 }` alone would silently return the full list.
+// `Pagination` is a union of PaginationOffsetSchema, PaginationPageBasedSchema, PaginationBeforeSchema, PaginationAfterSchema.
 const { items, done } = await collectStream(
-  repository.listAtoms(folderKey, { depth: 1, pagination: { limit: 100 } }),
+  repository.listAtoms(folderKey, { depth: 1, pagination: { offset: 0, limit: 100 } }),
 );
 console.log(items); // Atom[]
 ```
