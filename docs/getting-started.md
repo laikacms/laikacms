@@ -19,6 +19,11 @@ const api = buildJsonApi({ repo });
 export default { fetch: api.fetch };
 ```
 
+> **⚠️ No authentication:** `buildJsonApi` ships no authentication — any client can create, read,
+> update, and delete content without a token. Do not expose it directly to an untrusted network. For
+> a production-ready API with built-in auth, use [`decapApi`](./decap-integration.md) from
+> `@laikacms/decap` instead.
+
 > **Note:** `rawSerializer` stores only the `body` field of each content object as plain text.
 > Passing any other fields (e.g. `title`, `tags`) will throw an error at write time to prevent
 > silent data loss. If you need to persist multi-field content, use `jsonSerializer` instead.
