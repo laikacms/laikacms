@@ -119,7 +119,11 @@ Both copies must describe the same collections. The recommended pattern is to ke
 ```ts
 // shared/decap-config.ts — one source of truth for both sides
 export const decapConfig = {
-  backend: { name: 'laika', api_root: '/api/decap' },
+  backend: {
+    name: 'laika',
+    base_url: 'http://localhost:3000', // URL where your LaikaCMS API runs; required for the browser
+    api_root: '/api/decap',
+  },
   media_folder: 'uploads',
   public_folder: '/uploads',
   collections: [
@@ -227,8 +231,36 @@ import CMS from 'decap-cms-app';
 
 const LaikaBackend = createLaikaBackend();
 CMS.registerBackend('laika', LaikaBackend);
-CMS.init();
+CMS.init({
+  config: {
+    backend: {
+      name: 'laika',
+      base_url: 'http://localhost:3000', // URL where your LaikaCMS API is running; required
+      api_root: '/api/decap',
+      dev_token: 'dev-secret-change-me', // dev-only: bypasses OAuth2; remove for production
+    },
+    media_folder: 'uploads',
+    public_folder: '/uploads',
+    collections: [
+      // same collections array as your server-side decapConfig
+    ],
+  },
+});
 ```
+
+> **`base_url` is required.** Without it, Decap cannot locate the Laika API and the admin shows
+> "Missing required configuration: base_url and app_id are required". Set it to the origin where
+> your `decapApi` handler runs (e.g. `http://localhost:3000` locally, your public URL in
+> production).
+>
+> **`dev_token`** lets the Decap admin authenticate without a full OAuth2 flow during development —
+> any non-empty string works as long as your `authenticateAccessToken` callback accepts it. Remove
+> this field before deploying to production and wire a real OAuth2 / JWT validator instead (see
+> [Production auth with `decap-oauth2`](#production-auth-with-decap-oauth2) below).
+>
+> Alternatively, omit `config:` from `CMS.init()` and place the backend settings in
+> `admin/config.yml` next to `index.html` — Decap loads it automatically at startup. See
+> [quickstart-fs-decap](./quickstart-fs-decap.md) for a complete `config.yml` example.
 
 ### Create the HTML shell
 
