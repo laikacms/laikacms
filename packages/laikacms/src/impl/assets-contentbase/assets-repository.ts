@@ -249,9 +249,10 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
         }
         const { collection, remainder } = this.parseKey(folderKey);
         if (!collection) {
-          return yield* Effect.fail(
-            new BadRequestError(`folderKey '${folderKey}' is missing a collection prefix`),
-          );
+          // Root/empty folder key has no collection prefix — ContentBase cannot enumerate
+          // all collections, so return an empty list. Decap admin queries without
+          // filter[folder] on every Media tab open; 400 would break it unconditionally.
+          return { total: 0 };
         }
         const resolved = yield* this.resolveCollection(collection, emit);
         const physicalFolder = remainder ? pathCombine(resolved.directory, remainder) : resolved.directory;

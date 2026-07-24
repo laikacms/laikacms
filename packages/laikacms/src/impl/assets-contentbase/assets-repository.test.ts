@@ -114,6 +114,17 @@ describe('ContentBaseAssetsRepository — listResources', () => {
     expect(collected.done.total).toBe(5);
   });
 
+  it('listResources with empty folderKey returns empty list instead of 400', async () => {
+    await LaikaTask.runPromise(
+      repo.createAsset({ key: KEY('root-test.png'), content: PNG, mimeType: 'image/png' }),
+    );
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listResources('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
+    );
+    expect(collected.data).toHaveLength(0);
+    expect(collected.done.total).toBe(0);
+  });
+
   it('lists assets created under a folder prefix', async () => {
     const k1 = KEY('gallery/a.png');
     const k2 = KEY('gallery/b.png');
