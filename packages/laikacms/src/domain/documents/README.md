@@ -24,6 +24,17 @@ import { Document, DocumentsRepository, Unpublished } from 'laikacms/documents';
 - `Unpublished` - Draft/pending document
 - `Revision` - Document revision history
 
+## Capabilities
+
+`getCapabilities()` returns a `DocumentsCapabilities` object with four fields:
+
+| Field               | Description                                                                                                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `compatibilityDate` | Opaque version string — implementations increment this when they change behavior in a breaking way.                                                                                                                      |
+| `pagination`        | Which pagination styles (`offset`, `page`, `cursor`) the repository honors on listing calls. `supported: false` means pagination is ignored and full lists are always returned.                                          |
+| `versionTracking`   | Whether the repository attaches an opaque per-record `version` token to returned documents, unpublished records, and summaries. Tokens change only when content changes; compare by equality.                            |
+| `changes`           | Whether `getSyncToken` and `listChanges` are implemented. `syncToken: true` means `getSyncToken` works; `changeFeed: true` means `listChanges` works. Both default to `false` (methods fail with `NotImplementedError`). |
+
 ## Editorial Workflow
 
 ```
@@ -65,6 +76,10 @@ abstract class DocumentsRepository {
     key: Key,
     options: ListRevisionsOptions,
   ): LaikaStream.LaikaStream<RevisionSummary, ListRevisionsDone>;
+
+  // Change signals (capability-gated; check getCapabilities().changes before calling)
+  getSyncToken(options?: GetSyncTokenOptions): LaikaTask.LaikaTask<SyncToken>;
+  listChanges(options: ListChangesOptions): LaikaStream.LaikaStream<ChangeSummary, ListChangesDone>;
 }
 ```
 

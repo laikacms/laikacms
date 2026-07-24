@@ -54,8 +54,24 @@ abstract class AssetsRepository {
   abstract getFolder(key: Key): LaikaTask.LaikaTask<Folder>;
   abstract createFolder(folderCreate: FolderCreate): LaikaTask.LaikaTask<Folder>;
   abstract deleteFolder(key: string, recursive?: boolean): LaikaTask.LaikaTask<void>;
+
+  // Change signals (capability-gated; check getCapabilities().changes before calling)
+  getSyncToken(options?: GetSyncTokenOptions): LaikaTask.LaikaTask<SyncToken>;
+  listChanges(options: ListChangesOptions): LaikaStream.LaikaStream<ChangeSummary, ListChangesDone>;
 }
 ```
+
+## Capabilities
+
+`getCapabilities()` returns an `AssetsCapabilities` object with five fields:
+
+| Field               | Description                                                                                                                                                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `compatibilityDate` | Opaque version string — implementations increment this when they change behavior in a breaking way.                                                                                                                      |
+| `pagination`        | Which pagination styles (`offset`, `page`, `cursor`) the repository honors on `listResources`. `supported: false` means pagination is ignored and full lists are always returned.                                        |
+| `versionTracking`   | Whether the repository attaches an opaque per-record `version` token to returned assets. Tokens change only when content changes; compare by equality.                                                                   |
+| `changes`           | Whether `getSyncToken` and `listChanges` are implemented. `syncToken: true` means `getSyncToken` works; `changeFeed: true` means `listChanges` works. Both default to `false` (methods fail with `NotImplementedError`). |
+| `filtering`         | _(optional)_ Named filters honored by `listResources` (e.g. `search`). Absent means no filters are supported; implementations fail with `InvalidData` on undeclared filter names rather than silently ignoring them.     |
 
 ## Implementations
 
