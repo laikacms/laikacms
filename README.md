@@ -54,16 +54,15 @@ export default {
 
 ## Packages
 
-This repository carries the three core packages. The storage/asset adapters (`@laikacms/aws`,
+This repository carries the two core packages. The storage/asset adapters (`@laikacms/aws`,
 `@laikacms/github`, …), `laikacli`, `@laikacms/git-gateway`, the `portable-text-*` mappers, and the
 example apps were moved out into their own repositories in June 2026 — see
 [docs/restructure-2026-06.md](./docs/restructure-2026-06.md).
 
-| Package              | Description                                                                                                                                                                           |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `laikacms`           | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
-| `@laikacms/decap`    | Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives in `@laikacms/decap-ai`                                                                              |
-| `@laikacms/decap-ai` | AI chat integration for Decap CMS (Vercel AI SDK)                                                                                                                                     |
+| Package           | Description                                                                                                                                                                           |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laikacms`        | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
+| `@laikacms/decap` | Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives in `@laikacms/decap-cms/ai`                                                                          |
 
 See [docs/packages.md](./docs/packages.md) for the full list of subpath exports, including the
 packages that now live in separate repositories.
@@ -85,9 +84,9 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Releasing
 
-The three core packages (`laikacms`, `@laikacms/decap`, `@laikacms/decap-ai`) are released together
-at the same version (changesets `fixed` group). Internal `workspace:*` references are pinned to the
-exact version on publish. Packages that were moved out of this repo (the adapters, `laikacli`,
+The two core packages (`laikacms`, `@laikacms/decap`) are released together at the same version
+(changesets `fixed` group). Internal `workspace:*` references are pinned to the exact version on
+publish. Packages that were moved out of this repo (the adapters, `laikacli`,
 `@laikacms/git-gateway`, …) are now released from their own repositories.
 
 ```
