@@ -37,6 +37,9 @@ const api = buildJsonApi({ repo });
 export default { fetch: api.fetch };
 ```
 
+> **⚠️ No auth** — `buildJsonApi` ships no authentication. See
+> [Getting Started](./docs/getting-started.md) for production setup with `decapApi`.
+
 ## Cloudflare Workers
 
 ```typescript
