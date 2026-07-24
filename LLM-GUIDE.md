@@ -348,10 +348,9 @@ These are the things that consistently bite first-time integrators:
     }
     ```
 
-12. **Packages need a `dist/` before downstream packages can type-check.** The monorepo has three
-    core packages (`laikacms`, `@laikacms/decap`, `@laikacms/github`). If you run
-    `pnpm --filter <package> exec tsc --noEmit` directly and get
-    `Cannot find module '@laikacms/...'`, build the upstream package first:
+12. **Packages need a `dist/` before downstream packages can type-check.** The monorepo has two core
+    packages (`laikacms`, `@laikacms/decap`). If you run `pnpm --filter <package> exec tsc --noEmit`
+    directly and get `Cannot find module '@laikacms/...'`, build the upstream package first:
     ```
     pnpm --filter @laikacms/decap build
     ```

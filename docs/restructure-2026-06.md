@@ -21,13 +21,13 @@ packages, while the adapters and examples evolve independently on their own rele
 
 ## What the repo contains now
 
-Three published packages remain:
+Two published packages remain (updated July 2026: `@laikacms/decap-ai` was discontinued and moved
+into the `@laikacms/decap-cms` fork, DCMS-492):
 
-| Package              | Path                | Description                                                           |
-| -------------------- | ------------------- | --------------------------------------------------------------------- |
-| `laikacms`           | `packages/laikacms` | Core domain, APIs, default implementations, serializers, shared utils |
-| `@laikacms/decap`    | `packages/decap`    | Decap CMS integrations: backend, OAuth2, widgets, server adapters     |
-| `@laikacms/decap-ai` | `packages/decap-ai` | AI chat integration for Decap CMS (Vercel AI SDK)                     |
+| Package           | Path                | Description                                                           |
+| ----------------- | ------------------- | --------------------------------------------------------------------- |
+| `laikacms`        | `packages/laikacms` | Core domain, APIs, default implementations, serializers, shared utils |
+| `@laikacms/decap` | `packages/decap`    | Decap CMS integrations: backend, OAuth2, widgets, server adapters     |
 
 The `apps/` directory no longer exists.
 
@@ -81,7 +81,7 @@ repo:
   elsewhere.
 - `README.md` — Packages / Apps / Releasing sections.
 - `LLM-GUIDE.md` — starter references are now external.
-- `pnpm-workspace.yaml` — workspace globs trimmed to the three remaining packages.
+- `pnpm-workspace.yaml` — workspace globs trimmed to the two remaining packages.
 
 ## See also
 
