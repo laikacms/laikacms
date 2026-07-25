@@ -1,0 +1,9 @@
+{
+  "name": "laikacms-examples",
+  "private": true,
+  "description": "Standalone examples for Laika CMS. Not part of the pnpm workspace and never published.",
+  "type": "module",
+  "dependencies": {
+    "laikacms": "file:../packages/laikacms"
+  }
+}

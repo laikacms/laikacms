@@ -24,6 +24,8 @@ export default tseslint.config(
   },
   {
     ignores: [
+      // Standalone examples workspace — not part of this pnpm project
+      'examples/**',
       '**/dist/**',
       '**/dist-test/**',
       '**/node_modules/**',

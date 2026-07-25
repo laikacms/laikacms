@@ -1,0 +1,4 @@
+# This file makes examples/ its own pnpm workspace root, so pnpm never
+# climbs up to the repo root. Installs here get their own lockfile and
+# node_modules and have zero effect on the main workspace.
+packages: []
