@@ -1,5 +1,19 @@
 # laikacms
 
+## 2.1.0
+
+### Minor Changes
+
+- Add granular subpath exports so bundled consumers can avoid heavy barrels:
+
+  - `laikacms/core/utilities` — dependency-free helpers (`memoize`, `lazy`, `Url`, `Paths`,
+    `Header`, ...). `AsyncGenerator` moved to its own module (`async-generator.ts`) because
+    `accumulateFirst` needs `effect/Result`; the `laikacms/core` barrel re-exports it, so the public
+    API is unchanged.
+  - `laikacms/crypto/*` — per-module crypto access (e.g. `laikacms/crypto/constant-time`) so
+    importing `constantTimeEqual` no longer drags `bcryptjs` in via the `laikacms/crypto` star
+    barrel.
+
 ## 2.0.0
 
 ### Patch Changes
