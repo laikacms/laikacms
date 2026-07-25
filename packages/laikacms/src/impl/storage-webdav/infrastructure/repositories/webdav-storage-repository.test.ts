@@ -457,3 +457,81 @@ describe('WebDavStorageRepository — custom determineExtension', () => {
     ).rejects.toBeInstanceOf(BadRequestError);
   });
 });
+
+// ---------------------------------------------------------------------------
+// basePath round-trip
+// ---------------------------------------------------------------------------
+
+describe('WebDavStorageRepository — basePath round-trip', () => {
+  it('createObject writes under basePath and getObject reads back with the short key', async () => {
+    const baseSrv = createMockServer();
+    // Pre-seed the basePath subcollection; the repo does not MKCOL the root itself
+    baseSrv.store.set(`${ROOT_PATH}/content`, {
+      isCollection: true,
+      content: '',
+      ctime: new Date(0),
+      mtime: new Date(0),
+    });
+
+    const repo = new WebDavStorageRepository(
+      { baseUrl: `http://dav.test${ROOT_PATH}`, basePath: 'content', fetch: baseSrv.fetch },
+      { md: mdSerializer },
+      'md',
+    );
+
+    const created = await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'hello', content: { body: 'hi' } }),
+    );
+
+    // Key returned is relative to the basePath root, not the server absolute path
+    expect(created.key).toBe('hello');
+    expect(created.content).toEqual({ body: 'hi' });
+
+    // On the server the file is stored under the basePath subfolder
+    expect(baseSrv.store.has(`${ROOT_PATH}/content/hello.md`)).toBe(true);
+    // Not at the naive location that ignores basePath
+    expect(baseSrv.store.has(`${ROOT_PATH}/hello.md`)).toBe(false);
+
+    // getObject can retrieve it by its short key
+    const fetched = await LaikaTask.runPromise(repo.getObject('hello'));
+    expect(fetched.key).toBe('hello');
+    expect(fetched.content).toEqual({ body: 'hi' });
+  });
+
+  it('listAtomSummaries with basePath only surfaces children of the basePath folder', async () => {
+    const baseSrv = createMockServer();
+    // Pre-seed the basePath subcollection and a sibling at the server root
+    baseSrv.store.set(`${ROOT_PATH}/content`, {
+      isCollection: true,
+      content: '',
+      ctime: new Date(0),
+      mtime: new Date(0),
+    });
+    baseSrv.store.set(`${ROOT_PATH}/content/inside.md`, {
+      isCollection: false,
+      content: 'yes',
+      ctime: new Date(0),
+      mtime: new Date(0),
+    });
+    // A file at the server root (outside basePath) — must not appear
+    baseSrv.store.set(`${ROOT_PATH}/outside.md`, {
+      isCollection: false,
+      content: 'no',
+      ctime: new Date(0),
+      mtime: new Date(0),
+    });
+
+    const repo = new WebDavStorageRepository(
+      { baseUrl: `http://dav.test${ROOT_PATH}`, basePath: 'content', fetch: baseSrv.fetch },
+      { md: mdSerializer },
+      'md',
+    );
+
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('', { pagination: { offset: 0, limit: 100 } }),
+    );
+
+    expect(collected.data.map(s => s.key)).toEqual(['inside']);
+    expect(collected.done).toEqual({ total: 1 });
+  });
+});

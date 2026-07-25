@@ -275,3 +275,112 @@ describe('WebDavDataSource buildAuthHeaders — outgoing Authorization headers',
     expect(calls[1]!['Authorization']).toBe('Bearer persistent-token');
   });
 });
+
+describe('WebDavDataSource — basePath option', () => {
+  const BASE_WITH_PATH = 'http://dav.test/remote.php/dav/files/alice';
+  const BASE_PATH = 'laika-content';
+
+  const makeUrlSpy = (): { spy: typeof fetch, urls: string[] } => {
+    const urls: string[] = [];
+    const spy: typeof fetch = async (input, _init) => {
+      urls.push(typeof input === 'string' ? input : input.toString());
+      return new Response('', { status: 204 });
+    };
+    return { spy, urls };
+  };
+
+  it('outgoing request URL includes basePath segments', async () => {
+    const { spy, urls } = makeUrlSpy();
+    const ds = new WebDavDataSource({ baseUrl: BASE_WITH_PATH, basePath: BASE_PATH, fetch: spy });
+    await ds.deleteResource('docs/post.md');
+    expect(urls[0]).toBe(
+      'http://dav.test/remote.php/dav/files/alice/laika-content/docs/post.md',
+    );
+  });
+
+  it('root key maps to basePath root URL with no trailing slash', async () => {
+    const { spy, urls } = makeUrlSpy();
+    const ds = new WebDavDataSource({ baseUrl: BASE_WITH_PATH, basePath: BASE_PATH, fetch: spy });
+    await ds.deleteResource('');
+    expect(urls[0]).toBe('http://dav.test/remote.php/dav/files/alice/laika-content');
+  });
+
+  it('basePath with leading and trailing slashes is normalised', async () => {
+    const { spy, urls } = makeUrlSpy();
+    const ds = new WebDavDataSource({
+      baseUrl: BASE_WITH_PATH,
+      basePath: '/laika-content/',
+      fetch: spy,
+    });
+    await ds.deleteResource('docs/post.md');
+    expect(urls[0]).toBe(
+      'http://dav.test/remote.php/dav/files/alice/laika-content/docs/post.md',
+    );
+  });
+
+  it('listChildren strips both baseUrl and basePath segments from server hrefs', async () => {
+    const rootHref = '/remote.php/dav/files/alice/laika-content/';
+    const childHref = '/remote.php/dav/files/alice/laika-content/docs/post.md';
+    const xml = `<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>${rootHref}</d:href>
+    <d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop>
+    <d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>${childHref}</d:href>
+    <d:propstat><d:prop><d:resourcetype></d:resourcetype></d:prop>
+    <d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+</d:multistatus>`;
+
+    const spy: typeof fetch = async () =>
+      new Response(xml, {
+        status: 207,
+        headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+      });
+
+    const ds = new WebDavDataSource({ baseUrl: BASE_WITH_PATH, basePath: BASE_PATH, fetch: spy });
+    const result = await ds.listChildren('');
+
+    expect(Result.isFailure(result)).toBe(false);
+    if (Result.isFailure(result)) return;
+    expect(result.success).toHaveLength(1);
+    expect(result.success[0]!.key).toBe('docs/post.md');
+  });
+
+  it('hrefs outside the basePath root are silently dropped', async () => {
+    // A server-side href that does not start with the basePath prefix
+    const outsideHref = '/remote.php/dav/files/bob/other.md';
+    const insideHref = '/remote.php/dav/files/alice/laika-content/notes.md';
+    const xml = `<?xml version="1.0" encoding="utf-8"?>
+<d:multistatus xmlns:d="DAV:">
+  <d:response>
+    <d:href>${outsideHref}</d:href>
+    <d:propstat><d:prop><d:resourcetype></d:resourcetype></d:prop>
+    <d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+  <d:response>
+    <d:href>${insideHref}</d:href>
+    <d:propstat><d:prop><d:resourcetype></d:resourcetype></d:prop>
+    <d:status>HTTP/1.1 200 OK</d:status></d:propstat>
+  </d:response>
+</d:multistatus>`;
+
+    const spy: typeof fetch = async () =>
+      new Response(xml, {
+        status: 207,
+        headers: { 'Content-Type': 'application/xml; charset=utf-8' },
+      });
+
+    const ds = new WebDavDataSource({ baseUrl: BASE_WITH_PATH, basePath: BASE_PATH, fetch: spy });
+    const result = await ds.listChildren('');
+
+    expect(Result.isFailure(result)).toBe(false);
+    if (Result.isFailure(result)) return;
+    // Only the inside href is kept; the outside one is dropped
+    expect(result.success).toHaveLength(1);
+    expect(result.success[0]!.key).toBe('notes.md');
+  });
+});
