@@ -280,6 +280,46 @@ const oauth2 = decapOauth2({
 
 Both `OAuthMessages` and `Translation` are exported from `@laikacms/decap/decap-oauth2/i18n`.
 
+## Additional options
+
+These top-level `OAuthConfig` fields are independent of any optional feature. None are required
+unless noted.
+
+| Option                   | Type                                  | Default                | Description                                                                                                                                                               |
+| ------------------------ | ------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `accessTokenExpiration`  | `number`                              | `3600`                 | Access token lifetime in seconds (1 hour).                                                                                                                                |
+| `refreshTokenExpiration` | `number`                              | `2592000`              | Refresh token lifetime in seconds (30 days).                                                                                                                              |
+| `authCodeExpiration`     | `number`                              | `600`                  | Authorization code lifetime in seconds (10 minutes).                                                                                                                      |
+| `authorizeEndpoint`      | `string`                              | `<basePath>/authorize` | Override the authorize endpoint path. Useful when the default path conflicts with an existing route.                                                                      |
+| `tokenEndpoint`          | `string`                              | `<basePath>/token`     | Override the token endpoint path.                                                                                                                                         |
+| `customLogo`             | `string`                              | —                      | HTML string replacing the default Decap CMS logo on the login page (e.g. `'<img src="/logo.png" alt="My CMS">'`).                                                         |
+| `customStyles`           | `string`                              | —                      | CSS string appended after the built-in styles. Use to adjust colors, fonts, or layout without forking the template.                                                       |
+| `loginRedirectUrl`       | `string`                              | —                      | URL users are sent to after a successful password reset (e.g. your CMS admin page). Defaults to the login page when omitted.                                              |
+| `logger`                 | `{ debug, info, warn, error, fatal }` | —                      | Structured logger for internal diagnostics. Any object that implements `debug/info/warn/error/fatal(...args: unknown[]): void` works — `console`, `pino`, `winston`, etc. |
+
+Example with token timing and a logger:
+
+```typescript
+import { decapOauth2 } from '@laikacms/decap/decap-oauth2';
+
+const oauth2 = decapOauth2({
+  basePath: '/oauth2',
+  clientId: process.env.DECAP_CLIENT_ID!,
+  callbacks: {/* ... */},
+
+  // Shorten the access token to 15 minutes for tighter sessions
+  accessTokenExpiration: 900,
+  // Keep refresh tokens for 7 days instead of the 30-day default
+  refreshTokenExpiration: 604800,
+
+  // Route diagnostics through your app's logger
+  logger: console,
+
+  // Replace the default logo
+  customLogo: '<img src="/logo.svg" alt="My App" style="height:40px">',
+});
+```
+
 ## Security Considerations
 
 This package implements security measures with future quantum computing threats in mind:
