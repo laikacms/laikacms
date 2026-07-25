@@ -177,6 +177,20 @@ function safeIntReq(s: string, fallback: number): number {
 }
 
 /**
+ * Hard upper bound on a client-requested page size. Every list endpoint funnels
+ * through {@link parsePaginationQuery}, and the API boundary buffers a full page
+ * into memory (`runCollect`) before responding — so an unbounded `page[size]` /
+ * `page[limit]` is a memory/DoS surface. Requests above this are silently clamped
+ * down rather than rejected, so cursor-following clients keep working.
+ */
+export const MAX_PAGE_SIZE = 100;
+
+/** Clamp an optional client-supplied page size down to {@link MAX_PAGE_SIZE}. */
+function clampPageSize(n: number | undefined): number | undefined {
+  return n === undefined ? undefined : Math.min(n, MAX_PAGE_SIZE);
+}
+
+/**
  * Parses pagination parameters from query string
  * @param query - Record of query parameters
  * @returns Pagination object (cursor, page-based, or offset-based)
@@ -196,28 +210,28 @@ export function parsePaginationQuery(query: Record<string, string | string[] | u
   if (pageAfter !== undefined) {
     return {
       after: firstStr(pageAfter) || undefined,
-      perPage: safeIntOpt(firstStr(pageSize)),
+      perPage: clampPageSize(safeIntOpt(firstStr(pageSize))),
     };
   }
 
   if (pageBefore) {
     return {
       before: firstStr(pageBefore),
-      perPage: safeIntOpt(firstStr(pageSize)),
+      perPage: clampPageSize(safeIntOpt(firstStr(pageSize))),
     };
   }
 
   if (pageNumber) {
     return {
       page: safeIntReq(firstStr(pageNumber)!, 1),
-      perPage: safeIntOpt(firstStr(pageSize)),
+      perPage: clampPageSize(safeIntOpt(firstStr(pageSize))),
     };
   }
 
   if (pageOffset !== undefined) {
     return {
       offset: safeIntReq(firstStr(pageOffset)!, 0),
-      limit: safeIntOpt(firstStr(pageLimit)),
+      limit: clampPageSize(safeIntOpt(firstStr(pageLimit))),
     };
   }
 
@@ -229,6 +243,6 @@ export function parsePaginationQuery(query: Record<string, string | string[] | u
   const sizeStr = firstStr(pageSize);
   return {
     page: 1,
-    perPage: sizeStr ? (safeIntOpt(sizeStr) ?? 10) : 10,
+    perPage: sizeStr ? (clampPageSize(safeIntOpt(sizeStr)) ?? 10) : 10,
   };
 }
