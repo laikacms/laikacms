@@ -108,9 +108,8 @@ Decap CMS server-side integrations: the Decap-compatible API and the OAuth2 serv
 
 > **Moved (July 2026, DCMS-492):** AI chat (`@laikacms/decap-ai`, now discontinued), the icon
 > widgets, the Dutch locale, the embedded-entry editor component, and the config type utilities all
-> moved into the `@laikacms/decap-cms` fork: `@laikacms/decap-cms/ai`, `…/widgets/aichat`,
-> `…/widgets/lucide-icon`, `…/widgets/radix-icon`, `…/locales/nl`,
-> `…/editor-component-embedded-entry`, and `…/config-types`.
+> moved into the `@laikacms/decap-cms` fork: `…/widgets/aichat`, `…/widgets/lucide-icon`,
+> `…/widgets/radix-icon`, `…/locales/nl`, `…/editor-component-embedded-entry`, and `…/config-types`.
 
 | Subpath                                | Description                            |
 | -------------------------------------- | -------------------------------------- |

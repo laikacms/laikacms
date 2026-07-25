@@ -65,7 +65,7 @@ example apps were moved out into their own repositories in June 2026 — see
 | Package           | Description                                                                                                                                                                           |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `laikacms`        | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
-| `@laikacms/decap` | Decap CMS integrations: backend, OAuth2, widgets, server adapters. AI chat lives in `@laikacms/decap-cms/ai`                                                                          |
+| `@laikacms/decap` | Decap CMS integrations: backend, OAuth2, widgets, server adapters.                                                                                                                    |
 
 See [docs/packages.md](./docs/packages.md) for the full list of subpath exports, including the
 packages that now live in separate repositories.

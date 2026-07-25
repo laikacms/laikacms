@@ -1,5 +1,19 @@
 # @laikacms/decap
 
+## 2.1.1
+
+### Patch Changes
+
+- cc4d315: Remove the unused direct `zod` dependency from the server-only Decap integration package.
+
+  The Decap API and OAuth2 documentation now also covers the `authenticateRequest` method and
+  additional top-level OAuth configuration options.
+
+  The published package now includes an MIT `LICENSE` file.
+
+- Updated dependencies [cc4d315]
+  - laikacms@2.1.1
+
 ## 2.1.0
 
 ### Patch Changes
