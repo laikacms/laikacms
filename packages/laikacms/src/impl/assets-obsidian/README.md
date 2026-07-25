@@ -47,6 +47,22 @@ Every non-markdown file in the vault (images, PDFs, audio, …) is exposed as an
 vault-relative path. The implementation is read-oriented — for write-heavy workloads prefer
 `laikacms/assets/r2` or another object-storage backend.
 
+## Filtering
+
+`ObsidianAssetsRepository` supports a named `filter[search]` query parameter when listing resources
+via the `assets-api`:
+
+```
+GET /resources?filter[search]=logo
+```
+
+This performs a **case-insensitive substring match on the resource key** — the example above returns
+every asset whose key contains `"logo"` (e.g. `attachments/logo.png`, `images/logo-dark.svg`).
+
+Sending an undeclared filter name (anything other than `search`) returns `400 Bad Request`. Inspect
+`GET /capabilities` (`attributes.filtering.filters`) to see the current list of supported filter
+names at runtime.
+
 ## Limitations
 
 Obsidian vaults store no per-file custom metadata or cache headers, so `updateAsset` is unsupported:

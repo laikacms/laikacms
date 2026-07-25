@@ -81,6 +81,22 @@ const assets = new R2AssetsRepository({
 > when you have independent controls in place (e.g., internal-only upload endpoint, antivirus
 > scanning, audit logging).
 
+## Filtering
+
+`R2AssetsRepository` supports a named `filter[search]` query parameter when listing resources via
+the `assets-api`:
+
+```
+GET /resources?filter[search]=logo
+```
+
+This performs a **case-insensitive substring match on the resource key** — the example above returns
+every asset whose key contains `"logo"` (e.g. `brand/logo.png`, `icons/logo-dark.svg`).
+
+Sending an undeclared filter name (anything other than `search`) returns `400 Bad Request`. Inspect
+`GET /capabilities` (`attributes.filtering.filters`) to see the current list of supported filter
+names at runtime.
+
 ## TypeScript
 
 The options type is exported for consumers that need to reference it explicitly:
