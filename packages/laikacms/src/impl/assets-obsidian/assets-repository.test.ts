@@ -158,6 +158,38 @@ describe('ObsidianAssetsRepository — listing', () => {
       await fs.chmod(path.join(vaultDir, 'forbidden'), 0o700);
     }
   });
+
+  it('filter[search] returns only keys that contain the substring, case-insensitively', async () => {
+    await fs.writeFile(path.join(vaultDir, 'Banner.PNG'), Buffer.from(PNG));
+    await fs.writeFile(path.join(vaultDir, 'icon.svg'), Buffer.from(PNG));
+
+    const repo = new ObsidianAssetsRepository(vaultDir);
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listResources('', {
+        depth: 1,
+        pagination: { offset: 0, limit: 100 },
+        filters: { search: 'banner' },
+      }),
+    );
+
+    const keys = collected.data.map(r => r.key);
+    expect(keys).toContain('Banner.PNG');
+    expect(keys).not.toContain('icon.svg');
+  });
+
+  it('listResources returns all resources when no search filter is given', async () => {
+    await fs.writeFile(path.join(vaultDir, 'a.png'), Buffer.from(PNG));
+    await fs.writeFile(path.join(vaultDir, 'b.png'), Buffer.from(PNG));
+
+    const repo = new ObsidianAssetsRepository(vaultDir);
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listResources('', { depth: 1, pagination: { offset: 0, limit: 100 } }),
+    );
+
+    const keys = collected.data.map(r => r.key);
+    expect(keys).toContain('a.png');
+    expect(keys).toContain('b.png');
+  });
 });
 
 describe('ObsidianAssetsRepository — getVariations', () => {
@@ -225,5 +257,14 @@ describe('ObsidianAssetsRepository — getCapabilities', () => {
     expect(caps.compatibilityDate.length).toBeGreaterThan(0);
     expect(caps.pagination).toBeDefined();
     expect(caps.pagination.supported).toBe(true);
+  });
+
+  it('advertises a search filter in filtering.filters', async () => {
+    const repo = new ObsidianAssetsRepository(vaultDir);
+    const caps = await LaikaTask.runPromise(repo.getCapabilities());
+    expect(caps.filtering).toBeDefined();
+    expect(caps.filtering.supported).toBe(true);
+    const filterNames = caps.filtering!.filters.map(f => f.name);
+    expect(filterNames).toContain('search');
   });
 });
