@@ -47,19 +47,22 @@ export default { fetch: api.fetch };
 
 ## Endpoints
 
-| Method | Path                       | Description                   |
-| ------ | -------------------------- | ----------------------------- |
-| GET    | `/`                        | API info + endpoint discovery |
-| GET    | `/capabilities`            | Repository capabilities       |
-| POST   | `/atoms`                   | Create a folder               |
-| GET    | `/atoms/{folder}`          | List atoms                    |
-| GET    | `/atom-summaries/{folder}` | List atom summaries           |
-| GET    | `/objects/{key}`           | Read a storage object         |
-| POST   | `/objects`                 | Create object                 |
-| PATCH  | `/objects/{key}`           | Update object                 |
-| DELETE | `/objects/{key}`           | Delete a storage object       |
-| GET    | `/folders/{key}`           | Read a folder                 |
-| POST   | `/operations`              | Atomic batch operations       |
+| Method | Path                    | Description                   |
+| ------ | ----------------------- | ----------------------------- |
+| GET    | `/`                     | API info + endpoint discovery |
+| GET    | `/capabilities`         | Repository capabilities       |
+| GET    | `/openapi.json`         | OpenAPI 3.1 specification     |
+| POST   | `/atoms`                | Create a folder               |
+| GET    | `/atoms`                | List atoms at root            |
+| GET    | `/atoms/{key}`          | List atoms in a folder        |
+| GET    | `/atom-summaries`       | List atom summaries at root   |
+| GET    | `/atom-summaries/{key}` | List atom summaries in folder |
+| GET    | `/objects/{key}`        | Read a storage object         |
+| POST   | `/objects`              | Create object                 |
+| PATCH  | `/objects/{key}`        | Update object                 |
+| DELETE | `/objects/{key}`        | Delete a storage object       |
+| GET    | `/folders/{key}`        | Read a folder                 |
+| POST   | `/operations`           | Atomic batch operations       |
 
 ## Options
 
