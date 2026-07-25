@@ -171,7 +171,6 @@ function buildGpsIfdLE(entries: IFDEntry[]): number[] {
 // TIFF tag constants (matches scanner source)
 const TAG_GPS_IFD_POINTER = 0x8825;
 const TAG_XMP = 0x02bc;
-const TAG_EXIF_IFD_POINTER = 0x8769;
 const GPS_TAG_LATITUDE = 0x0002;
 const GPS_TAG_LONGITUDE = 0x0004;
 const GPS_TAG_ALTITUDE = 0x0006;

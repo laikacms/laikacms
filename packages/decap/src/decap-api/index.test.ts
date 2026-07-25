@@ -10,7 +10,7 @@
  *   - URL query-string api_key is rejected / ignored
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 
 import type { AssetsCapabilities, AssetsRepository } from 'laikacms/assets';
 import { LaikaTask } from 'laikacms/core';

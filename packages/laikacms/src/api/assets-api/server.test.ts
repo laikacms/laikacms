@@ -1872,7 +1872,6 @@ describe('assets-api onError / logger (LCMS-331)', () => {
   it('does not call onError for normal 404 responses', async () => {
     const api = buildAssetsApi({ repository: stubRepo, onError: vi.fn() });
     const res = await api.fetch(new Request('http://localhost/api/assets/does-not-exist'));
-    const opts = api as unknown as { _onError?: () => void };
     // 404 is a normal route-not-found — the catch-all is never hit.
     expect(res.status).toBe(404);
   });

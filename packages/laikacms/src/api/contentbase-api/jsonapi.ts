@@ -4,7 +4,7 @@ import {
   type DocumentCollectionSettings,
   type MediaCollectionSettings,
 } from 'laikacms/contentbase-settings';
-import { fromJsonApi, toJsonApi } from 'laikacms/json-api';
+import { toJsonApi } from 'laikacms/json-api';
 
 // Re-export common JSON:API utilities
 export {

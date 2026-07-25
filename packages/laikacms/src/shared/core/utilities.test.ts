@@ -1,6 +1,8 @@
 import * as Result from 'effect/Result';
 import { describe, expect, it } from 'vitest';
 import { AsyncGenerator } from './async-generator.js';
+import type { LaikaResult } from './domain/index.js';
+import { BadRequestError } from './domain/index.js';
 import { Header, lazy, lazyAsync, memoize, Paths, TemplateLiteral, Url } from './utilities.js';
 
 describe('lazy', () => {
@@ -103,25 +105,25 @@ describe('AsyncGenerator helpers', () => {
   });
 
   it('accumulateFirst returns the first success and short-circuits', async () => {
-    async function* gen() {
-      yield Result.fail({ kind: 'err1' });
+    async function* gen(): AsyncGenerator<LaikaResult<string>> {
+      yield Result.fail(new BadRequestError('err1'));
       yield Result.succeed('hello');
-      yield Result.fail({ kind: 'err2' });
+      yield Result.fail(new BadRequestError('err2'));
     }
-    const result = await AsyncGenerator.accumulateFirst(gen() as any);
+    const result = await AsyncGenerator.accumulateFirst(gen());
     expect(Result.isSuccess(result)).toBe(true);
     if (Result.isSuccess(result)) expect(result.success).toBe('hello');
   });
 
   it('accumulateFirst collects every failure when no success arrives', async () => {
-    async function* gen() {
-      yield Result.fail({ kind: 'a' });
-      yield Result.fail({ kind: 'b' });
+    async function* gen(): AsyncGenerator<LaikaResult<string>> {
+      yield Result.fail(new BadRequestError('a'));
+      yield Result.fail(new BadRequestError('b'));
     }
-    const result = await AsyncGenerator.accumulateFirst(gen() as any);
+    const result = await AsyncGenerator.accumulateFirst(gen());
     expect(Result.isFailure(result)).toBe(true);
     if (Result.isFailure(result)) {
-      expect((result.failure as Array<{ kind: string }>).map(e => e.kind)).toEqual(['a', 'b']);
+      expect(result.failure.map(e => e.message)).toEqual(['a', 'b']);
     }
   });
 });

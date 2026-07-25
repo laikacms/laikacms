@@ -188,7 +188,6 @@ async function generateTestKeyPair(): Promise<{
 
   // Encode as COSE_Key: {1: 2, 3: -7, -1: 1, -2: x, -3: y}
   // Using integer keys (CBOR) - we encode manually
-  const coseMap: Record<string, unknown> = {};
   // COSE keys are integers; we encode them as numeric keys in the object
   // The decoder in passkey.ts uses String(key) so we pass string representations of numbers
   const coseParts: Uint8Array[] = [];
@@ -597,7 +596,7 @@ describe('verifyRegistration', () => {
   });
 
   it('returns success: false when rpId hash does not match', async () => {
-    const { credentialId, publicKeyCose, challenge } = await buildValidRegistrationData();
+    const { publicKeyCose, challenge } = await buildValidRegistrationData();
 
     // Build authData with WRONG rpId
     const { privateKey: _pk, publicKeyCose: _pk2 } = await generateTestKeyPair();

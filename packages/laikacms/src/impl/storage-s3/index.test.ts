@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { createS3Bucket } from './index.js';
 import type { S3ClientLike, S3Commands } from './index.js';
 
