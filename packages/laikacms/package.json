@@ -211,6 +211,11 @@
       "import": "./dist/shared/core/index.js",
       "default": "./dist/shared/core/index.js"
     },
+    "./core/utilities": {
+      "types": "./dist/shared/core/utilities.d.ts",
+      "import": "./dist/shared/core/utilities.js",
+      "default": "./dist/shared/core/utilities.js"
+    },
     "./compat": {
       "types": "./dist/shared/core/compat.d.ts",
       "import": "./dist/shared/core/compat.js",
@@ -220,6 +225,11 @@
       "types": "./dist/shared/crypto/index.d.ts",
       "import": "./dist/shared/crypto/index.js",
       "default": "./dist/shared/crypto/index.js"
+    },
+    "./crypto/*": {
+      "types": "./dist/shared/crypto/*.d.ts",
+      "import": "./dist/shared/crypto/*.js",
+      "default": "./dist/shared/crypto/*.js"
     },
     "./file-sanitizer": {
       "types": "./dist/shared/file-sanitizer/index.d.ts",

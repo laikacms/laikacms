@@ -1,5 +1,8 @@
-import * as Result from 'effect/Result';
-import type { LaikaError, LaikaResult } from './domain/index.js';
+// DEPENDENCY-FREE by design: this module is exported as `laikacms/core/utilities`
+// so bundled consumers (e.g. the superstar API worker's eager path) can use
+// `memoize`/`Url`/`Header` without pulling effect or the laika domain graph.
+// Never add an import here - helpers that need effect live in
+// `async-generator.ts` (or their own module).
 
 export const lazy = <T>(func: () => T) => {
   let instance: T | null = null;
@@ -24,33 +27,6 @@ export const lazyAsync = <T>(func: () => Promise<T>) => {
 };
 
 export type LazyAsync<T> = () => Promise<T> | T;
-
-export const AsyncGenerator = {
-  toArray: async <T>(gen: AsyncGenerator<T>): Promise<T[]> => {
-    const result: T[] = [];
-    for await (const item of gen) {
-      result.push(item);
-    }
-    return result;
-  },
-  first: async <T>(gen: AsyncGenerator<T>): Promise<T | undefined> => {
-    for await (const item of gen) {
-      return item;
-    }
-    return undefined;
-  },
-  accumulateFirst: async <T>(gen: AsyncGenerator<LaikaResult<T>>): Promise<Result.Result<T, LaikaError[]>> => {
-    const errors: LaikaError[] = [];
-    for await (const item of gen) {
-      if (Result.isSuccess(item)) {
-        return Result.succeed(item.success);
-      } else if (Result.isFailure(item)) {
-        errors.push(item.failure);
-      }
-    }
-    return Result.fail(errors);
-  },
-};
 
 export const memoize = <I, O>(func: (t: I) => O): (t: I) => O => {
   let cache: { 0: I, 1: O } | undefined; // Keep just 1 item to prevent memory leaks

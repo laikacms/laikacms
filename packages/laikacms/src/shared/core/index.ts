@@ -1,3 +1,4 @@
+export * from './async-generator.js';
 export * from './domain/index.js';
 export * from './laika-types.js';
 export * from './utilities.js';

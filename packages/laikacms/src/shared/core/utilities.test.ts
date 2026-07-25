@@ -1,6 +1,7 @@
 import * as Result from 'effect/Result';
 import { describe, expect, it } from 'vitest';
-import { AsyncGenerator, Header, lazy, lazyAsync, memoize, Paths, TemplateLiteral, Url } from './utilities.js';
+import { AsyncGenerator } from './async-generator.js';
+import { Header, lazy, lazyAsync, memoize, Paths, TemplateLiteral, Url } from './utilities.js';
 
 describe('lazy', () => {
   it('runs the factory the first time and reuses the result thereafter', () => {
