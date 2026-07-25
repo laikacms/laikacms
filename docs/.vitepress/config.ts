@@ -3,6 +3,10 @@ import { defineConfig } from 'vitepress';
 export default defineConfig({
   title: 'Laika CMS',
   description: 'Modular, runtime-agnostic content management software for your own custom or existing UIs.',
+  // Served at laikacms.com/docs/ alongside the marketing site (see the
+  // laika-cloud repo, ADR-0028). `pnpm build:site` at the workspace root
+  // assembles apps/website/dist + this dist into one Cloudflare Pages deploy.
+  base: '/docs/',
   cleanUrls: true,
   lastUpdated: true,
   // The apps/ tree was moved out of the monorepo (June 2026, see restructure-2026-06.md).

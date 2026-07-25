@@ -1,0 +1,6 @@
+# /app is a REDIRECT to the platform origin, never a reverse proxy. Proxying
+# would put the authenticated dashboard on the same origin as this OSS-built
+# static site, letting a compromised package ride (or mint, via /auth/v1/token)
+# the user's session. See laika-cloud decisions/0028.
+/app https://app.laikacms.com/ 301
+/app/* https://app.laikacms.com/:splat 301

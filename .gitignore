@@ -80,6 +80,9 @@ jspm_packages/
 docs/.vitepress/cache
 docs/.vitepress/dist
 
+# Assembled apex site (website + docs) for Cloudflare Pages
+site-dist/
+
 # Rollup cache
 .rollup.cache
 

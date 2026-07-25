@@ -23,9 +23,36 @@ export default tseslint.config(
     },
   },
   {
+    // Marketing copy ships straight from apps/website (including the og-image
+    // card): no em dashes in anything user-visible. Strings, template
+    // literals and JSX text are covered; the .html files (index.html,
+    // scripts/og-card.html) are outside ESLint's reach — keep those clean in
+    // review.
+    files: ['apps/website/**/*.{ts,tsx,js,jsx,mjs}'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        {
+          selector: 'Literal[value=/\\u2014/]',
+          message: 'No em dashes (—) in website copy; use a colon, comma, or restructure.',
+        },
+        {
+          selector: 'TemplateElement[value.raw=/\\u2014/]',
+          message: 'No em dashes (—) in website copy; use a colon, comma, or restructure.',
+        },
+        {
+          selector: 'JSXText[value=/\\u2014/]',
+          message: 'No em dashes (—) in website copy; use a colon, comma, or restructure.',
+        },
+      ],
+    },
+  },
+  {
     ignores: [
       // Standalone examples workspace — not part of this pnpm project
       'examples/**',
+      // Assembled apex site (website + docs) for Cloudflare Pages
+      'site-dist/**',
       '**/dist/**',
       '**/dist-test/**',
       '**/node_modules/**',
