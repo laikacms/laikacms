@@ -72,8 +72,7 @@
     "jsonwebtoken": "catalog:",
     "jwt-decode": "catalog:",
     "uuid": "catalog:",
-    "yaml": "catalog:",
-    "zod": "catalog:"
+    "yaml": "catalog:"
   },
   "devDependencies": {
     "@hono/node-server": "catalog:server",

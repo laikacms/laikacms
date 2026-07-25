@@ -171,7 +171,7 @@ pnpm add decap-cms-widget-lexicaleditor decap-cms-lexical-core
 | `Widget`                    | Decap CMS widget definition object — pass to `CMS.registerWidget()`  |
 | `LexicalControl`            | React control component (rendered in the Decap CMS editor panel)     |
 | `LexicalPreview`            | React preview component (rendered in the Decap CMS preview panel)    |
-| `lexicalEditorWidgetSchema` | Zod schema for the widget field configuration                        |
+| `lexicalEditorWidgetSchema` | Zod schema for the widget field configuration (outdated?)            |
 | `passthroughSerializer`     | Serializer that stores the Portable Text value as-is (no conversion) |
 | `Editor`                    | The standalone Lexical editor React component (usable outside Decap) |
 

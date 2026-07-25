@@ -21,7 +21,6 @@ catalogs:
     "trash": "^10.1.1"
     "uuid": "^14.0.1"
     "yaml": "^2.9.0"
-    "zod": "^4.4.3"
 
   lint:
     "@eslint/js": "^10.0.1"
