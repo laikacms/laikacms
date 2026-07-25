@@ -8,6 +8,7 @@ export * from './transformers.js';
 export {
   buildPaginationLinks,
   type JsonApiLinks,
+  MAX_PAGE_SIZE,
   type Pagination,
   PaginationAfterSchema,
   PaginationBeforeSchema,

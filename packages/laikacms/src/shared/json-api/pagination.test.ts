@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildPaginationLinks, parsePaginationQuery } from './pagination.js';
+import { buildPaginationLinks, MAX_PAGE_SIZE, parsePaginationQuery } from './pagination.js';
 
 describe('parsePaginationQuery', () => {
   it('parses page[after] cursor pagination', () => {
@@ -77,6 +77,49 @@ describe('parsePaginationQuery', () => {
     const result = parsePaginationQuery({});
     expect('after' in result).toBe(false);
     expect(result).toEqual({ page: 1, perPage: 10 });
+  });
+});
+
+describe('parsePaginationQuery — MAX_PAGE_SIZE clamping', () => {
+  it('exposes a sane hard cap', () => {
+    expect(MAX_PAGE_SIZE).toBe(100);
+  });
+
+  it('clamps an oversized page[size] on the default page-based path', () => {
+    expect(parsePaginationQuery({ 'page[size]': '1000000' })).toEqual({ page: 1, perPage: MAX_PAGE_SIZE });
+  });
+
+  it('clamps page[size] on cursor (after) requests', () => {
+    expect(parsePaginationQuery({ 'page[after]': 'cur', 'page[size]': '5000' })).toEqual({
+      after: 'cur',
+      perPage: MAX_PAGE_SIZE,
+    });
+  });
+
+  it('clamps page[size] on cursor (before) requests', () => {
+    expect(parsePaginationQuery({ 'page[before]': 'cur', 'page[size]': '5000' })).toEqual({
+      before: 'cur',
+      perPage: MAX_PAGE_SIZE,
+    });
+  });
+
+  it('clamps page[size] on explicit page[number] requests', () => {
+    expect(parsePaginationQuery({ 'page[number]': '2', 'page[size]': '999' })).toEqual({
+      page: 2,
+      perPage: MAX_PAGE_SIZE,
+    });
+  });
+
+  it('clamps page[limit] on offset-based requests', () => {
+    expect(parsePaginationQuery({ 'page[offset]': '40', 'page[limit]': '999' })).toEqual({
+      offset: 40,
+      limit: MAX_PAGE_SIZE,
+    });
+  });
+
+  it('leaves in-range sizes untouched', () => {
+    expect(parsePaginationQuery({ 'page[size]': '25' })).toEqual({ page: 1, perPage: 25 });
+    expect(parsePaginationQuery({ 'page[size]': String(MAX_PAGE_SIZE) })).toEqual({ page: 1, perPage: MAX_PAGE_SIZE });
   });
 });
 
