@@ -391,6 +391,38 @@ const api = decapApi({
 If `authenticateApiToken` is not configured and a request arrives with `X-API-Key` or
 `Authorization: ApiKey`, the server returns `401`.
 
+### SSR auth guard with `authenticateRequest`
+
+`decapApi(...)` returns a `DecapApi` object with two methods:
+
+```ts
+interface DecapApi {
+  fetch(request: Request): Promise<Response>;
+  authenticateRequest(request: Request): Promise<Response | User>;
+}
+```
+
+`authenticateRequest` runs the same Bearer/API-key validation as `fetch`, but returns the
+authenticated `User` directly instead of routing the request to an API endpoint. Use it in SSR
+frameworks to protect a page route or inject the current user into the render context without
+duplicating auth logic:
+
+```ts
+// SvelteKit — src/routes/admin/+page.server.ts
+import { api } from '$lib/decap'; // your decapApi(...) instance
+import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
+
+export const load: PageServerLoad = async ({ request }) => {
+  const result = await api.authenticateRequest(request);
+  if (result instanceof Response) throw redirect(302, '/login'); // 401 / 403
+  return { user: result }; // result is User
+};
+```
+
+The same pattern works in any framework that exposes a Web API `Request` at the route-handler
+boundary (Next.js App Router, TanStack Start, Hono middleware, etc.).
+
 ### Logging with `logger`
 
 Pass any `logger` compatible with the `Console` interface (`error`, `warn`, `info`, `debug`) to
