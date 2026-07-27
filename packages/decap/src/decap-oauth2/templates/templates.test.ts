@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import { getAuthorizationPageHTML } from './authorization-page.js';
 import { oauthErrorResponse, renderErrorPage } from './error.js';
 import { buildCspWithLogo, html, processCustomLogo, templateVars } from './html.js';
+import { generateWebAuthnScript, renderEnhancedLoginPage } from './login-page.js';
 import { renderLogoutAllSuccessPage, renderLogoutSuccessPage } from './logout-page.js';
 import { renderPasskeySetupPage } from './passkey-setup-page.js';
 import {
@@ -116,6 +117,109 @@ describe('buildCspWithLogo', () => {
     const result = buildCspWithLogo(noImgSrc, ['https://cdn.example.com']);
     expect(result).toContain('img-src');
     expect(result).toContain('https://cdn.example.com');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// login-page.ts
+// ---------------------------------------------------------------------------
+
+describe('renderEnhancedLoginPage', () => {
+  const base = { authorizeUrl: '/oauth2/authorize' };
+
+  it('renders without throwing with minimal options', () => {
+    const { html } = renderEnhancedLoginPage(base);
+    expect(html.length).toBeGreaterThan(0);
+    expect(html).toContain('<!DOCTYPE html>');
+  });
+
+  it('includes the form action URL', () => {
+    const { html } = renderEnhancedLoginPage(base);
+    expect(html).toContain('action="/oauth2/authorize"');
+  });
+
+  it('includes the escaped error string when error is set', () => {
+    const { html } = renderEnhancedLoginPage({ ...base, error: 'Invalid credentials' });
+    expect(html).toContain('Invalid credentials');
+  });
+
+  it('escapes XSS in error string (escapeHtml path)', () => {
+    const { html } = renderEnhancedLoginPage({ ...base, error: '<script>alert(1)</script>' });
+    expect(html).not.toContain('<script>alert');
+    expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('includes passkey script and challenge when passkeyOptions is non-null', () => {
+    const { html } = renderEnhancedLoginPage({
+      ...base,
+      passkeyOptions: {
+        challenge: 'challenge-base64url',
+        rpId: 'example.com',
+        timeout: 60000,
+        userVerification: 'required',
+      },
+      passkeyVerifyUrl: '/auth/passkey/verify',
+    });
+    expect(html).toContain('<script>');
+    expect(html).toContain('challenge-base64url');
+  });
+
+  it('omits forgot-password anchor when forgotPasswordUrl is absent', () => {
+    const { html } = renderEnhancedLoginPage(base);
+    expect(html).not.toContain('<a href');
+  });
+
+  it('includes forgot-password link when forgotPasswordUrl is provided', () => {
+    const { html } = renderEnhancedLoginPage({
+      ...base,
+      forgotPasswordUrl: '/auth/forgot-password',
+    });
+    expect(html).toContain('forgot-password');
+  });
+
+  it('returns empty imgSrc without custom logo', () => {
+    const { imgSrc } = renderEnhancedLoginPage(base);
+    expect(imgSrc).toHaveLength(0);
+  });
+
+  it('returns imgSrc for external logo', () => {
+    const { imgSrc } = renderEnhancedLoginPage({
+      ...base,
+      customLogo: 'https://cdn.example.com/logo.png',
+    });
+    expect(imgSrc).toContain('https://cdn.example.com');
+  });
+});
+
+describe('generateWebAuthnScript', () => {
+  const opts = {
+    challenge: 'challenge-base64url',
+    rpId: 'example.com',
+    timeout: 60000,
+    userVerification: 'required' as const,
+  };
+
+  it('returns a string containing <script> with non-null options', () => {
+    const result = generateWebAuthnScript(opts, '/auth/passkey/verify');
+    expect(typeof result).toBe('string');
+    expect(result).toContain('<script>');
+  });
+
+  it('serializes the challenge JSON into the output', () => {
+    const result = generateWebAuthnScript(opts, '/auth/passkey/verify');
+    expect(result).toContain('challenge-base64url');
+    expect(result).toContain('example.com');
+  });
+
+  it('embeds the verify URL in the script', () => {
+    const result = generateWebAuthnScript(opts, '/my-verify-url');
+    expect(result).toContain('/my-verify-url');
+  });
+
+  it('returns a script tag even when passkeyOptions is null', () => {
+    const result = generateWebAuthnScript(null, '/auth/passkey/verify');
+    expect(result).toContain('<script>');
+    expect(result).toContain('null');
   });
 });
 
