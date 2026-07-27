@@ -1488,6 +1488,105 @@ describe('GET /resources (collection) — ?meta=true inlines metadata (LCMS-343)
 });
 
 // ---------------------------------------------------------------------------
+// GET /resources (collection) — ?include=urls and ?include=variations (LCMS-365)
+// ---------------------------------------------------------------------------
+
+function makeCollectionIncludeRepo(opts: {
+  getUrlsSpy?: ReturnType<typeof vi.fn>,
+  getVariationsSpy?: ReturnType<typeof vi.fn>,
+} = {}): AssetsRepository {
+  const getUrlsImpl = (_assets: Asset[]) =>
+    LaikaStream.make<AssetUrl>(emit =>
+      Effect.gen(function*() {
+        yield* emit.data(stubAssetUrl);
+      })
+    );
+  const getVariationsImpl = (_assets: Asset[]) =>
+    LaikaStream.make<AssetVariations>(emit =>
+      Effect.gen(function*() {
+        yield* emit.data(stubVariations);
+      })
+    );
+  return {
+    listResources: (_folderKey: string, _options: ListResourcesOptions) =>
+      LaikaStream.make<Resource, ListResourcesDone>(emit =>
+        Effect.gen(function*() {
+          yield* emit.data(singleAsset);
+          return { total: 1 };
+        })
+      ),
+    getUrls: opts.getUrlsSpy ?? getUrlsImpl,
+    getVariations: opts.getVariationsSpy ?? getVariationsImpl,
+  } as unknown as AssetsRepository;
+}
+
+describe('GET /resources (collection) — ?include=urls sideloads asset-url (LCMS-365)', () => {
+  it('?include=urls returns included[] with asset-url for each asset', async () => {
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=urls'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      data: Array<{ type: string, id: string }>,
+      included?: Array<{ type: string, id: string, attributes: { url?: string } }>,
+    };
+    const urlResource = body.included?.find(r => r.type === 'asset-url');
+    expect(urlResource).toBeDefined();
+    expect(urlResource?.id).toBe('images/hero.jpg');
+    expect(urlResource?.attributes.url).toBe('https://cdn.example.com/images/hero.jpg');
+  });
+
+  it('?include=asset-url (long-form alias) also sideloads asset-url on collection', async () => {
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=asset-url'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { included?: Array<{ type: string }> };
+    expect(body.included?.some(r => r.type === 'asset-url')).toBe(true);
+  });
+
+  it('when getUrls fails on the collection path, response is still 200 with empty included[]', async () => {
+    const getUrlsSpy = vi.fn((_assets: Asset[]) => LaikaStream.fail(new InternalError('cdn unavailable')));
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo({ getUrlsSpy }) });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=urls'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: Array<unknown>, included?: Array<unknown> };
+    expect(body.data).toHaveLength(1);
+    expect(body.included).toBeUndefined();
+  });
+});
+
+describe('GET /resources (collection) — ?include=variations sideloads asset-variation (LCMS-365)', () => {
+  it('?include=variations returns included[] with asset-variation for each asset', async () => {
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=variations'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      included?: Array<{ type: string, id: string }>,
+    };
+    expect(body.included?.some(r => r.type === 'asset-variation')).toBe(true);
+  });
+
+  it('?include=asset-variation (long-form alias) also sideloads asset-variation on collection', async () => {
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo() });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=asset-variation'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { included?: Array<{ type: string }> };
+    expect(body.included?.some(r => r.type === 'asset-variation')).toBe(true);
+  });
+
+  it('when getVariations fails on the collection path, response is still 200 with empty included[]', async () => {
+    const getVariationsSpy = vi.fn((_assets: Asset[]) =>
+      LaikaStream.fail(new InternalError('variant service unavailable'))
+    );
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo({ getVariationsSpy }) });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=variations'));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: Array<unknown>, included?: Array<unknown> };
+    expect(body.data).toHaveLength(1);
+    expect(body.included).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Malformed JSON body — fetch() must never throw, always return a Response
 // ---------------------------------------------------------------------------
 
