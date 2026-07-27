@@ -35,8 +35,11 @@ pnpm add laikacms
 ```typescript
 import { buildJsonApi } from 'laikacms/contentbase-api';
 import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
-const settings = new DefaultContentBaseSettingsProvider();
+const storage = new FileSystemStorageRepository('./content', { json: jsonSerializer }, 'json');
+const settings = new DefaultContentBaseSettingsProvider({ storage });
 const api = buildJsonApi({ repo: settings });
 
 // Wrap with authentication before exposing publicly — see warning above.
