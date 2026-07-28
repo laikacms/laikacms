@@ -108,8 +108,9 @@ export default {
   (DynamoDB)
 - [`@laikacms/decap`](https://www.npmjs.com/package/@laikacms/decap) — Decap CMS integrations
   (backend, OAuth2, widgets)
-- [`@laikacms/decap-ai`](https://www.npmjs.com/package/@laikacms/decap-ai) — AI chat features for
-  Decap CMS
+- [`@laikacms/decap-cms`](https://www.npmjs.com/package/@laikacms/decap-cms) — Laika-aware Decap CMS
+  fork with AI chat widget (`…/widgets/aichat`), icon widgets, embedded-entry editor, and config
+  type utilities (`@laikacms/decap-ai` is discontinued; AI features moved here)
 
 ## Documentation
 
