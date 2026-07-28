@@ -254,7 +254,7 @@ export class DrizzleStorageRepository extends StorageRepository {
           this.options.callbacks.insert({
             values: {
               key: create.key,
-              type: create.type,
+              type: create.type ?? 'object',
               content: JSON.stringify(create.content),
               depth: this.calculateDepth(create.key),
               createdAt: now,

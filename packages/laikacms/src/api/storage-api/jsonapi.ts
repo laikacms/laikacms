@@ -107,8 +107,8 @@ export function folderToJsonApi(folder: Folder): JsonApiFolder {
 }
 
 export function folderCreateToJsonApi(folder: FolderCreate): JsonApiFolderCreate {
-  const { key, type: _type, ...attributes } = folder as FolderCreate & { type?: unknown };
-  return { type: 'folder', id: key as string, attributes: attributes as Omit<FolderCreate, 'key' | 'type'> };
+  const { key, type: _type, ...attributes } = folder;
+  return { type: 'folder', id: key, attributes };
 }
 
 export function storageObjectSummaryToJsonApi(obj: StorageObjectSummary): JsonApiStorageObjectSummary {
@@ -136,7 +136,7 @@ export function storageObjectCreateFromJsonApi(jsonApi: JsonApiStorageObjectCrea
     key: jsonApi.id,
     ...jsonApi.attributes,
     ...(jsonApi.meta ? { metadata: jsonApi.meta } : {}),
-  } as StorageObjectCreate;
+  };
 }
 
 export function storageObjectUpdateFromJsonApi(jsonApi: JsonApiStorageObjectUpdate): StorageObjectUpdate {
@@ -152,7 +152,7 @@ export function folderFromJsonApi(jsonApi: JsonApiFolder): Folder {
 }
 
 export function folderCreateFromJsonApi(jsonApi: JsonApiFolderCreate): FolderCreate {
-  return { key: jsonApi.id, ...jsonApi.attributes } as FolderCreate;
+  return { key: jsonApi.id, ...jsonApi.attributes };
 }
 
 export function storageObjectSummaryFromJsonApi(jsonApi: JsonApiStorageObjectSummary): StorageObjectSummary {
