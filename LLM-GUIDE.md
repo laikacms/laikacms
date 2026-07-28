@@ -160,6 +160,7 @@ import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
 import { R2StorageRepository } from 'laikacms/storage-r2';
+import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
 export interface Env {
   CONTENT: R2Bucket;
@@ -168,7 +169,7 @@ export interface Env {
 const app = new Hono<{ Bindings: Env }>();
 
 const makeLaika = (env: Env) => {
-  const storage = new R2StorageRepository(/* … env.CONTENT … */);
+  const storage = new R2StorageRepository(env.CONTENT, { md: markdownSerializer }, 'md');
   const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
   return decapApi({
     documents: new ContentBaseDocumentsRepository(storage, settings),
