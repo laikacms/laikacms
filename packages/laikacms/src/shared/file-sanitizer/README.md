@@ -9,7 +9,8 @@ Best-effort file sanitization for uploaded content.
 ## Features
 
 - Image sanitization (JPEG, PNG, GIF, WebP) — metadata stripped, sanitized data returned
-- Dangerous-content scanning for TIFF, PDF, MP4 — rejected if dangerous content found
+- Dangerous-content scanning for TIFF, PDF, MP4, MOV, AVI, HEIC, HEIF — rejected if dangerous
+  content found
 - MIME type verification
 
 ## Installation
@@ -21,14 +22,27 @@ pnpm add laikacms
 ## Usage
 
 ```typescript
+import { DangerousFileTypeError, FileTooLargeError, UnsupportedFileTypeError } from 'laikacms/core';
 import { sanitizeFile } from 'laikacms/file-sanitizer';
 
 const blob = await request.blob();
 const data = new Uint8Array(await blob.arrayBuffer());
 
-// sanitizeFile returns on success and throws on unsupported/dangerous/corrupted input
-const result = await sanitizeFile(data);
-const sanitized = result.data; // Uint8Array with metadata stripped
+try {
+  // sanitizeFile returns on success and throws on oversized/unsupported/dangerous/corrupted input
+  const result = await sanitizeFile(data);
+  const sanitized = result.data; // Uint8Array with metadata stripped
+} catch (err) {
+  if (err instanceof FileTooLargeError) {
+    // File exceeds maxFileSize (default 100 MB)
+  } else if (err instanceof DangerousFileTypeError) {
+    // File contains dangerous metadata (GPS, embedded scripts, …)
+  } else if (err instanceof UnsupportedFileTypeError) {
+    // File type is not supported or MIME type mismatch
+  } else {
+    throw err; // CorruptedFileError or unexpected
+  }
+}
 ```
 
 ## Supported Formats
@@ -53,11 +67,15 @@ embedded GPS coordinates, scripts, or privacy-sensitive metadata) and then alway
 - `DangerousFileTypeError` — dangerous content was detected
 - `UnsupportedFileTypeError` — no dangerous content, but the type cannot be sanitized
 
-| Format | Scan performed                        |
-| ------ | ------------------------------------- |
-| TIFF   | Tag-level scan for dangerous metadata |
-| PDF    | Embedded JavaScript detection         |
-| MP4    | Container structure scan              |
+| Format | Scan performed                                   |
+| ------ | ------------------------------------------------ |
+| TIFF   | Tag-level scan for dangerous metadata            |
+| PDF    | Embedded JavaScript detection                    |
+| MP4    | Container structure scan (GPS/location metadata) |
+| MOV    | Container structure scan + XMP metadata scan     |
+| AVI    | XMP metadata scan (GPS/face-recognition data)    |
+| HEIC   | XMP metadata scan (GPS/face-recognition data)    |
+| HEIF   | XMP metadata scan (GPS/face-recognition data)    |
 
 To pass these types through without any checks, add them to `ignoreExtensions` in `SanitizeOptions`
 — but only when you have other security measures in place.
