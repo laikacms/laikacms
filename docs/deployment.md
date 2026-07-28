@@ -33,6 +33,11 @@ bucket_name = "content"
 
 Deploy: `wrangler deploy`
 
+> **⚠️ No authentication:** `buildJsonApi` ships no authentication — any client can create, read,
+> update, and delete content without a token. Do not expose it directly to an untrusted network. For
+> a production-ready API with built-in auth, use [`decapApi`](./decap-integration.md) from
+> `@laikacms/decap` instead.
+
 ## Node.js
 
 ```typescript
@@ -47,12 +52,33 @@ const api = buildJsonApi({ repo });
 serve({ fetch: api.fetch, port: 3000 });
 ```
 
+> **⚠️ No authentication:** `buildJsonApi` ships no authentication — any client can create, read,
+> update, and delete content without a token. Do not expose it directly to an untrusted network. For
+> a production-ready API with built-in auth, use [`decapApi`](./decap-integration.md) from
+> `@laikacms/decap` instead.
+
 ## Auth and CORS
 
 `buildJsonApi` has no built-in authentication or CORS handling. Add them as middleware around
 `api.fetch` at the framework level.
 
-Example with Hono:
+**Cloudflare Workers** — check the `Authorization` header directly in the `fetch` handler:
+
+```typescript
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const token = request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '');
+    if (token !== env.API_TOKEN) {
+      return new Response('Unauthorized', { status: 401 });
+    }
+    const repo = new R2StorageRepository(env.CONTENT_BUCKET, { md: markdownSerializer }, 'md');
+    const api = buildJsonApi({ repo });
+    return api.fetch(request);
+  },
+};
+```
+
+**Node.js / Hono:**
 
 ```typescript
 import { Hono } from 'hono';
