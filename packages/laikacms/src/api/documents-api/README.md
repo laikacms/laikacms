@@ -138,7 +138,7 @@ The API uses seven JSON:API resource types:
 | `revision-summary`       | Revision list (`GET /revisions/{key}`)            |
 | `documents-capabilities` | `GET /capabilities`                               |
 | `sync-token`             | `GET /sync-token`                                 |
-| `changes`                | `GET /changes`                                    |
+| `change-summary`         | `GET /changes`                                    |
 
 ## Batch operations (`POST /operations`)
 
