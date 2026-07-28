@@ -1,6 +1,6 @@
 import type { AssetsRepository } from 'laikacms/assets';
 import { buildAssetsApi } from 'laikacms/assets/api';
-import { AuthenticationError, Header, NotFoundError, TemplateLiteral as TL, Url } from 'laikacms/core';
+import { AuthenticationError, ForbiddenError, Header, NotFoundError, TemplateLiteral as TL, Url } from 'laikacms/core';
 import { addTimingJitter } from 'laikacms/crypto';
 import type { DocumentsRepository } from 'laikacms/documents';
 import { buildJsonApi as buildDocumentsApi } from 'laikacms/documents/api';
@@ -73,7 +73,26 @@ export interface User {
   email: string;
   name?: string;
   passwordHash?: string;
+  /**
+   * Optional access scope for the authenticated principal.
+   *
+   * When explicitly `'read'`, the principal may only perform SAFE (non-mutating)
+   * requests — any other method is rejected with 403 at the API boundary (see
+   * {@link decapApi}). This lets consumers wire a read-only credential (e.g. a
+   * read-only API key) even though the underlying repositories grant every
+   * authenticated principal full read+write.
+   *
+   * Left unset (or `'write'`) the principal keeps full access, so this is
+   * backwards compatible for consumers that don't populate it.
+   */
+  scope?: 'read' | 'write';
 }
+
+/**
+ * HTTP methods that never mutate state. A read-only principal is allowed these;
+ * everything else requires write scope.
+ */
+const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export interface DecapOptions {
   documents: DocumentsRepository;
@@ -291,6 +310,27 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         return await respond(authenticated);
       }
       const user = authenticated;
+
+      // Scope enforcement (defence in depth). A principal whose scope is
+      // explicitly `'read'` may only issue SAFE requests. The repositories
+      // themselves grant any authenticated principal full read+write, so a
+      // read-only credential can ONLY be honoured here, at the boundary, before
+      // the request reaches a sub-API. Unset/`'write'` scope keeps full access.
+      if (user.scope === 'read' && !SAFE_METHODS.has(request.method.toUpperCase())) {
+        options.logger?.warn(
+          `Rejecting ${request.method} ${pathname}: read-only principal ${user.id} may not mutate.`,
+        );
+        return await respond(
+          new Response(
+            JSON.stringify(
+              errorToJsonApiMapper(
+                new ForbiddenError('This credential is not permitted to perform write operations.'),
+              ),
+            ),
+            { status: 403, headers: securityHeaders() },
+          ),
+        );
+      }
 
       if (pathname.startsWith(sessionEndpoint)) {
         options.logger?.debug('Session endpoint for user:', user.id);

@@ -947,3 +947,94 @@ describe('logger forwarding — documents sub-API (LCMS-366)', () => {
     expect(logger.error).toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Suite: scope enforcement — a read-only principal may not mutate
+//
+// The gate lives in fetch(), right after authentication and before endpoint
+// dispatch, so it is endpoint-agnostic. Blocked cases target /documents and
+// /storage to show it fires across sub-APIs (the repos are never reached, so
+// no repo mock is needed). Pass-through cases target /session, which dispatches
+// without a repository, to observe that the gate lets the request continue.
+// ---------------------------------------------------------------------------
+
+describe('scope enforcement (read-only principal)', () => {
+  const readUser: User = { id: 'ro', email: 'ro@example.com', scope: 'read' };
+  const writeUser: User = { id: 'rw', email: 'rw@example.com', scope: 'write' };
+
+  function apiForUser(user: User) {
+    return decapApi(makeOptions({
+      authenticateAccessToken: vi.fn().mockResolvedValue(user),
+      documents: {} as DocumentsRepository,
+      storage: {} as StorageRepository,
+    }));
+  }
+
+  it('returns 403 for POST /documents when scope is "read"', async () => {
+    const api = apiForUser(readUser);
+    const res = await api.fetch(
+      makeRequest('/documents/published', { Authorization: 'Bearer t' }, 'POST'),
+    );
+
+    expect(res.status).toBe(403);
+  });
+
+  it('403 body is a JSON:API forbidden error', async () => {
+    const api = apiForUser(readUser);
+    const res = await api.fetch(
+      makeRequest('/documents/published', { Authorization: 'Bearer t' }, 'POST'),
+    );
+    const body = await res.json();
+
+    expect(res.headers.get('Content-Type')).toContain('vnd.api+json');
+    expect(body.errors?.[0]?.status).toBe('403');
+  });
+
+  it.each(['POST', 'PATCH', 'DELETE'])(
+    'blocks %s across sub-APIs for a read-only principal',
+    async method => {
+      const api = apiForUser(readUser);
+      const res = await api.fetch(
+        makeRequest('/storage/objects/x', { Authorization: 'Bearer t' }, method),
+      );
+
+      expect(res.status).toBe(403);
+    },
+  );
+
+  it('does NOT reach the repository when blocked', async () => {
+    const documents = { create: vi.fn() } as unknown as DocumentsRepository;
+    const api = decapApi(makeOptions({
+      authenticateAccessToken: vi.fn().mockResolvedValue(readUser),
+      documents,
+    }));
+
+    await api.fetch(makeRequest('/documents/published', { Authorization: 'Bearer t' }, 'POST'));
+
+    expect((documents as unknown as { create: ReturnType<typeof vi.fn> }).create)
+      .not.toHaveBeenCalled();
+  });
+
+  it('allows safe (GET) requests for a read-only principal', async () => {
+    const api = apiForUser(readUser);
+    const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'GET'));
+
+    expect(res.status).toBe(200);
+  });
+
+  it('does NOT block a mutating request when scope is "write"', async () => {
+    const api = apiForUser(writeUser);
+    const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'POST'));
+
+    expect(res.status).not.toBe(403);
+  });
+
+  it('does NOT block a mutating request when scope is unset (backwards compatible)', async () => {
+    const api = decapApi(makeOptions({
+      authenticateAccessToken: vi.fn().mockResolvedValue(MOCK_USER), // no scope field
+    }));
+    const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'POST'));
+
+    expect(res.status).not.toBe(403);
+  });
+});
