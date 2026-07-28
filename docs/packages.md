@@ -76,20 +76,22 @@ utilities. Imported via subpath exports.
 
 ### Shared (`packages/laikacms/src/shared/`)
 
-| Subpath                      | Description                                                                                                                     |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `laikacms/compat`            | Promise-bridge helpers (`runTask`, `collectStream`) for consuming `LaikaTask`/`LaikaStream` without importing `effect` directly |
-| `laikacms/core`              | Types, errors, utilities                                                                                                        |
-| `laikacms/core/errors`       | Domain error classes (`LaikaError` subclasses: `NotFoundError`, `BadRequestError`, `InternalError`, etc.)                       |
-| `laikacms/core/errors-extra` | HTTP adapter utilities: `ErrorCodeToStatusMap` (error code → HTTP status), `ErrorCodeToKeyMap`, `ErrorClasses`                  |
-| `laikacms/core/types/*`      | Targeted type modules — `datetime`, `effect`, `ext-name`, `mime-type`, `pagination`, `role`, `role-permission`                  |
-| `laikacms/crypto`            | Cryptographic utilities                                                                                                         |
-| `laikacms/file-sanitizer`    | File upload sanitization                                                                                                        |
-| `laikacms/i18n`              | Internationalization (bundle index)                                                                                             |
-| `laikacms/i18n/en`           | English translations                                                                                                            |
-| `laikacms/i18n/nl`           | Dutch translations                                                                                                              |
-| `laikacms/json-api`          | JSON:API utilities                                                                                                              |
-| `laikacms/sanitizer`         | Input sanitization                                                                                                              |
+| Subpath                      | Description                                                                                                                                                                                                                                               |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laikacms/compat`            | Promise-bridge helpers (`runTask`, `collectStream`) for consuming `LaikaTask`/`LaikaStream` without importing `effect` directly                                                                                                                           |
+| `laikacms/core`              | Types, errors, utilities                                                                                                                                                                                                                                  |
+| `laikacms/core/errors`       | Domain error classes (`LaikaError` subclasses: `NotFoundError`, `BadRequestError`, `InternalError`, etc.)                                                                                                                                                 |
+| `laikacms/core/errors-extra` | HTTP adapter utilities: `ErrorCodeToStatusMap` (error code → HTTP status), `ErrorCodeToKeyMap`, `ErrorClasses`                                                                                                                                            |
+| `laikacms/core/types/*`      | Targeted type modules — `datetime`, `effect`, `ext-name`, `mime-type`, `pagination`, `role`, `role-permission`                                                                                                                                            |
+| `laikacms/core/utilities`    | Dependency-free helpers (`memoize`, `lazy`, `lazyAsync`, `Url`, `Header`, `Paths`, `TemplateLiteral`) — safe for bundled consumers that must not pull in Effect or the laika domain graph                                                                 |
+| `laikacms/crypto`            | Cryptographic utilities (barrel — imports all modules)                                                                                                                                                                                                    |
+| `laikacms/crypto/*`          | Per-module granular access: `laikacms/crypto/constant-time`, `laikacms/crypto/hash`, `laikacms/crypto/password`, `laikacms/crypto/random`, `laikacms/crypto/timing` — avoids dragging unused crypto deps (e.g. `bcryptjs`) when only one module is needed |
+| `laikacms/file-sanitizer`    | File upload sanitization                                                                                                                                                                                                                                  |
+| `laikacms/i18n`              | Internationalization (bundle index)                                                                                                                                                                                                                       |
+| `laikacms/i18n/en`           | English translations                                                                                                                                                                                                                                      |
+| `laikacms/i18n/nl`           | Dutch translations                                                                                                                                                                                                                                        |
+| `laikacms/json-api`          | JSON:API utilities                                                                                                                                                                                                                                        |
+| `laikacms/sanitizer`         | Input sanitization                                                                                                                                                                                                                                        |
 
 ## `@laikacms/aws`
 
