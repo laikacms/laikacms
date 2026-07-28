@@ -4,7 +4,7 @@ import { StorageObjectContentSchema } from './storage-object.js';
 
 export const StorageObjectCreateSchema = S.toStandardSchemaV1(S.Struct({
   key: S.String.pipe(S.check(S.isMaxLength(1023))),
-  type: S.Literal('object'),
+  type: S.optional(S.Literal('object')),
   content: StorageObjectContentSchema,
   /**
    * Optional capability-driven metadata hints. Read by the storage's
