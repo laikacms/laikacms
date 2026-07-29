@@ -2,10 +2,11 @@
 
 A condensed entry point for anyone (LLM or human) bootstrapping with LaikaCMS in under five minutes.
 If you're a coding agent dropped into a repo that wants to use LaikaCMS, **read this first**, then
-[`docs/starters.md`](./docs/starters.md), then the specific docs you need.
+[`docs/contributing/starters.md`](./docs/contributing/starters.md), then the specific docs you need.
 
 > **Note (June 2026):** the `starter-*` reference apps and most adapter packages were moved out of
-> this monorepo (see [`docs/restructure-2026-06.md`](./docs/restructure-2026-06.md)). The
+> this monorepo (see
+> [`docs/contributing/restructure-2026-06.md`](./docs/contributing/restructure-2026-06.md)). The
 > `starter-…` names below still tell you which **pattern** to use; the directories themselves now
 > live in separate repositories (locations TBD).
 
@@ -77,7 +78,7 @@ const laika = decapApi({
   authenticateAccessToken: yourValidator, // throw to reject; see task (e) for production auth
 });
 
-// Serve the Decap CMS admin bundle (built by esbuild — see docs/decap-integration.md → "Serving the Decap admin shell"):
+// Serve the Decap CMS admin bundle (built by esbuild — see docs/guides/decap/admin-shell.md → "Serving the Decap admin shell"):
 app.use('/admin/*', serveStatic({ root: './admin' }));
 
 // Mount on every method at /api/decap/*:
@@ -114,7 +115,7 @@ app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 > ```
 >
 > See
-> [docs/decap-integration.md → "Seeding the server-side Decap config"](./docs/decap-integration.md#seeding-the-server-side-decap-config)
+> [docs/guides/decap/standalone-worker.md → "Seeding the server-side Decap config"](./docs/guides/decap/standalone-worker.md#seeding-the-server-side-decap-config)
 > for the full pattern (shared config constant, serializer requirements, server-vs-browser copies).
 
 ### b) Render content server-side in a framework page (Next/SvelteKit/Astro/Nuxt/Remix/etc.)
@@ -183,7 +184,7 @@ const makeLaika = (env: Env) => {
 app.all('/api/decap/*', c => makeLaika(c.env).fetch(c.req.raw));
 // Serve the Decap CMS admin bundle: build admin/ with esbuild, then declare
 // `[assets] directory = "./admin"` in wrangler.toml — Workers Assets serve /admin/* automatically.
-// See docs/decap-integration.md → "Serving the Decap admin shell"
+// See docs/guides/decap/admin-shell.md → "Serving the Decap admin shell"
 
 export default app;
 ```
@@ -192,8 +193,8 @@ export default app;
 
 **Don't.** Use a sidecar Node/Workers backend that exposes `/api/posts` etc. as public endpoints
 (reading the repo directly), and have the SPA `fetch('/api/posts')`. See
-[docs/starters.md](./docs/starters.md) for the canonical sidecar pattern (starters were moved to
-separate repos in the June 2026 restructure).
+[docs/contributing/starters.md](./docs/contributing/starters.md) for the canonical sidecar pattern
+(starters were moved to separate repos in the June 2026 restructure).
 
 Why: the LaikaCMS HTTP API requires a Bearer token on every endpoint except `/health`. SPAs can't
 safely hold one.
@@ -237,7 +238,7 @@ const laika = decapApi({
 
 For a full self-contained login server (email/password, passkey, TOTP) use the `decapOauth2(...)`
 PKCE server from `@laikacms/decap/decap-oauth2` — see
-[docs/decap-integration.md → "Production auth with decap-oauth2"](./docs/decap-integration.md#production-auth-with-decap-oauth2).
+[docs/guides/decap/auth.md → "Production auth with decap-oauth2"](./docs/guides/decap/auth.md#production-auth-with-decap-oauth2).
 
 ---
 
@@ -302,7 +303,7 @@ These are the things that consistently bite first-time integrators:
    - Inline server-rendered HTML response from a non-page route (SvelteKit `+server.ts`, Marko
      `+handler.ts`, Astro `is:inline`). Serve a small HTML string that loads Decap from CDN and
      registers `createLaikaBackend()` — see
-     [docs/decap-integration.md → "Serving the Decap admin shell"](./docs/decap-integration.md#serving-the-decap-admin-shell).
+     [docs/guides/decap/admin-shell.md → "Serving the Decap admin shell"](./docs/guides/decap/admin-shell.md#serving-the-decap-admin-shell).
 
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** Use `workspace:*` for
    any `@laikacms/*` package reference within the monorepo, and `catalog:*` for shared external
@@ -374,7 +375,7 @@ These are the things that consistently bite first-time integrators:
     The serializer registry must support structured data — `markdownSerializer`, `yamlSerializer`,
     or `jsonSerializer` all work; `rawSerializer` silently drops the `collections` field. See the
     callout in task (a) above and
-    [docs/decap-integration.md → "Seeding the server-side Decap config"](./docs/decap-integration.md#seeding-the-server-side-decap-config).
+    [docs/guides/decap/standalone-worker.md → "Seeding the server-side Decap config"](./docs/guides/decap/standalone-worker.md#seeding-the-server-side-decap-config).
 
 14. **`ContentBaseDocumentsRepository` injects a `language` field into every stored content
     object.** The implementation co-locates the document language with its content in storage so
@@ -442,5 +443,5 @@ the canonical "minimal Node example"; `starter-workers-r2` is the canonical "min
 
 This file lives in the repo because LaikaCMS evolves. If you (LLM or human) followed an instruction
 here and it didn't work — **update this file in the same PR**. The doc-improvement loop that
-maintains the starters also maintains this guide. See `docs/starters.md` for the "continuous
-documentation audit" philosophy.
+maintains the starters also maintains this guide. See `docs/contributing/starters.md` for the
+"continuous documentation audit" philosophy.

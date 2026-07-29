@@ -38,7 +38,7 @@ export default { fetch: api.fetch };
 ```
 
 > **⚠️ No auth** — `buildJsonApi` ships no authentication. See
-> [Getting Started](./docs/getting-started.md) for production setup with `decapApi`.
+> [Getting Started](./docs/guides/getting-started.md) for production setup with `decapApi`.
 
 ## Cloudflare Workers
 
@@ -60,26 +60,26 @@ export default {
 This repository carries the two core packages. The storage/asset adapters (`@laikacms/aws`,
 `@laikacms/github`, …), `laikacli`, `@laikacms/git-gateway`, the `portable-text-*` mappers, and the
 example apps were moved out into their own repositories in June 2026 — see
-[docs/restructure-2026-06.md](./docs/restructure-2026-06.md).
+[docs/contributing/restructure-2026-06.md](./docs/contributing/restructure-2026-06.md).
 
 | Package           | Description                                                                                                                                                                           |
 | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `laikacms`        | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
 | `@laikacms/decap` | Decap CMS integrations: backend, OAuth2, widgets, server adapters.                                                                                                                    |
 
-See [docs/packages.md](./docs/packages.md) for the full list of subpath exports, including the
-packages that now live in separate repositories.
+See [docs/reference/packages.md](./docs/reference/packages.md) for the full list of subpath exports,
+including the packages that now live in separate repositories.
 
 ## Documentation
 
 - **[LLM-GUIDE.md](./LLM-GUIDE.md) — start here if you're an LLM/agent or want the 5-minute
   version**
-- [Getting Started](./docs/getting-started.md)
-- [Architecture](./docs/architecture.md)
-- [API Reference](./docs/api-reference.md)
-- [Decap Integration](./docs/decap-integration.md)
-- [Deployment](./docs/deployment.md)
-- [Packages](./docs/packages.md)
+- [Getting Started](./docs/guides/getting-started.md)
+- [Architecture](./docs/concepts/architecture.md)
+- [API Reference](./docs/reference/json-api/index.md)
+- [Decap Integration](./docs/guides/decap/index.md)
+- [Deployment](./docs/guides/deployment.md)
+- [Packages](./docs/reference/packages.md)
 
 ## Contributing
 

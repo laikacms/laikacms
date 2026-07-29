@@ -16,10 +16,10 @@ incomplete — see "Where to invest first" below for the remaining priorities.
 
 > Note: this document predates two reshapes — the package consolidation that merged the original 39
 > packages into `laikacms`, `@laikacms/aws`, `@laikacms/decap`, and `@laikacms/github`, and the
-> [June 2026 restructure](./restructure-2026-06.md) that moved the adapters (including
-> `@laikacms/aws`) and the example apps out of this repo. References to module paths (e.g.
-> `packages/shared/crypto`) have been updated where they are wrong; the high-level test-rollout
-> guidance is still applicable to the three remaining packages.
+> [June 2026 restructure](./restructure-2026-06) that moved the adapters (including `@laikacms/aws`)
+> and the example apps out of this repo. References to module paths (e.g. `packages/shared/crypto`)
+> have been updated where they are wrong; the high-level test-rollout guidance is still applicable
+> to the three remaining packages.
 
 | Metric                                            | Value (snapshot, pre-consolidation) |
 | ------------------------------------------------- | ----------------------------------- |

@@ -4,8 +4,8 @@ This guide walks you through running LaikaCMS on a plain Node.js server using fi
 (`laikacms/storage-fs`) and the Laika backend for Decap CMS (`@laikacms/decap`). It is the simplest
 possible self-hosted setup — no cloud provider account required.
 
-For a broader overview of the system see [architecture](./architecture.md), and for Cloudflare
-Workers or AWS Lambda deployments see [deployment](./deployment.md).
+For a broader overview of the system see [architecture](../../concepts/architecture), and for
+Cloudflare Workers or AWS Lambda deployments see [deployment](../deployment).
 
 ---
 
@@ -53,7 +53,7 @@ pnpm add --allow-build=esbuild --allow-build=msgpackr-extract \
 > `laikacms/documents-contentbase`, `laikacms/assets-contentbase`,
 > `laikacms/contentbase-settings-default`, and `laikacms/storage-serializers-json`. These are
 > subpath exports of the single `laikacms` package — there is no separate `@laikacms/storage-fs`
-> package on npm. See [packages.md](./packages.md) for the full list of subpaths.
+> package on npm. See [packages.md](../../reference/packages) for the full list of subpaths.
 
 > **Other formats:** swap `laikacms/storage-serializers-json` for
 > `laikacms/storage-serializers-yaml` if you prefer YAML files, and change `'json'` to `'yaml'` in
@@ -143,7 +143,7 @@ serve({ fetch: api.fetch, port: 3000 }, () => {
 
 > **Production auth:** the `authenticateAccessToken` callback above accepts a hard-coded dev token.
 > For production, replace it with a real validator (JWT verification, database session lookup, etc.)
-> or use the bundled `decapOauth2` helper — see [Decap Integration](./decap-integration.md).
+> or use the bundled `decapOauth2` helper — see [Decap Integration](./auth).
 
 > **Other base paths:** if you mount behind a reverse proxy at a different prefix, change
 > `basePath: '/api'` here and update `api_root` in `admin/config.yml` to match.
@@ -308,13 +308,13 @@ started in §2.
 
 The `dev_token` value is sent as a Bearer token by the Decap admin; the server's
 `authenticateAccessToken` callback checks it. **Never use a dev token in production** — replace it
-with a real OAuth2 flow or JWT validator (see [Decap Integration](./decap-integration.md)).
+with a real OAuth2 flow or JWT validator (see [Decap Integration](./auth)).
 
 For a production deployment, replace `http://localhost:3000` with your public API URL and remove the
 `dev_token` line.
 
-See [Decap Integration](./decap-integration.md) for the full integration guide including OAuth2
-setup and available widgets.
+See [Decap Integration](./) for the full integration guide including OAuth2 setup and available
+widgets.
 
 ---
 
@@ -435,8 +435,8 @@ docker run -p 3000:3000 -v $(pwd)/content:/app/content laika-api
 
 ## Next steps
 
-- [Architecture](./architecture.md) — understand the layered design
-- [Decap Integration](./decap-integration.md) — OAuth2, widgets, media library
-- [API Reference](./api-reference.md) — full JSON:API endpoint reference
-- [Deployment](./deployment.md) — Cloudflare Workers, AWS Lambda, and more
-- [Repositories](./repositories.md) — swap to R2, S3, or other backends
+- [Architecture](../../concepts/architecture) — understand the layered design
+- [Decap Integration](./) — OAuth2, widgets, media library
+- [API Reference](../../reference/json-api/) — full JSON:API endpoint reference
+- [Deployment](../deployment) — Cloudflare Workers, AWS Lambda, and more
+- [Repositories](../../concepts/repositories) — swap to R2, S3, or other backends

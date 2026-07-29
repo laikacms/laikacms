@@ -10,8 +10,8 @@ own packages.
 > `decap-cms-widget-lexicaleditor`, `decap-cms-widget-portabletext-editor`,
 > `decap-cms-lexical-core`, and the rest of the adapters) are still published to npm under the same
 > names but are now developed in **separate repositories**. See
-> [the restructure note](./restructure-2026-06.md) for details and the current status of the moved
-> repos.
+> [the restructure note](../contributing/restructure-2026-06) for details and the current status of
+> the moved repos.
 
 ## `laikacms`
 
@@ -125,7 +125,7 @@ Decap CMS server-side integrations: the Decap-compatible API and the OAuth2 serv
 ## `decap-cms-lexical-core`
 
 > **Developed in a separate repository** (moved out June 2026). Still published to npm under the
-> same name. See [the restructure note](./restructure-2026-06.md).
+> same name. See [the restructure note](../contributing/restructure-2026-06).
 
 Lexical-specific bindings for the editor-agnostic `@laikacloud/portabletext-core`: Portable Text ↔
 Lexical bridge, headless editor factory, custom blocks subsystem, and the `LexicalRichtextValue`
@@ -153,7 +153,7 @@ pnpm add decap-cms-lexical-core
 ## `decap-cms-widget-lexicaleditor`
 
 > **Developed in a separate repository** (moved out June 2026). Still published to npm under the
-> same name. See [the restructure note](./restructure-2026-06.md).
+> same name. See [the restructure note](../contributing/restructure-2026-06).
 
 Lexical-based rich text widget for Decap CMS, built on a shadcn-editor fork. Stores content as
 Portable Text (via `decap-cms-lexical-core`) and renders a full-featured editor toolbar in the Decap
@@ -198,7 +198,7 @@ collections:
 ## `decap-cms-widget-portabletext-editor`
 
 > **Developed in a separate repository** (moved out June 2026). Still published to npm under the
-> same name. See [the restructure note](./restructure-2026-06.md).
+> same name. See [the restructure note](../contributing/restructure-2026-06).
 
 Decap CMS widget backed by `@portabletext/editor` (Sanity's native Portable Text editor). A sibling
 of `decap-cms-widget-lexicaleditor` — choose this one when you want the official Portable Text

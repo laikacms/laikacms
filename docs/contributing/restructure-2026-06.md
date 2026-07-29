@@ -76,8 +76,8 @@ pnpm add -D laikacli
 The following docs described the removed apps/packages and were updated to match the stripped-down
 repo:
 
-- [`docs/starters.md`](./starters.md) — starter templates moved out of the monorepo.
-- [`docs/packages.md`](./packages.md) — distinguishes in-repo packages from those developed
+- [`docs/starters.md`](./starters) — starter templates moved out of the monorepo.
+- [`docs/packages.md`](../reference/packages) — distinguishes in-repo packages from those developed
   elsewhere.
 - `README.md` — Packages / Apps / Releasing sections.
 - `LLM-GUIDE.md` — starter references are now external.

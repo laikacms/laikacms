@@ -8,10 +8,10 @@ hero:
   actions:
     - theme: brand
       text: Get Started
-      link: /getting-started
+      link: /guides/getting-started
     - theme: alt
-      text: Architecture
-      link: /architecture
+      text: Concepts
+      link: /concepts/
     - theme: alt
       text: View on GitHub
       link: https://github.com/laikacms/laikacms
@@ -33,17 +33,29 @@ features:
 
 ## Quick Links
 
-- [Getting Started](./getting-started.md) — Installation and basic usage
-- [Starter templates](./starters.md) — Reference apps (moved to separate repos, June 2026)
-- [Architecture](./architecture.md) — How Laika CMS is structured
-- [API Reference](./api-reference.md) — Complete API documentation
-- [Packages](./packages.md) — Overview of all packages
-- [Glossary](./glossary.md): shared vocabulary (protocol, repository, adapter, version, sync token,
-  change feed)
-- [Decap CMS Integration](./decap-integration.md) — Using Decap CMS as a frontend
-- [Deployment](./deployment.md) — Production deployment guides
-- [Security](./SECURITY.md) — Security best practices
-- [Test Strategy](./test-strategy.md) — Coverage gaps and rollout plan
+**Guides**
+
+- [Getting Started](./guides/getting-started) — Installation and basic usage
+- [Decap CMS Integration](./guides/decap/) — Using Decap CMS as a frontend
+- [Deployment](./guides/deployment) — Production deployment guides
+- [Security](./guides/security) — Security best practices
+
+**Concepts**
+
+- [Architecture](./concepts/architecture) — How Laika CMS is structured
+- [Repositories](./concepts/repositories) — The repository pattern and its implementations
+- [Content Model](./concepts/content-model) — Atoms, folders, the `body` convention, change tracking
+
+**Reference**
+
+- [JSON:API Reference](./reference/json-api/) — Complete API documentation
+- [Packages](./reference/packages) — Overview of all packages
+- [Glossary](./reference/glossary) — Shared vocabulary (protocol, repository, adapter, version, sync
+  token, change feed)
+
+**Contributing**
+
+- [Contributing & Internals](./contributing/) — ADRs, test strategy, security audits, repo history
 
 ## Architecture Overview
 

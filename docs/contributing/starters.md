@@ -2,7 +2,7 @@
 
 > **Moved out of the monorepo (June 2026).** The ~160 `starter-*` reference apps that used to live
 > under `apps/` were removed from `laikacms/laikacms` as part of the
-> [June 2026 restructure](./restructure-2026-06.md). They are being relocated to their own
+> [June 2026 restructure](./restructure-2026-06). They are being relocated to their own
 > repositories.
 
 ## What the starters were
@@ -19,10 +19,10 @@ updated with links once they are available.
 
 In the meantime, the core wiring the starters demonstrated is documented directly:
 
-- [Getting Started](./getting-started.md) — install and basic usage.
-- [Decap Integration](./decap-integration.md) — admin mounting, storage wiring, auth modes.
-- [Deployment](./deployment.md) — runtime- and host-specific notes.
-- [Packages](./packages.md) — the subpath exports each starter imported.
+- [Getting Started](../guides/getting-started) — install and basic usage.
+- [Decap Integration](../guides/decap/) — admin mounting, storage wiring, auth modes.
+- [Deployment](../guides/deployment) — runtime- and host-specific notes.
+- [Packages](../reference/packages) — the subpath exports each starter imported.
 
 ## Building blocks the starters used
 

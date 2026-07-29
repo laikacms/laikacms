@@ -73,7 +73,7 @@ adapter with its own (probably different) opinions.
 
 ## Terminology
 
-Recorded in the [glossary](../glossary.md). The two load-bearing terms:
+Recorded in the [glossary](../../reference/glossary). The two load-bearing terms:
 
 - **protocol**: the entire `laikacms` bounded context, repository contracts plus default
   implementations. Laika minus the CMS is "basically a protocol".

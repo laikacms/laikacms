@@ -14,54 +14,88 @@ export default defineConfig({
   ignoreDeadLinks: [/\/apps\//],
   themeConfig: {
     nav: [
-      { text: 'Guide', link: '/getting-started' },
-      { text: 'API', link: '/api-reference' },
-      { text: 'Packages', link: '/packages' },
-      {
-        text: 'More',
-        items: [
-          { text: 'Architecture', link: '/architecture' },
-          { text: 'Repositories', link: '/repositories' },
-          { text: 'Decap Integration', link: '/decap-integration' },
-          { text: 'Deployment', link: '/deployment' },
-          { text: 'Security', link: '/SECURITY' },
-          { text: 'Security Audit (2026-05)', link: '/security-audit-2026-05' },
-          { text: 'Test Strategy', link: '/test-strategy' },
-          { text: 'Restructure (2026-06)', link: '/restructure-2026-06' },
-        ],
-      },
+      { text: 'Guides', link: '/guides/getting-started', activeMatch: '/guides/' },
+      { text: 'Concepts', link: '/concepts/', activeMatch: '/concepts/' },
+      { text: 'Reference', link: '/reference/json-api/', activeMatch: '/reference/' },
+      { text: 'Contributing', link: '/contributing/', activeMatch: '/contributing/' },
     ],
     sidebar: [
       {
-        text: 'Introduction',
+        text: 'Guides',
         items: [
-          { text: 'Overview', link: '/' },
-          { text: 'Getting Started', link: '/getting-started' },
-          { text: 'Architecture', link: '/architecture' },
+          { text: 'Overview', link: '/guides/' },
+          { text: 'Getting Started', link: '/guides/getting-started' },
+          { text: 'Deployment', link: '/guides/deployment' },
+          { text: 'Security', link: '/guides/security' },
+          {
+            text: 'Decap CMS',
+            collapsed: false,
+            items: [
+              { text: 'Overview', link: '/guides/decap/' },
+              { text: 'Quickstart: FileSystem + Decap', link: '/guides/decap/quickstart-fs' },
+              { text: 'Standalone Worker', link: '/guides/decap/standalone-worker' },
+              { text: 'Serving the Admin Shell', link: '/guides/decap/admin-shell' },
+              { text: 'Authentication', link: '/guides/decap/auth' },
+              { text: 'Widgets & Editor Components', link: '/guides/decap/widgets-and-editors' },
+              { text: 'Framework Setup Notes', link: '/guides/decap/frameworks' },
+            ],
+          },
+        ],
+      },
+      {
+        text: 'Concepts',
+        items: [
+          { text: 'Overview', link: '/concepts/' },
+          { text: 'Architecture', link: '/concepts/architecture' },
+          { text: 'Repositories', link: '/concepts/repositories' },
+          { text: 'Content Model', link: '/concepts/content-model' },
         ],
       },
       {
         text: 'Reference',
         items: [
-          { text: 'API Reference', link: '/api-reference' },
-          { text: 'Packages', link: '/packages' },
-          { text: 'Repositories', link: '/repositories' },
+          { text: 'Overview', link: '/reference/' },
+          {
+            text: 'JSON:API',
+            collapsed: false,
+            items: [
+              { text: 'Overview', link: '/reference/json-api/' },
+              { text: 'Storage API', link: '/reference/json-api/storage' },
+              { text: 'Documents API', link: '/reference/json-api/documents' },
+              { text: 'Assets API', link: '/reference/json-api/assets' },
+              { text: 'ContentBase API', link: '/reference/json-api/contentbase' },
+              { text: 'Error Responses', link: '/reference/json-api/errors' },
+            ],
+          },
+          { text: 'Packages', link: '/reference/packages' },
+          { text: 'Glossary', link: '/reference/glossary' },
         ],
       },
       {
-        text: 'Integrations',
+        text: 'Contributing',
+        collapsed: true,
         items: [
-          { text: 'Decap CMS', link: '/decap-integration' },
-          { text: 'Deployment', link: '/deployment' },
-        ],
-      },
-      {
-        text: 'Operations',
-        items: [
-          { text: 'Security', link: '/SECURITY' },
-          { text: 'Security Audit 2026-05', link: '/security-audit-2026-05' },
-          { text: 'Test Strategy', link: '/test-strategy' },
-          { text: 'Restructure 2026-06', link: '/restructure-2026-06' },
+          { text: 'Overview', link: '/contributing/' },
+          {
+            text: 'Decisions (ADRs)',
+            collapsed: true,
+            items: [
+              { text: 'ADR Index', link: '/contributing/decisions/' },
+              {
+                text: 'ADR-001 · Real-time Collaboration',
+                link: '/contributing/decisions/ADR-001-realtime-collaboration',
+              },
+              { text: 'ADR-002 · GraphQL API Option', link: '/contributing/decisions/ADR-002-graphql-api-option' },
+              {
+                text: 'ADR-003 · CMS-agnostic Protocol',
+                link: '/contributing/decisions/ADR-003-cms-agnostic-protocol',
+              },
+            ],
+          },
+          { text: 'Test Strategy', link: '/contributing/test-strategy' },
+          { text: 'Security Audit (2026-05)', link: '/contributing/security-audit-2026-05' },
+          { text: 'Restructure (2026-06)', link: '/contributing/restructure-2026-06' },
+          { text: 'Starter Templates', link: '/contributing/starters' },
         ],
       },
     ],
