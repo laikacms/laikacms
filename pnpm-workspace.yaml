@@ -1,13 +1,19 @@
 packages:
   - "packages/laikacms"
   - "packages/decap"
+  - "packages/github"
+  - "packages/gitlab"
+  - "packages/bitbucket"
   - "docs"
   - "apps/website"
 
 catalogs:
-  
+
   aws:
     "aws-jwt-verify": "^5.2.1"
+  octokit:
+    "@octokit/rest": "^22.0.1"
+    "@octokit/auth-app": "^7.1.4"
   default:
     "@tailwindcss/vite": "^4.2.2"
     "bcryptjs": "^3.0.3"
