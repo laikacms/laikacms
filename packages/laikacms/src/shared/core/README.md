@@ -97,3 +97,47 @@ const { items, done } = await collectStream(
 );
 console.log(items); // Atom[]
 ```
+
+## Subpath exports
+
+| Subpath                      | Description                                                                                                                             |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `laikacms/core`              | Types, errors, and utilities (main barrel)                                                                                              |
+| `laikacms/core/errors`       | Domain error classes (`LaikaError` subclasses: `NotFoundError`, `BadRequestError`, `InternalError`, etc.)                               |
+| `laikacms/core/errors-extra` | HTTP adapter utilities: `ErrorCodeToStatusMap`, `ErrorCodeToKeyMap`, `ErrorClasses`                                                     |
+| `laikacms/core/types/*`      | Targeted type modules: `datetime`, `effect`, `ext-name`, `mime-type`, `pagination`, `role`, `role-permission`                           |
+| `laikacms/core/utilities`    | Dependency-free helpers — safe for bundled consumers that must not pull in Effect or the laika domain graph (see below)                 |
+
+### `laikacms/core/utilities`
+
+Zero-dependency helpers exported as a separate subpath so bundled consumers (e.g. edge workers) can
+use them without importing Effect or any part of the laika domain graph.
+
+```typescript
+import { memoize, lazy, lazyAsync, Url, Header, Paths, TemplateLiteral } from 'laikacms/core/utilities';
+
+// Single-item memoize (keeps last result only — no unbounded cache growth)
+const expensiveFn = memoize((id: string) => computeSomething(id));
+
+// Lazy singleton — initialised on first call
+const getConfig = lazy(() => loadConfig());
+
+// Lazy async singleton
+const getDb = lazyAsync(() => connectToDatabase());
+
+// URL helpers
+Url.join('/api', '/users');         // '/api/users'
+Url.isAbsolute('https://example.com'); // true
+Url.combine('/a', '/b', '/c');      // '/a/b/c'
+
+// Path helpers
+Paths.toSegments('foo/bar/baz');    // ['foo', 'bar', 'baz']
+Paths.combine('foo', 'bar', 'baz'); // 'foo/bar/baz'
+
+// Authorization header helpers
+Header.ExtractAuthorizationBearerToken('Bearer abc123'); // 'abc123'
+Header.ExtractAuthorizationApiKey('ApiKey mykey');       // 'mykey'
+
+// Tagged template for URL construction
+const url = TemplateLiteral.url`/api/${'users'}/${'123'}`; // '/api/users/123'
+```
