@@ -154,6 +154,56 @@ function makeSettingsProvider(overrides?: Partial<DocumentCollectionSettings>): 
   } as ContentBaseSettingsProvider;
 }
 
+/**
+ * A settings provider that knows about several document collections, so a
+ * folderless `listRecords` (list-all-collections) has something to enumerate.
+ */
+function makeMultiCollectionProvider(): ContentBaseSettingsProvider {
+  const collections: Record<string, DocumentCollectionSettings> = {
+    posts: {
+      type: 'document',
+      key: 'posts',
+      name: 'Posts',
+      directory: 'posts',
+      unpublishedStatuses: { draft: { directory: 'draft', name: 'Draft' } },
+    },
+    pages: {
+      type: 'document',
+      key: 'pages',
+      name: 'Pages',
+      directory: 'pages',
+      unpublishedStatuses: { draft: { directory: 'draft', name: 'Draft' } },
+    },
+  };
+  return {
+    getDocumentCollectionSettings(collection: string) {
+      const s = collections[collection];
+      return s ? LaikaTask.succeed(s) : LaikaTask.fail(new NotFoundError(`no collection ${collection}`));
+    },
+    getSettings() {
+      return LaikaTask.succeed({ collections });
+    },
+    putSettings() {
+      return LaikaTask.succeed(undefined);
+    },
+    putDocumentCollectionSettings() {
+      return LaikaTask.succeed(undefined);
+    },
+    getMediaCollectionSettings() {
+      return LaikaTask.fail(new NotFoundError('not found'));
+    },
+    putMediaCollectionSettings() {
+      return LaikaTask.succeed(undefined);
+    },
+    getCollectionSchema() {
+      return LaikaTask.fail(new NotFoundError('no schema'));
+    },
+    putCollectionSchema() {
+      return LaikaTask.succeed(undefined);
+    },
+  } as ContentBaseSettingsProvider;
+}
+
 async function resolveTask<T>(task: LaikaTask.LaikaTask<T>): Promise<Result.Result<T, LaikaError>> {
   return LaikaTask.runPromiseResult(task);
 }
@@ -357,14 +407,29 @@ describe('ContentBaseDocumentsRepository', () => {
       expect(done.total).toBe(5);
     });
 
-    it('returns BadRequestError when folder is empty (LCMS-268)', async () => {
-      const result = await LaikaStream.runPromiseResult(
-        repo.listRecords({ folder: '', pagination: { offset: 0, limit: 100 }, depth: 1 }),
-      );
-      expect(Result.isFailure(result)).toBe(true);
-      if (Result.isFailure(result)) {
-        expect(result.failure.code).toBe(BadRequestError.CODE);
+    it('empty folder lists collections as folder entries (LCMS-268)', async () => {
+      const repoMulti = new ContentBaseDocumentsRepository(storage, makeMultiCollectionProvider());
+      // Documents inside the collections must NOT be flattened into the result.
+      for (const key of ['posts/p1', 'pages/pg1']) {
+        await resolveTask(
+          repoMulti.createDocument({ key, type: 'published', status: 'published', content: {}, language: 'en' }),
+        );
       }
+      const { data, done } = await collectStream(
+        repoMulti.listRecords({ folder: '', pagination: { offset: 0, limit: 100 }, depth: 1 }),
+      );
+      expect(data.every(r => r.type === 'folder')).toBe(true);
+      expect(data.map(r => r.key).sort()).toEqual(['pages', 'posts']);
+      expect(done.total).toBe(2);
+    });
+
+    it('missing folder is treated the same as empty — collections as folders (LCMS-268)', async () => {
+      const repoMulti = new ContentBaseDocumentsRepository(storage, makeMultiCollectionProvider());
+      const { data } = await collectStream(
+        repoMulti.listRecords({ pagination: { offset: 0, limit: 100 }, depth: 1 }),
+      );
+      expect(data.map(r => r.type)).toEqual(['folder', 'folder']);
+      expect(data.map(r => r.key).sort()).toEqual(['pages', 'posts']);
     });
   });
 
@@ -382,14 +447,13 @@ describe('ContentBaseDocumentsRepository', () => {
       expect(done.total).toBe(3);
     });
 
-    it('returns BadRequestError when folder is empty (LCMS-268)', async () => {
-      const result = await LaikaStream.runPromiseResult(
-        repo.listRecordSummaries({ folder: '', pagination: { offset: 0, limit: 100 }, depth: 1 }),
+    it('empty folder lists collections as folder-summary entries (LCMS-268)', async () => {
+      const repoMulti = new ContentBaseDocumentsRepository(storage, makeMultiCollectionProvider());
+      const { data } = await collectStream(
+        repoMulti.listRecordSummaries({ folder: '', pagination: { offset: 0, limit: 100 }, depth: 1 }),
       );
-      expect(Result.isFailure(result)).toBe(true);
-      if (Result.isFailure(result)) {
-        expect(result.failure.code).toBe(BadRequestError.CODE);
-      }
+      expect(data.every(r => r.type === 'folder-summary')).toBe(true);
+      expect(data.map(r => r.key).sort()).toEqual(['pages', 'posts']);
     });
   });
 

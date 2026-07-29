@@ -33,6 +33,8 @@ import {
   type DocumentCreateJsonApi,
   documentSummaryToJsonApi,
   documentToJsonApi,
+  folderSummaryToJsonApi,
+  folderToJsonApi,
   revisionCreateFromJsonApi,
   type RevisionCreateJsonApi,
   revisionSummaryToJsonApi,
@@ -759,6 +761,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
             return documentToJsonApi(entry as Parameters<typeof documentToJsonApi>[0]);
           case 'unpublished':
             return unpublishedToJsonApi(entry as Parameters<typeof unpublishedToJsonApi>[0]);
+          case 'folder':
+            return folderToJsonApi(entry as Parameters<typeof folderToJsonApi>[0]);
           default:
             throw new Error(`Unknown entry type: ${entry.type}`);
         }
@@ -814,6 +818,11 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           case 'unpublished-summary':
             return unpublishedSummaryToJsonApi(
               { ...entry, type: 'unpublished-summary' } as Parameters<typeof unpublishedSummaryToJsonApi>[0],
+            );
+          case 'folder':
+          case 'folder-summary':
+            return folderSummaryToJsonApi(
+              { ...entry, type: 'folder-summary' } as Parameters<typeof folderSummaryToJsonApi>[0],
             );
           default:
             throw new Error(`Unknown entry type: ${entry.type}`);

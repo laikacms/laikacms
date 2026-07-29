@@ -39,6 +39,10 @@ import {
   documentSummaryFromJsonApi,
   type DocumentSummaryJsonApi,
   documentUpdateToJsonApi,
+  folderFromJsonApi,
+  type FolderJsonApi,
+  folderSummaryFromJsonApi,
+  type FolderSummaryJsonApi,
   type JsonApiCollectionResponse,
   revisionCreateToJsonApi,
   revisionFromJsonApi,
@@ -198,7 +202,8 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         const params = paginationCodec.encode(options.pagination);
         params.set('filter[type]', options.type ?? 'all');
         params.set('filter[depth]', '' + options.depth);
-        params.set('filter[folder]', options.folder);
+        // Omit filter[folder] when absent so the server lists all collections.
+        if (options.folder) params.set('filter[folder]', options.folder);
 
         const json = yield* this.fetchJson(`/records?${params}`);
         const collection = json as unknown as JsonApiCollectionResponse;
@@ -217,7 +222,7 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
                   case 'revision':
                     return revisionFromJsonApi(item as RevisionJsonApi) as unknown as DocumentRecord;
                   case 'folder':
-                    return undefined as unknown as DocumentRecord; // skipped below
+                    return folderFromJsonApi(item as FolderJsonApi) as unknown as DocumentRecord;
                   default:
                     throw new IllegalStateException('Unknown record type: ' + item.type);
                 }
@@ -246,7 +251,8 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         const params = paginationCodec.encode(options.pagination);
         params.set('filter[type]', options.type ?? 'all');
         params.set('filter[depth]', '' + options.depth);
-        params.set('filter[folder]', options.folder);
+        // Omit filter[folder] when absent so the server lists all collections.
+        if (options.folder) params.set('filter[folder]', options.folder);
 
         const json = yield* this.fetchJson(`/record-summaries?${params}`);
         const collection = json as unknown as JsonApiCollectionResponse;
@@ -268,7 +274,8 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
                   case 'revision-summary':
                     return revisionSummaryFromJsonApi(item as RevisionSummaryJsonApi) as unknown as RecordSummary;
                   case 'folder':
-                    return undefined;
+                  case 'folder-summary':
+                    return folderSummaryFromJsonApi(item as FolderSummaryJsonApi) as unknown as RecordSummary;
                   default:
                     throw new IllegalStateException('Unknown record type: ' + item.type);
                 }

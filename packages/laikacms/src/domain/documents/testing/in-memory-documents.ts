@@ -243,7 +243,30 @@ export class InMemoryDocumentsRepository extends DocumentsRepository {
     return key.split('/').length <= maxDepth;
   }
 
+  /** Distinct top-level folder names (first path segment) across all stored keys. */
+  private topLevelFolderNames(): string[] {
+    const names = new Set<string>();
+    for (const doc of this.published.values()) {
+      const seg = doc.key.split('/')[0];
+      if (seg) names.add(seg);
+    }
+    for (const draft of this.unpublished.values()) {
+      const seg = draft.key.split('/')[0];
+      if (seg) names.add(seg);
+    }
+    return [...names].sort();
+  }
+
   listRecords(options: ListRecordsOptions): LaikaStream.LaikaStream<Record, ListRecordsDone> {
+    // Root listing (no/empty folder): each collection is a folder entry,
+    // matching `ContentBaseDocumentsRepository`.
+    if (!options.folder) {
+      const folders: Record[] = this.topLevelFolderNames().map(key => ({ type: 'folder', key }));
+      const total = folders.length;
+      const page = applyPagination(folders, options.pagination);
+      return page.length > 0 ? LaikaStream.succeedMany(page, { total }) : LaikaStream.empty({ total });
+    }
+
     const all: Record[] = [];
     if (options.type === 'published' || options.type === undefined) {
       for (const doc of this.published.values()) {
@@ -268,6 +291,13 @@ export class InMemoryDocumentsRepository extends DocumentsRepository {
   listRecordSummaries(
     options: ListRecordsOptions,
   ): LaikaStream.LaikaStream<RecordSummary, ListRecordsDone> {
+    if (!options.folder) {
+      const folders: RecordSummary[] = this.topLevelFolderNames().map(key => ({ type: 'folder-summary', key }));
+      const total = folders.length;
+      const page = applyPagination(folders, options.pagination);
+      return page.length > 0 ? LaikaStream.succeedMany(page, { total }) : LaikaStream.empty({ total });
+    }
+
     const all: RecordSummary[] = [];
     if (options.type === 'published' || options.type === undefined) {
       for (const doc of this.published.values()) {

@@ -22,7 +22,14 @@ export interface ListRevisionsOptions {
 
 export interface ListRecordsOptions {
   pagination: Pagination;
-  folder: Key;
+  /**
+   * Scope the listing to one collection (`<collection>` or
+   * `<collection>/<subfolder>`; the first path segment selects the collection).
+   * Omit (or pass an empty string) to list the **root**: each document
+   * collection surfaces as a `folder` record (a directory listing), rather
+   * than the records inside it.
+   */
+  folder?: Key | undefined;
   depth: number;
   type?: 'published' | 'unpublished' | undefined;
   statuses?: string[] | undefined;

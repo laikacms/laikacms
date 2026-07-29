@@ -62,7 +62,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     super();
   }
 
-  getCapabilities(): LaikaTask.LaikaTask<DocumentsCapabilities> {
+  override getCapabilities(): LaikaTask.LaikaTask<DocumentsCapabilities> {
     return LaikaTask.make<DocumentsCapabilities>(emit =>
       Effect.gen({ self: this }, function*() {
         const caps = yield* LaikaTask.runValueForwarding(this.storageRepository.getCapabilities(), emit);
@@ -171,7 +171,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
   // ===== DOCUMENTS (PUBLISHED) =====
 
-  getDocument(key: string): LaikaTask.LaikaTask<Document> {
+  override getDocument(key: string): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* this.getDocumentPath(key, emit);
@@ -187,7 +187,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
+  override createDocument(create: DocumentCreate): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
         if (typeof create.content !== 'object' || create.content === null || Array.isArray(create.content)) {
@@ -228,7 +228,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
+  override updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* this.getDocumentPath(update.key, emit);
@@ -252,7 +252,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  deleteDocument(key: string): LaikaTask.LaikaTask<void> {
+  override deleteDocument(key: string): LaikaTask.LaikaTask<void> {
     return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* this.getDocumentPath(key, emit);
@@ -263,7 +263,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
   // ===== UNPUBLISHED =====
 
-  getUnpublished(key: string): LaikaTask.LaikaTask<Unpublished> {
+  override getUnpublished(key: string): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         const { collection, remainder } = this.parseKey(key);
@@ -299,7 +299,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
+  override createUnpublished(create: UnpublishedCreate): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         if (typeof create.content !== 'object' || create.content === null || Array.isArray(create.content)) {
@@ -336,7 +336,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  updateUnpublished(update: UnpublishedUpdate): LaikaTask.LaikaTask<Unpublished> {
+  override updateUnpublished(update: UnpublishedUpdate): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(update.key), emit);
@@ -411,7 +411,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  deleteUnpublished(key: string): LaikaTask.LaikaTask<void> {
+  override deleteUnpublished(key: string): LaikaTask.LaikaTask<void> {
     return LaikaTask.make<void>(emit =>
       Effect.gen({ self: this }, function*() {
         const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
@@ -421,7 +421,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  unpublish(key: string, status: string): LaikaTask.LaikaTask<Unpublished> {
+  override unpublish(key: string, status: string): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
         const document = yield* LaikaTask.runValueForwarding(this.getDocument(key), emit);
@@ -451,7 +451,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  publish(key: string): LaikaTask.LaikaTask<Document> {
+  override publish(key: string): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
         const unpublished = yield* LaikaTask.runValueForwarding(this.getUnpublished(key), emit);
@@ -483,11 +483,11 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
   // ===== RECORDS (LIST ALL TYPES) =====
 
-  listRecords(options: ListRecordsOptions): LaikaStream.LaikaStream<Record, ListRecordsDone> {
+  override listRecords(options: ListRecordsOptions): LaikaStream.LaikaStream<Record, ListRecordsDone> {
     return this.listRecordsInternal<Record>(options, 'full');
   }
 
-  listRecordSummaries(
+  override listRecordSummaries(
     options: ListRecordSummaries,
   ): LaikaStream.LaikaStream<RecordSummary, ListRecordsDone> {
     return this.listRecordsInternal<RecordSummary>(options, 'summary');
@@ -499,133 +499,147 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   ): LaikaStream.LaikaStream<T, ListRecordsDone> {
     return LaikaStream.make<T, ListRecordsDone>(emit =>
       Effect.gen({ self: this }, function*() {
+        // Root listing (no/empty folder): each document collection surfaces as
+        // a `folder` entry — the directory listing of the root — mirroring how
+        // listing a collection yields the records directly inside it. It is
+        // neither an error nor a flattened dump of every collection's documents.
         if (!options.folder) {
-          return yield* Effect.fail(
-            new BadRequestError(
-              'listRecords requires `folder` (the collection name) to identify which collection to list',
-            ),
-          );
+          const settings = yield* runForwarding(this.settingsProvider.getSettings(), emit);
+          let count = 0;
+          for (const [name, cfg] of Object.entries(settings.collections ?? {})) {
+            if (cfg.type !== 'document') continue;
+            yield* emit.data(
+              (mode === 'full'
+                ? { type: 'folder', key: name }
+                : { type: 'folder-summary', key: name }) as unknown as T,
+            );
+            count += 1;
+          }
+          return { total: count };
         }
+
         const { collection, remainder: subFolder } = this.parseKey(options.folder);
         if (!collection) {
           return yield* Effect.fail(
             new BadRequestError(`folder '${options.folder}' is missing a collection prefix`),
           );
         }
-        const settings = yield* runForwarding(
-          this.settingsProvider.getDocumentCollectionSettings(collection),
-          emit,
-        );
 
         let total = 0;
+        {
+          const settings = yield* runForwarding(
+            this.settingsProvider.getDocumentCollectionSettings(collection),
+            emit,
+          );
 
-        // Published
-        if (options.type === 'published' || options.type === undefined) {
-          const directory = settings.directory ?? collection;
-          const folderPath = subFolder ? pathCombine(directory, subFolder) : directory;
-          const listOptions = { pagination: options.pagination, depth: options.depth };
-
-          if (mode === 'full') {
-            const { data: atoms, done } = yield* LaikaStream.runCollectForwarding(
-              this.storageRepository.listAtoms(folderPath, listOptions),
-              emit,
-            );
-            let emitted = 0;
-            for (const atom of atoms) {
-              if (atom.type !== 'object') continue;
-              const k = this.extractKeyFromPath(atom.key, directory, collection);
-              yield* emit.data({
-                ...atom,
-                key: k,
-                type: 'published' as const,
-                status: 'published' as const,
-              } as unknown as T);
-              emitted += 1;
-            }
-            total += done.total ?? emitted;
-          } else {
-            const { data: summaries, done } = yield* LaikaStream.runCollectForwarding(
-              this.storageRepository.listAtomSummaries(folderPath, listOptions),
-              emit,
-            );
-            let emitted = 0;
-            for (const atom of summaries) {
-              if (atom.type !== 'object-summary') continue;
-              const k = this.extractKeyFromPath(atom.key, directory, collection);
-              yield* emit.data({
-                ...atom,
-                key: k,
-                type: 'published-summary' as const,
-                status: 'published' as const,
-              } as unknown as T);
-              emitted += 1;
-            }
-            total += done.total ?? emitted;
-          }
-        }
-
-        // Unpublished
-        if (options.type === 'unpublished' || options.type === undefined) {
-          const unpublishedStatuses = settings.unpublishedStatuses || {};
-          const statusesToList = options.statuses || Object.keys(unpublishedStatuses);
-
-          for (const status of statusesToList) {
-            const statusConfig = unpublishedStatuses[status];
-            if (!statusConfig) continue;
-
-            const basePath = `.contentbase/${collection}/${statusConfig.directory}`;
-            const folderPath = subFolder ? pathCombine(basePath, subFolder) : basePath;
+          // Published
+          if (options.type === 'published' || options.type === undefined) {
+            const directory = settings.directory ?? collection;
+            const folderPath = subFolder ? pathCombine(directory, subFolder) : directory;
             const listOptions = { pagination: options.pagination, depth: options.depth };
 
             if (mode === 'full') {
-              const r = yield* Effect.result(
-                LaikaStream.runCollectForwarding(
-                  this.storageRepository.listAtoms(folderPath, listOptions),
-                  emit,
-                ),
+              const { data: atoms, done } = yield* LaikaStream.runCollectForwarding(
+                this.storageRepository.listAtoms(folderPath, listOptions),
+                emit,
               );
-              if (Result.isFailure(r)) {
-                // Ignore NotFound for status dirs that don't exist yet.
-                if (r.failure.code !== NotFoundError.CODE) yield* emit.recoverableError(r.failure);
-                continue;
-              }
               let emitted = 0;
-              for (const atom of r.success.data) {
+              for (const atom of atoms) {
                 if (atom.type !== 'object') continue;
-                const k = this.extractKeyFromPath(atom.key, basePath, collection);
+                const k = this.extractKeyFromPath(atom.key, directory, collection);
                 yield* emit.data({
                   ...atom,
                   key: k,
-                  type: 'unpublished' as const,
-                  status,
+                  type: 'published' as const,
+                  status: 'published' as const,
                 } as unknown as T);
                 emitted += 1;
               }
-              total += r.success.done.total ?? emitted;
+              total += done.total ?? emitted;
             } else {
-              const r = yield* Effect.result(
-                LaikaStream.runCollectForwarding(
-                  this.storageRepository.listAtomSummaries(folderPath, listOptions),
-                  emit,
-                ),
+              const { data: summaries, done } = yield* LaikaStream.runCollectForwarding(
+                this.storageRepository.listAtomSummaries(folderPath, listOptions),
+                emit,
               );
-              if (Result.isFailure(r)) {
-                if (r.failure.code !== NotFoundError.CODE) yield* emit.recoverableError(r.failure);
-                continue;
-              }
               let emitted = 0;
-              for (const atom of r.success.data) {
+              for (const atom of summaries) {
                 if (atom.type !== 'object-summary') continue;
-                const k = this.extractKeyFromPath(atom.key, basePath, collection);
+                const k = this.extractKeyFromPath(atom.key, directory, collection);
                 yield* emit.data({
                   ...atom,
                   key: k,
-                  type: 'unpublished-summary' as const,
-                  status,
+                  type: 'published-summary' as const,
+                  status: 'published' as const,
                 } as unknown as T);
                 emitted += 1;
               }
-              total += r.success.done.total ?? emitted;
+              total += done.total ?? emitted;
+            }
+          }
+
+          // Unpublished
+          if (options.type === 'unpublished' || options.type === undefined) {
+            const unpublishedStatuses = settings.unpublishedStatuses || {};
+            const statusesToList = options.statuses || Object.keys(unpublishedStatuses);
+
+            for (const status of statusesToList) {
+              const statusConfig = unpublishedStatuses[status];
+              if (!statusConfig) continue;
+
+              const basePath = `.contentbase/${collection}/${statusConfig.directory}`;
+              const folderPath = subFolder ? pathCombine(basePath, subFolder) : basePath;
+              const listOptions = { pagination: options.pagination, depth: options.depth };
+
+              if (mode === 'full') {
+                const r = yield* Effect.result(
+                  LaikaStream.runCollectForwarding(
+                    this.storageRepository.listAtoms(folderPath, listOptions),
+                    emit,
+                  ),
+                );
+                if (Result.isFailure(r)) {
+                  // Ignore NotFound for status dirs that don't exist yet.
+                  if (r.failure.code !== NotFoundError.CODE) yield* emit.recoverableError(r.failure);
+                  continue;
+                }
+                let emitted = 0;
+                for (const atom of r.success.data) {
+                  if (atom.type !== 'object') continue;
+                  const k = this.extractKeyFromPath(atom.key, basePath, collection);
+                  yield* emit.data({
+                    ...atom,
+                    key: k,
+                    type: 'unpublished' as const,
+                    status,
+                  } as unknown as T);
+                  emitted += 1;
+                }
+                total += r.success.done.total ?? emitted;
+              } else {
+                const r = yield* Effect.result(
+                  LaikaStream.runCollectForwarding(
+                    this.storageRepository.listAtomSummaries(folderPath, listOptions),
+                    emit,
+                  ),
+                );
+                if (Result.isFailure(r)) {
+                  if (r.failure.code !== NotFoundError.CODE) yield* emit.recoverableError(r.failure);
+                  continue;
+                }
+                let emitted = 0;
+                for (const atom of r.success.data) {
+                  if (atom.type !== 'object-summary') continue;
+                  const k = this.extractKeyFromPath(atom.key, basePath, collection);
+                  yield* emit.data({
+                    ...atom,
+                    key: k,
+                    type: 'unpublished-summary' as const,
+                    status,
+                  } as unknown as T);
+                  emitted += 1;
+                }
+                total += r.success.done.total ?? emitted;
+              }
             }
           }
         }
@@ -637,7 +651,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
 
   // ===== REVISIONS =====
 
-  getRevision(key: string, revision: string): LaikaTask.LaikaTask<Revision> {
+  override getRevision(key: string, revision: string): LaikaTask.LaikaTask<Revision> {
     return LaikaTask.make<Revision>(emit =>
       Effect.gen({ self: this }, function*() {
         const path = yield* this.getRevisionPath(key, emit, revision);
@@ -657,7 +671,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  createRevision(create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
+  override createRevision(create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
     return LaikaTask.make<Revision>(emit =>
       Effect.gen({ self: this }, function*() {
         if (typeof create.content !== 'object' || create.content === null || Array.isArray(create.content)) {
@@ -694,7 +708,7 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
     );
   }
 
-  listRevisions(
+  override listRevisions(
     key: string,
     options: ListRevisionsOptions,
   ): LaikaStream.LaikaStream<RevisionSummary, ListRevisionsDone> {
