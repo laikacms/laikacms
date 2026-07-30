@@ -52,11 +52,17 @@ abstract class StorageRepository {
 // Implementation provides concrete behavior
 class R2StorageRepository extends StorageRepository {
   getObject(key: Key): LaikaTask.LaikaTask<StorageObject> {
-    return LaikaTask.make(async emit => {
-      const object = await this.bucket.get(key);
-      if (!object) throw new NotFoundError(`Not found: ${key}`);
-      return { key, content: await object.text() };
-    });
+    // build callback returns Effect.Effect<StorageObject, LaikaError>
+    return LaikaTask.make(() =>
+      Effect.tryPromise({
+        try: async () => {
+          const object = await this.bucket.get(key);
+          if (!object) throw new NotFoundError(`Not found: ${key}`);
+          return { key, content: await object.text() };
+        },
+        catch: err => err instanceof LaikaError ? err : new UnknownError(err),
+      })
+    );
   }
 }
 ```
@@ -82,18 +88,19 @@ console.log(items); // Atom[]
 
 ## Standard Schema
 
-Validation uses [Standard Schema](https://github.com/standard-schema/standard-schema) for
-interoperability with Zod, Valibot, ArkType.
+LaikaCMS exports its entity types as [Standard Schema v1](https://github.com/standard-schema/standard-schema)
+compatible schemas. Consumers can use these directly with Zod, Valibot, ArkType, or any
+Standard-Schema-compatible validator.
 
 ```typescript
-import { z } from 'zod';
+import { StorageObjectSchema } from 'laikacms/storage';
 
-const PostSchema = z.object({
-  title: z.string(),
-  content: z.string(),
-});
+// StorageObjectSchema satisfies StandardSchemaV1 — parse with any compatible library
+const result = StorageObjectSchema['~standard'].validate(unknownPayload);
 
-// Works with any Standard Schema compatible library — validation is handled
-// by the repository layer, not passed as a createObject option
-await runTask(repo.createObject({ key: 'posts/hello', content: data }));
+// Content validation is the caller's responsibility before calling createObject —
+// StorageRepository.createObject accepts StorageObjectCreate (key + content + optional metadata)
+// and does not perform schema validation on the content field.
+const parsed = PostSchema.parse(rawContent); // validate first
+await runTask(repo.createObject({ key: 'posts/hello', content: parsed }));
 ```
