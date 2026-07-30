@@ -42,6 +42,25 @@ const api = decapApi({
 If `authenticateApiToken` is not configured and a request arrives with `X-API-Key` or
 `Authorization: ApiKey`, the server returns `401`.
 
+### Read-only API keys
+
+Return `scope: 'read'` from either auth callback to restrict that principal to safe (GET / HEAD /
+OPTIONS) requests. Mutating requests (POST, PUT, PATCH, DELETE) are rejected with `403 Forbidden`
+before they reach any repository. Omitting `scope` (or returning `scope: 'write'`) keeps full access
+— existing callbacks need no changes.
+
+```ts
+authenticateApiToken: async key => {
+  const apiKey = await db.apiKeys.findByKey(key);
+  if (!apiKey) throw new Error('Invalid API key');
+  return {
+    id: apiKey.userId,
+    email: apiKey.email,
+    scope: apiKey.readOnly ? 'read' : 'write',
+  };
+},
+```
+
 ## SSR auth guard with `authenticateRequest`
 
 `decapApi(...)` returns a `DecapApi` object with two methods:
