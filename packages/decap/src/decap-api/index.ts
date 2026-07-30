@@ -60,7 +60,7 @@ export const SECURITY_DEFAULTS = {
  *
  * @example
  * ```typescript
- * declare module '@laikacms/decap-api' {
+ * declare module '@laikacms/decap/decap-api' {
  *   interface User {
  *     role: 'admin' | 'editor';
  *     organizationId: string;
