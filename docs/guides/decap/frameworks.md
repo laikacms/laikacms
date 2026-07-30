@@ -107,7 +107,8 @@ The `.buffer` property of a `Buffer` is the **underlying shared** `ArrayBuffer`;
 
 VitePress and Docusaurus both run Node.js-based dev servers (Vite's Connect middleware and
 webpack-dev-server respectively). You must register `laika.fetch` as a middleware rather than a
-route handler, which means you get `IncomingMessage`/`ServerResponse` — not a Web API `Request`.
+route handler, which means you get `IncomingMessage`/`ServerResponse` — not a Web API `Request`. Use
+the same manual bridge as the [Express section](#express--plain-httpserver--manual-bridge).
 
 **VitePress** — use a Vite plugin with `configureServer`:
 
@@ -122,7 +123,22 @@ export default defineConfig({
       name: 'laika-decap-api',
       configureServer(server) {
         server.middlewares.use('/api/decap', async (req, res) => {
-          const webReq = await toWebRequest(req); // IncomingMessage → Request bridge
+          // Connect IncomingMessage → Web Request bridge (req.url is path-only)
+          const url = `http://${req.headers.host}${req.url}`;
+          const chunks: Buffer[] = [];
+          for await (const chunk of req as AsyncIterable<Buffer>) chunks.push(chunk);
+          const bodyBuf = chunks.length ? Buffer.concat(chunks) : null;
+          const webReq = new Request(url, {
+            method: req.method,
+            headers: req.headers as Record<string, string>,
+            body: bodyBuf
+              ? (bodyBuf.buffer.slice(
+                bodyBuf.byteOffset,
+                bodyBuf.byteOffset + bodyBuf.byteLength,
+              ) as ArrayBuffer)
+              : null,
+            ...(bodyBuf ? { duplex: 'half' } : {}),
+          } as RequestInit);
           const webRes = await laika.fetch(webReq);
           res.writeHead(webRes.status, Object.fromEntries(webRes.headers));
           res.end(Buffer.from(await webRes.arrayBuffer()));
@@ -156,7 +172,22 @@ export default function laikaPlugin(): Plugin {
           // webpack-dev-server v5: setupMiddlewares replaces the old before/after hooks
           setupMiddlewares(middlewares: any[], devServer: any) {
             devServer.app.use('/api/decap', async (req: any, res: any) => {
-              const webReq = await toWebRequest(req);
+              // IncomingMessage → Web Request bridge (req.url is path-only)
+              const url = `http://${req.headers.host}${req.url}`;
+              const chunks: Buffer[] = [];
+              for await (const chunk of req) chunks.push(chunk);
+              const bodyBuf = chunks.length ? Buffer.concat(chunks) : null;
+              const webReq = new Request(url, {
+                method: req.method,
+                headers: req.headers,
+                body: bodyBuf
+                  ? (bodyBuf.buffer.slice(
+                    bodyBuf.byteOffset,
+                    bodyBuf.byteOffset + bodyBuf.byteLength,
+                  ) as ArrayBuffer)
+                  : null,
+                ...(bodyBuf ? { duplex: 'half' } : {}),
+              } as RequestInit);
               const webRes = await laika.fetch(webReq);
               res.writeHead(webRes.status, Object.fromEntries(webRes.headers));
               res.end(Buffer.from(await webRes.arrayBuffer()));
