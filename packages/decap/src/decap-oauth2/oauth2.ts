@@ -100,7 +100,7 @@ export interface AuthorizationCode {
  *
  * @example
  * ```typescript
- * declare module '@laikacms/decap-oauth2' {
+ * declare module '@laikacms/decap/decap-oauth2' {
  *   interface User {
  *     role: 'admin' | 'editor';
  *     organizationId: string;
@@ -293,10 +293,10 @@ export interface OAuthConfig {
   /**
    * Localized messages for user-facing strings.
    * If not provided, defaults to English messages.
-   * Import translations from '@laikacms/decap-oauth2/i18n' or provide custom messages.
+   * Import translations from '@laikacms/decap/decap-oauth2/i18n' or provide custom messages.
    * @example
    * ```typescript
-   * import { nl } from '@laikacms/decap-oauth2/i18n';
+   * import { nl } from '@laikacms/decap/decap-oauth2/i18n';
    * const config: OAuthConfig = {
    *   translations: nl,
    *   // ... other options

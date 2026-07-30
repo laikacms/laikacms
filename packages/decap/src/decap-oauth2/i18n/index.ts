@@ -7,7 +7,7 @@
  *
  * @example
  * ```typescript
- * import { type Translation, defaultMessages } from '@laikacms/decap-oauth2/i18n';
+ * import { type Translation, defaultMessages } from '@laikacms/decap/decap-oauth2/i18n';
  *
  * // Use default English messages
  * const config = { translations: defaultMessages };
