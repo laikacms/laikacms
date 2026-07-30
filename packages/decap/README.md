@@ -43,6 +43,52 @@ Key options accepted by `decapApi(options)`:
 | `logger`                  | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | no       | Receives structured diagnostic output; forwarded to storage, documents, and assets API sub-handlers                                                                    |
 | `cors`                    | `CorsOptions`                                     | no       | CORS configuration; required when the admin UI is served from a different origin than the API. Set `origins: '*'` for local dev, explicit origins list for production. |
 
+#### `User` type
+
+Both `authenticateAccessToken` and `authenticateApiToken` must return a `User` object. The built-in
+fields are:
+
+| Field          | Type                | Required | Description                                                                     |
+| -------------- | ------------------- | -------- | ------------------------------------------------------------------------------- |
+| `id`           | `string`            | yes      | Unique identifier for the principal                                             |
+| `email`        | `string`            | yes      | Email address                                                                   |
+| `name`         | `string`            | no       | Display name                                                                    |
+| `passwordHash` | `string`            | no       | Stored by `decap-oauth2`; stripped before the user object is sent to the client |
+| `scope`        | `'read' \| 'write'` | no       | Access scope — see below. Defaults to full access when omitted or `'write'`.    |
+
+**`scope` — read-only credentials**
+
+Return `scope: 'read'` to restrict a principal to safe (GET / HEAD / OPTIONS) requests only. Any
+mutating method (POST, PUT, PATCH, DELETE) is rejected with `403 Forbidden` at the API boundary
+before it reaches the underlying repositories. This lets you wire a read-only API key without
+needing repositories that enforce per-credential access control:
+
+```ts
+authenticateApiToken: async key => {
+  const apiKey = await db.apiKeys.findByKey(key);
+  if (!apiKey) throw new Error('Invalid API key');
+  return {
+    id: apiKey.userId,
+    email: apiKey.email,
+    scope: apiKey.readOnly ? 'read' : 'write', // ← restrict writes for read-only keys
+  };
+},
+```
+
+Omitting `scope` (or setting it to `'write'`) leaves the principal with full access — this is the
+default, so existing callbacks need no changes.
+
+You can extend the `User` interface with custom fields by augmenting the module:
+
+```ts
+declare module '@laikacms/decap/decap-api' {
+  interface User {
+    role: 'admin' | 'editor';
+    organizationId: string;
+  }
+}
+```
+
 #### `decap-api` return value
 
 `decapApi(options)` returns a `DecapApi` object:

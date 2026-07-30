@@ -88,9 +88,10 @@ console.log(items); // Atom[]
 
 ## Standard Schema
 
-LaikaCMS exports its entity types as [Standard Schema v1](https://github.com/standard-schema/standard-schema)
-compatible schemas. Consumers can use these directly with Zod, Valibot, ArkType, or any
-Standard-Schema-compatible validator.
+LaikaCMS exports its entity types as
+[Standard Schema v1](https://github.com/standard-schema/standard-schema) compatible schemas.
+Consumers can use these directly with Zod, Valibot, ArkType, or any Standard-Schema-compatible
+validator.
 
 ```typescript
 import { StorageObjectSchema } from 'laikacms/storage';
