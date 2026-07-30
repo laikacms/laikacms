@@ -136,7 +136,7 @@ List all assets and folders under a given folder prefix.
 | `filter[<name>]`                                | string | —       | Named filter declared by the backend in `GET /capabilities` `filtering.filters[].name`. Undeclared names return `400`. Check capabilities before using. |
 | `page[after]`                                   | string | —       | Forward cursor for pagination                                                                                                                           |
 | `page[before]`                                  | string | —       | Backward cursor for pagination                                                                                                                          |
-| `page[size]`                                    | number | `100`   | Items per page                                                                                                                                          |
+| `page[size]`                                    | number | `100`   | Items per page; max 100, clamped silently                                                                                                               |
 | `include`                                       | string | —       | Comma-separated: `urls` (or `asset-url`), `variations` (or `asset-variation`)                                                                           |
 | `meta`                                          | string | —       | Set `meta=true` to inline asset metadata onto `data.meta`                                                                                               |
 

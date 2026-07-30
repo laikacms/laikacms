@@ -125,7 +125,7 @@ List records (published and/or unpublished) with full content for a given collec
 | `filter[depth]`  | number                                      | no       | `1`           | Traversal depth (minimum 1)                                      |
 | `page[after]`    | string                                      | no       | —             | Forward cursor for pagination                                    |
 | `page[before]`   | string                                      | no       | —             | Backward cursor for pagination                                   |
-| `page[size]`     | number                                      | no       | —             | Items per page                                                   |
+| `page[size]`     | number                                      | no       | —             | Items per page; max 100, clamped silently                        |
 
 > **Note:** `filter[folder]` is required and identifies the collection to list. Omitting it or
 > passing an empty string returns `400 bad_request`. To list documents across multiple collections,
@@ -675,11 +675,11 @@ List revision summaries for a document key.
 
 **Query Parameters**
 
-| Parameter      | Type   | Default | Description                    |
-| -------------- | ------ | ------- | ------------------------------ |
-| `page[after]`  | string | —       | Forward cursor for pagination  |
-| `page[before]` | string | —       | Backward cursor for pagination |
-| `page[size]`   | number | —       | Items per page                 |
+| Parameter      | Type   | Default | Description                               |
+| -------------- | ------ | ------- | ----------------------------------------- |
+| `page[after]`  | string | —       | Forward cursor for pagination             |
+| `page[before]` | string | —       | Backward cursor for pagination            |
+| `page[size]`   | number | —       | Items per page; max 100, clamped silently |
 
 **Response** — collection of `revision-summary` resources
 
