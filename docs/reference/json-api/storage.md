@@ -140,12 +140,12 @@ empty key.
 
 **Query Parameters**
 
-| Parameter       | Type   | Default | Description                    |
-| --------------- | ------ | ------- | ------------------------------ |
-| `page[after]`   | string | —       | Forward cursor for pagination  |
-| `page[before]`  | string | —       | Backward cursor for pagination |
-| `page[size]`    | number | 10      | Number of items per page       |
-| `filter[depth]` | number | `1`     | Traversal depth (minimum 1)    |
+| Parameter       | Type   | Default | Description                               |
+| --------------- | ------ | ------- | ----------------------------------------- |
+| `page[after]`   | string | —       | Forward cursor for pagination             |
+| `page[before]`  | string | —       | Backward cursor for pagination            |
+| `page[size]`    | number | 10      | Items per page; max 100, clamped silently |
+| `filter[depth]` | number | `1`     | Traversal depth (minimum 1)               |
 
 **Response** — collection of `object` and/or `folder` resources
 

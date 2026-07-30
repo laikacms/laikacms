@@ -38,3 +38,6 @@ specification. All responses use the `application/vnd.api+json` content type.
   offset- and page-based pagination. Sending a cursor param to an unsupported backend returns a
   `400 Bad Request` with a `invalid_data` error. Inspect `GET /capabilities`
   (`attributes.pagination.styles.cursor`) to confirm cursor support before using these params.
+  **Page size is capped at 100.** `page[size]` / `page[limit]` values above 100 are silently clamped
+  to 100 — the request succeeds but fewer items are returned. The response pagination links will
+  reflect the clamped value.
