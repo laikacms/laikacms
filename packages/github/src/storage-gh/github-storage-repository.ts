@@ -37,13 +37,13 @@ import * as minimatch from 'minimatch';
 
 import { GithubDataSource, type GithubDataSourceOptions } from './github-datasource.js';
 
-export interface GithubStorageRepositoryOptions extends GithubDataSourceOptions {
-  serializerRegistry: StorageSerializerRegistry;
-  defaultFileExtension: string;
-  ignoreList?: string[];
-  commitAuthor?: { name: string, email: string };
-  determineExtension?: DetermineExtension;
-}
+export type GithubStorageRepositoryOptions = GithubDataSourceOptions & {
+  serializerRegistry: StorageSerializerRegistry,
+  defaultFileExtension: string,
+  ignoreList?: string[],
+  commitAuthor?: { name: string, email: string },
+  determineExtension?: DetermineExtension,
+};
 
 const DEFAULT_IGNORE_LIST = [
   '**/.keep',
