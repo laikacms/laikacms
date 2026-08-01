@@ -378,6 +378,8 @@ export class GithubDataSource {
           new AuthorizationError(`Insufficient permissions for ${contextPath}: ${msg || 'forbidden'}`),
         );
       }
+      case 429:
+        return Result.fail(new TooManyRequestsError(`GitHub rate-limited request for ${contextPath}`));
       case 409:
       case 422:
         return Result.fail(
