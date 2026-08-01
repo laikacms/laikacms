@@ -97,6 +97,27 @@ are just another shape (`type: 'app-installation'`) returned from the callback.
 
 ---
 
+## Behaviour notes
+
+- **Extension hiding.** Keys are extension-free at the boundary, exactly like `@laikacms/gitlab` and
+  `laikacms/storage-fs`. The on-disk file extension is chosen from the registered serializers and
+  looked up on read.
+- **Empty directories.** Git tracks files, not directories. `createFolder` writes a `.keep` file
+  (filtered out of listings via the `ignoreList`).
+- **Listings on missing folders.** GitHub's API cannot distinguish an empty directory from a missing
+  one — both return HTTP 404. The GitHub backend maps 404 → `Result.succeed([])`, so listing a
+  missing folder returns `total: 0` with zero summaries and **no** `recoverableError`. `getFolder`
+  on a missing folder similarly succeeds, returning a synthetic `Folder` with `createdAt/updatedAt`
+  set to `new Date(0)`. This differs from `@laikacms/gitlab` and `@laikacms/bitbucket`, which
+  surface missing-folder 404s as `recoverableError` (`NotFoundError`).
+- **Upsert.** `createOrUpdateObject` maps to GitHub's `createOrUpdateFileContents` endpoint. Pass
+  `update.metadata.revisionId` (the file's blob `sha`) for optimistic-concurrency updates.
+- **Rate limits.** Deep listings (Trees API) and write operations count against your installation's
+  primary and secondary rate limits. On 429 or a 403 with `x-ratelimit-remaining: 0`, the backend
+  raises `TooManyRequestsError`.
+
+---
+
 ## Constructor options
 
 All options are passed as a single object to `new GithubStorageRepository(options)`.
