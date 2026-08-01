@@ -118,18 +118,14 @@ List records (published and/or unpublished) with full content for a given collec
 
 **Query Parameters**
 
-| Parameter        | Type                                        | Required | Default       | Description                                                      |
-| ---------------- | ------------------------------------------- | -------- | ------------- | ---------------------------------------------------------------- |
-| `filter[folder]` | string                                      | **yes**  | —             | Collection (folder) to list from, e.g. `posts` or `posts/drafts` |
-| `filter[type]`   | `"published"` \| `"unpublished"` \| `"all"` | no       | `"published"` | Filter by document state                                         |
-| `filter[depth]`  | number                                      | no       | `1`           | Traversal depth (minimum 1)                                      |
-| `page[after]`    | string                                      | no       | —             | Forward cursor for pagination                                    |
-| `page[before]`   | string                                      | no       | —             | Backward cursor for pagination                                   |
-| `page[size]`     | number                                      | no       | —             | Items per page; max 100, clamped silently                        |
-
-> **Note:** `filter[folder]` is required and identifies the collection to list. Omitting it or
-> passing an empty string returns `400 bad_request`. To list documents across multiple collections,
-> make one request per collection.
+| Parameter        | Type                                        | Required | Default       | Description                                                                                                                                                                            |
+| ---------------- | ------------------------------------------- | -------- | ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `filter[folder]` | string                                      | no       | `""`          | Collection (folder) to list from, e.g. `posts` or `posts/drafts`. Omit or pass an empty string to list all collections as `folder` resources (one per configured document collection). |
+| `filter[type]`   | `"published"` \| `"unpublished"` \| `"all"` | no       | `"published"` | Filter by document state                                                                                                                                                               |
+| `filter[depth]`  | number                                      | no       | `1`           | Traversal depth (minimum 1)                                                                                                                                                            |
+| `page[after]`    | string                                      | no       | —             | Forward cursor for pagination                                                                                                                                                          |
+| `page[before]`   | string                                      | no       | —             | Backward cursor for pagination                                                                                                                                                         |
+| `page[size]`     | number                                      | no       | —             | Items per page; max 100, clamped silently                                                                                                                                              |
 
 **Response** — mixed array of `published` and `unpublished` resources
 
@@ -175,7 +171,8 @@ List records (published and/or unpublished) with full content for a given collec
 #### GET /record-summaries
 
 List record summaries (without content) for a given collection folder. Accepts the same query
-parameters as `GET /records`, including the required `filter[folder]`.
+parameters as `GET /records`. When `filter[folder]` is omitted or empty, returns one
+`folder-summary` resource per configured document collection.
 
 **Response** — mixed array of `published-summary` and `unpublished-summary` resources
 
