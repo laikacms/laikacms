@@ -249,11 +249,20 @@ GitHub-backed `StorageRepository` (GitHub App authentication).
 
 ### `GithubDataSourceOptions`
 
-`GithubStorageRepository` accepts a `GithubDataSourceOptions` object. Notable option:
+`GithubStorageRepository` accepts a `GithubDataSourceOptions` object. Auth is a discriminated union
+— supply either a pre-built `octokit` instance **or** the three GitHub App credential fields:
 
-| Option    | Type                 | Description                                                                                                                             |
-| --------- | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `octokit` | `Octokit` (optional) | Pre-configured Octokit instance. When provided, overrides the built-in GitHub App auth — useful for testing or fine-grained token auth. |
+| Option            | Type                | Required when           | Description                                                                                      |
+| ----------------- | ------------------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
+| `octokit`         | `Octokit`           | using PAT / custom auth | Pre-configured Octokit instance. When provided, App credentials (`appId` etc.) are not required. |
+| `appId`           | `string \| number`  | App auth (no `octokit`) | GitHub App ID.                                                                                   |
+| `privateKey`      | `string`            | App auth (no `octokit`) | GitHub App private key (PEM). Literal `\n` sequences and surrounding quotes are normalised.      |
+| `installationId`  | `string \| number`  | App auth (no `octokit`) | GitHub App installation ID for the target repository.                                            |
+| `owner`           | `string`            | always                  | GitHub repository owner (user or org).                                                           |
+| `repo`            | `string`            | always                  | GitHub repository name.                                                                          |
+| `branch`          | `string`            | always                  | Branch to read from and commit to.                                                               |
+| `tokenTtlSeconds` | `number` (optional) | —                       | Installation token TTL in seconds. Defaults to 50 minutes (tokens last ~1 h).                    |
+| `userAgent`       | `string` (optional) | —                       | Custom User-Agent header for GitHub API requests. Defaults to `@laikacms/github`.                |
 
 ## `@laikacms/git-gateway`
 

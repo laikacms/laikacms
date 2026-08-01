@@ -1,3 +1,4 @@
+import type { Octokit } from '@octokit/rest';
 import type { StorageContractCase } from 'laikacms/storage/testing';
 
 import { GithubStorageRepository } from '../github-storage-repository.js';
@@ -187,16 +188,10 @@ export const githubContractCase: StorageContractCase = {
   async makeRepo() {
     const { octokit } = createMockOctokit();
     return new GithubStorageRepository({
-      // App credentials are required by the constructor but we supply an
-      // external octokit so they are never used.
-      appId: '1',
-      privateKey:
-        '-----BEGIN RSA PRIVATE KEY-----\nMIIEowIBAAKCAQEA0Z3VS5JJcds3xHn/ygWep4bzVoHpIgVHqKsYbkqNdkW0zKMC\n-----END RSA PRIVATE KEY-----',
-      installationId: '1',
       owner: 'test-owner',
       repo: 'test-repo',
       branch: 'main',
-      octokit: octokit as never,
+      octokit: octokit as unknown as Octokit,
       serializerRegistry: makeSerializerRegistry() as never,
       defaultFileExtension: 'json',
     });

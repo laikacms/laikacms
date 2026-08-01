@@ -15,20 +15,30 @@ import {
 } from 'laikacms/core';
 import type { LaikaResult } from 'laikacms/core';
 
-export interface GithubDataSourceOptions {
-  appId: string | number;
-  privateKey: string;
-  installationId: string | number;
-  owner: string;
-  repo: string;
-  branch: string;
-  /** Optional Octokit override — useful for tests. */
-  octokit?: Octokit;
+type GithubAppAuthOptions = {
+  appId: string | number,
+  privateKey: string,
+  installationId: string | number,
+  octokit?: undefined,
+};
+
+type GithubOctokitAuthOptions = {
+  /** Pre-configured Octokit instance. When provided, App credentials are not required. */
+  octokit: Octokit,
+  appId?: undefined,
+  privateKey?: undefined,
+  installationId?: undefined,
+};
+
+export type GithubDataSourceOptions = {
+  owner: string,
+  repo: string,
+  branch: string,
   /** Token cache TTL in seconds. Installation tokens last ~1h; default refresh well before. */
-  tokenTtlSeconds?: number;
+  tokenTtlSeconds?: number,
   /** User-Agent string sent on all requests. */
-  userAgent?: string;
-}
+  userAgent?: string,
+} & (GithubAppAuthOptions | GithubOctokitAuthOptions);
 
 interface GithubDirEntry {
   name: string;
