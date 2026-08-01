@@ -4,7 +4,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "Decap CMS server-side integrations for Laika CMS: OAuth2 and the decap-api server adapter. The Decap CMS shell, widgets (incl. AI chat), config types and the laika backend live in the upstream-named `@laikacms/decap-cms` fork.",
+  "description": "Decap CMS server-side integrations for Laika CMS: OAuth2, the decap-api server adapter, and the Laika CMS backend for the Decap admin UI.",
   "keywords": [
     "decap-cms",
     "headless-cms",
@@ -31,6 +31,11 @@
     "CHANGELOG.md"
   ],
   "exports": {
+    "./decap-cms-backend-laika": {
+      "types": "./dist/decap-cms-backend-laika/index.d.ts",
+      "import": "./dist/decap-cms-backend-laika/index.js",
+      "default": "./dist/decap-cms-backend-laika/index.js"
+    },
     "./decap-api": {
       "types": "./dist/decap-api/index.d.ts",
       "import": "./dist/decap-api/index.js",
@@ -67,17 +72,32 @@
     "prepack": "node ../../scripts/check-no-catalog-deps.mjs"
   },
   "dependencies": {
-    "laikacms": "workspace:*",
     "aws-jwt-verify": "catalog:aws",
+    "effect": "catalog:default",
     "jsonwebtoken": "catalog:",
     "jwt-decode": "catalog:",
+    "laikacms": "workspace:*",
     "uuid": "catalog:",
     "yaml": "catalog:"
   },
+  "peerDependencies": {
+    "@laikacms/decap-cms": "^4.0.0",
+    "react": "catalog:react"
+  },
+  "peerDependenciesMeta": {
+    "@laikacms/decap-cms": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
+  },
   "devDependencies": {
     "@hono/node-server": "catalog:server",
+    "@laikacms/decap-cms": "4.0.0",
     "@types/jsonwebtoken": "catalog:types",
     "@types/node": "catalog:types",
+    "@types/react": "catalog:types",
     "rimraf": "catalog:tools",
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"
