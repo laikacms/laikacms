@@ -73,8 +73,10 @@ new GitlabStorageRepository({
   pass back via `update.metadata.revisionId` for optimistic-concurrency updates.
 - **Empty directories.** Git tracks files, not directories. `createFolder` writes a `.keep` file
   (filtered out of listings via the same ignore list as `storage-fs` and `@laikacms/github`).
-- **Listings on missing folders** are reported as `recoverableErrors` (a `NotFoundError`), matching
-  every other `StorageRepository`.
+- **Listings on missing folders** are reported as `recoverableErrors` (a `NotFoundError`). Note that
+  `@laikacms/github` behaves differently: GitHub's API cannot distinguish an empty directory from a
+  missing one (both return 404), so the GitHub backend maps 404 → empty results instead of a
+  `NotFoundError`. Bitbucket matches GitLab — missing folders surface as a `recoverableError`.
 - **Pagination.** Cursor pagination is not supported. The directory listing pages through
   `X-Next-Page` until exhausted, then offset/page styles are applied in memory.
 - **Self-hosted.** Pass `apiUrl: 'https://gitlab.example.com/api/v4'` for a self-hosted instance.
