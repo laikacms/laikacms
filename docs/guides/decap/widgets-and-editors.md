@@ -2,6 +2,16 @@
 
 ## Widgets
 
+> **Version requirement:** the widget subpaths (`/widgets/lucide-icon`, `/widgets/radix-icon`,
+> `/widgets/aichat`) ship in `@laikacms/decap-cms@alpha` (≥ 4.1.0-alpha.5). They are **not**
+> present in `@laikacms/decap-cms@latest` (4.0.4-alpha.3). Install the alpha tag explicitly:
+>
+> ```bash
+> npm install @laikacms/decap-cms@alpha
+> # or
+> pnpm add @laikacms/decap-cms@alpha
+> ```
+
 | Widget       | Subpath                                   |
 | ------------ | ----------------------------------------- |
 | AI Chat      | `@laikacms/decap-cms/widgets/aichat`      |
@@ -12,7 +22,7 @@ Each widget registers under a unique name (`lucide-icon` / `radix-icon`) so both
 same app without one overwriting the other.
 
 ```ts
-import CMS from '@laikacms/decap-cms';
+import CMS from 'decap-cms-app';
 import LucideWidgetIcon from '@laikacms/decap-cms/widgets/lucide-icon';
 import RadixWidgetIcon from '@laikacms/decap-cms/widgets/radix-icon';
 
@@ -22,6 +32,11 @@ CMS.registerWidget(LucideWidgetIcon.Widget());
 // Registers as 'radix-icon' — safe to call alongside lucide-icon
 CMS.registerWidget(RadixWidgetIcon.Widget());
 ```
+
+> **`decap-cms-app` vs `@laikacms/decap-cms` root import:** use `import CMS from 'decap-cms-app'`
+> (consistent with [quickstart-fs.md](./quickstart-fs) and [admin-shell.md](./admin-shell)). The
+> `@laikacms/decap-cms` root export (`dist/app/index.js`) imports the Node.js `path` module and
+> fails when bundled for the browser with esbuild.
 
 In collection config, reference them by their distinct names:
 
@@ -34,39 +49,6 @@ fields:
     name: feature_icon
     widget: radix-icon
 ```
-
----
-
-## Editor Components
-
-### Embedded Entry (`decap-cms-editor-component-embedded-entry`)
-
-Adds a markdown shortcode that lets editors link inline content cross-references from within the
-markdown editor toolbar. The shortcode format is `embedded-entry` with two quoted arguments:
-collection and entry slugs.
-
-```ts
-import CMS from '@laikacms/decap-cms';
-import { DecapCmsEditorComponentEmbeddedEntry } from '@laikacms/decap-cms/editor-component-embedded-entry';
-
-CMS.registerEditorComponent(DecapCmsEditorComponentEmbeddedEntry);
-```
-
-When an editor clicks the "Embedded Entry" toolbar button, Decap shows a two-field form:
-
-| Field      | Widget   | Purpose                                      |
-| ---------- | -------- | -------------------------------------------- |
-| Collection | `string` | Collection slug to embed from (e.g. `posts`) |
-| Entry      | `string` | Entry identifier within that collection      |
-
-The shortcode is stored verbatim in the markdown field and round-trips without data loss:
-
-```md
-Here is an inline reference: {{< embedded-entry "posts" "hello-world" >}}
-```
-
-To parse the shortcode in your site renderer, match against the pattern `embedded-entry` and extract
-the collection + entry slugs from the two quoted arguments.
 
 ---
 

@@ -128,7 +128,7 @@ const api = decapApi({
     return { id: 'dev', email: 'dev@localhost' };
   },
   // CORS: required when the Decap admin is served from a different origin than this
-  // API (e.g. `npx serve admin/` on :5000 while the API runs on :3000).
+  // API (e.g. `npx serve admin/ -l 5000` on :5000 while the API runs on :3000).
   // Without this the browser blocks every API call with a CORS error before the
   // Decap admin can authenticate.  In production, list only your actual admin origin.
   cors: { origins: ['http://localhost:5000'] },
@@ -328,12 +328,14 @@ npm start
 
 # Terminal 2 — compile the admin bundle, then serve it
 npx esbuild admin/index.ts --bundle --outfile=admin/bundle.js --format=iife --target=es2020
-npx serve admin/
+npx serve admin/ -l 5000
 ```
 
 esbuild bundles `admin/index.ts` together with `decap-cms-app` and
 `@laikacms/decap-cms/backends/laika` into a single `admin/bundle.js` that the browser can load
-directly. The `serve` step then hosts `admin/index.html` (and `bundle.js`) at
+directly. The `-l 5000` flag pins `serve` to port 5000 — without it, `serve` defaults to port 3000
+and falls back to a random ephemeral port when the API already holds 3000, breaking the hardcoded
+CORS origin. The `serve` step then hosts `admin/index.html` (and `bundle.js`) at
 `http://localhost:5000`.
 
 Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS admin UI.
@@ -348,7 +350,7 @@ Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS
 
 > **Rebuild after changes:** re-run the `npx esbuild …` command whenever you edit `admin/index.ts`
 > or `admin/config.yml`. For a faster inner loop, append `--watch` to the esbuild command and open a
-> third terminal for `npx serve admin/`.
+> third terminal for `npx serve admin/ -l 5000`.
 
 ---
 

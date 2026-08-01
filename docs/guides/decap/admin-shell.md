@@ -86,12 +86,12 @@ npx esbuild admin/index.ts --bundle --outfile=admin/bundle.js --format=iife --ta
 npm start
 
 # Terminal 2 — admin UI
-npx serve admin/
+npx serve admin/ -l 5000
 ```
 
-Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS admin.
+Open `http://localhost:5000` to access the Decap CMS admin.
 
-> **CORS:** when the admin (`npx serve` on `:5000`) and the API (`:3000`) are on different origins,
+> **CORS:** when the admin (`npx serve -l 5000`) and the API (`:3000`) are on different origins,
 > add `cors: { origins: ['http://localhost:5000'] }` to your `decapApi(...)` call. Without it the
 > browser blocks every request with a CORS error. In production, serve the admin and API from the
 > same origin to avoid the need for CORS. See [quickstart-fs-decap](./quickstart-fs) for a complete
