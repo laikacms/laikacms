@@ -205,6 +205,7 @@ auth-shaped error, surface a Laika-standard error from `@laikacms/core`:
 | Octokit returns 403 with auth-permission body                | `AuthorizationError`                                        |
 | Octokit returns 403 with `Resource not accessible by …` body | `ForbiddenError`                                            |
 | Octokit returns 403 + `x-ratelimit-remaining: 0`             | `TooManyRequestsError`                                      |
+| Octokit returns 429 (secondary rate limit)                   | `TooManyRequestsError`                                      |
 | Network / DNS failure during provider callback               | `AuthenticationError`                                       |
 | Any other GitHub error                                       | Existing mapping (`NotFoundError` / `InternalError` / etc.) |
 
