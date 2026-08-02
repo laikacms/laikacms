@@ -485,6 +485,29 @@ describe('POST /published', () => {
     expect(body.errors[0]!.code).toBe('bad_request');
     expect(body.errors[0]!.detail).toMatch(/data\.id is required/);
   });
+
+  it('defaults language to "und" when omitted (LCMS-511)', async () => {
+    let captured: unknown;
+    const doc = makeDocument('posts/new');
+    const repo = {
+      createDocument: vi.fn((data: unknown) => {
+        captured = data;
+        return LaikaTask.make(() => Effect.succeed(doc));
+      }),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    await api.fetch(
+      new Request('http://localhost/published', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: { type: 'published', id: 'posts/new', attributes: { content: { title: 'Hello' } } },
+        }),
+      }),
+    );
+    expect((captured as { language: string }).language).toBe('und');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -806,6 +829,33 @@ describe('POST /unpublished', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('500');
   });
+
+  it('defaults language to "und" when omitted (LCMS-511)', async () => {
+    let captured: unknown;
+    const draft = makeUnpublished('posts/draft');
+    const repo = {
+      createUnpublished: vi.fn((data: unknown) => {
+        captured = data;
+        return LaikaTask.make(() => Effect.succeed(draft));
+      }),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    await api.fetch(
+      new Request('http://localhost/unpublished', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'unpublished',
+            id: 'posts/draft',
+            attributes: { status: 'draft', content: { title: 'Draft' } },
+          },
+        }),
+      }),
+    );
+    expect((captured as { language: string }).language).toBe('und');
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -911,6 +961,29 @@ describe('POST /revisions', () => {
     expect(body.errors[0]!.status).toBe('400');
     expect(body.errors[0]!.code).toBe('bad_request');
     expect(body.errors[0]!.detail).toMatch(/attributes\.revision is required/);
+  });
+
+  it('defaults language to "und" when omitted (LCMS-511)', async () => {
+    let captured: unknown;
+    const rev = makeRevision('posts/hello', 'rev-1');
+    const repo = {
+      createRevision: vi.fn((data: unknown) => {
+        captured = data;
+        return LaikaTask.make(() => Effect.succeed(rev));
+      }),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    await api.fetch(
+      new Request('http://localhost/revisions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: { type: 'revision', id: 'posts/hello', attributes: { revision: 'rev-1', content: { title: 'Hello' } } },
+        }),
+      }),
+    );
+    expect((captured as { language: string }).language).toBe('und');
   });
 });
 

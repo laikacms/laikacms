@@ -173,8 +173,10 @@ export const documentFromJsonApi = (jsonApi: DocumentJsonApi): Document => fromJ
 export const documentCreateToJsonApi = (doc: DocumentCreate): DocumentCreateJsonApi =>
   toJsonApi(doc, 'published', 'key');
 
-export const documentCreateFromJsonApi = (jsonApi: DocumentCreateJsonApi): DocumentCreate =>
-  fromJsonApi(jsonApi, 'published', 'key');
+export const documentCreateFromJsonApi = (jsonApi: DocumentCreateJsonApi): DocumentCreate => {
+  const doc = fromJsonApi(jsonApi, 'published', 'key');
+  return { ...doc, language: doc.language ?? 'und' };
+};
 
 export const documentUpdateToJsonApi = (doc: DocumentUpdate): DocumentUpdateJsonApi =>
   toJsonApi(doc, 'published', 'key');
@@ -197,8 +199,10 @@ export const unpublishedFromJsonApi = (jsonApi: UnpublishedJsonApi): Unpublished
 export const unpublishedCreateToJsonApi = (doc: UnpublishedCreate): UnpublishedCreateJsonApi =>
   toJsonApi(doc, 'unpublished', 'key');
 
-export const unpublishedCreateFromJsonApi = (jsonApi: UnpublishedCreateJsonApi): UnpublishedCreate =>
-  fromJsonApi(jsonApi, 'unpublished', 'key');
+export const unpublishedCreateFromJsonApi = (jsonApi: UnpublishedCreateJsonApi): UnpublishedCreate => {
+  const doc = fromJsonApi(jsonApi, 'unpublished', 'key');
+  return { ...doc, language: doc.language ?? 'und' };
+};
 
 export const unpublishedUpdateToJsonApi = (doc: UnpublishedUpdate): UnpublishedUpdateJsonApi =>
   toJsonApi(doc, 'unpublished', 'key');
@@ -244,8 +248,10 @@ export const revisionFromJsonApi = (jsonApi: RevisionJsonApi): Revision => ({
 export const revisionCreateToJsonApi = (rev: RevisionCreate): RevisionCreateJsonApi =>
   toJsonApi(rev, 'revision', 'key');
 
-export const revisionCreateFromJsonApi = (jsonApi: RevisionCreateJsonApi): RevisionCreate =>
-  fromJsonApi(jsonApi, 'revision', 'key');
+export const revisionCreateFromJsonApi = (jsonApi: RevisionCreateJsonApi): RevisionCreate => {
+  const rev = fromJsonApi(jsonApi, 'revision', 'key');
+  return { ...rev, language: rev.language ?? 'und' };
+};
 
 export const revisionSummaryToJsonApi = (rev: RevisionSummary): RevisionSummaryJsonApi => {
   const { type: _type, ...attributes } = rev;
