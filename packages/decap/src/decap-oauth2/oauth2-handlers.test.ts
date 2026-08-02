@@ -803,6 +803,75 @@ describe('handlePasskeyAuthenticateVerify', () => {
     expect(json.requires_totp).toBe(true);
     expect(json.totp_session).toBeTruthy();
   });
+
+  it('returns 400 with Missing OAuth parameters when redirect_uri is absent', async () => {
+    vi.mocked(verifyAuthentication).mockResolvedValue({ success: true, userId: 'user-1' });
+    const callbacks = makeCallbacks();
+    const passkeyCbs = makePasskeyCallbacks();
+    const config = makeConfig(callbacks, { passkey: passkeyConfig(passkeyCbs) });
+    const router = decapOauth2(config);
+
+    // code_challenge present but redirect_uri missing
+    const url = makeUrl('passkey/authenticate/verify', { code_challenge: 'abc123' });
+    const request = new Request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validAuthCredential),
+    });
+    const response = await router.fetch(request);
+
+    expect(response.status).toBe(400);
+    const json = await response.json() as Record<string, unknown>;
+    expect(json.error).toBe('Missing OAuth parameters');
+  });
+
+  it('returns 400 with Missing OAuth parameters when code_challenge is absent', async () => {
+    vi.mocked(verifyAuthentication).mockResolvedValue({ success: true, userId: 'user-1' });
+    const callbacks = makeCallbacks();
+    const passkeyCbs = makePasskeyCallbacks();
+    const config = makeConfig(callbacks, { passkey: passkeyConfig(passkeyCbs) });
+    const router = decapOauth2(config);
+
+    // redirect_uri present but code_challenge missing
+    const url = makeUrl('passkey/authenticate/verify', {
+      redirect_uri: 'https://example.com/callback',
+    });
+    const request = new Request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validAuthCredential),
+    });
+    const response = await router.fetch(request);
+
+    expect(response.status).toBe(400);
+    const json = await response.json() as Record<string, unknown>;
+    expect(json.error).toBe('Missing OAuth parameters');
+  });
+
+  it('returns 500 when storeAuthorizationCode callback throws', async () => {
+    vi.mocked(verifyAuthentication).mockResolvedValue({ success: true, userId: 'user-1' });
+    const callbacks = makeCallbacks({
+      storeAuthorizationCode: vi.fn().mockRejectedValue(new Error('DB unavailable')),
+    });
+    const passkeyCbs = makePasskeyCallbacks();
+    const config = makeConfig(callbacks, { passkey: passkeyConfig(passkeyCbs) });
+    const router = decapOauth2(config);
+
+    const url = makeUrl('passkey/authenticate/verify', {
+      redirect_uri: 'https://example.com/callback',
+      code_challenge: 'abc123',
+    });
+    const request = new Request(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(validAuthCredential),
+    });
+    const response = await router.fetch(request);
+
+    expect(response.status).toBe(500);
+    const json = await response.json() as Record<string, unknown>;
+    expect(json.error).toBe('Authentication failed');
+  });
 });
 
 // ===========================================================================
