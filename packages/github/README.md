@@ -6,29 +6,14 @@ required.
 
 ## Auth modes
 
-The package currently ships with **one** authentication shape: **GitHub App (installation token)**.
-OAuth user-token auth is planned but not yet implemented — see the TODO section below.
+The package ships with **two** authentication shapes. They are mutually exclusive — supply either
+App credentials **or** a pre-built `Octokit` instance, not both.
 
-### OAuth (user token) — _planned; not yet implemented_
+### GitHub App (installation token)
 
-Use when the user editing content **is** the GitHub user whose identity will appear on the commits.
-This is the right choice for:
-
-- The OSS `laika-gateway` running on someone's own infra, where users sign in with GitHub and the
-  gateway acts as them.
-- `laikacli` (`laika local serve`) talking directly to a contributor's GitHub repo.
-- Any setup where you do **not** have a separate identity provider in front of GitHub.
-
-You provide a user OAuth token (e.g. from the standard `github.com/login/oauth` flow); the
-integration calls the GitHub API as that user. No App registration, no private key, no installation
-id.
-
-### GitHub App (installation token) — _for divergent identity_
-
-Use only when the user editing content is **not** a GitHub user (for example: they signed in to
-Laika Cloud with Google, but the content lives in a GitHub repo). In that case the App's
-installation token is what lets the platform write to GitHub on the user's behalf; the user has no
-GitHub identity to act under.
+Use when the user editing content is **not** a GitHub user (for example: they signed in to Laika
+Cloud with Google, but the content lives in a GitHub repo). The App's installation token lets the
+platform write to GitHub on the user's behalf; the user has no GitHub identity to act under.
 
 Practical signs that you need App mode:
 
@@ -37,13 +22,20 @@ Practical signs that you need App mode:
   `@laikacms/decap/decap-oauth2` + `@laikacms/decap/decap-api` + `@laikacms/integrations/github`) on
   top of GitHub storage.
 
-Practical signs you do **not** need App mode:
+### Pre-configured Octokit (bring-your-own client)
 
-- The user signing in is the user whose name should appear on the commit.
-- You don't want to register a GitHub App, manage its private key, or have users install it on their
-  repo before they can write.
+Pass a pre-built `Octokit` instance instead of App credentials. The package uses it as-is for all
+API calls — no token minting, no TTL management. This is the right choice when:
 
-## Usage — App mode (currently shipping)
+- **Testing** — inject a mocked/intercepted Octokit to avoid real GitHub API calls.
+- **GitHub Enterprise** — construct `new Octokit({ baseUrl: 'https://github.my-corp.com/api/v3' })`
+  and pass it in; no App registration required.
+- **Custom plugins / retry strategies** — build an Octokit with `@octokit/plugin-retry` or similar
+  and hand it to the storage repository.
+- **Any existing Octokit you already have** — if your app already manages a configured Octokit
+  (PAT, OAuth token, custom auth), just pass it rather than setting up a GitHub App.
+
+## Usage — App mode
 
 ```ts
 import { GithubStorageRepository } from '@laikacms/github/storage-gh';
@@ -51,7 +43,7 @@ import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
 const storage = new GithubStorageRepository({
-  // App-mode auth (the App's installation token is minted from the private key)
+  // App-mode auth: supply all three to mint an installation token from the private key.
   appId: env.GITHUB_APP_ID,
   privateKey: env.GITHUB_APP_PRIVATE_KEY,
   installationId: env.GITHUB_APP_INSTALLATION_ID,
@@ -69,31 +61,31 @@ const storage = new GithubStorageRepository({
 
 Then pass `storage` to `decapApi({ storage, ... })`.
 
-## Usage — OAuth mode (planned; see TODO below)
+## Usage — Octokit mode
 
 ```ts
+import { Octokit } from '@octokit/rest';
 import { GithubStorageRepository } from '@laikacms/github/storage-gh';
 
+// Any fully-configured Octokit instance works — PAT, OAuth, GHE, custom plugins.
+const octokit = new Octokit({ auth: env.GITHUB_TOKEN });
+
+// GitHub Enterprise example:
+// const octokit = new Octokit({ baseUrl: 'https://github.my-corp.com/api/v3', auth: env.GHE_TOKEN });
+
 const storage = new GithubStorageRepository({
-  // Async auth provider — invoked on demand, re-invoked on expiry / 401.
-  // Return whichever shape matches the user's identity setup.
-  auth: async () => ({
-    type: 'oauth-user',
-    token: await getOAuthTokenForCurrentUser(),
-    // Optional; if present, the integration refreshes proactively before this time.
-    expiresAt: new Date(Date.now() + 60 * 60 * 1000),
-  }),
+  octokit, // mutually exclusive with appId / privateKey / installationId
 
   owner: 'esstudio',
   repo: 'content',
   branch: 'main',
-  serializerRegistry: {/* … */},
+  serializerRegistry: {
+    yaml: yamlSerializer,
+    md: markdownSerializer,
+  },
   defaultFileExtension: 'md',
 });
 ```
-
-The same `auth` channel is how App mode will be expressed once the refactor lands — App credentials
-are just another shape (`type: 'app-installation'`) returned from the callback.
 
 ---
 
@@ -122,18 +114,32 @@ are just another shape (`type: 'app-installation'`) returned from the callback.
 
 All options are passed as a single object to `new GithubStorageRepository(options)`.
 
-### Required
+Auth options are a **discriminated union** — supply either `octokit` **or** the three App
+fields (`appId`, `privateKey`, `installationId`), never both.
 
-| Option                 | Type                        | Description                                                                                              |
-| ---------------------- | --------------------------- | -------------------------------------------------------------------------------------------------------- |
-| `appId`                | `string \| number`          | GitHub App ID.                                                                                           |
-| `privateKey`           | `string`                    | PEM private key for the App. Literal `\n` sequences and surrounding quotes are normalised automatically. |
-| `installationId`       | `string \| number`          | Installation ID for the App on the target repo.                                                          |
-| `owner`                | `string`                    | Repository owner (user or organisation).                                                                 |
-| `repo`                 | `string`                    | Repository name.                                                                                         |
-| `branch`               | `string`                    | Branch to read from and write to.                                                                        |
-| `serializerRegistry`   | `StorageSerializerRegistry` | Map of file extension → serializer. Drives which extensions the integration can read and write.          |
-| `defaultFileExtension` | `string`                    | Extension used when no other serializer can be determined.                                               |
+### Required (always)
+
+| Option                 | Type                        | Description                                                                                     |
+| ---------------------- | --------------------------- | ----------------------------------------------------------------------------------------------- |
+| `owner`                | `string`                    | Repository owner (user or organisation).                                                        |
+| `repo`                 | `string`                    | Repository name.                                                                                |
+| `branch`               | `string`                    | Branch to read from and write to.                                                               |
+| `serializerRegistry`   | `StorageSerializerRegistry` | Map of file extension → serializer. Drives which extensions the integration can read and write. |
+| `defaultFileExtension` | `string`                    | Extension used when no other serializer can be determined.                                      |
+
+### Auth — App mode (mutually exclusive with `octokit`)
+
+| Option           | Type               | Description                                                                                              |
+| ---------------- | ------------------ | -------------------------------------------------------------------------------------------------------- |
+| `appId`          | `string \| number` | GitHub App ID.                                                                                           |
+| `privateKey`     | `string`           | PEM private key for the App. Literal `\n` sequences and surrounding quotes are normalised automatically. |
+| `installationId` | `string \| number` | Installation ID for the App on the target repo.                                                          |
+
+### Auth — Octokit mode (mutually exclusive with App fields)
+
+| Option    | Type      | Description                                                                                                                                                      |
+| --------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `octokit` | `Octokit` | Pre-configured `@octokit/rest` instance. The package uses it as-is for all API calls — no token minting or TTL management. Mutually exclusive with App credentials. |
 
 ### Optional
 
@@ -142,7 +148,7 @@ All options are passed as a single object to `new GithubStorageRepository(option
 | `ignoreList`         | `string[]`                        | See below                   | Glob patterns for files that are excluded from directory listings. Overrides the built-in list entirely when supplied.                                                                                                                                                                         |
 | `commitAuthor`       | `{ name: string, email: string }` | _(none)_                    | Name and email stamped as **both** the `author` and `committer` fields on every GitHub API write call (`createOrUpdateFileContents` and `deleteFile`). Both fields are set explicitly; neither is left for GitHub to default. Omit to let GitHub fall back to the App installation's identity. |
 | `determineExtension` | `DetermineExtension`              | `defaultDetermineExtension` | Custom resolver that picks the file extension for a new object given its key and metadata. Replaces the built-in logic when provided.                                                                                                                                                          |
-| `tokenTtlSeconds`    | `number`                          | `3000` (50 min)             | How many seconds before the cached installation token is considered stale and a fresh one is minted. GitHub installation tokens last ~1 hour; the default refreshes well before expiry.                                                                                                        |
+| `tokenTtlSeconds`    | `number`                          | `3000` (50 min)             | App mode only. How many seconds before the cached installation token is considered stale and a fresh one is minted. GitHub installation tokens last ~1 hour; the default refreshes well before expiry.                                                                                         |
 | `userAgent`          | `string`                          | `'@laikacms/github'`        | `User-Agent` header sent on every Octokit request.                                                                                                                                                                                                                                             |
 
 #### Default `ignoreList`
@@ -160,86 +166,21 @@ When `ignoreList` is not supplied the following patterns are excluded:
 
 ---
 
-## TODO — make this package work without a GitHub App
+## TODO — OAuth user-token auth
 
-**Current state.** `GithubDataSourceOptions` requires `appId`, `privateKey`, and `installationId`;
-the package can only authenticate as a GitHub App installation. This blocks every OSS scenario where
-the user's GitHub identity should be the writer.
+**Current state.** The package supports two auth modes: GitHub App (installation token) and
+pre-configured Octokit (bring-your-own). The octokit mode unblocks testing, GitHub Enterprise, and
+custom auth plugins. A first-class OAuth user-token flow (where the user's GitHub identity appears
+on commits) is not yet implemented — it belongs in `@laikacms/decap/decap-oauth2` for
+self-hosted gateways.
 
-**Target shape.** The constructor accepts an **async auth provider** — a callback invoked on demand
-to produce credentials, just-in-time. The integration is responsible for caching the returned token
-until it expires and re-invoking the callback on expiry or on a 401 from GitHub.
+**Target shape.** When implemented, the constructor will accept an **async auth provider** — a
+callback invoked on demand to produce credentials. The octokit mode is the interim escape hatch:
+pass `new Octokit({ auth: yourToken })` to get non-App auth today.
 
-The discriminated union returned by the callback (names and fields below are the design intent — do
-**not** copy the `@octokit/auth-app` types verbatim; write a Laika-native shape that hides Octokit
-specifics from consumers):
-
-```ts
-type LaikaGithubAuth =
-  | {
-    type: 'oauth-user',
-    /** OAuth access token from github.com/login/oauth. */
-    token: string,
-    /** If present, the cache refreshes proactively before this time. */
-    expiresAt?: Date,
-    /** Optional refresh hook — invoked instead of the parent callback on expiry. */
-    refresh?: () => Promise<LaikaGithubAuth>,
-  }
-  | {
-    type: 'app-installation',
-    /** Installation access token. */
-    token: string,
-    installationId: number | string,
-    expiresAt?: Date,
-    refresh?: () => Promise<LaikaGithubAuth>,
-  }
-  | {
-    type: 'oauth-app',
-    clientId: string,
-    clientSecret: string,
-  }
-  | {
-    type: 'pat',
-    /** Personal Access Token — supported but discouraged; warn at construction. */
-    token: string,
-  };
-
-type LaikaGithubAuthProvider = () => Promise<LaikaGithubAuth>;
-```
-
-**Caching + expiry.** The integration owns the cache:
-
-- Cache the resolved token by reference identity of the provider callback.
-- If `expiresAt` is present, refresh `tokenTtlSeconds` (default 60s) before it. If `expiresAt` is
-  absent, do not cache across calls — re-invoke the callback per request.
-- If a request returns 401 after a valid cached token, evict and re-invoke the provider exactly
-  once. A second 401 surfaces as `AuthenticationError`.
-- The async callback is the single source of truth. Do not duplicate token state outside the cache.
-
-**Error mapping.** When the provider throws, or when the underlying GitHub call fails with an
-auth-shaped error, surface a Laika-standard error from `@laikacms/core`:
-
-| Cause                                                        | Laika error                                                 |
-| ------------------------------------------------------------ | ----------------------------------------------------------- |
-| Provider callback throws / rejects                           | `AuthenticationError`                                       |
-| Octokit / fetch returns 401                                  | `AuthenticationError`                                       |
-| Octokit returns 403 with auth-permission body                | `AuthorizationError`                                        |
-| Octokit returns 403 with `Resource not accessible by …` body | `ForbiddenError`                                            |
-| Octokit returns 403 + `x-ratelimit-remaining: 0`             | `TooManyRequestsError`                                      |
-| Octokit returns 429 (secondary rate limit)                   | `TooManyRequestsError`                                      |
-| Network / DNS failure during provider callback               | `AuthenticationError`                                       |
-| Any other GitHub error                                       | Existing mapping (`NotFoundError` / `InternalError` / etc.) |
-
-Errors include the underlying Octokit status + a short reason in `cause`, never the raw response
-body.
-
-**Migration.** Once the callback shape ships, App-mode usage moves to the callback form. The current
-`appId` / `privateKey` / `installationId` constructor fields remain accepted **for one minor
-version** with a deprecation warning that points at the callback form, then go away.
-
-**Out of scope for the first cut:**
+**Out of scope until the OAuth flow ships:**
 
 - Building the GitHub OAuth flow itself. That belongs in `@laikacms/decap/decap-oauth2` (and is
   documented there for self-hosted gateways managing their own users).
 - Token storage. Where the token lives between requests (cookie, KV, session, CLI keychain) is a
-  consumer concern; this package only needs the async callback that returns the current token.
+  consumer concern.
