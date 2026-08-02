@@ -3,8 +3,8 @@
 ## Widgets
 
 > **Version requirement:** the widget subpaths (`/widgets/lucide-icon`, `/widgets/radix-icon`,
-> `/widgets/aichat`) ship in `@laikacms/decap-cms@alpha` (≥ 4.1.0-alpha.5). They are **not**
-> present in `@laikacms/decap-cms@latest` (4.0.4-alpha.3). Install the alpha tag explicitly:
+> `/widgets/aichat`) ship in `@laikacms/decap-cms@alpha` (≥ 4.1.0-alpha.5). They are **not** present
+> in `@laikacms/decap-cms@latest` (4.0.4-alpha.3). Install the alpha tag explicitly:
 >
 > ```bash
 > npm install @laikacms/decap-cms@alpha
@@ -22,9 +22,9 @@ Each widget registers under a unique name (`lucide-icon` / `radix-icon`) so both
 same app without one overwriting the other.
 
 ```ts
-import CMS from 'decap-cms-app';
 import LucideWidgetIcon from '@laikacms/decap-cms/widgets/lucide-icon';
 import RadixWidgetIcon from '@laikacms/decap-cms/widgets/radix-icon';
+import CMS from 'decap-cms-app';
 
 // Registers as 'lucide-icon'
 CMS.registerWidget(LucideWidgetIcon.Widget());
