@@ -75,7 +75,16 @@ Returns a single collection by key.
 **Response 404** — collection key does not exist:
 
 ```json
-{ "errors": [{ "status": "404", "title": "not_found", "detail": "Collection 'posts' not found." }] }
+{
+  "errors": [
+    {
+      "status": "404",
+      "code": "not_found",
+      "title": "Not Found",
+      "detail": "Collection 'posts' not found."
+    }
+  ]
+}
 ```
 
 #### POST /collections
@@ -159,7 +168,12 @@ Updates an existing collection. `data.id` **must** match the URL `:key`; a misma
 ```json
 {
   "errors": [
-    { "status": "404", "title": "not_found", "detail": "Collection 'articles' not found." }
+    {
+      "status": "404",
+      "code": "not_found",
+      "title": "Not Found",
+      "detail": "Collection 'articles' not found."
+    }
   ]
 }
 ```
@@ -170,7 +184,8 @@ Updates an existing collection. `data.id` **must** match the URL `:key`; a misma
 {
   "errors": [{
     "status": "409",
-    "title": "conflict",
+    "code": "conflict",
+    "title": "Conflict",
     "detail": "Body data.id ('wrong-key') does not match URL key ('articles'). Use the URL key as the resource identifier."
   }]
 }

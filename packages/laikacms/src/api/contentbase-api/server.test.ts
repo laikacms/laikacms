@@ -99,9 +99,11 @@ describe('GET /collections', () => {
     const res = await api.fetch(new Request('http://localhost/collections'));
     expect(res.status).toBe(500);
 
-    const body = await res.json() as { errors: Array<{ status: string, title: string }> };
+    const body = await res.json() as { errors: Array<{ status: string, code: string, title: string }> };
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('500');
+    expect(body.errors[0]!.code).toBe('internal_error');
+    expect(body.errors[0]!.title).toBe('Internal Error');
   });
 });
 
@@ -149,9 +151,11 @@ describe('GET /collections/:key', () => {
     const res = await api.fetch(new Request('http://localhost/collections/missing'));
     expect(res.status).toBe(404);
 
-    const body = await res.json() as { errors: Array<{ status: string, title: string, detail: string }> };
+    const body = await res.json() as { errors: Array<{ status: string, code: string, title: string, detail: string }> };
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('404');
+    expect(body.errors[0]!.code).toBe('not_found');
+    expect(body.errors[0]!.title).toBe('Not Found');
     expect(body.errors[0]!.detail).toContain('missing');
   });
 });
@@ -642,8 +646,10 @@ describe('contentbase-api global error handler', () => {
     const res = await api.fetch(new Request('http://localhost/collections'));
     expect(res.status).toBe(503);
 
-    const body = await res.json() as { errors: Array<{ status: string }> };
+    const body = await res.json() as { errors: Array<{ status: string, code: string, title: string }> };
     expect(body.errors[0]!.status).toBe('503');
+    expect(body.errors[0]!.code).toBe('service_unavailable');
+    expect(body.errors[0]!.title).toBe('Service Unavailable');
   });
 
   it('routes error details through a custom logger and does not call console.error', async () => {
