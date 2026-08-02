@@ -247,12 +247,15 @@ PKCE server from `@laikacms/decap/decap-oauth2` — see
 `decapApi(...)` is runtime-agnostic — the only thing that changes between Node and the edge is which
 `StorageRepository` you construct:
 
-| Storage repo                  | Subpath                    | Runtime                            |
-| ----------------------------- | -------------------------- | ---------------------------------- |
-| `FileSystemStorageRepository` | `laikacms/storage-fs`      | Node, Bun, Deno (needs `node:fs`)  |
-| `R2StorageRepository`         | `laikacms/storage-r2`      | V8 isolates (Workers, Vercel Edge) |
-| `DrizzleStorageRepository`    | `laikacms/storage-drizzle` | Any SQL DB via Drizzle ORM         |
-| `WebDavStorageRepository`     | `laikacms/storage-webdav`  | Any RFC 4918 WebDAV server         |
+| Storage repo                  | Subpath                          | Runtime                                          |
+| ----------------------------- | -------------------------------- | ------------------------------------------------ |
+| `FileSystemStorageRepository` | `laikacms/storage-fs`            | Node, Bun, Deno (needs `node:fs`)                |
+| `R2StorageRepository`         | `laikacms/storage-r2`            | V8 isolates (Workers, Vercel Edge)               |
+| `DrizzleStorageRepository`    | `laikacms/storage-drizzle`       | Any SQL DB via Drizzle ORM                       |
+| `WebDavStorageRepository`     | `laikacms/storage-webdav`        | Any RFC 4918 WebDAV server                       |
+| `GithubStorageRepository`     | `@laikacms/github/storage-gh`    | Runtime-agnostic (`fetch`-only); GitHub repos    |
+| `GitlabStorageRepository`     | `@laikacms/gitlab/storage-gl`    | Runtime-agnostic (`fetch`-only); GitLab repos    |
+| `BitbucketStorageRepository`  | `@laikacms/bitbucket/storage-bb` | Runtime-agnostic (`fetch`-only); Bitbucket repos |
 
 Wrap the repo in `ContentBaseDocumentsRepository` / `ContentBaseAssetsRepository`, pass them to
 `decapApi(...)`, and mount `.fetch` from your framework's catch-all route. `decapApi(...)` returns
@@ -288,12 +291,15 @@ These are the things that consistently bite first-time integrators:
    `StorageRepository` such as `R2StorageRepository` instead and pass it to the same
    `decapApi(...)`.
 
-5. **Workers/edge storage is currently R2-only.** Vercel Blob, Netlify Blobs, Deno KV, Bun S3 don't
-   have first-party `StorageRepository` adapters yet. The Vercel Edge and Netlify Functions starters
-   document this gap — for production on those platforms, write a small `StorageRepository` adapter
-   or use `@laikacms/github/storage-gh` (GitHub-backed):
+5. **Edge-compatible storage options: R2 and the git-backed repos.** `R2StorageRepository`,
+   `GithubStorageRepository`, `GitlabStorageRepository`, and `BitbucketStorageRepository` are all
+   valid in V8 isolates and any `fetch`-only edge runtime. Vercel Blob, Netlify Blobs, Deno KV, and
+   Bun S3 don't have first-party adapters yet — for those platforms write a small
+   `StorageRepository` adapter or use one of the git-backed repos:
    ```ts
+   import { BitbucketStorageRepository } from '@laikacms/bitbucket/storage-bb';
    import { GithubStorageRepository } from '@laikacms/github/storage-gh';
+   import { GitlabStorageRepository } from '@laikacms/gitlab/storage-gl';
    ```
 
 6. **Hide the Decap admin shell from your framework's hydration.** SSR frameworks hydrate the whole
