@@ -89,17 +89,18 @@ export interface OAuthTotpCallbacks {
   /**
    * Delete a pending TOTP session. Called after the session has been consumed
    * (a TOTP code was successfully verified) so the same session token cannot be
-   * replayed.
+   * replayed. Optional — omitting relies on natural TTL expiry.
    */
-  deletePendingTotpSession(sessionId: string): Promise<void>;
+  deletePendingTotpSession?(sessionId: string): Promise<void>;
   /**
    * Return the most recently consumed TOTP time step for the user, or null if
    * none has been recorded. Together with `setLastTotpStep` this provides
-   * RFC 6238 §5.2 replay protection.
+   * RFC 6238 §5.2 replay protection. Optional — omitting disables per-step
+   * replay protection.
    */
-  getLastTotpStep(userId: string): Promise<number | null>;
-  /** Record the time step of a successfully consumed TOTP code. */
-  setLastTotpStep(userId: string, step: number): Promise<void>;
+  getLastTotpStep?(userId: string): Promise<number | null>;
+  /** Record the time step of a successfully consumed TOTP code. Optional — omit alongside `getLastTotpStep`. */
+  setLastTotpStep?(userId: string, step: number): Promise<void>;
 }
 
 /**
@@ -335,12 +336,12 @@ export async function verifyOAuthTOTPWithReplayProtection(
     return { valid: false };
   }
 
-  const last = await callbacks.getLastTotpStep(userId);
+  const last = callbacks.getLastTotpStep ? await callbacks.getLastTotpStep(userId) : null;
   if (last !== null && result.step <= last) {
     return { valid: false, replay: true };
   }
 
-  await callbacks.setLastTotpStep(userId, result.step);
+  if (callbacks.setLastTotpStep) await callbacks.setLastTotpStep(userId, result.step);
 
   return { valid: true };
 }
