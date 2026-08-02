@@ -209,8 +209,8 @@ pnpm add -D esbuild
 > recorded in `pnpm-workspace.yaml`. Without those grants `pnpm` exits with
 > `ERR_PNPM_IGNORED_BUILDS` and the install step fails.
 
-> The `laika` backend lives at the `@laikacms/decap-cms/backends/laika` subpath export of the Decap
-> CMS fork. There is no separate backend package on npm.
+> The `laika` backend ships as `@laikacms/decap/decap-cms-backend-laika` (a subpath of the
+> `@laikacms/decap` package). Import `createLaikaBackend` from there.
 >
 > `@laikacms/decap-cms` is the scoped Decap CMS fork that provides the
 > `@laikacms/decap-cms/lib/util`, `/lib/auth`, `/ui-default`, and `/core` subpaths required by the
@@ -246,7 +246,7 @@ The static file server needs an `index.html` to load your compiled bundle:
 
 ```typescript
 // admin/index.ts
-import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
+import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 import CMS from 'decap-cms-app';
 
 // No explicit documentsApiBaseUrl / assetsApiBaseUrl needed: the backend
@@ -332,7 +332,7 @@ npx serve admin/ -l 5000
 ```
 
 esbuild bundles `admin/index.ts` together with `decap-cms-app` and
-`@laikacms/decap-cms/backends/laika` into a single `admin/bundle.js` that the browser can load
+`@laikacms/decap/decap-cms-backend-laika` into a single `admin/bundle.js` that the browser can load
 directly. The `-l 5000` flag pins `serve` to port 5000 — without it, `serve` defaults to port 3000
 and falls back to a random ephemeral port when the API already holds 3000, breaking the hardcoded
 CORS origin. The `serve` step then hosts `admin/index.html` (and `bundle.js`) at

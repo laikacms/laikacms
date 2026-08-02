@@ -113,14 +113,14 @@ Decap CMS server-side integrations: the Decap-compatible API and the OAuth2 serv
 > moved into the `@laikacms/decap-cms` fork: `…/widgets/aichat`, `…/widgets/lucide-icon`,
 > `…/widgets/radix-icon`, `…/locales/nl`, `…/editor-component-embedded-entry`, and `…/config-types`.
 
-| Subpath                                | Description                            |
-| -------------------------------------- | -------------------------------------- |
-| `@laikacms/decap-cms/backends/laika`   | Decap CMS backend (lives in the fork)  |
-| `@laikacms/decap/decap-api`            | Decap-compatible API                   |
-| `@laikacms/decap/decap-oauth2`         | OAuth2 server with PKCE                |
-| `@laikacms/decap/decap-oauth2/i18n`    | i18n bundle index for the OAuth2 UI    |
-| `@laikacms/decap/decap-oauth2/i18n/en` | English translations for the OAuth2 UI |
-| `@laikacms/decap/decap-oauth2/i18n/nl` | Dutch translations for the OAuth2 UI   |
+| Subpath                                   | Description                                |
+| ----------------------------------------- | ------------------------------------------ |
+| `@laikacms/decap/decap-cms-backend-laika` | Decap CMS backend (`createLaikaBackend()`) |
+| `@laikacms/decap/decap-api`               | Decap-compatible API                       |
+| `@laikacms/decap/decap-oauth2`            | OAuth2 server with PKCE                    |
+| `@laikacms/decap/decap-oauth2/i18n`       | i18n bundle index for the OAuth2 UI        |
+| `@laikacms/decap/decap-oauth2/i18n/en`    | English translations for the OAuth2 UI     |
+| `@laikacms/decap/decap-oauth2/i18n/nl`    | Dutch translations for the OAuth2 UI       |
 
 ## `decap-cms-lexical-core`
 

@@ -4,10 +4,10 @@ The admin UI requires a compiled browser bundle — compile the Laika backend an
 with esbuild, then serve the resulting files as static assets.
 
 > **Why not esm.sh / import maps?** esm.sh re-bundles packages on the fly but does not fully resolve
-> deep `export *` barrel chains. The `@laikacms/decap-cms/backends/laika` subpath depends on symbols
-> re-exported through several barrel layers (e.g. `DocumentsCompatibilityDate`) that esm.sh's
-> bundler drops, so the admin silently fails to load. esbuild resolves all transitive imports at
-> build time and produces a self-contained bundle with no runtime CDN dependency.
+> deep `export *` barrel chains. The `@laikacms/decap/decap-cms-backend-laika` subpath depends on
+> symbols re-exported through several barrel layers (e.g. `DocumentsCompatibilityDate`) that
+> esm.sh's bundler drops, so the admin silently fails to load. esbuild resolves all transitive
+> imports at build time and produces a self-contained bundle with no runtime CDN dependency.
 
 ### Install build dependencies
 
@@ -23,7 +23,7 @@ Without it the esbuild step will fail with "Could not resolve" errors.
 
 ```typescript
 // admin/index.ts
-import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
+import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 import CMS from 'decap-cms-app';
 
 const LaikaBackend = createLaikaBackend();
@@ -91,8 +91,8 @@ npx serve admin/ -l 5000
 
 Open `http://localhost:5000` to access the Decap CMS admin.
 
-> **CORS:** when the admin (`npx serve -l 5000`) and the API (`:3000`) are on different origins,
-> add `cors: { origins: ['http://localhost:5000'] }` to your `decapApi(...)` call. Without it the
+> **CORS:** when the admin (`npx serve -l 5000`) and the API (`:3000`) are on different origins, add
+> `cors: { origins: ['http://localhost:5000'] }` to your `decapApi(...)` call. Without it the
 > browser blocks every request with a CORS error. In production, serve the admin and API from the
 > same origin to avoid the need for CORS. See [quickstart-fs-decap](./quickstart-fs) for a complete
 > working example.
@@ -118,9 +118,9 @@ For full control (custom widgets, the Decap React tree) you can instead render a
 ```ts
 // src/components/DecapAdmin.tsx (a React island)
 import { App } from '@laikacms/decap-cms/app';
-import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
 import DecapCmsCore, { DecapCmsProvider } from '@laikacms/decap-cms/core';
 import DEFAULT_WIDGET_STRING from '@laikacms/decap-cms/widgets/string';
+import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 // …other widgets…
 
 import { decapConfig } from '~/lib/decap-config.ts';

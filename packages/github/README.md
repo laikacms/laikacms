@@ -32,8 +32,8 @@ API calls — no token minting, no TTL management. This is the right choice when
   and pass it in; no App registration required.
 - **Custom plugins / retry strategies** — build an Octokit with `@octokit/plugin-retry` or similar
   and hand it to the storage repository.
-- **Any existing Octokit you already have** — if your app already manages a configured Octokit
-  (PAT, OAuth token, custom auth), just pass it rather than setting up a GitHub App.
+- **Any existing Octokit you already have** — if your app already manages a configured Octokit (PAT,
+  OAuth token, custom auth), just pass it rather than setting up a GitHub App.
 
 ## Usage — App mode
 
@@ -64,8 +64,8 @@ Then pass `storage` to `decapApi({ storage, ... })`.
 ## Usage — Octokit mode
 
 ```ts
-import { Octokit } from '@octokit/rest';
 import { GithubStorageRepository } from '@laikacms/github/storage-gh';
+import { Octokit } from '@octokit/rest';
 
 // Any fully-configured Octokit instance works — PAT, OAuth, GHE, custom plugins.
 const octokit = new Octokit({ auth: env.GITHUB_TOKEN });
@@ -114,8 +114,8 @@ const storage = new GithubStorageRepository({
 
 All options are passed as a single object to `new GithubStorageRepository(options)`.
 
-Auth options are a **discriminated union** — supply either `octokit` **or** the three App
-fields (`appId`, `privateKey`, `installationId`), never both.
+Auth options are a **discriminated union** — supply either `octokit` **or** the three App fields
+(`appId`, `privateKey`, `installationId`), never both.
 
 ### Required (always)
 
@@ -137,8 +137,8 @@ fields (`appId`, `privateKey`, `installationId`), never both.
 
 ### Auth — Octokit mode (mutually exclusive with App fields)
 
-| Option    | Type      | Description                                                                                                                                                      |
-| --------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Option    | Type      | Description                                                                                                                                                         |
+| --------- | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `octokit` | `Octokit` | Pre-configured `@octokit/rest` instance. The package uses it as-is for all API calls — no token minting or TTL management. Mutually exclusive with App credentials. |
 
 ### Optional
@@ -171,8 +171,8 @@ When `ignoreList` is not supplied the following patterns are excluded:
 **Current state.** The package supports two auth modes: GitHub App (installation token) and
 pre-configured Octokit (bring-your-own). The octokit mode unblocks testing, GitHub Enterprise, and
 custom auth plugins. A first-class OAuth user-token flow (where the user's GitHub identity appears
-on commits) is not yet implemented — it belongs in `@laikacms/decap/decap-oauth2` for
-self-hosted gateways.
+on commits) is not yet implemented — it belongs in `@laikacms/decap/decap-oauth2` for self-hosted
+gateways.
 
 **Target shape.** When implemented, the constructor will accept an **async auth provider** — a
 callback invoked on demand to produce credentials. The octokit mode is the interim escape hatch:

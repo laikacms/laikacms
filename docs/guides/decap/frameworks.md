@@ -474,8 +474,8 @@ SvelteKit has no `c.html()` equivalent for serving a raw admin shell. The correc
     const script = document.createElement('script');
     script.src = 'https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js';
     script.onload = async () => {
-      const { default: createLaikaBackend } = await import(
-        '@laikacms/decap-cms/backends/laika'
+      const { createLaikaBackend } = await import(
+        '@laikacms/decap/decap-cms-backend-laika'
       );
       window.CMS.registerBackend('laika', createLaikaBackend());
       window.CMS.init({ config: { /* your decap config */ } });
