@@ -6,12 +6,12 @@ own packages.
 > **Repository layout (June 2026, updated July 2026).** This monorepo now carries only the two core
 > packages — `laikacms` and `@laikacms/decap` (`@laikacms/decap-ai` and the client-side decap extras
 > moved into the `@laikacms/decap-cms` fork in July 2026, DCMS-492). The other packages documented
-> below (`@laikacms/aws`, `@laikacms/github`, `@laikacms/git-gateway`, `laikacli`,
-> `decap-cms-widget-lexicaleditor`, `decap-cms-widget-portabletext-editor`,
-> `decap-cms-lexical-core`, and the rest of the adapters) are still published to npm under the same
-> names but are now developed in **separate repositories**. See
-> [the restructure note](../contributing/restructure-2026-06) for details and the current status of
-> the moved repos.
+> below (`@laikacms/aws`, `@laikacms/github`, `@laikacms/gitlab`, `@laikacms/bitbucket`,
+> `@laikacms/git-gateway`, `laikacli`, `decap-cms-widget-lexicaleditor`,
+> `decap-cms-widget-portabletext-editor`, `decap-cms-lexical-core`, and the rest of the adapters)
+> are still published to npm under the same names but are now developed in **separate
+> repositories**. See [the restructure note](../contributing/restructure-2026-06) for details and
+> the current status of the moved repos.
 
 ## `laikacms`
 
@@ -263,6 +263,71 @@ GitHub-backed `StorageRepository` (GitHub App authentication).
 | `branch`          | `string`            | always                  | Branch to read from and commit to.                                                               |
 | `tokenTtlSeconds` | `number` (optional) | —                       | Installation token TTL in seconds. Defaults to 50 minutes (tokens last ~1 h).                    |
 | `userAgent`       | `string` (optional) | —                       | Custom User-Agent header for GitHub API requests. Defaults to `@laikacms/github`.                |
+
+## `@laikacms/gitlab`
+
+GitLab-backed `StorageRepository` via the REST v4 API. Authenticates with a Personal Access Token,
+an OAuth bearer token, or a CI job token. Runtime-agnostic — only depends on `fetch`.
+
+| Subpath                       | Description                      |
+| ----------------------------- | -------------------------------- |
+| `@laikacms/gitlab/storage-gl` | GitLab-backed storage repository |
+
+### `GitlabStorageRepositoryOptions`
+
+| Option                 | Type                                         | Required | Description                                                                                        |
+| ---------------------- | -------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------- |
+| `projectId`            | `string \| number`                           | always   | Numeric project ID or URL-encoded path (`group/subgroup/project`).                                 |
+| `branch`               | `string`                                     | always   | Branch to read from and commit to.                                                                 |
+| `auth`                 | `GitlabAuth`                                 | —        | Auth credentials. Omit for anonymous reads on public projects. See auth union below.               |
+| `apiUrl`               | `string` (optional)                          | —        | API base URL. Defaults to `https://gitlab.com/api/v4`. Override for self-hosted GitLab.            |
+| `serializerRegistry`   | `StorageSerializerRegistry`                  | always   | Map of extension → serializer (e.g. `{ md: markdownSerializer }`).                                 |
+| `defaultFileExtension` | `string`                                     | always   | Extension used when creating objects (e.g. `'md'`).                                                |
+| `commitAuthor`         | `{ name: string, email: string }` (optional) | —        | Author attached to every commit. Omit to use the token owner's identity.                           |
+| `ignoreList`           | `readonly string[]` (optional)               | —        | Glob patterns to exclude from directory listings. Defaults hide `.keep`, `.DS_Store`, etc.         |
+| `determineExtension`   | `DetermineExtension` (optional)              | —        | Custom strategy for picking the on-server file extension. Defaults to `defaultDetermineExtension`. |
+
+**`GitlabAuth` union** — supply exactly one of:
+
+| Field        | Type                                | Description                                                |
+| ------------ | ----------------------------------- | ---------------------------------------------------------- |
+| `token`      | `string`                            | Personal access token. Sent as `PRIVATE-TOKEN` header.     |
+| `oauthToken` | `string`                            | OAuth 2.0 bearer token. Sent as `Authorization: Bearer …`. |
+| `jobToken`   | `string`                            | CI job token. Sent as `JOB-TOKEN` header.                  |
+| `headers`    | `Record<string, string>` (optional) | Extra headers merged into every request.                   |
+
+## `@laikacms/bitbucket`
+
+Bitbucket Cloud-backed `StorageRepository` via the REST v2 API. Authenticates with an app password
+or an OAuth 2.0 token. Runtime-agnostic — only depends on `fetch`.
+
+| Subpath                          | Description                         |
+| -------------------------------- | ----------------------------------- |
+| `@laikacms/bitbucket/storage-bb` | Bitbucket-backed storage repository |
+
+### `BitbucketStorageRepositoryOptions`
+
+| Option                 | Type                                         | Required | Description                                                                                |
+| ---------------------- | -------------------------------------------- | -------- | ------------------------------------------------------------------------------------------ |
+| `workspace`            | `string`                                     | always   | Bitbucket workspace slug (e.g. `'acme'`).                                                  |
+| `repo`                 | `string`                                     | always   | Repository slug within the workspace.                                                      |
+| `branch`               | `string`                                     | always   | Branch every commit lands on.                                                              |
+| `auth`                 | `BitbucketAuth`                              | always   | Auth credentials. See auth union below.                                                    |
+| `apiUrl`               | `string` (optional)                          | —        | API base URL. Defaults to `https://api.bitbucket.org/2.0`.                                 |
+| `serializerRegistry`   | `StorageSerializerRegistry`                  | always   | Map of extension → serializer (e.g. `{ md: markdownSerializer }`).                         |
+| `defaultFileExtension` | `string`                                     | always   | Extension used when creating objects (e.g. `'md'`).                                        |
+| `commitAuthor`         | `{ name: string, email: string }` (optional) | —        | Author attached to every commit.                                                           |
+| `ignoreList`           | `readonly string[]` (optional)               | —        | Glob patterns to exclude from directory listings. Defaults hide `.keep`, `.DS_Store`, etc. |
+| `determineExtension`   | `DetermineExtension` (optional)              | —        | Custom strategy for picking the on-server file extension.                                  |
+
+**`BitbucketAuth` union** — supply one of:
+
+| Field           | Type                                     | Description                                                                    |
+| --------------- | ---------------------------------------- | ------------------------------------------------------------------------------ |
+| `appPassword`   | `{ username: string, password: string }` | App-password tuple. Sent as HTTP Basic.                                        |
+| `oauthToken`    | `string`                                 | OAuth 2.0 access token. Sent as Bearer.                                        |
+| `tokenProvider` | `() => string \| Promise<string>`        | Async token provider — called before every request (useful for token refresh). |
+| `headers`       | `Record<string, string>` (optional)      | Extra headers merged into every request.                                       |
 
 ## `@laikacms/git-gateway`
 
