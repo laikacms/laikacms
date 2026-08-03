@@ -1,4 +1,4 @@
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError, TooManyRequestsError } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -269,6 +269,53 @@ describe('BitbucketStorageRepository auth', () => {
       repo.createObject({ type: 'object', key: 'h', content: { body: 'x' } }),
     );
     expect(bb.lastAuth()).toBe('Bearer oauth-xyz');
+  });
+});
+
+describe('BitbucketStorageRepository.getAtom error propagation', () => {
+  const makeRepoWithFetch = (fetchImpl: typeof fetch) =>
+    new BitbucketStorageRepository({
+      workspace: WS,
+      repo: REPO,
+      branch: BRANCH,
+      auth: { appPassword: { username: 'alice', password: 'app-pw' } },
+      apiUrl: API_URL,
+      fetch: fetchImpl,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+      commitAuthor: { name: 'Laika Bot', email: 'bot@example.com' },
+    });
+
+  it('propagates TooManyRequestsError (429) instead of falling through to getFolder', async () => {
+    const fetch429: typeof fetch = async () =>
+      new Response(JSON.stringify({ error: { message: 'Rate limit exceeded' } }), { status: 429 });
+    const repo = makeRepoWithFetch(fetch429);
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(TooManyRequestsError);
+  });
+
+  it('propagates ForbiddenError (403) instead of falling through to getFolder', async () => {
+    const fetch403: typeof fetch = async () =>
+      new Response(JSON.stringify({ error: { message: 'Access denied' } }), { status: 403 });
+    const repo = makeRepoWithFetch(fetch403);
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('falls through to getFolder on NotFoundError and returns folder when it exists', async () => {
+    seedFile('notes/.keep', '');
+    const repo = makeRepo();
+    const atom = await LaikaTask.runPromise(repo.getAtom('notes'));
+    expect(atom.type).toBe('folder');
+    expect(atom.key).toBe('notes');
   });
 });
 
