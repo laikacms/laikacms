@@ -6,7 +6,7 @@
  * can be exercised by injecting mock DocumentsRepository / AssetsRepository
  * implementations.
  *
- * @laikacms/decap-cms/lib-util is fully mocked: the package's dist bundle
+ * @laikacms/decap-cms/lib/util is fully mocked: the package's dist bundle
  * imports extension-less relative specifiers (e.g. `'./utilities'`) which
  * Node.js ESM cannot resolve, so `vi.importActual` / `importOriginal` fails
  * at module load time. The mock factory below stays a static factory — no
@@ -15,7 +15,7 @@
  * ACCESS_TOKEN_ERROR) and the v4 Cursor shape are used so assertions match
  * what the real package produces at runtime.
  *
- * lib-auth and ui-default remain fully mocked for the same ESM reason, plus
+ * lib/auth and ui-default remain fully mocked for the same ESM reason, plus
  * they access the DOM at module load time.
  * We do NOT test the authentication flow because that requires a running server.
  */
@@ -80,7 +80,7 @@ const { Cursor, CURSOR_COMPATIBILITY_SYMBOL, API_ERROR, ACCESS_TOKEN_ERROR } = v
   return { Cursor, CURSOR_COMPATIBILITY_SYMBOL, API_ERROR, ACCESS_TOKEN_ERROR };
 });
 
-vi.mock('@laikacms/decap-cms/lib-util', () => ({
+vi.mock('@laikacms/decap-cms/lib/util', () => ({
   AccessTokenError: class AccessTokenError extends Error {
     constructor(msg: string) {
       super(msg);
@@ -104,7 +104,7 @@ vi.mock('@laikacms/decap-cms/lib-util', () => ({
   CURSOR_COMPATIBILITY_SYMBOL,
 }));
 
-vi.mock('@laikacms/decap-cms/lib-auth', () => ({
+vi.mock('@laikacms/decap-cms/lib/auth', () => ({
   PkceAuthenticator: class PkceAuthenticator {
     completeAuth = vi.fn();
     authenticate = vi.fn();
@@ -201,7 +201,7 @@ function makeConfig(overrides: Record<string, unknown> = {}) {
 // Import createLaikaBackend (after mocks are in place)
 // ---------------------------------------------------------------------------
 
-import { unsentRequest } from '@laikacms/decap-cms/lib-util';
+import { unsentRequest } from '@laikacms/decap-cms/lib/util';
 
 import createLaikaBackend from './laika-backend.js';
 
