@@ -290,9 +290,11 @@ export class BitbucketStorageRepository extends StorageRepository {
       Effect.gen({ self: this }, function*() {
         // Bitbucket doesn't expose a cheap "is it a file or a directory" probe
         // other than fetching meta on the file vs listing the dir. Try the file
-        // surface first; fall through to folder on a NotFoundError.
+        // surface first; fall through to folder only on NotFoundError — all other
+        // errors (429, 403, 5xx) must propagate unchanged.
         const probe = yield* Effect.result(LaikaTask.runValue(this.getObject(key)));
         if (Result.isSuccess(probe)) return probe.success as Atom;
+        if (!(probe.failure instanceof NotFoundError)) return yield* Effect.fail(probe.failure);
         return yield* LaikaTask.runValue(this.getFolder(key));
       })
     );
