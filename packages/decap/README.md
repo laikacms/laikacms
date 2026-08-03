@@ -96,6 +96,41 @@ declare module '@laikacms/decap/decap-api' {
 | `fetch(request: Request): Promise<Response>`                       | Main catch-all handler — route all Decap API traffic here                                                                                                                                                                      |
 | `authenticateRequest(request: Request): Promise<Response \| User>` | Validates the request's auth (Bearer or API key) and returns a `User` on success, or a `Response` (401/403) on failure. Use in SSR route handlers to protect pages or inject the current user without routing through the API. |
 
+#### `decap-cms-backend-laika` options
+
+`createLaikaBackend(options?)` accepts an optional options object:
+
+| Option                   | Type                                                           | Default                                    | Description                                                                                                         |
+| ------------------------ | -------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `getDocumentsRepository` | `(opts: GetDocumentsRepositoryOptions) => DocumentsRepository` | `new DocumentsJsonApiProxyRepository(...)` | Override the documents repository factory — use to add interceptors, logging, or custom routing                     |
+| `getAssetsRepository`    | `(opts: GetAssetsRepositoryOptions) => AssetsRepository`       | `new AssetsJsonApiProxyRepository(...)`    | Override the assets repository factory                                                                              |
+| `documentsApiBaseUrl`    | `string`                                                       | derived from `api_url + '/documents'`      | Explicit documents API base URL; use when documents and assets APIs are served from different hosts or base paths   |
+| `assetsApiBaseUrl`       | `string`                                                       | derived from `api_url + '/assets'`         | Explicit assets API base URL                                                                                        |
+| `onWarning`              | `(error: LaikaError) => void`                                  | `console.warn(...)`                        | Hook called for every recoverable warning — use for structured logging, Sentry breadcrumbs, or observability toasts |
+
+The `backend:` block in your Decap config also accepts:
+
+| Field         | Type       | Description                                                                                                    |
+| ------------- | ---------- | -------------------------------------------------------------------------------------------------------------- |
+| `acceptRoles` | `string[]` | Restrict access to users whose role matches one of the listed values (e.g. `acceptRoles: ['admin', 'editor']`) |
+
+Example with split API hosts and observability:
+
+```ts
+import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
+import * as Sentry from '@sentry/browser';
+
+const LaikaBackend = createLaikaBackend({
+  documentsApiBaseUrl: 'https://api.example.com/documents',
+  assetsApiBaseUrl: 'https://cdn.example.com/assets',
+  onWarning: err => {
+    Sentry.addBreadcrumb({ category: 'laika', level: 'warning', message: err.message });
+  },
+});
+
+export default LaikaBackend;
+```
+
 ### i18n
 
 i18n bundles are exposed per-module: `…/decap-oauth2/i18n`, `…/decap-oauth2/i18n/en`,
