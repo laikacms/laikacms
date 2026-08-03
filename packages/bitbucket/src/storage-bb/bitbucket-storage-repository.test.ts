@@ -320,3 +320,31 @@ describe('BitbucketStorageRepository.getAtom error propagation', () => {
 });
 
 runStorageRepositoryContract(bitbucketContractCase);
+
+describe('BitbucketStorageRepository mapError', () => {
+  it('maps a 429 response to TooManyRequestsError on a write operation', async () => {
+    const fetch429: typeof fetch = async () =>
+      new Response(JSON.stringify({ error: { message: 'Rate limit exceeded' } }), { status: 429 });
+    const repo = new BitbucketStorageRepository({
+      workspace: WS,
+      repo: REPO,
+      branch: BRANCH,
+      auth: { appPassword: { username: 'alice', password: 'app-pw' } },
+      apiUrl: API_URL,
+      fetch: fetch429,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+      commitAuthor: { name: 'Laika Bot', email: 'bot@example.com' },
+    });
+
+    await expect(
+      LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'some-key', content: { body: 'hi' } })),
+    ).rejects.toBeInstanceOf(TooManyRequestsError);
+  });
+});
