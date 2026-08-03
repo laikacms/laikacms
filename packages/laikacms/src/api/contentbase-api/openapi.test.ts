@@ -1,3 +1,4 @@
+import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 
 import type { ContentBaseSettingsProvider } from 'laikacms/contentbase-settings';
@@ -45,9 +46,39 @@ describe('GET /openapi.json', () => {
 
   it('reflects a custom basePath in servers[0].url', async () => {
     const api = buildJsonApi({ repo: stubRepo, basePath: '/api/contentbase' });
-    const res = await api.fetch(new Request('https://cms.example.com/openapi.json'));
+    const res = await api.fetch(new Request('https://cms.example.com/api/contentbase/openapi.json'));
     const doc = await res.json() as OpenApiDocument;
     expect(doc.servers?.[0]?.url).toBe('https://cms.example.com/api/contentbase');
+  });
+
+  it('serves openapi.json under a non-root basePath (not at the root path)', async () => {
+    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/contentbase' });
+    const mounted = await api.fetch(new Request('https://cms.example.com/api/contentbase/openapi.json'));
+    expect(mounted.status).toBe(200);
+    const root = await api.fetch(new Request('https://cms.example.com/openapi.json'));
+    expect(root.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /openapi.yaml — served document
+// ---------------------------------------------------------------------------
+
+describe('GET /openapi.yaml', () => {
+  it('returns 200 with application/yaml', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/openapi.yaml'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toContain('application/yaml');
+  });
+
+  it('serves the same OpenAPI document as YAML with servers[0].url rewritten', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('https://cms.example.com/openapi.yaml'));
+    const doc = load(await res.text()) as OpenApiDocument;
+    expect(doc.openapi).toBe('3.1.0');
+    expect(doc.info.title).toBe('Laika CMS Contentbase API');
+    expect(doc.servers?.[0]?.url).toBe('https://cms.example.com');
   });
 });
 
@@ -62,6 +93,7 @@ describe('buildContentbaseOpenApi', () => {
       '/collections',
       '/collections/{key}',
       '/openapi.json',
+      '/openapi.yaml',
     ]);
   });
 

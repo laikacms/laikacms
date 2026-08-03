@@ -1,3 +1,4 @@
+import { load } from 'js-yaml';
 import type { DocumentsRepository } from 'laikacms/documents';
 import type { OpenApiDocument, OpenApiOperation, OpenApiPathItem } from 'laikacms/json-api';
 import { describe, expect, it } from 'vitest';
@@ -12,6 +13,7 @@ const stubRepo = {} as DocumentsRepository;
 const expectedPaths = [
   '/',
   '/openapi.json',
+  '/openapi.yaml',
   '/capabilities',
   '/sync-token',
   '/changes',
@@ -96,6 +98,26 @@ describe('GET /openapi.json', () => {
     const doc = await res.json() as OpenApiDocument;
     expect(doc.servers![0]!.url).toBe('https://cms.example.com/api/documents');
     // Path keys stay relative to the basePath.
+    expect(Object.keys(doc.paths).sort()).toEqual([...expectedPaths].sort());
+  });
+});
+
+describe('GET /openapi.yaml', () => {
+  it('returns 200 with Content-Type application/yaml', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/openapi.yaml'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('application/yaml');
+  });
+
+  it('serves the same document as YAML with servers[0].url rewritten', async () => {
+    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/documents' });
+    const res = await api.fetch(new Request('https://cms.example.com/api/documents/openapi.yaml'));
+    const doc = load(await res.text()) as OpenApiDocument;
+
+    expect(doc.openapi).toBe('3.1.0');
+    expect(doc.info.title).toBe('Laika CMS Documents API');
+    expect(doc.servers![0]!.url).toBe('https://cms.example.com/api/documents');
     expect(Object.keys(doc.paths).sort()).toEqual([...expectedPaths].sort());
   });
 });

@@ -602,6 +602,24 @@ const paths: Record<string, OpenApiPathItem> = {
       },
     },
   },
+  '/openapi.yaml': {
+    get: {
+      operationId: 'getOpenApiDocumentYaml',
+      summary: 'This OpenAPI 3.1 document, as YAML',
+      tags: ['info'],
+      responses: {
+        '200': {
+          description:
+            'The OpenAPI 3.1 document describing this API as YAML, with servers rewritten to the request origin.',
+          content: {
+            'application/yaml': {
+              schema: { type: 'object', description: 'An OpenAPI 3.1 document.' },
+            },
+          },
+        },
+      },
+    },
+  },
   '/capabilities': {
     get: {
       operationId: 'getCapabilities',

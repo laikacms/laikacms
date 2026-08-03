@@ -821,6 +821,19 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
           },
         },
       },
+      '/openapi.yaml': {
+        get: {
+          operationId: 'getOpenApiDocumentYaml',
+          summary: 'Get this OpenAPI 3.1 document, as YAML',
+          tags: ['info'],
+          responses: {
+            '200': {
+              description: 'The OpenAPI document as YAML, with `servers[0].url` resolved against the request origin.',
+              content: { 'application/yaml': { schema: { type: 'object' } } },
+            },
+          },
+        },
+      },
       '/capabilities': {
         get: {
           operationId: 'getCapabilities',

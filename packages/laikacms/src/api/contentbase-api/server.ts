@@ -6,7 +6,8 @@ import { type CollectionSettings } from 'laikacms/contentbase-settings';
 import type { LaikaResult } from 'laikacms/core';
 import { BadRequestError, ConflictError, LaikaTask, NotFoundError } from 'laikacms/core';
 import type { JsonApiLogger } from 'laikacms/json-api';
-import { errorToJsonApiMapper } from 'laikacms/json-api';
+import { errorToJsonApiMapper, openApiDocumentToYaml } from 'laikacms/json-api';
+import { type AuthorizeDecision, resolveAuthorization } from '../authorize.js';
 import {
   collectionFromJsonApi,
   type CollectionJsonApi,
@@ -14,6 +15,34 @@ import {
   decodeCollectionJsonApi,
 } from './jsonapi.js';
 import { buildContentbaseOpenApi } from './openapi.js';
+
+/**
+ * A single contentbase action the API is about to perform, discriminated on
+ * `action` and carrying that action's direct arguments (the collection key
+ * and/or the parsed {@link CollectionSettings} body).
+ */
+export type ContentbaseAuthorizeAction =
+  | { action: 'listCollections' }
+  | { action: 'getCollection', key: string }
+  | { action: 'createCollection', collection: CollectionSettings }
+  | { action: 'updateCollection', key: string, collection: CollectionSettings }
+  | { action: 'deleteCollection', key: string };
+
+/**
+ * The argument passed to a contentbase {@link ContentbaseAuthorize} callback:
+ * the action descriptor plus the entire originating {@link Request}.
+ */
+export type ContentbaseAuthorizeInput = ContentbaseAuthorizeAction & { request: Request };
+
+/**
+ * Per-action authorization callback. Invoked once for every contentbase action
+ * before the underlying settings provider is touched. Return `true` to allow,
+ * `false` to deny with a 403, or a `LaikaError` to deny with a custom
+ * status/message.
+ */
+export type ContentbaseAuthorize = (
+  input: ContentbaseAuthorizeInput,
+) => AuthorizeDecision | Promise<AuthorizeDecision>;
 
 export interface ContentBaseApiOptions {
   repo: ContentBaseSettingsProvider;
@@ -24,6 +53,11 @@ export interface ContentBaseApiOptions {
    * The Hono app itself is prefix-agnostic — mount it at this same path.
    */
   basePath?: string;
+  /**
+   * Optional per-action authorization hook. See {@link ContentbaseAuthorize}.
+   * When omitted the API performs no authorization (the historical behaviour).
+   */
+  authorize?: ContentbaseAuthorize | undefined;
 }
 
 function makeResponders(onError?: ((error: unknown) => void) | undefined, logger?: JsonApiLogger) {
@@ -73,11 +107,31 @@ function makeResponders(onError?: ((error: unknown) => void) | undefined, logger
  * `laikacms/decap-api` or a custom middleware that validates a Bearer token)
  * before exposing it to an untrusted network — otherwise anyone who can reach
  * `fetch` can read, mutate, and delete collection settings.
+ *
+ * Built on Hono rather than `@effect/platform` HttpApi: this API is meant to be
+ * dropped into a consumer's *existing* router/framework, and Hono composes far
+ * more cleanly there — its `Request`→`Response` `fetch` handler, `.route()`
+ * mounting, and middleware model plug into arbitrary hosts without dragging the
+ * Effect runtime into the caller's routing layer.
  */
 export function buildJsonApi(options: ContentBaseApiOptions) {
-  const { repo, onError, logger, basePath = '' } = options;
+  const { repo, onError, logger, basePath = '', authorize } = options;
   const { respondError, respondResource, respondCollection } = makeResponders(onError, logger);
-  const app = new Hono();
+  // Register every route under `basePath` so the API works when mounted at a
+  // non-root path — requests arrive at `${basePath}/openapi.json`, not `/openapi.json`.
+  const app = new Hono().basePath(basePath);
+
+  // Run the per-action authorization hook (if configured). Returns a ready
+  // error Response when the action is denied, or `null` when it's allowed.
+  const authorizeAction = async (
+    c: Context,
+    action: ContentbaseAuthorizeAction,
+  ): Promise<Response | null> => {
+    if (!authorize) return null;
+    const denial = resolveAuthorization(await authorize({ ...action, request: c.req.raw }));
+    if (!denial) return null;
+    return respondError(c, Result.fail(denial));
+  };
 
   // Ensure all responses carry Cache-Control: no-store
   app.use('*', async (c, next) => {
@@ -121,8 +175,20 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
     });
   });
 
+  app.get('/openapi.yaml', c => {
+    const url = new URL(c.req.url);
+    const doc = buildContentbaseOpenApi({ basePath });
+    const yaml = openApiDocumentToYaml({
+      ...doc,
+      servers: [{ url: `${url.origin}${basePath}` }],
+    });
+    return c.body(yaml, 200, { 'Content-Type': 'application/yaml' });
+  });
+
   // Collections
   app.get('/collections', async c => {
+    const denied = await authorizeAction(c, { action: 'listCollections' });
+    if (denied) return denied;
     const settings = await LaikaTask.runPromiseResult(repo.getSettings());
     if (Result.isFailure(settings)) {
       return respondError(c, settings);
@@ -134,6 +200,8 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
 
   app.get('/collections/:key', async c => {
     const key = c.req.param('key');
+    const denied = await authorizeAction(c, { action: 'getCollection', key });
+    if (denied) return denied;
     const allSettings = await LaikaTask.runPromiseResult(repo.getSettings());
     if (Result.isFailure(allSettings)) {
       return respondError(c, allSettings);
@@ -167,6 +235,9 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
       const jsonData = await c.req.json();
       const validatedData = decodeCollectionJsonApi(jsonData.data);
       const body = collectionFromJsonApi(validatedData as CollectionJsonApi);
+
+      const denied = await authorizeAction(c, { action: 'createCollection', collection: body });
+      if (denied) return denied;
 
       if (body.type === 'document') {
         const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(body.key, body));
@@ -222,6 +293,9 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
 
       const bodyWithKey = { ...body, key };
 
+      const denied = await authorizeAction(c, { action: 'updateCollection', key, collection: bodyWithKey });
+      if (denied) return denied;
+
       if (bodyWithKey.type === 'document') {
         const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(key, bodyWithKey));
         if (Result.isFailure(result)) {
@@ -245,6 +319,8 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
 
   app.delete('/collections/:key', async c => {
     const key = c.req.param('key');
+    const denied = await authorizeAction(c, { action: 'deleteCollection', key });
+    if (denied) return denied;
     const allSettings = await LaikaTask.runPromiseResult(repo.getSettings());
     if (Result.isFailure(allSettings)) {
       return respondError(c, allSettings);

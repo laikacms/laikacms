@@ -1,3 +1,4 @@
+import { load } from 'js-yaml';
 import type { AssetsRepository } from 'laikacms/assets';
 import type { OpenApiDocument, OpenApiOperation, OpenApiPathItem } from 'laikacms/json-api';
 import { describe, expect, it } from 'vitest';
@@ -43,6 +44,7 @@ describe('GET /openapi.json', () => {
       '/capabilities',
       '/changes',
       '/openapi.json',
+      '/openapi.yaml',
       '/resources',
       '/resources/{key}',
       '/sync-token',
@@ -68,6 +70,24 @@ describe('GET /openapi.json', () => {
     expect(res.status).toBe(200);
     const doc = await res.json() as OpenApiDocument;
     expect(doc.servers?.[0]?.url).toBe('http://localhost/custom/assets');
+  });
+});
+
+describe('GET /openapi.yaml', () => {
+  it('returns 200 with Content-Type application/yaml', async () => {
+    const api = buildAssetsApi({ repository: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/api/assets/openapi.yaml'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('application/yaml');
+  });
+
+  it('serves the same document as YAML with servers[0].url rewritten', async () => {
+    const api = buildAssetsApi({ repository: stubRepo });
+    const res = await api.fetch(new Request('https://cms.example.com/api/assets/openapi.yaml'));
+    const doc = load(await res.text()) as OpenApiDocument;
+    expect(doc.openapi).toBe('3.1.0');
+    expect(doc.info.title).toBe('Laika CMS Assets API');
+    expect(doc.servers?.[0]?.url).toBe('https://cms.example.com/api/assets');
   });
 });
 

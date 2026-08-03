@@ -185,6 +185,23 @@ export function buildContentbaseOpenApi(options: ContentbaseOpenApiOptions = {})
           },
         },
       },
+      '/openapi.yaml': {
+        get: {
+          operationId: 'getOpenApiDocumentYaml',
+          summary: 'Get the OpenAPI 3.1 document describing this API, as YAML',
+          tags: ['openapi'],
+          responses: {
+            '200': {
+              description: 'The OpenAPI document, serialized as YAML.',
+              content: {
+                'application/yaml': {
+                  schema: { type: 'object' },
+                },
+              },
+            },
+          },
+        },
+      },
       '/collections': {
         get: {
           operationId: 'listCollections',

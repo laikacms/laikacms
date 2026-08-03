@@ -609,6 +609,23 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
           },
         },
       },
+      '/openapi.yaml': {
+        get: {
+          operationId: 'getOpenApiDocumentYaml',
+          summary: 'Get this OpenAPI document as YAML',
+          tags: ['Meta'],
+          responses: {
+            '200': {
+              description: 'The OpenAPI 3.1 document describing this API, serialized as YAML, with '
+                + '`servers` rewritten to the absolute mount point of the handler.',
+              content: {
+                'application/yaml': { schema: { type: 'object' } },
+              },
+            },
+            '500': internalErrorResponse,
+          },
+        },
+      },
       '/capabilities': {
         get: {
           operationId: 'getCapabilities',

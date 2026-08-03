@@ -90,6 +90,7 @@ const runStreamWithDone = async <A, D extends LaikaDone>(
   }
 };
 import { buildPaginationLinks, parsePaginationQuery } from 'laikacms/json-api';
+import { openApiDocumentToYaml } from 'laikacms/json-api';
 import type { FolderCreate } from 'laikacms/storage';
 import { SyncToken } from 'laikacms/storage';
 import type { JsonApiCollectionResponse, JsonApiResource, JsonApiResponse } from './jsonapi.js';
@@ -342,6 +343,11 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
             version: '1.0.0',
             endpoints: [
               { path: '/openapi.json', methods: ['GET'], description: 'OpenAPI 3.1 specification for this API' },
+              {
+                path: '/openapi.yaml',
+                methods: ['GET'],
+                description: 'OpenAPI 3.1 specification for this API, as YAML',
+              },
               { path: '/capabilities', methods: ['GET'], description: 'Underlying assets repository capabilities' },
               { path: '/sync-token', methods: ['GET'], description: 'Get an opaque change token (capability-gated)' },
               { path: '/changes', methods: ['GET'], description: 'List changes since a sync token (capability-gated)' },
@@ -369,6 +375,18 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           headers: { 'Content-Type': 'application/json' },
         },
       );
+    }
+
+    // Route: GET /openapi.yaml
+    // Same document as /openapi.json, serialized as YAML for tooling that
+    // prefers it (and for readable diffs).
+    if (path === `${basePath}/openapi.yaml` && method === 'GET') {
+      const doc = buildAssetsOpenApi({ basePath });
+      const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
+      return new Response(yaml, {
+        status: 200,
+        headers: { 'Content-Type': 'application/yaml' },
+      });
     }
 
     // Route: GET /capabilities

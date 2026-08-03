@@ -52,3 +52,31 @@ value carries the new sync token to resume from. Capability-gated via
 
 The storage domain's generic vocabulary: an atom is either a storage object or a folder. These are
 wrappers around the user's content, not a data model imposed on it.
+
+## LaikaTask / LaikaStream
+
+The two return types every repository method uses: `LaikaTask<T>` for a single result and
+`LaikaStream<T, D>` for many results with a typed done value. Both are thin, Effect-based
+abstractions — internally they are Effects, so they carry the typed error channel, tracing, and
+interruption semantics Effect provides, and an Effect consumer can `yield*` them directly inside an
+`Effect.gen`.
+
+They are deliberately **not** raw `Effect` values. Wrapping Effect behind `LaikaTask`/`LaikaStream`
+keeps Effect an implementation detail of the protocol rather than a hard requirement on the caller:
+the library can be consumed with or without adopting Effect. See [dual API](#dual-api).
+
+## dual API
+
+A design rule: `laikacms` is built on Effect internally, but must be usable by consumers who do not
+use Effect. Repository methods therefore return [LaikaTask / LaikaStream](#laikatask--laikastream)
+(Effect-based, for Effect consumers) while `laikacms/compat` exposes Promise-friendly wrappers for
+everyone else:
+
+- **`runTask(task, options?)`** runs a `LaikaTask` and resolves with its value.
+- **`collectStream(stream, options?)`** drains a `LaikaStream` and resolves with its items and done
+  value.
+
+Neither wrapper requires the caller to import Effect. This is intentional and load-bearing: new code
+must preserve it. Do not expose a raw `Effect` type across a public repository boundary, and do not
+force callers into an Effect runtime to use a repository — anything reachable via `LaikaTask` /
+`LaikaStream` must stay consumable through `laikacms/compat`.

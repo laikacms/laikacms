@@ -27,7 +27,9 @@ import {
   parsePaginationQuery,
   recoverableErrorsToWarnings,
 } from 'laikacms/json-api';
+import { openApiDocumentToYaml } from 'laikacms/json-api';
 import { SyncToken } from 'laikacms/storage';
+import { type AuthorizeDecision, resolveAuthorization } from '../authorize.js';
 import {
   documentCreateFromJsonApi,
   type DocumentCreateJsonApi,
@@ -351,11 +353,56 @@ async function runStreamWithDone<A, D extends LaikaDone>(
   }
 }
 
+/**
+ * A single documents action the API is about to perform, discriminated on
+ * `action` and carrying that action's direct arguments (the same values passed
+ * to the underlying {@link DocumentsRepository} method). Atomic-operation
+ * sub-steps are surfaced individually via their granular action.
+ */
+export type DocumentsAuthorizeAction =
+  | { action: 'getCapabilities' }
+  | { action: 'getSyncToken', options: Parameters<DocumentsRepository['getSyncToken']>[0] }
+  | { action: 'listChanges', options: Parameters<DocumentsRepository['listChanges']>[0] }
+  | { action: 'listRecords', options: Parameters<DocumentsRepository['listRecords']>[0] }
+  | { action: 'listRecordSummaries', options: Parameters<DocumentsRepository['listRecordSummaries']>[0] }
+  | { action: 'getDocument', key: string }
+  | { action: 'createDocument', data: Parameters<DocumentsRepository['createDocument']>[0] }
+  | { action: 'updateDocument', data: Parameters<DocumentsRepository['updateDocument']>[0] }
+  | { action: 'deleteDocument', key: string }
+  | { action: 'unpublish', key: string, status: string }
+  | { action: 'getUnpublished', key: string }
+  | { action: 'createUnpublished', data: Parameters<DocumentsRepository['createUnpublished']>[0] }
+  | { action: 'updateUnpublished', data: Parameters<DocumentsRepository['updateUnpublished']>[0] }
+  | { action: 'deleteUnpublished', key: string }
+  | { action: 'publish', key: string }
+  | { action: 'createRevision', data: Parameters<DocumentsRepository['createRevision']>[0] }
+  | { action: 'listRevisions', key: string }
+  | { action: 'getRevision', key: string, revisionId: string };
+
+/**
+ * The argument passed to a documents {@link DocumentsAuthorize} callback: the
+ * action descriptor plus the entire originating {@link Request}.
+ */
+export type DocumentsAuthorizeInput = DocumentsAuthorizeAction & { request: Request };
+
+/**
+ * Per-action authorization callback. Invoked once for every documents action
+ * (and once per sub-operation of an atomic request) before the underlying
+ * repository is touched. Return `true` to allow, `false` to deny with a 403,
+ * or a `LaikaError` to deny with a custom status/message.
+ */
+export type DocumentsAuthorize = (input: DocumentsAuthorizeInput) => AuthorizeDecision | Promise<AuthorizeDecision>;
+
 export interface DocumentsApiOptions {
   repo: DocumentsRepository;
   basePath?: string;
   onError?(error: unknown): void;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
+  /**
+   * Optional per-action authorization hook. See {@link DocumentsAuthorize}.
+   * When omitted the API performs no authorization (the historical behaviour).
+   */
+  authorize?: DocumentsAuthorize | undefined;
 }
 
 // Schema definitions using Effect Schema
@@ -548,7 +595,7 @@ function validateOperationShape(operation: AtomicOperation, index: number): Laik
  * and revisions.
  */
 export function buildJsonApi(options: DocumentsApiOptions) {
-  const { repo, basePath = '', onError, logger } = options;
+  const { repo, basePath = '', onError, logger, authorize } = options;
 
   /** Notify onError and delegate to respondError. */
   const failResponse = (result: LaikaResult<unknown>, status?: ErrorStatus): Response => {
@@ -570,6 +617,16 @@ export function buildJsonApi(options: DocumentsApiOptions) {
   };
 
   async function fetchInner(request: Request): Promise<Response> {
+    // Run the per-action authorization hook (if configured). Returns a ready
+    // error Response when the action is denied, or `null` when it's allowed.
+    const authorizeAction = async (action: DocumentsAuthorizeAction): Promise<Response | null> => {
+      if (!authorize) return null;
+      const denial = resolveAuthorization(await authorize({ ...action, request }));
+      if (!denial) return null;
+      const status = ErrorCodeToStatusMap[denial.code as keyof typeof ErrorCodeToStatusMap] ?? 403;
+      return failResponse(Result.fail(denial), status);
+    };
+
     const url = new URL(request.url);
     let path = url.pathname.substring(basePath.length);
     if (path.startsWith('/')) path = path.substring(1);
@@ -591,6 +648,18 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       );
     }
 
+    if (path === 'openapi.yaml' && request.method === 'GET') {
+      const doc = buildDocumentsOpenApi({ basePath });
+      const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
+      return new Response(yaml, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/yaml',
+          'Cache-Control': 'no-store',
+        },
+      });
+    }
+
     // Root endpoint - list available endpoints
     if (path === '' && request.method === 'GET') {
       return json({
@@ -605,6 +674,11 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                 path: '/openapi.json',
                 methods: ['GET'],
                 description: 'OpenAPI 3.1 specification for this API',
+              },
+              {
+                path: '/openapi.yaml',
+                methods: ['GET'],
+                description: 'OpenAPI 3.1 specification for this API, as YAML',
               },
               {
                 path: '/capabilities',
@@ -733,14 +807,15 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       const folder = parsed['filter[folder]'] ?? '';
       const depth = parsed['filter[depth]'] ?? 1;
 
-      const result = await runStreamWithDone(
-        repo.listRecords({
-          pagination: parsePaginationQuery(queryParams),
-          folder,
-          type: type as 'published' | 'unpublished' | undefined,
-          depth,
-        }),
-      );
+      const listOptions = {
+        pagination: parsePaginationQuery(queryParams),
+        folder,
+        type: type as 'published' | 'unpublished' | undefined,
+        depth,
+      };
+      const denied = await authorizeAction({ action: 'listRecords', options: listOptions });
+      if (denied) return denied;
+      const result = await runStreamWithDone(repo.listRecords(listOptions));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
         return failResponse(result, status);
@@ -789,14 +864,15 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       const folder = parsed['filter[folder]'] ?? '';
       const depth = parsed['filter[depth]'] ?? 1;
 
-      const result = await runStreamWithDone(
-        repo.listRecordSummaries({
-          pagination: parsePaginationQuery(queryParams),
-          folder,
-          type: type as 'published' | 'unpublished' | undefined,
-          depth,
-        }),
-      );
+      const listOptions = {
+        pagination: parsePaginationQuery(queryParams),
+        folder,
+        type: type as 'published' | 'unpublished' | undefined,
+        depth,
+      };
+      const denied = await authorizeAction({ action: 'listRecordSummaries', options: listOptions });
+      if (denied) return denied;
+      const result = await runStreamWithDone(repo.listRecordSummaries(listOptions));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
         return failResponse(result, status);
@@ -844,6 +920,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     // Mirror of /storage-api's `/capabilities`: surface the documents repo's
     // own capabilities so the proxy client can introspect what's supported.
     if (resource === 'capabilities' && request.method === 'GET') {
+      const denied = await authorizeAction({ action: 'getCapabilities' });
+      if (denied) return denied;
       const result = await firstResult(repo.getCapabilities());
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
@@ -865,6 +943,11 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     // the same typed error on the proxy side.
     if (resource === 'sync-token' && request.method === 'GET') {
       const folder = queryParams['filter[folder]'];
+      const denied = await authorizeAction({
+        action: 'getSyncToken',
+        options: folder ? { folder } : undefined,
+      });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.getSyncToken(folder ? { folder } : undefined),
         token => ({
@@ -890,9 +973,10 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         );
       }
       const folder = queryParams['filter[folder]'];
-      const result = await runStreamWithDone(
-        repo.listChanges({ since: SyncToken.make(since), ...(folder ? { folder } : {}) }),
-      );
+      const changesOptions = { since: SyncToken.make(since), ...(folder ? { folder } : {}) };
+      const denied = await authorizeAction({ action: 'listChanges', options: changesOptions });
+      if (denied) return denied;
+      const result = await runStreamWithDone(repo.listChanges(changesOptions));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
         return failResponse(result, status);
@@ -926,6 +1010,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
 
     // ===== DOCUMENTS (PUBLISHED) =====
     if (resource === 'published' && request.method === 'GET' && key) {
+      const denied = await authorizeAction({ action: 'getDocument', key });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.getDocument(key),
         documentToJsonApi,
@@ -945,6 +1031,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       const bodyResult = await parseBody(request, decodeUnpublishBody);
       if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
       const { data } = bodyResult.success;
+      const denied = await authorizeAction({ action: 'unpublish', key, status: data.attributes.status });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.unpublish(key, data.attributes.status),
         unpublishedToJsonApi,
@@ -970,6 +1058,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         id: data.id,
         attributes: data.attributes,
       } as DocumentCreateJsonApi);
+      const denied = await authorizeAction({ action: 'createDocument', data: createData });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.createDocument(createData),
         documentToJsonApi,
@@ -988,6 +1078,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         key,
         ...data.attributes,
       };
+      const denied = await authorizeAction({ action: 'updateDocument', data: updateData });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.updateDocument(updateData),
         documentToJsonApi,
@@ -999,10 +1091,14 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     }
 
     if (resource === 'published' && request.method === 'DELETE' && key) {
+      const denied = await authorizeAction({ action: 'deleteDocument', key });
+      if (denied) return denied;
       return respondVoidWithWarnings(repo.deleteDocument(key), onError, logger);
     }
 
     if (resource === 'unpublished' && request.method === 'GET' && key) {
+      const denied = await authorizeAction({ action: 'getUnpublished', key });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.getUnpublished(key),
         unpublishedToJsonApi,
@@ -1019,6 +1115,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       && request.method === 'POST'
       && key
     ) {
+      const denied = await authorizeAction({ action: 'publish', key });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.publish(key),
         documentToJsonApi,
@@ -1044,6 +1142,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         id: data.id,
         attributes: data.attributes,
       } as UnpublishedCreateJsonApi);
+      const denied = await authorizeAction({ action: 'createUnpublished', data: createData });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.createUnpublished(createData),
         unpublishedToJsonApi,
@@ -1063,6 +1163,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         id: bodyData.id,
         attributes: bodyData.attributes,
       } as UnpublishedUpdateJsonApi);
+      const denied = await authorizeAction({ action: 'updateUnpublished', data: { ...updateData, key } });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.updateUnpublished({ ...updateData, key }),
         unpublishedToJsonApi,
@@ -1074,6 +1176,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     }
 
     if (resource === 'unpublished' && request.method === 'DELETE' && key) {
+      const denied = await authorizeAction({ action: 'deleteUnpublished', key });
+      if (denied) return denied;
       return respondVoidWithWarnings(repo.deleteUnpublished(key), onError, logger);
     }
 
@@ -1103,6 +1207,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         id: data.id,
         attributes: data.attributes,
       } as RevisionCreateJsonApi);
+      const denied = await authorizeAction({ action: 'createRevision', data: createData });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.createRevision(createData),
         revisionToJsonApi,
@@ -1121,6 +1227,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     ) {
       const cursorRejection = await rejectUnsupportedCursor();
       if (cursorRejection) return cursorRejection;
+      const denied = await authorizeAction({ action: 'listRevisions', key });
+      if (denied) return denied;
       const result = await runStreamWithDone(
         repo.listRevisions(key, { pagination: parsePaginationQuery(queryParams) }),
       );
@@ -1146,6 +1254,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       && key
       && action
     ) {
+      const denied = await authorizeAction({ action: 'getRevision', key, revisionId: action });
+      if (denied) return denied;
       return respondResourceWithWarnings(
         repo.getRevision(key, action),
         revisionToJsonApi,
@@ -1175,6 +1285,57 @@ export function buildJsonApi(options: DocumentsApiOptions) {
           return { ...jsonApiErr.errors[0]!, source: { pointer: `/operations/${index}` } };
         });
         return json({ errors }, 400);
+      }
+
+      // (a2) Authorize every sub-operation up front, mapped to its granular
+      // action. A single denial rejects the whole batch before any write.
+      for (const operation of ops) {
+        let authAction: DocumentsAuthorizeAction | undefined;
+        if (operation.op === 'add' && 'data' in operation && operation.data.type === 'unpublished') {
+          const op = operation as AddUnpublishedOp;
+          authAction = {
+            action: 'createUnpublished',
+            data: unpublishedCreateFromJsonApi({
+              type: 'unpublished',
+              id: op.data.id,
+              attributes: op.data.attributes,
+            } as UnpublishedCreateJsonApi),
+          };
+        } else if (operation.op === 'add' && 'data' in operation && operation.data.type === 'published') {
+          const op = operation as AddDocumentOp;
+          authAction = {
+            action: 'createDocument',
+            data: documentCreateFromJsonApi({
+              type: 'published',
+              id: op.data.id,
+              attributes: op.data.attributes,
+            } as DocumentCreateJsonApi),
+          };
+        } else if (operation.op === 'update' && 'href' in operation && 'ref' in operation) {
+          const { href, ref, data } = operation as StateTransitionOp;
+          if (href === '/publish') authAction = { action: 'publish', key: ref.id };
+          else if (href === '/unpublish') {
+            authAction = { action: 'unpublish', key: ref.id, status: data?.attributes.status ?? '' };
+          }
+        } else if (operation.op === 'update' && 'data' in operation) {
+          const op = operation as UpdateUnpublishedOp;
+          authAction = {
+            action: 'updateUnpublished',
+            data: unpublishedUpdateFromJsonApi({
+              type: 'unpublished',
+              id: op.data.id,
+              attributes: op.data.attributes,
+            } as UnpublishedUpdateJsonApi),
+          };
+        } else if (operation.op === 'remove') {
+          const { ref } = operation as RemoveOp;
+          if (ref.type === 'document') authAction = { action: 'deleteDocument', key: ref.id };
+          else if (ref.type === 'unpublished') authAction = { action: 'deleteUnpublished', key: ref.id };
+        }
+        if (authAction) {
+          const denied = await authorizeAction(authAction);
+          if (denied) return denied;
+        }
       }
 
       // (b) Execute ops sequentially; stop at first repository failure.

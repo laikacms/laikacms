@@ -1,3 +1,4 @@
+import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 
 import type { OpenApiDocument, OpenApiOperation, OpenApiPathItem } from 'laikacms/json-api';
@@ -20,6 +21,7 @@ const EXPECTED_PATHS = [
   '/objects',
   '/objects/{key}',
   '/openapi.json',
+  '/openapi.yaml',
   '/operations',
 ];
 
@@ -56,6 +58,28 @@ describe('GET /openapi.json', () => {
 
     const doc = await res.json() as OpenApiDocument;
     expect(doc.servers?.[0]?.url).toBe('http://localhost/api/storage');
+  });
+});
+
+describe('GET /openapi.yaml', () => {
+  it('returns 200 with an application/yaml OpenAPI 3.1 document', async () => {
+    const api = buildJsonApi({ repo: stubRepo });
+    const res = await api.fetch(new Request('http://localhost/openapi.yaml'));
+    expect(res.status).toBe(200);
+    expect(res.headers.get('Content-Type')).toBe('application/yaml');
+
+    const doc = load(await res.text()) as OpenApiDocument;
+    expect(doc.openapi).toBe('3.1.0');
+    expect(doc.info.title).toBe('Laika CMS Storage API');
+  });
+
+  it('rewrites servers[0].url to the request origin + basePath', async () => {
+    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/storage' });
+    const res = await api.fetch(new Request('https://storage.example.com/api/storage/openapi.yaml'));
+    expect(res.status).toBe(200);
+
+    const doc = load(await res.text()) as OpenApiDocument;
+    expect(doc.servers?.[0]?.url).toBe('https://storage.example.com/api/storage');
   });
 });
 

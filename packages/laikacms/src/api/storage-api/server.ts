@@ -14,7 +14,7 @@ import {
   NotFoundError,
 } from 'laikacms/core';
 import type { JsonApiError, JsonApiLogger, JsonApiResponse } from 'laikacms/json-api';
-import { errorToJsonApiMapper, recoverableErrorsToWarnings } from 'laikacms/json-api';
+import { errorToJsonApiMapper, openApiDocumentToYaml, recoverableErrorsToWarnings } from 'laikacms/json-api';
 import type {
   Folder,
   FolderCreate,
@@ -24,6 +24,7 @@ import type {
   StorageRepository,
 } from 'laikacms/storage';
 
+import { type AuthorizeDecision, resolveAuthorization } from '../authorize.js';
 import {
   atomSummaryToJsonApi,
   atomToJsonApi,
@@ -284,11 +285,53 @@ type FolderCreateBody = S.Schema.Type<typeof FolderCreateBodySchema>;
 type AtomicOperation = S.Schema.Type<typeof AtomicOperationSchema>;
 type AtomicOperationsRequest = S.Schema.Type<typeof AtomicOperationsRequestSchema>;
 
+/**
+ * A single storage action the API is about to perform, discriminated on
+ * `action` and carrying that action's direct arguments (the same values passed
+ * to the underlying {@link StorageRepository} method). Atomic-operation
+ * sub-steps are surfaced individually via their granular action (e.g. an
+ * `add` op with an object becomes `createObject`).
+ */
+export type StorageAuthorizeAction =
+  | { action: 'getCapabilities' }
+  | { action: 'listAtoms', key: string, options: NonNullable<Parameters<StorageRepository['listAtoms']>[1]> }
+  | {
+    action: 'listAtomSummaries',
+    key: string,
+    options: NonNullable<Parameters<StorageRepository['listAtomSummaries']>[1]>,
+  }
+  | { action: 'getObject', key: string }
+  | { action: 'getFolder', key: string }
+  | { action: 'createObject', data: StorageObjectCreate }
+  | { action: 'createFolder', data: FolderCreate }
+  | { action: 'updateObject', data: StorageObjectUpdate }
+  | { action: 'removeObject', key: string };
+
+/**
+ * The argument passed to a storage {@link StorageAuthorize} callback: the
+ * action descriptor plus the entire originating {@link Request}.
+ */
+export type StorageAuthorizeInput = StorageAuthorizeAction & { request: Request };
+
+/**
+ * Per-action authorization callback. Invoked once for every storage action
+ * (and once per sub-operation of an atomic request) before the underlying
+ * repository is touched. Return `true` to allow, `false` to deny with a 403,
+ * or a `LaikaError` to deny with a custom status/message.
+ */
+export type StorageAuthorize = (input: StorageAuthorizeInput) => AuthorizeDecision | Promise<AuthorizeDecision>;
+
 export interface StorageApiOptions {
   repo: StorageRepository;
   basePath?: string | undefined;
   onError?(error: unknown): void;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
+  /**
+   * Optional per-action authorization hook. See {@link StorageAuthorize}. When
+   * omitted the API performs no authorization (the historical behaviour) — wrap
+   * or supply this before exposing the handler to an untrusted network.
+   */
+  authorize?: StorageAuthorize | undefined;
 }
 
 /**
@@ -298,7 +341,7 @@ export interface StorageApiOptions {
  * untrusted network.
  */
 export function buildJsonApi(options: StorageApiOptions) {
-  const { repo, basePath = '', onError, logger } = options;
+  const { repo, basePath = '', onError, logger, authorize } = options;
 
   const decodeStorageObjectCreateBody = S.decodeUnknownSync(StorageObjectCreateBodySchema);
   const decodeStorageObjectUpdateBody = S.decodeUnknownSync(StorageObjectUpdateBodySchema);
@@ -324,6 +367,16 @@ export function buildJsonApi(options: StorageApiOptions) {
 
   async function fetchInner(request: Request): Promise<Response> {
     const url = new URL(request.url);
+
+    // Run the per-action authorization hook (if configured). Returns a ready
+    // error Response when the action is denied, or `null` when it's allowed.
+    const authorizeAction = async (action: StorageAuthorizeAction): Promise<Response | null> => {
+      if (!authorize) return null;
+      const denial = resolveAuthorization(await authorize({ ...action, request }));
+      if (!denial) return null;
+      const status = ErrorCodeToStatusMap[denial.code as keyof typeof ErrorCodeToStatusMap] ?? 403;
+      return failResponse(Result.fail(denial), status);
+    };
     let path = url.pathname.substring(basePath.length);
     if (path.startsWith('/')) path = path.substring(1);
     if (path.endsWith('/')) path = path.slice(0, -1);
@@ -341,6 +394,11 @@ export function buildJsonApi(options: StorageApiOptions) {
                 path: '/openapi.json',
                 methods: ['GET'],
                 description: 'OpenAPI 3.1 specification for this API',
+              },
+              {
+                path: '/openapi.yaml',
+                methods: ['GET'],
+                description: 'OpenAPI 3.1 specification for this API, as YAML',
               },
               {
                 path: '/capabilities',
@@ -388,6 +446,18 @@ export function buildJsonApi(options: StorageApiOptions) {
           },
         },
       );
+    }
+
+    if (path === 'openapi.yaml' && request.method === 'GET') {
+      const doc = buildStorageOpenApi({ basePath });
+      const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
+      return new Response(yaml, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/yaml',
+          'Cache-Control': 'no-store',
+        },
+      });
     }
 
     // The JSON-API proxy URL-encodes the key (so keys with slashes survive the
@@ -439,6 +509,8 @@ export function buildJsonApi(options: StorageApiOptions) {
       const rawDepth = parseInt(queryParams['filter[depth]'] ?? '1', 10);
       const depth = Number.isFinite(rawDepth) && rawDepth >= 1 ? rawDepth : 1;
       const listOptions = { depth, pagination };
+      const denied = await authorizeAction({ action: 'listAtoms', key: key ?? '', options: listOptions });
+      if (denied) return denied;
       const result = await runStream(repo.listAtoms(key ?? '', listOptions));
       if (Result.isFailure(result)) {
         const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
@@ -475,6 +547,8 @@ export function buildJsonApi(options: StorageApiOptions) {
       const rawDepth = parseInt(queryParams['filter[depth]'] ?? '1', 10);
       const depth = Number.isFinite(rawDepth) && rawDepth >= 1 ? rawDepth : 1;
       const listOptions = { depth, pagination };
+      const denied = await authorizeAction({ action: 'listAtomSummaries', key: key ?? '', options: listOptions });
+      if (denied) return denied;
       const result = await runStream(repo.listAtomSummaries(key ?? '', listOptions));
       if (Result.isFailure(result)) {
         const errorCode = result.failure.code as keyof typeof ErrorCodeToStatusMap;
@@ -496,6 +570,8 @@ export function buildJsonApi(options: StorageApiOptions) {
       // (and humans) can introspect what's actually supported instead of
       // assuming. Cheap call; we run it on every request so a swapped-out
       // repo is reflected immediately.
+      const denied = await authorizeAction({ action: 'getCapabilities' });
+      if (denied) return denied;
       const result = await runTask(repo.getCapabilities());
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
@@ -527,6 +603,8 @@ export function buildJsonApi(options: StorageApiOptions) {
         );
       }
       const data: FolderCreate = { key: body.data.id, type: 'folder' };
+      const denied = await authorizeAction({ action: 'createFolder', data });
+      if (denied) return denied;
       const result = await runTaskWithMetadata(repo.createFolder(data));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
@@ -542,6 +620,8 @@ export function buildJsonApi(options: StorageApiOptions) {
     } else if (resource === 'atom-summaries' && request.method === 'GET') return listAtomSummaries();
     else if (resource === 'objects' && request.method === 'GET') {
       if (!key) return failResponse(Result.fail(new InvalidData('Missing object key')), 400);
+      const denied = await authorizeAction({ action: 'getObject', key });
+      if (denied) return denied;
       const result = await runTaskWithMetadata(repo.getObject(key));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
@@ -556,6 +636,8 @@ export function buildJsonApi(options: StorageApiOptions) {
       );
     } else if (resource === 'folders' && request.method === 'GET') {
       if (!key) return failResponse(Result.fail(new InvalidData('Missing folder key')), 400);
+      const denied = await authorizeAction({ action: 'getFolder', key });
+      if (denied) return denied;
       const result = await runTaskWithMetadata(repo.getFolder(key));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
@@ -600,6 +682,8 @@ export function buildJsonApi(options: StorageApiOptions) {
         content: body.data.attributes.content || {},
         ...(body.data.meta ? { metadata: body.data.meta } : {}),
       };
+      const denied = await authorizeAction({ action: 'createObject', data });
+      if (denied) return denied;
       const result = await runTaskWithMetadata(repo.createObject(data));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
@@ -648,6 +732,8 @@ export function buildJsonApi(options: StorageApiOptions) {
         content: body.data.attributes.content,
         ...(body.data.meta ? { metadata: body.data.meta } : {}),
       };
+      const denied = await authorizeAction({ action: 'updateObject', data });
+      if (denied) return denied;
       const result = await runTaskWithMetadata(repo.updateObject(data));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
@@ -665,6 +751,8 @@ export function buildJsonApi(options: StorageApiOptions) {
       if (!pathKey) {
         return failResponse(Result.fail(new InvalidData('Missing object key')), 400);
       }
+      const denied = await authorizeAction({ action: 'removeObject', key: pathKey });
+      if (denied) return denied;
       const result = await runStream(repo.removeAtoms([pathKey]));
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
@@ -739,6 +827,36 @@ export function buildJsonApi(options: StorageApiOptions) {
           Result.fail(new InvalidData('Invalid atomic operations request')),
           400,
         );
+      }
+
+      // Authorize every sub-operation up front, mapped to its granular action.
+      // Atomic requests are all-or-nothing: a single denial rejects the whole
+      // batch before any write reaches the repository.
+      for (const operation of body['atomic:operations']) {
+        let action: StorageAuthorizeAction | undefined;
+        if (operation.op === 'add' && operation.data.type === 'object') {
+          action = {
+            action: 'createObject',
+            data: {
+              key: operation.data.id,
+              type: 'object',
+              content: operation.data.attributes.content || {},
+            },
+          };
+        } else if (operation.op === 'add' && operation.data.type === 'folder') {
+          action = { action: 'createFolder', data: { key: operation.data.id, type: 'folder' } };
+        } else if (operation.op === 'update') {
+          action = {
+            action: 'updateObject',
+            data: { key: operation.data.id, type: 'object', content: operation.data.attributes.content },
+          };
+        } else if (operation.op === 'remove') {
+          action = { action: 'removeObject', key: operation.ref.id };
+        }
+        if (action) {
+          const denied = await authorizeAction(action);
+          if (denied) return denied;
+        }
       }
 
       type Ref = { key: string, type: string };
