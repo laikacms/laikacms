@@ -270,6 +270,78 @@ describe('BitbucketStorageRepository auth', () => {
     );
     expect(bb.lastAuth()).toBe('Bearer oauth-xyz');
   });
+
+  it('sends Bearer when tokenProvider returns a sync string', async () => {
+    const repo = new BitbucketStorageRepository({
+      workspace: WS,
+      repo: REPO,
+      branch: BRANCH,
+      auth: { tokenProvider: () => 'sync-token-abc' },
+      apiUrl: API_URL,
+      fetch: bb.fetch,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+      commitAuthor: { name: 'Laika Bot', email: 'bot@example.com' },
+    });
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'h', content: { body: 'x' } }),
+    );
+    expect(bb.lastAuth()).toBe('Bearer sync-token-abc');
+  });
+
+  it('sends Bearer when tokenProvider returns a Promise<string>', async () => {
+    const repo = new BitbucketStorageRepository({
+      workspace: WS,
+      repo: REPO,
+      branch: BRANCH,
+      auth: { tokenProvider: () => Promise.resolve('async-token-xyz') },
+      apiUrl: API_URL,
+      fetch: bb.fetch,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+      commitAuthor: { name: 'Laika Bot', email: 'bot@example.com' },
+    });
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'h', content: { body: 'x' } }),
+    );
+    expect(bb.lastAuth()).toBe('Bearer async-token-xyz');
+  });
+
+  it('tokenProvider takes priority over oauthToken', async () => {
+    const repo = new BitbucketStorageRepository({
+      workspace: WS,
+      repo: REPO,
+      branch: BRANCH,
+      auth: { tokenProvider: () => 'provider-token', oauthToken: 'static-token' },
+      apiUrl: API_URL,
+      fetch: bb.fetch,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+      commitAuthor: { name: 'Laika Bot', email: 'bot@example.com' },
+    });
+    await LaikaTask.runPromise(
+      repo.createObject({ type: 'object', key: 'h', content: { body: 'x' } }),
+    );
+    expect(bb.lastAuth()).toBe('Bearer provider-token');
+  });
 });
 
 describe('BitbucketStorageRepository.getAtom error propagation', () => {
