@@ -15,18 +15,31 @@ the mock matches the mock — useless. Instead, a testkit provides:
 
 ```ts
 // packages/laikacms/src/domain/storage/testing/contract.ts
+export type StorageContractCapability =
+  | 'createObject'
+  | 'createOrUpdateObject'
+  | 'updateObject'
+  | 'createFolder'
+  | 'listAtomSummaries'
+  | 'listAtoms'
+  | 'getAtom'
+  | 'removeAtoms';
+
 export interface StorageContractCase {
   name: string;
   makeRepo(): Promise<StorageRepository>;
   teardown?(): Promise<void>;
+  /** Capabilities to skip (not supported by this backend). */
+  skip?: StorageContractCapability[];
 }
 ```
 
-| Field      | Required | Description                                                                       |
-| ---------- | -------- | --------------------------------------------------------------------------------- |
-| `name`     | yes      | Label shown in test output                                                        |
-| `makeRepo` | yes      | Create the backend and return a ready repository                                  |
-| `teardown` | no       | Cleanup hook called after all tests; omit when the backend is naturally ephemeral |
+| Field      | Required | Description                                                                                                          |
+| ---------- | -------- | -------------------------------------------------------------------------------------------------------------------- |
+| `name`     | yes      | Label shown in test output                                                                                           |
+| `makeRepo` | yes      | Create the backend and return a ready repository                                                                     |
+| `teardown` | no       | Cleanup hook called after all tests; omit when the backend is naturally ephemeral                                    |
+| `skip`     | no       | `StorageContractCapability[]` — list of operations not supported by this backend; their contract tests are `.skip`ped |
 
 ## Registering your testkit
 
@@ -55,6 +68,8 @@ import { MyStorageRepository } from '../infrastructure/repositories/my-repositor
 
 export const myContractCase: StorageContractCase = {
   name: 'MyStorageRepository',
+
+  // skip: ['createFolder'],  // omit capabilities not supported by this backend
 
   async makeRepo() {
     // Set up ephemeral backend state here (tmp dir, in-memory store, …).
