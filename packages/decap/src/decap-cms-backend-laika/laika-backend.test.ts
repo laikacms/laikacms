@@ -15,7 +15,7 @@
  * ACCESS_TOKEN_ERROR) and the v4 Cursor shape are used so assertions match
  * what the real package produces at runtime.
  *
- * lib-auth and ui-default remain fully mocked for the same ESM reason, plus
+ * lib/auth and ui-default remain fully mocked for the same ESM reason, plus
  * they access the DOM at module load time.
  * We do NOT test the authentication flow because that requires a running server.
  */
