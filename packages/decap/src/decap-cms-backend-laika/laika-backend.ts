@@ -4,7 +4,7 @@ import {
   Cursor,
   CURSOR_COMPATIBILITY_SYMBOL,
   unsentRequest,
-} from '@laikacms/decap-cms/lib-util';
+} from '@laikacms/decap-cms/lib/util';
 
 import React from 'react';
 
@@ -24,7 +24,7 @@ import type {
   CmsPersistOptions as PersistOptions,
   CmsUnpublishedEntry as UnpublishedEntry,
   CmsUser as User,
-} from '@laikacms/decap-cms/lib-util';
+} from '@laikacms/decap-cms/lib/util';
 
 import * as Result from 'effect/Result';
 import type { AssetCreate, AssetsRepository } from 'laikacms/assets';

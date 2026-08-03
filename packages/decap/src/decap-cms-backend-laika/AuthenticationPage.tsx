@@ -1,4 +1,4 @@
-import { PkceAuthenticator } from '@laikacms/decap-cms/lib-auth';
+import { PkceAuthenticator } from '@laikacms/decap-cms/lib/auth';
 import { AuthenticationPage, Icon } from '@laikacms/decap-cms/ui-default';
 import React, { Component } from 'react';
 
@@ -112,8 +112,6 @@ class PKCEAuthenticationPage extends Component<PKCEAuthPageProps, PKCEAuthPageSt
         loginDisabled={inProgress}
         loginErrorMessage={loginError}
         siteUrl={config?.site_url}
-        logoUrl={config?.logo_url}
-        logo={undefined}
         renderButtonContent={() => (
           <React.Fragment>
             <Icon type="link" /> {inProgress ? t('auth.loggingIn') : t('auth.login')}

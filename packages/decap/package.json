@@ -81,7 +81,7 @@
     "yaml": "catalog:"
   },
   "peerDependencies": {
-    "@laikacms/decap-cms": "^4.0.0",
+    "@laikacms/decap-cms": ">=4.0.4-alpha.3",
     "react": "catalog:react"
   },
   "peerDependenciesMeta": {
@@ -94,7 +94,7 @@
   },
   "devDependencies": {
     "@hono/node-server": "catalog:server",
-    "@laikacms/decap-cms": "4.0.0",
+    "@laikacms/decap-cms": "4.0.4-alpha.3",
     "@types/jsonwebtoken": "catalog:types",
     "@types/node": "catalog:types",
     "@types/react": "catalog:types",
