@@ -1,4 +1,41 @@
 # This file makes examples/ its own pnpm workspace root, so pnpm never
 # climbs up to the repo root. Installs here get their own lockfile and
 # node_modules and have zero effect on the main workspace.
-packages: []
+#
+# laikacms is declared as a workspace member (from the parent monorepo) so
+# pnpm treats it as an in-workspace package and can resolve its catalog:
+# specifiers using the catalogs defined below. Without workspace membership,
+# pnpm treats file: references as external and refuses catalog: deps entirely.
+packages:
+  - "../packages/laikacms"
+
+# Mirrors only the catalog entries that packages/laikacms/package.json
+# references. Must be kept in sync with the root pnpm-workspace.yaml.
+catalogs:
+
+  default:
+    "bcryptjs": "^3.0.3"
+    "effect": "4.0.0-beta.66"
+    "gray-matter": "^4.0.3"
+    "js-yaml": "^5.2.1"
+    "minimatch": "^10.2.5"
+    "trash": "^10.1.1"
+
+  schema:
+    "@standard-schema/spec": "^1.1.0"
+    "json-schema": "^0.4.0"
+
+  server:
+    "@hono/node-server": "^2.0.10"
+    "hono": "^4.12.31"
+
+  tools:
+    "rimraf": "^6.1.3"
+    "typescript": "^6.0.3"
+    "vitest": "^4.1.10"
+
+  types:
+    "@cloudflare/workers-types": "^5.20260719.1"
+    "@types/js-yaml": "^4.0.9"
+    "@types/json-schema": "^7.0.15"
+    "@types/node": "^22.20.1"
