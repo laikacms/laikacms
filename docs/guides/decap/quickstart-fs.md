@@ -283,8 +283,13 @@ collections:
     format: json # required — the laika Decap backend only supports JSON-format collections today
     fields:
       - { name: title, label: Title, widget: string }
-      - { name: body,  label: Body,  widget: markdown }
+      - { name: body,  label: Body,  widget: richtext }
 ```
+
+> The v4.beta bundle deprecates `widget: markdown` (DCMS-483) in favour of `widget: richtext`.
+> Migration guide:
+> [BREAKING_CHANGES_V4_BETA.md](https://github.com/laikacms/decap-cms/blob/v4.beta/BREAKING_CHANGES_V4_BETA.md)
+> in `laikacms/decap-cms`.
 
 > **`format: json` is required.** Omitting `format:` makes Decap default to markdown-frontmatter,
 > which the laika backend cannot yet persist (see the callout in §1). Saving an entry in such a
