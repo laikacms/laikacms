@@ -55,6 +55,16 @@ Returns meta-information about the Documents API and its available endpoints.
           "description": "Underlying documents repository capabilities"
         },
         {
+          "path": "/sync-token",
+          "methods": ["GET"],
+          "description": "Get an opaque per-scope change token (capability-gated)"
+        },
+        {
+          "path": "/changes",
+          "methods": ["GET"],
+          "description": "List changes since a sync token (capability-gated)"
+        },
+        {
           "path": "/records",
           "methods": ["GET"],
           "description": "List full records (published + unpublished view per key)"
@@ -161,9 +171,12 @@ List records (published and/or unpublished) with full content for a given collec
 | `filter[folder]` | string                                      | no       | `""`          | Collection (folder) to list from, e.g. `posts` or `posts/drafts`. Omit or pass an empty string to list all collections as `folder` resources (one per configured document collection). |
 | `filter[type]`   | `"published"` \| `"unpublished"` \| `"all"` | no       | `"published"` | Filter by document state                                                                                                                                                               |
 | `filter[depth]`  | number                                      | no       | `1`           | Traversal depth (minimum 1)                                                                                                                                                            |
-| `page[after]`    | string                                      | no       | —             | Forward cursor for pagination                                                                                                                                                          |
-| `page[before]`   | string                                      | no       | —             | Backward cursor for pagination                                                                                                                                                         |
-| `page[size]`     | number                                      | no       | —             | Items per page; max 100, clamped silently                                                                                                                                              |
+| `page[number]`   | number                                      | no       | `1`           | Page number for page-based pagination (1-based)                                                                                                                                        |
+| `page[size]`     | number                                      | no       | `10`          | Items per page — combines with `page[number]`, `page[after]`, or `page[before]`                                                                                                        |
+| `page[offset]`   | number                                      | no       | —             | Zero-based item offset for offset-based pagination                                                                                                                                     |
+| `page[limit]`    | number                                      | no       | —             | Maximum number of items to return — combines with `page[offset]`                                                                                                                       |
+| `page[after]`    | string                                      | no       | —             | Forward cursor; rejected with 400 if the backend does not support cursor pagination (check `GET /capabilities`)                                                                        |
+| `page[before]`   | string                                      | no       | —             | Backward cursor; rejected with 400 if the backend does not support cursor pagination (check `GET /capabilities`)                                                                       |
 
 **Response** — mixed array of `published` and `unpublished` resources
 
@@ -972,3 +985,112 @@ processing stopped at a failure). Remove operations return a `meta` entry.
   ]
 }
 ```
+
+---
+
+#### GET /sync-token
+
+Returns an opaque sync token representing the current state of the documents repository (or a
+specific folder). Use the token with `GET /changes` to poll for changes since a known point.
+
+> **Capability-gated** — backends that do not support change signals return `501 Not Implemented`.
+> Check `GET /capabilities` before calling this endpoint.
+
+**Query Parameters**
+
+| Parameter        | Type   | Required | Description                                                                         |
+| ---------------- | ------ | -------- | ----------------------------------------------------------------------------------- |
+| `filter[folder]` | string | no       | Scope the token to a specific folder (e.g. `posts`). Omit to get a repo-wide token. |
+
+**Response** — a single `sync-token` resource
+
+```json
+{
+  "data": {
+    "type": "sync-token",
+    "id": "self",
+    "attributes": {
+      "syncToken": "eyJzZXEiOjQyfQ=="
+    }
+  }
+}
+```
+
+When scoped to a folder the response includes a `folder` attribute:
+
+```json
+{
+  "data": {
+    "type": "sync-token",
+    "id": "posts",
+    "attributes": {
+      "syncToken": "eyJzZXEiOjQyfQ==",
+      "folder": "posts"
+    }
+  }
+}
+```
+
+**Error Responses**
+
+| Status | Condition                                                              |
+| ------ | ---------------------------------------------------------------------- |
+| `501`  | Backend does not support change signals (`NotImplementedError`)        |
+| `403`  | Caller is not authorised to call `getSyncToken` (`AuthorizationError`) |
+
+---
+
+#### GET /changes
+
+List change events since a previously obtained sync token. Returns one `change-summary` resource per
+changed key, and a new `meta.syncToken` to use on the next poll.
+
+> **Capability-gated** — backends that do not support change signals return `501 Not Implemented`.
+> Check `GET /capabilities` before calling this endpoint.
+
+**Query Parameters**
+
+| Parameter        | Type   | Required | Description                                                                                    |
+| ---------------- | ------ | -------- | ---------------------------------------------------------------------------------------------- |
+| `filter[since]`  | string | **yes**  | Sync token from a prior `GET /sync-token` or `GET /changes` response. Returns `400` if absent. |
+| `filter[folder]` | string | no       | Restrict change feed to a specific folder. Should match the folder used to obtain the token.   |
+
+**Response** — collection of `change-summary` resources
+
+```json
+{
+  "data": [
+    {
+      "type": "change-summary",
+      "id": "posts/hello-world",
+      "attributes": {
+        "deleted": false,
+        "version": "abc123"
+      }
+    },
+    {
+      "type": "change-summary",
+      "id": "posts/old-draft",
+      "attributes": {
+        "deleted": true
+      }
+    }
+  ],
+  "meta": {
+    "page": { "total": 2 },
+    "syncToken": "eyJzZXEiOjQzfQ=="
+  }
+}
+```
+
+The `meta.syncToken` value is the cursor for the next call. `attributes.version` is present only
+when the backend includes per-document version tokens; `attributes.deleted: true` indicates a key
+was removed since the prior token.
+
+**Error Responses**
+
+| Status | Condition                                                             |
+| ------ | --------------------------------------------------------------------- |
+| `400`  | `filter[since]` is absent                                             |
+| `501`  | Backend does not support change signals (`NotImplementedError`)       |
+| `403`  | Caller is not authorised to call `listChanges` (`AuthorizationError`) |

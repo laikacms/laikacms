@@ -220,9 +220,12 @@ List all assets and folders under a given folder prefix.
 | `folder`, `filter[folder]`, or `filter[prefix]` | string | `""`    | Folder key prefix to list (priority: `folder` > `filter[folder]` > `filter[prefix]`)                                                                    |
 | `filter[depth]` or `depth`                      | number | `1`     | Traversal depth (minimum 1)                                                                                                                             |
 | `filter[<name>]`                                | string | —       | Named filter declared by the backend in `GET /capabilities` `filtering.filters[].name`. Undeclared names return `400`. Check capabilities before using. |
-| `page[after]`                                   | string | —       | Forward cursor for pagination                                                                                                                           |
-| `page[before]`                                  | string | —       | Backward cursor for pagination                                                                                                                          |
-| `page[size]`                                    | number | `100`   | Items per page; max 100, clamped silently                                                                                                               |
+| `page[number]`                                  | number | —       | Page number for page-based pagination (1-based)                                                                                                         |
+| `page[size]`                                    | number | `100`   | Items per page — combines with `page[number]`, `page[after]`, or `page[before]`; max 100, clamped silently                                              |
+| `page[offset]`                                  | number | —       | Zero-based item offset for offset-based pagination                                                                                                      |
+| `page[limit]`                                   | number | —       | Maximum number of items to return — combines with `page[offset]`                                                                                        |
+| `page[after]`                                   | string | —       | Forward cursor; rejected with 400 if the backend does not support cursor pagination (check `GET /capabilities`)                                         |
+| `page[before]`                                  | string | —       | Backward cursor; rejected with 400 if the backend does not support cursor pagination (check `GET /capabilities`)                                        |
 | `include`                                       | string | —       | Comma-separated: `urls` (or `asset-url`), `variations` (or `asset-variation`)                                                                           |
 | `meta`                                          | string | —       | Set `meta=true` to inline asset metadata onto `data.meta`                                                                                               |
 
@@ -607,3 +610,114 @@ Delete an asset or folder.
 > **Note:** Clients that check `response.status === 204` to confirm deletion must also handle `200`
 > — both statuses indicate a successful delete. The `200` body surfaces actionable detail about what
 > partially failed; clients that ignore warnings can treat any `2xx` as success.
+
+---
+
+#### GET /sync-token
+
+Returns an opaque sync token representing the current state of the assets repository (or a specific
+folder). Use the token with `GET /changes` to poll for changed or deleted assets since a known
+point.
+
+> **Capability-gated** — backends that do not support change signals return `501 Not Implemented`.
+> Check `attributes.changes.supported` in `GET /capabilities` before calling this endpoint.
+
+**Query Parameters**
+
+| Parameter        | Type   | Required | Description                                                                          |
+| ---------------- | ------ | -------- | ------------------------------------------------------------------------------------ |
+| `filter[folder]` | string | no       | Scope the token to a specific folder (e.g. `images`). Omit to get a repo-wide token. |
+
+**Response** — a single `sync-token` resource
+
+```json
+{
+  "data": {
+    "type": "sync-token",
+    "id": "self",
+    "attributes": {
+      "syncToken": "eyJlcG9jaCI6MTcwMH0="
+    }
+  }
+}
+```
+
+When scoped to a folder the response includes a `folder` attribute:
+
+```json
+{
+  "data": {
+    "type": "sync-token",
+    "id": "images",
+    "attributes": {
+      "syncToken": "eyJlcG9jaCI6MTcwMH0=",
+      "folder": "images"
+    }
+  }
+}
+```
+
+**Error Responses**
+
+| Status | Condition                                                              |
+| ------ | ---------------------------------------------------------------------- |
+| `501`  | Backend does not support change signals (`NotImplementedError`)        |
+| `403`  | Caller is not authorised to call `getSyncToken` (`AuthorizationError`) |
+
+---
+
+#### GET /changes
+
+List asset change events since a previously obtained sync token. Returns one `change-summary`
+resource per changed key, and a new `meta.syncToken` to use on the next poll.
+
+> **Capability-gated** — backends that do not support change signals return `501 Not Implemented`.
+> Check `attributes.changes.supported` in `GET /capabilities` before calling this endpoint.
+
+**Query Parameters**
+
+| Parameter        | Type   | Required | Description                                                                                    |
+| ---------------- | ------ | -------- | ---------------------------------------------------------------------------------------------- |
+| `filter[since]`  | string | **yes**  | Sync token from a prior `GET /sync-token` or `GET /changes` response. Returns `400` if absent. |
+| `filter[folder]` | string | no       | Restrict change feed to a specific folder. Should match the folder used to obtain the token.   |
+
+**Response** — collection of `change-summary` resources
+
+```json
+{
+  "data": [
+    {
+      "type": "change-summary",
+      "id": "images/hero.jpg",
+      "attributes": {
+        "deleted": false,
+        "version": "etag-abc123"
+      }
+    },
+    {
+      "type": "change-summary",
+      "id": "images/old-logo.png",
+      "attributes": {
+        "deleted": true
+      }
+    }
+  ],
+  "meta": {
+    "page": { "total": 2 },
+    "syncToken": "eyJlcG9jaCI6MTcwMX0="
+  }
+}
+```
+
+The `meta.syncToken` value is the cursor for the next call. `attributes.version` is present only
+when the backend supports version tracking (`attributes.versionTracking.supported: true` in
+`GET /capabilities`). `attributes.deleted: true` indicates the asset was removed since the prior
+token.
+
+**Error Responses**
+
+| Status | Condition                                                             |
+| ------ | --------------------------------------------------------------------- |
+| `400`  | `filter[since]` is absent                                             |
+| `501`  | Backend does not support change signals (`NotImplementedError`)       |
+| `403`  | Caller is not authorised to call `listChanges` (`AuthorizationError`) |
