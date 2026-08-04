@@ -23,7 +23,7 @@ import {
 import type { ContentBaseSettingsProvider, MediaCollectionSettings } from 'laikacms/contentbase-settings';
 import type { LaikaDone, LaikaError } from 'laikacms/core';
 import { BadRequestError, LaikaStream, LaikaTask } from 'laikacms/core';
-import type { Atom, AtomSummary, Folder, FolderCreate, StorageRepository } from 'laikacms/storage';
+import type { Atom, Folder, FolderCreate, StorageRepository } from 'laikacms/storage';
 import { pathCombine, pathToSegments } from 'laikacms/storage';
 
 /** Lift a LaikaTask into an Effect, forwarding metadata to the outer emit. */
@@ -203,25 +203,6 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
     };
   }
 
-  private summaryToResource(atom: AtomSummary, directory: string, collection: string): Resource {
-    const logicalKey = this.extractKeyFromPath(atom.key, directory, collection);
-    if (atom.type === 'folder-summary') {
-      return {
-        type: 'folder',
-        key: logicalKey,
-        createdAt: atom.createdAt,
-        updatedAt: atom.updatedAt,
-      };
-    }
-    return {
-      type: 'asset',
-      key: logicalKey,
-      createdAt: atom.createdAt,
-      updatedAt: atom.updatedAt,
-      content: {},
-    };
-  }
-
   // ===== Resource Operations =====
 
   getResource(
@@ -257,19 +238,22 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
         const resolved = yield* this.resolveCollection(collection, emit);
         const physicalFolder = remainder ? pathCombine(resolved.directory, remainder) : resolved.directory;
 
-        const { data: summaries, done: storageDone } = yield* LaikaStream.runCollectForwarding(
-          this.storageRepository.listAtomSummaries(physicalFolder, {
+        // Use listAtoms (not listAtomSummaries) so each entry carries its full
+        // StorageObjectContent — summaries alone can't report a listed asset's
+        // contentType, which regressed to `null` (LCMS-271).
+        const { data: atoms, done: storageDone } = yield* LaikaStream.runCollectForwarding(
+          this.storageRepository.listAtoms(physicalFolder, {
             pagination: options.pagination,
             depth: options.depth,
           }),
           emit,
         );
 
-        for (const atom of summaries) {
-          yield* emit.data(this.summaryToResource(atom, resolved.directory, collection));
+        for (const atom of atoms) {
+          yield* emit.data(this.atomToResource(atom, resolved.directory, collection));
         }
         return {
-          total: storageDone.total ?? summaries.length,
+          total: storageDone.total ?? atoms.length,
           ...(storageDone.pagination ? { pagination: storageDone.pagination } : {}),
         };
       })
