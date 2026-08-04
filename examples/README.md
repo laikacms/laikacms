@@ -1,10 +1,15 @@
 # Laika CMS examples
 
-Standalone examples. This directory has its own `pnpm-workspace.yaml` that declares
-`../packages/laikacms` as a local workspace member, keeping the lockfile and `node_modules` here
-and away from the main workspace.
+> **Example apps have moved.** The ~160 `starter-*` reference apps that used to live here were
+> relocated to separate repositories in June 2026. See
+> [`docs/contributing/starters.md`](../docs/contributing/starters.md) for the current status and
+> links once they are published.
 
-## Setup
+This directory retains the `pnpm-workspace.yaml` scaffolding (used by the `examples/` isolated
+workspace) but contains no runnable apps. The setup instructions below apply when example apps are
+added back.
+
+## Setup (for future example apps)
 
 Build the library first (from the repo root), then install here:
 
