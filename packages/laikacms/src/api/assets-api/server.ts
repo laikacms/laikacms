@@ -17,6 +17,7 @@ import {
 } from 'laikacms/core';
 import type { JsonApiLogger } from 'laikacms/json-api';
 import { errorToJsonApiMapper, recoverableErrorsToWarnings } from 'laikacms/json-api';
+import { type AuthorizeDecision, resolveAuthorization } from '../authorize.js';
 
 /** Convert any caught throw into a LaikaError, preserving LaikaError instances and wrapping defects in InternalError. */
 const toLaikaError = (err: unknown): LaikaError => {
@@ -121,11 +122,45 @@ export interface AssetsApi {
   fetch(req: Request): Promise<Response>;
 }
 
+/**
+ * A single assets action the API is about to perform, discriminated on
+ * `action` and carrying that action's relevant arguments.
+ */
+export type AssetsAuthorizeAction =
+  | { action: 'listResources', folder: string }
+  | { action: 'getResource', key: string }
+  | { action: 'createAsset' }
+  | { action: 'createFolder' }
+  | { action: 'updateAsset', key: string }
+  | { action: 'deleteResource', key: string }
+  | { action: 'getCapabilities' }
+  | { action: 'getSyncToken' }
+  | { action: 'listChanges' };
+
+/**
+ * The argument passed to an assets {@link AssetsAuthorize} callback:
+ * the action descriptor plus the entire originating {@link Request}.
+ */
+export type AssetsAuthorizeInput = AssetsAuthorizeAction & { request: Request };
+
+/**
+ * Per-action authorization callback. Invoked once for every assets action
+ * before the underlying repository is touched. Return `true` to allow,
+ * `false` to deny with a 403, or a `LaikaError` to deny with a custom
+ * status/message.
+ */
+export type AssetsAuthorize = (input: AssetsAuthorizeInput) => AuthorizeDecision | Promise<AuthorizeDecision>;
+
 export interface AssetsApiOptions {
   repository: AssetsRepository;
   basePath?: string;
   onError?: (error: unknown) => void;
   logger?: JsonApiLogger;
+  /**
+   * Optional per-action authorization hook. See {@link AssetsAuthorize}.
+   * When omitted the API performs no authorization (the historical behaviour).
+   */
+  authorize?: AssetsAuthorize | undefined;
 }
 
 // ============================================
@@ -286,12 +321,20 @@ type JsonApiFolderCreateData = S.Schema.Type<typeof JsonApiFolderCreateSchema>;
  * `fetch` can list, upload, modify, and delete asset binaries.
  */
 export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
-  const { repository, basePath = '/api/assets', onError, logger } = options;
+  const { repository, basePath = '/api/assets', onError, logger, authorize } = options;
 
   // Create decoders
   const decodeAssetCreate = S.decodeUnknownSync(JsonApiAssetCreateSchema);
   const decodeAssetUpdate = S.decodeUnknownSync(JsonApiAssetUpdateSchema);
   const decodeFolderCreate = S.decodeUnknownSync(JsonApiFolderCreateSchema);
+
+  const authorizeAction = async (request: Request, action: AssetsAuthorizeAction): Promise<Response | null> => {
+    if (!authorize) return null;
+    const denial = resolveAuthorization(await authorize({ ...action, request }));
+    if (!denial) return null;
+    const status = ErrorCodeToStatusMap[denial.code as keyof typeof ErrorCodeToStatusMap] ?? 403;
+    return respondError(denial, status, logger);
+  };
 
   return {
     async fetch(request: Request): Promise<Response> {
@@ -394,6 +437,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // proxy client can introspect what the upstream actually supports
     // instead of guessing.
     if (path === `${basePath}/capabilities` && method === 'GET') {
+      const denied = await authorizeAction(request, { action: 'getCapabilities' });
+      if (denied) return denied;
       const result = await firstResult(repository.getCapabilities());
       if (Result.isFailure(result)) {
         const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
@@ -412,6 +457,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // with NotImplementedError, which maps to HTTP 501 and re-hydrates into
     // the same typed error on the proxy side.
     if (path === `${basePath}/sync-token` && method === 'GET') {
+      const denied = await authorizeAction(request, { action: 'getSyncToken' });
+      if (denied) return denied;
       const folder = str(query['filter[folder]']);
       const result = await firstResultWithMetadata(repository.getSyncToken(folder ? { folder } : undefined));
       if (Result.isFailure(result)) {
@@ -433,6 +480,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // Route: GET /changes
     // List changes since a sync token; `meta.syncToken` carries the new token.
     if (path === `${basePath}/changes` && method === 'GET') {
+      const denied = await authorizeAction(request, { action: 'listChanges' });
+      if (denied) return denied;
       const since = str(query['filter[since]']);
       if (!since) {
         return respondError(
@@ -470,6 +519,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // List all resources in a folder
     if (path === `${basePath}/resources` && method === 'GET') {
       const folderKey = str(query['folder']) || str(query['filter[folder]']) || str(query['filter[prefix]']) || '';
+      const deniedList = await authorizeAction(request, { action: 'listResources', folder: folderKey });
+      if (deniedList) return deniedList;
       const pagination = parsePaginationQuery(query);
 
       // Reject cursor params when the backend has declared cursor:false.
@@ -666,6 +717,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // Get a single resource by key
     if (path.startsWith(`${basePath}/resources/`) && method === 'GET') {
       const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
+      const deniedGet = await authorizeAction(request, { action: 'getResource', key });
+      if (deniedGet) return deniedGet;
 
       const result = await firstResultWithMetadata(repository.getResource(key, { hints }));
       if (Result.isFailure(result)) {
@@ -734,6 +787,9 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
           );
         }
 
+        const deniedCreate = await authorizeAction(request, { action: 'createAsset' });
+        if (deniedCreate) return deniedCreate;
+
         let metadata: {
           key?: string,
           mimeType?: string,
@@ -801,6 +857,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         const data = body.data as { type?: string };
 
         if (data.type === 'folder') {
+          const deniedFolder = await authorizeAction(request, { action: 'createFolder' });
+          if (deniedFolder) return deniedFolder;
           let parsed: JsonApiFolderCreateData;
           try {
             parsed = decodeFolderCreate(data);
@@ -831,6 +889,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
 
         // Asset creation via JSON (content must be base64 encoded)
         if (data.type === 'asset') {
+          const deniedAsset = await authorizeAction(request, { action: 'createAsset' });
+          if (deniedAsset) return deniedAsset;
           let parsed: JsonApiAssetCreateData;
           try {
             parsed = decodeAssetCreate(data);
@@ -896,6 +956,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // Update an asset
     if (path.startsWith(`${basePath}/resources/`) && method === 'PATCH') {
       const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
+      const deniedPatch = await authorizeAction(request, { action: 'updateAsset', key });
+      if (deniedPatch) return deniedPatch;
       let body: { data: Record<string, unknown> };
       try {
         body = await request.json() as { data: Record<string, unknown> };
@@ -939,6 +1001,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // Delete a resource
     if (path.startsWith(`${basePath}/resources/`) && method === 'DELETE') {
       const key = decodeURIComponent(path.slice(`${basePath}/resources/`.length));
+      const denied = await authorizeAction(request, { action: 'deleteResource', key });
+      if (denied) return denied;
       const recursive = str(query['recursive']) === 'true';
 
       // Try to determine if it's an asset or folder
