@@ -112,6 +112,8 @@ jobs:
           touch site-dist/.nojekyll
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
