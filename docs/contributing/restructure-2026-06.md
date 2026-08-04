@@ -29,7 +29,7 @@ into the `@laikacms/decap-cms` fork, DCMS-492):
 | `laikacms`        | `packages/laikacms` | Core domain, APIs, default implementations, serializers, shared utils |
 | `@laikacms/decap` | `packages/decap`    | Decap CMS integrations: backend, OAuth2, widgets, server adapters     |
 
-The `apps/` directory no longer exists.
+The `apps/` directory was removed during the restructure. **Update (v2.1.0, commit `be41003`):** `apps/website` (`@laikacms/website` — the laikacms.com marketing site) was subsequently re-added as a private workspace package; `apps/` now contains only that one entry.
 
 ## What was removed
 
@@ -40,7 +40,7 @@ The entire `apps/` tree was deleted:
 - **159 `starter-*` templates** — one reference app per framework / runtime / storage backend
   (Next.js, Astro, SvelteKit, Nuxt, Hono, Workers, Lambda, and many more).
 - **5 non-starter apps**: `decap-cms-laika-app`, `laika-gateway`, `storage-contract-e2e`,
-  `storybook`, and `website`.
+  `storybook`, and `website`. (`website` was subsequently re-added as `apps/website` in v2.1.0 — see the note above.)
 
 ### Packages (8 top-level directories, 100+ npm packages)
 
