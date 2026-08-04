@@ -50,15 +50,31 @@ interface AssetsApiOptions {
   basePath?: string;
   onError?: (error: unknown) => void;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'>;
+  authorize?: (input: AssetsAuthorizeInput) => boolean | LaikaError | Promise<boolean | LaikaError>;
 }
 ```
 
-| Option       | Type                                              | Default         | Description                                                                                                                |
-| ------------ | ------------------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| `repository` | `AssetsRepository`                                | —               | Required. The assets repository implementation to back the API.                                                            |
-| `basePath`   | `string`                                          | `'/api/assets'` | URL prefix stripped from `request.url` before routing. Set to the mount path (e.g. `/assets`) when mounting at a sub-path. |
-| `onError`    | `(error: unknown) => void`                        | —               | Called with each fatal error before the JSON:API error response is returned. Use for logging or Sentry breadcrumbs.        |
-| `logger`     | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | —               | Passed to the JSON:API error serialiser for structured error logging.                                                      |
+| Option       | Type                                              | Default         | Description                                                                                                                                                                                                      |
+| ------------ | ------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repository` | `AssetsRepository`                                | —               | Required. The assets repository implementation to back the API.                                                                                                                                                  |
+| `basePath`   | `string`                                          | `'/api/assets'` | URL prefix stripped from `request.url` before routing. Set to the mount path (e.g. `/assets`) when mounting at a sub-path.                                                                                       |
+| `onError`    | `(error: unknown) => void`                        | —               | Called with each fatal error before the JSON:API error response is returned. Use for logging or Sentry breadcrumbs.                                                                                              |
+| `logger`     | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | —               | Passed to the JSON:API error serialiser for structured error logging.                                                                                                                                            |
+| `authorize`  | `AssetsAuthorize`                                 | —               | Optional per-action authorization hook. Invoked before each action with the action descriptor and originating `Request`. Return `true` to allow, `false` for 403, or a `LaikaError` for a custom status/message. |
+
+```typescript
+import { type AssetsAuthorizeInput, buildAssetsApi } from 'laikacms/assets-api';
+
+const api = buildAssetsApi({
+  repository: myAssetsRepo,
+  authorize: async ({ action, request }: AssetsAuthorizeInput) => {
+    const user = await getUser(request);
+    if (!user) return new AuthenticationError('Missing token');
+    if (action === 'deleteResource' && !user.isAdmin) return false; // 403
+    return true;
+  },
+});
+```
 
 ## Endpoints
 

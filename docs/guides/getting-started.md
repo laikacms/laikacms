@@ -46,9 +46,10 @@ export default { fetch: api.fetch };
 > });
 > ```
 >
-> The same `authorize` option is available on the documents API (`laikacms/documents/api`) and the
-> contentbase settings API (`laikacms/contentbase-api`). Atomic-operation requests authorize each
-> sub-action up front, so a single denial rejects the whole batch before any write runs.
+> The same `authorize` option is available on the documents API (`laikacms/documents/api`), the
+> contentbase settings API (`laikacms/contentbase-api`), and the assets API (`laikacms/assets-api`).
+> Atomic-operation requests authorize each sub-action up front, so a single denial rejects the whole
+> batch before any write runs.
 
 > **Note:** `rawSerializer` stores only the `body` field of each content object as plain text.
 > Passing any other fields (e.g. `title`, `tags`) will throw an error at write time to prevent
