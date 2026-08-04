@@ -48,13 +48,14 @@ export default { fetch: api.fetch };
 
 ## Endpoints
 
-| Method | Path                | Status | Description              |
-| ------ | ------------------- | ------ | ------------------------ |
-| GET    | `/collections`      | 200    | List all collections     |
-| GET    | `/collections/:key` | 200    | Read a single collection |
-| POST   | `/collections`      | 201    | Create a collection      |
-| PATCH  | `/collections/:key` | 200    | Update a collection      |
-| DELETE | `/collections/:key` | 204    | Delete a collection      |
+| Method | Path                | Status | Description               |
+| ------ | ------------------- | ------ | ------------------------- |
+| GET    | `/openapi.json`     | 200    | OpenAPI 3.1 specification |
+| GET    | `/collections`      | 200    | List all collections      |
+| GET    | `/collections/:key` | 200    | Read a single collection  |
+| POST   | `/collections`      | 201    | Create a collection       |
+| PATCH  | `/collections/:key` | 200    | Update a collection       |
+| DELETE | `/collections/:key` | 204    | Delete a collection       |
 
 All responses carry `Cache-Control: no-store`.
 
@@ -196,13 +197,15 @@ Errors follow JSON:API format:
 ```typescript
 interface ContentBaseApiOptions {
   repo: ContentBaseSettingsProvider;
+  basePath?: string;
   onError?(error: unknown): void;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'>;
 }
 ```
 
-| Option    | Type                                                    | Description                                         |
-| --------- | ------------------------------------------------------- | --------------------------------------------------- |
-| `repo`    | `ContentBaseSettingsProvider`                           | The settings provider to read/write collections     |
-| `onError` | `(error: unknown) => void`                              | Called for every error before the response is sent  |
-| `logger`  | `Pick<Console, 'error' \| 'warn' \| 'info' \| 'debug'>` | Routes unhandled-error log output; no-op if omitted |
+| Option     | Type                                              | Default | Description                                                                                                                        |
+| ---------- | ------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `repo`     | `ContentBaseSettingsProvider`                     | —       | Required. The settings provider to read/write collections.                                                                         |
+| `basePath` | `string`                                          | `''`    | Mount path advertised in the `servers` URL of the served OpenAPI document. The Hono app is prefix-agnostic; mount it at this path. |
+| `onError`  | `(error: unknown) => void`                        | —       | Called with each fatal error before the JSON:API error response is returned. Use for logging or Sentry breadcrumbs.                |
+| `logger`   | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | —       | Passed to the JSON:API error serialiser for structured error logging.                                                              |
