@@ -39,10 +39,21 @@ Returns meta-information about the Storage API and its available endpoints.
       "version": "1.0.0",
       "endpoints": [
         {
+          "path": "/openapi.json",
+          "methods": ["GET"],
+          "description": "OpenAPI 3.1 specification for this API"
+        },
+        {
+          "path": "/openapi.yaml",
+          "methods": ["GET"],
+          "description": "OpenAPI 3.1 specification for this API, as YAML"
+        },
+        {
           "path": "/capabilities",
           "methods": ["GET"],
           "description": "Underlying storage repository capabilities"
         },
+        { "path": "/atoms", "methods": ["POST"], "description": "Create a folder" },
         { "path": "/atoms/{key}", "methods": ["GET"], "description": "List atoms in a folder" },
         {
           "path": "/atom-summaries/{key}",
@@ -70,6 +81,34 @@ Returns meta-information about the Storage API and its available endpoints.
   }
 }
 ```
+
+---
+
+#### GET /openapi.json
+
+Returns the OpenAPI 3.1 specification for the Storage API as a JSON document.
+
+**Response** — `200 OK`, `Content-Type: application/json`
+
+The response body is an OpenAPI 3.1.0 document. The `servers` array is rewritten to the absolute
+mount point so the document is usable as-is by code generators and API clients.
+
+```json
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Storage API", "version": "1.0.0" },
+  "servers": [{ "url": "https://example.com/api/storage" }],
+  "paths": { ... }
+}
+```
+
+---
+
+#### GET /openapi.yaml
+
+Returns the same OpenAPI 3.1 specification as `GET /openapi.json`, serialized as YAML.
+
+**Response** — `200 OK`, `Content-Type: application/yaml`
 
 ---
 

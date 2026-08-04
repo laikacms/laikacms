@@ -32,6 +32,92 @@ results. Both the canonical short name and the long-form JSON:API type name are 
 
 ---
 
+#### GET /
+
+Returns meta-information about the Assets API and its available endpoints.
+
+**Response**
+
+```json
+{
+  "data": {
+    "type": "api-info",
+    "id": "assets",
+    "attributes": {
+      "name": "Assets API",
+      "version": "1.0.0",
+      "endpoints": [
+        {
+          "path": "/openapi.json",
+          "methods": ["GET"],
+          "description": "OpenAPI 3.1 specification for this API"
+        },
+        {
+          "path": "/openapi.yaml",
+          "methods": ["GET"],
+          "description": "OpenAPI 3.1 specification for this API, as YAML"
+        },
+        {
+          "path": "/capabilities",
+          "methods": ["GET"],
+          "description": "Underlying assets repository capabilities"
+        },
+        {
+          "path": "/sync-token",
+          "methods": ["GET"],
+          "description": "Get an opaque change token (capability-gated)"
+        },
+        {
+          "path": "/changes",
+          "methods": ["GET"],
+          "description": "List changes since a sync token (capability-gated)"
+        },
+        {
+          "path": "/resources",
+          "methods": ["GET", "POST"],
+          "description": "List or create assets and folders"
+        },
+        {
+          "path": "/resources/{key}",
+          "methods": ["GET", "PATCH", "DELETE"],
+          "description": "Read, update, or delete a resource"
+        }
+      ]
+    }
+  }
+}
+```
+
+---
+
+#### GET /openapi.json
+
+Returns the OpenAPI 3.1 specification for the Assets API as a JSON document.
+
+**Response** — `200 OK`, `Content-Type: application/json`
+
+The response body is an OpenAPI 3.1.0 document. The `servers` array is rewritten to the absolute
+mount point so the document is usable as-is by code generators and API clients.
+
+```json
+{
+  "openapi": "3.1.0",
+  "info": { "title": "Assets API", "version": "1.0.0" },
+  "servers": [{ "url": "https://example.com/api/assets" }],
+  "paths": { ... }
+}
+```
+
+---
+
+#### GET /openapi.yaml
+
+Returns the same OpenAPI 3.1 specification as `GET /openapi.json`, serialized as YAML.
+
+**Response** — `200 OK`, `Content-Type: application/yaml`
+
+---
+
 #### GET /capabilities
 
 Returns the capabilities advertised by the underlying assets repository. Clients should call this
