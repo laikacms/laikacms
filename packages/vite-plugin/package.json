@@ -1,0 +1,85 @@
+{
+  "name": "@laikacms/vite-plugin",
+  "version": "2.2.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Vite plugin for Laika CMS: mounts the storage, documents, and assets JSON:API in the dev/preview server, backed by a repository of your choice (a filesystem repository by default).",
+  "keywords": [
+    "vite",
+    "vite-plugin",
+    "headless-cms",
+    "laikacms",
+    "content-management"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepack": "node ../../scripts/check-no-catalog-deps.mjs"
+  },
+  "dependencies": {
+    "es-module-lexer": "catalog:",
+    "laikacms": "workspace:*",
+    "magic-string": "catalog:",
+    "minimatch": "catalog:"
+  },
+  "peerDependencies": {
+    "rolldown": ">=1",
+    "typescript": ">=5",
+    "vite": ">=8"
+  },
+  "peerDependenciesMeta": {
+    "rolldown": {
+      "optional": true
+    },
+    "typescript": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "minimatch": "catalog:",
+    "rimraf": "catalog:tools",
+    "rolldown": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vite": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
