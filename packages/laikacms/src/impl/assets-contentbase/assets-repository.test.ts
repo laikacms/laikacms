@@ -54,6 +54,23 @@ describe('ContentBaseAssetsRepository — createAsset / getAsset', () => {
     const fetched = await LaikaTask.runPromise(repo.getAsset(key));
     expect((fetched.content as Record<string, unknown>).customMetadata).toEqual({ owner: 'test' });
   });
+
+  it('fails with EntryAlreadyExistsError on a duplicate key instead of silently overwriting (LCMS-436)', async () => {
+    const key = KEY('duplicate.png');
+    await LaikaTask.runPromise(repo.createAsset({ key, content: PNG, mimeType: 'image/png' }));
+
+    const OTHER_CONTENT = new Uint8Array([0x01, 0x02, 0x03]);
+    const result = await LaikaTask.runPromiseResult(
+      repo.createAsset({ key, content: OTHER_CONTENT, mimeType: 'text/plain' }),
+    );
+    expect(result._tag).toBe('Failure');
+    if (result._tag === 'Failure') expect(result.failure.code).toBe('entry_already_exists');
+
+    // First asset's content must be untouched by the failed duplicate create.
+    const fetched = await LaikaTask.runPromise(repo.getAsset(key));
+    expect(fetched.content.contentType).toBe('image/png');
+    expect(fetched.content.size).toBe(PNG.length);
+  });
 });
 
 describe('ContentBaseAssetsRepository — updateAsset', () => {

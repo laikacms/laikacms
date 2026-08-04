@@ -321,7 +321,7 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
         if (create.cacheControl) storedContent.cacheControl = create.cacheControl;
 
         const result = yield* LaikaTask.runValueForwarding(
-          this.storageRepository.createOrUpdateObject({
+          this.storageRepository.createObject({
             type: 'object',
             key: path.physical,
             content: storedContent,
