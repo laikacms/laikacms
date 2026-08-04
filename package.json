@@ -6,8 +6,6 @@
   "scripts": {
     "clean": "rimraf --glob '**/node_modules' '**/dist' '**/.turbo' '**/cdk.out' '**/.tanstack/*' '**/.wrangler/*'",
     "build": "turbo run build",
-    "build:site": "turbo run build --filter=@laikacms/website --filter=@laikacms/docs && node scripts/assemble-site.mjs",
-    "deploy:site": "pnpm build:site && pnpm dlx wrangler pages deploy site-dist --project-name=laikacms-website",
     "dev": "turbo watch dev",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
@@ -37,7 +35,7 @@
   },
   "packageManager": "pnpm@10.34.5",
   "engines": {
-    "node": "22.x",
+    "node": "24.x",
     "pnpm": ">=8 <11"
   }
 }

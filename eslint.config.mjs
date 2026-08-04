@@ -65,6 +65,9 @@ export default tseslint.config(
       '**/build/**',
       '**/worker-configuration.d.ts',
       '**/next-env.d.ts',
+      // @laikacms/vite-plugin typegen output + its committed one-line reference
+      '**/.laika/**',
+      '**/laika-env.d.ts',
       'types/**',
       // Framework-generated artifact directories — never manually edited
       '**/.astro/**',

@@ -10,7 +10,7 @@
   <a href="https://github.com/laikacms/laikacms/commits/develop"><img src="https://img.shields.io/github/last-commit/laikacms/laikacms/develop" alt="Last Commit"></a>
 </p>
 <p align="center">
-  <img src="https://img.shields.io/badge/node-22.x-brightgreen" alt="Node.js">
+  <img src="https://img.shields.io/badge/node-24.x-brightgreen" alt="Node.js">
   <img src="https://img.shields.io/badge/pnpm-10.4.1-orange" alt="pnpm">
   <a href="https://github.com/laikacms/laikacms/network/dependencies"><img src="https://img.shields.io/librariesio/github/laikacms/laikacms" alt="Dependencies"></a>
 </p>
