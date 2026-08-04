@@ -203,9 +203,15 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
   getAtom(key: string): LaikaTask.LaikaTask<Atom> {
     return LaikaTask.make<Atom>(emit =>
       Effect.gen({ self: this }, function*() {
-        const asObject = yield* Effect.result(LaikaTask.runValueForwarding(this.getObject(key), emit));
-        if (asObject._tag === 'Success') return asObject.success;
-        return yield* LaikaTask.runValueForwarding(this.getFolder(key), emit);
+        const raw = yield* this.fetchResourceWithWarnings<JsonApiAtom>(
+          `/atom/${encodeURIComponent(key)}`,
+          { method: 'GET' },
+          emit,
+        );
+        return yield* Effect.try({
+          try: () => atomFromJsonApi(decodeJsonApiAtom(raw) as JsonApiAtom),
+          catch: e => new InvalidData((e as { message?: string }).message ?? 'Invalid JSON:API response'),
+        });
       })
     );
   }

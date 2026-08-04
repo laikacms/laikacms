@@ -12,14 +12,7 @@ let originalFetch: typeof fetch | null = null;
 
 export const jsonApiProxyStorageContractCase: StorageContractCase = {
   name: 'StorageJsonApiProxyRepository (in-process JSON:API + in-memory backing)',
-  /**
-   * `/operations` atomic remove resolves ops but never surfaces the resulting
-   * `atom` rows back to the client — so the proxy sees `atomic:results: []`
-   * and can't report removed/skipped counts. `getAtom` is a composite
-   * object+folder fetch that's not directly routed through the proxy.
-   * These are documented server-side gaps, not proxy bugs.
-   */
-  skip: ['getAtom', 'removeAtoms'],
+  skip: [],
   makeRepo: async () => {
     const backing = new InMemoryStorageRepository();
     const api = buildJsonApi({ repo: backing });
