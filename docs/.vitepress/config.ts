@@ -9,7 +9,7 @@ export default defineConfig({
   base: '/docs/',
   cleanUrls: true,
   lastUpdated: true,
-  // The apps/ tree was moved out of the monorepo (June 2026, see restructure-2026-06.md).
+  // The apps/ tree was moved out of the monorepo (June 2026).
   // Any lingering ../apps/ references point at external source dirs, not vitepress pages.
   ignoreDeadLinks: [/\/apps\//],
   themeConfig: {
@@ -76,25 +76,6 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: 'Overview', link: '/contributing/' },
-          {
-            text: 'Decisions (ADRs)',
-            collapsed: true,
-            items: [
-              { text: 'ADR Index', link: '/contributing/decisions/' },
-              {
-                text: 'ADR-001 · Real-time Collaboration',
-                link: '/contributing/decisions/ADR-001-realtime-collaboration',
-              },
-              { text: 'ADR-002 · GraphQL API Option', link: '/contributing/decisions/ADR-002-graphql-api-option' },
-              {
-                text: 'ADR-003 · CMS-agnostic Protocol',
-                link: '/contributing/decisions/ADR-003-cms-agnostic-protocol',
-              },
-            ],
-          },
-          { text: 'Test Strategy', link: '/contributing/test-strategy' },
-          { text: 'Security Audit (2026-05)', link: '/contributing/security-audit-2026-05' },
-          { text: 'Restructure (2026-06)', link: '/contributing/restructure-2026-06' },
           { text: 'Starter Templates', link: '/contributing/starters' },
         ],
       },

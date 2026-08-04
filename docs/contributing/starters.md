@@ -1,9 +1,8 @@
 # Starter templates
 
 > **Moved out of the monorepo (June 2026).** The ~160 `starter-*` reference apps that used to live
-> under `apps/` were removed from `laikacms/laikacms` as part of the
-> [June 2026 restructure](./restructure-2026-06). They are being relocated to their own
-> repositories.
+> under `apps/` were removed from `laikacms/laikacms` as part of the June 2026 restructure. They are
+> being relocated to their own repositories.
 
 ## What the starters were
 

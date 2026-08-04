@@ -127,6 +127,9 @@ const api = decapApi({
     if (token !== DEV_TOKEN) throw new Error('Invalid token');
     return { id: 'dev', email: 'dev@localhost' };
   },
+  // Authorization: decide what an authenticated principal may do. Here, anyone
+  // holding a valid token gets full access. Return false (or throw) to deny.
+  authorize: () => true,
   // CORS: required when the Decap admin is served from a different origin than this
   // API (e.g. `npx serve admin/ -l 5000` on :5000 while the API runs on :3000).
   // Without this the browser blocks every API call with a CORS error before the
@@ -357,7 +360,7 @@ Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS
 ## 6. Production deployment
 
 The `decapApi` server is a standard Node.js process and can be deployed anywhere that supports
-Node.js 22 or later.
+Node.js 24 or later.
 
 ### Key requirement
 

@@ -25,7 +25,7 @@ const api = decapApi({
   documents,
   storage,
   authenticateAccessToken: async token => {
-    // validate OAuth2 / JWT bearer token
+    // validate OAuth2 / JWT bearer token, return the principal's identity
     const session = await db.sessions.findByAccessToken(token);
     if (!session) throw new Error('Invalid session');
     return db.users.findById(session.userId);
@@ -36,28 +36,81 @@ const api = decapApi({
     if (!apiKey) throw new Error('Invalid API key');
     return db.users.findById(apiKey.userId);
   },
+  // Required: decide what the authenticated principal may do (see below).
+  authorize: () => true,
 });
 ```
 
 If `authenticateApiToken` is not configured and a request arrives with `X-API-Key` or
 `Authorization: ApiKey`, the server returns `401`.
 
-### Read-only API keys
+## Authorization with `authorize`
 
-Return `scope: 'read'` from either auth callback to restrict that principal to safe (GET / HEAD /
-OPTIONS) requests. Mutating requests (POST, PUT, PATCH, DELETE) are rejected with `403 Forbidden`
-before they reach any repository. Omitting `scope` (or returning `scope: 'write'`) keeps full access
-— existing callbacks need no changes.
+Authentication and authorization are cleanly separated: the `authenticate*` callbacks establish
+**who** the principal is (their identity), and the **required** `authorize(ctx)` callback decides
+**what they may do**. Return `true` to allow the request, `false` to reject it with `403 Forbidden`
+before it reaches any repository. A thrown callback fails closed (treated as a denial). There is no
+implicit default — you must state the policy.
+
+`ctx` carries the principal plus the request pre-parsed so a policy can decide without re-parsing
+the URL:
+
+```ts
+interface AuthorizeContext {
+  user: User; // the identity from your authenticate* callback
+  request: Request; // the raw request, for anything the fields below don't cover
+  method: string; // upper-cased HTTP method
+  domain: 'documents' | 'storage' | 'assets' | 'session';
+  operation: 'read' | 'create' | 'update' | 'delete' | 'publish' | 'unpublish';
+  collection?: string; // first path segment after the domain (the API resource)
+  itemId?: string; // the item key/slug (URL-decoded), when present
+}
+```
+
+```ts
+// Allow everything authenticated:
+authorize: () => true,
+
+// Read-only principal — allow reads, reject anything that mutates:
+authorize: ctx => ctx.operation === 'read',
+```
+
+### Role-based authorization
+
+Because authorization is entirely in your hands, "scopes" and "roles" are just identity fields you
+attach to the `User` and check in `authorize`. Augment the `User` interface with whatever your
+policy needs:
+
+```ts
+declare module '@laikacms/decap/decap-api' {
+  interface User {
+    roles: string[];
+  }
+}
+
+const api = decapApi({
+  documents,
+  storage,
+  authenticateAccessToken: yourValidator, // returns { id, email, roles, … }
+  authorize: ctx => {
+    if (ctx.operation === 'read') return true; // anyone authenticated may read
+    if (ctx.operation === 'delete') return ctx.user.roles.includes('admin'); // only admins delete
+    return ctx.user.roles.includes('editor'); // editors may create/update/publish
+  },
+});
+```
+
+Map `ctx.domain` + `ctx.collection` + `ctx.operation` to whatever permission vocabulary you like —
+the API imposes none. Reach for `ctx.request` only for checks the parsed fields don't cover.
+
+Read-only API keys are the same idea — return the relevant identity from `authenticateApiToken` and
+branch on it in `authorize`:
 
 ```ts
 authenticateApiToken: async key => {
   const apiKey = await db.apiKeys.findByKey(key);
   if (!apiKey) throw new Error('Invalid API key');
-  return {
-    id: apiKey.userId,
-    email: apiKey.email,
-    scope: apiKey.readOnly ? 'read' : 'write',
-  };
+  return { id: apiKey.userId, email: apiKey.email, roles: apiKey.readOnly ? [] : ['editor'] };
 },
 ```
 
@@ -174,6 +227,8 @@ const laika = decapApi({
     if (!user) throw new Error('Unknown user');
     return { id: user.id, email: user.email, name: user.email };
   },
+  // Every authenticated principal may read and write.
+  authorize: () => true,
 });
 
 const app = new Hono();
@@ -258,5 +313,4 @@ for the full `OAuthConfig` option reference.
 If multiple sites share one editing experience, host a gateway Worker separately and point each
 site's Decap admin at it. Auth is per-tenant via GitHub OAuth (or other). Storage is the tenant's
 own GitHub repo. The `laika-gateway` app and the `@laikacms/git-gateway` package were moved out of
-this monorepo in June 2026 (see [restructure-2026-06.md](../../contributing/restructure-2026-06));
-they now live in their own repositories.
+this monorepo in June 2026; they now live in their own repositories.

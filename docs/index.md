@@ -55,7 +55,7 @@ features:
 
 **Contributing**
 
-- [Contributing & Internals](./contributing/) — ADRs, test strategy, security audits, repo history
+- [Contributing](./contributing/) — starter templates and the contribution workflow
 
 ## Architecture Overview
 

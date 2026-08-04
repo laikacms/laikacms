@@ -1,8 +1,8 @@
 # Glossary
 
-Shared vocabulary for the `laikacms` bounded context. Terms here are load-bearing: code, docs, and
-ADRs use them with exactly these meanings. Background for the first three entries is in
-[ADR-003](../contributing/decisions/ADR-003-cms-agnostic-protocol).
+Shared vocabulary for the `laikacms` bounded context. Terms here are load-bearing: code and docs use
+them with exactly these meanings. Background for the first three entries is in
+[Architecture](../concepts/architecture).
 
 ## protocol
 

@@ -180,5 +180,4 @@ export const laika = api;
 ```
 
 The `starter-webdav-blog` example (a complete WebDAV setup including an embedded local-dev WebDAV
-server) was moved out of this monorepo in June 2026 — see
-[restructure-2026-06.md](../../contributing/restructure-2026-06).
+server) was moved out of this monorepo in June 2026.
