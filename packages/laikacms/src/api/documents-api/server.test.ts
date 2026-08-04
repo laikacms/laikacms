@@ -1138,6 +1138,36 @@ describe('GET /record-summaries', () => {
     expect(body.data[1]!.type).toBe('unpublished-summary');
     expect(body.data[1]!.id).toBe('posts/draft');
   });
+
+  it(
+    'returns 200 (not 500 "Unknown entry type") once a real repo has >=1 entry (LCMS-267)',
+    async () => {
+      // Regression for LCMS-267: a real repo (like ContentBaseDocumentsRepository)
+      // emits already-suffixed `published-summary` / `unpublished-summary` entry
+      // types from listRecordSummaries. Wiring a real repo through buildJsonApi
+      // end-to-end reproduces the original 500 "Unknown entry type:
+      // published-summary" as soon as the collection has at least one document.
+      const repo = new InMemoryDocumentsRepository();
+      await LaikaTask.runPromise(
+        repo.createDocument({
+          key: 'posts/hello',
+          type: 'published',
+          status: 'published',
+          content: { title: 'Hello' },
+          language: 'en',
+        }),
+      );
+
+      const api = buildJsonApi({ repo });
+      const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Bfolder%5D=posts'));
+      expect(res.status).toBe(200);
+
+      const body = await res.json() as { data: Array<{ id: string, type: string }> };
+      expect(body.data).toHaveLength(1);
+      expect(body.data[0]!.type).toBe('published-summary');
+      expect(body.data[0]!.id).toBe('posts/hello');
+    },
+  );
 });
 
 // ---------------------------------------------------------------------------
