@@ -8,7 +8,7 @@ unpublished drafts, and revision history.
 ## Usage
 
 ```ts
-import { and, eq, inArray, like, lte, ne } from 'drizzle-orm';
+import { and, count, eq, inArray, like, lte, ne } from 'drizzle-orm';
 import { DrizzleDocumentsRepository } from 'laikacms/documents/drizzle';
 
 import { db, documentsTable, revisionsTable } from './db';
@@ -51,6 +51,11 @@ const repo = new DrizzleDocumentsRepository({
           .where(where)
           .limit(limit ?? 100)
           .offset(offset ?? 0),
+      // optional — enables correct meta.page.total for paginated responses
+      count: ({ where }) =>
+        db.select({ count: count() }).from(documentsTable).where(where).then(([r]) =>
+          r?.count ?? 0
+        ),
     },
     revisions: {
       insert: ({ values }) => db.insert(revisionsTable).values(values).returning(),

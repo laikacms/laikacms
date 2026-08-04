@@ -8,7 +8,7 @@ query-builder callbacks and it handles the Laika storage contract. Tested with S
 ## Usage
 
 ```ts
-import { and, eq, like, lte } from 'drizzle-orm';
+import { and, count, eq, like, lte } from 'drizzle-orm';
 import { DrizzleStorageRepository } from 'laikacms/storage/drizzle';
 
 import { db, storageTable } from './db'; // your Drizzle db instance and table
@@ -26,6 +26,9 @@ const repo = new DrizzleStorageRepository({
     delete: ({ where }) => db.delete(storageTable).where(where).returning(),
     select: ({ where, limit, offset }) =>
       db.select().from(storageTable).where(where).limit(limit ?? 100).offset(offset ?? 0),
+    // optional — enables correct meta.total for paginated responses
+    count: ({ where }) =>
+      db.select({ count: count() }).from(storageTable).where(where).then(([r]) => r?.count ?? 0),
   },
 });
 
