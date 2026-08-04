@@ -75,6 +75,13 @@ interface StorageApiOptions {
 }
 ```
 
+| Option     | Type                                              | Default | Description                                                                                                                 |
+| ---------- | ------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `repo`     | `StorageRepository`                               | —       | Required. The storage repository implementation to back the API.                                                            |
+| `basePath` | `string`                                          | `''`    | URL prefix stripped from `request.url` before routing. Set to the mount path (e.g. `/storage`) when mounting at a sub-path. |
+| `onError`  | `(error: unknown) => void`                        | —       | Called with each fatal error before the JSON:API error response is returned. Use for logging or Sentry breadcrumbs.         |
+| `logger`   | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | —       | Passed to the JSON:API error serialiser for structured error logging.                                                       |
+
 ## Partial success: `meta.warnings`
 
 Every response — single-resource, collection, void (delete), and per-result inside `atomic:results`
