@@ -100,13 +100,20 @@ declare module '@laikacms/decap/decap-api' {
 
 `createLaikaBackend(options?)` accepts an optional options object:
 
-| Option                   | Type                                                           | Default                                    | Description                                                                                                         |
-| ------------------------ | -------------------------------------------------------------- | ------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
-| `getDocumentsRepository` | `(opts: GetDocumentsRepositoryOptions) => DocumentsRepository` | `new DocumentsJsonApiProxyRepository(...)` | Override the documents repository factory — use to add interceptors, logging, or custom routing                     |
-| `getAssetsRepository`    | `(opts: GetAssetsRepositoryOptions) => AssetsRepository`       | `new AssetsJsonApiProxyRepository(...)`    | Override the assets repository factory                                                                              |
-| `documentsApiBaseUrl`    | `string`                                                       | derived from `api_url + '/documents'`      | Explicit documents API base URL; use when documents and assets APIs are served from different hosts or base paths   |
-| `assetsApiBaseUrl`       | `string`                                                       | derived from `api_url + '/assets'`         | Explicit assets API base URL                                                                                        |
-| `onWarning`              | `(error: LaikaError) => void`                                  | `console.warn(...)`                        | Hook called for every recoverable warning — use for structured logging, Sentry breadcrumbs, or observability toasts |
+| Option                   | Type                                                           | Default                                          | Description                                                                                                         |
+| ------------------------ | -------------------------------------------------------------- | ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| `getDocumentsRepository` | `(opts: GetDocumentsRepositoryOptions) => DocumentsRepository` | `new DocumentsJsonApiProxyRepository(...)`       | Override the documents repository factory — use to add interceptors, logging, or custom routing                     |
+| `getAssetsRepository`    | `(opts: GetAssetsRepositoryOptions) => AssetsRepository`       | `new AssetsJsonApiProxyRepository(...)`          | Override the assets repository factory                                                                              |
+| `documentsApiBaseUrl`    | `string`                                                       | `Url.combine(base_url, api_root) + '/documents'` | Explicit documents API base URL; use when documents and assets APIs are served from different hosts or base paths   |
+| `assetsApiBaseUrl`       | `string`                                                       | `Url.combine(base_url, api_root) + '/assets'`    | Explicit assets API base URL                                                                                        |
+| `onWarning`              | `(error: LaikaError) => void`                                  | `console.warn(...)`                              | Hook called for every recoverable warning — use for structured logging, Sentry breadcrumbs, or observability toasts |
+
+> **`opts.baseUrl` in custom factories** — both `GetDocumentsRepositoryOptions.baseUrl` and
+> `GetAssetsRepositoryOptions.baseUrl` receive the _combined_ API URL
+> (`Url.combine(base_url, api_root)` from the Decap backend config), not the raw `base_url`. With
+> `base_url: 'https://api.example.com'` and `api_root: '/api'`, `opts.baseUrl` is
+> `'https://api.example.com/api'`. The default factories append `/documents` and `/assets` to this
+> value respectively, or use `documentsApiBaseUrl` / `assetsApiBaseUrl` when those are set.
 
 The `backend:` block in your Decap config also accepts:
 
