@@ -107,4 +107,10 @@ describe('buildAssetsOpenApi', () => {
     const paths = doc.paths as Record<string, OpenApiPathItem>;
     expect(Object.keys(paths['/resources']!.post!.responses)).toContain('409');
   });
+
+  it('PATCH /resources/{key} declares a 404 for a missing asset (LCMS-435)', () => {
+    const doc = buildAssetsOpenApi();
+    const paths = doc.paths as Record<string, OpenApiPathItem>;
+    expect(Object.keys(paths['/resources/{key}']!.patch!.responses)).toContain('404');
+  });
 });

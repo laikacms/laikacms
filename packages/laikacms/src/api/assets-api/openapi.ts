@@ -919,6 +919,7 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
               content: jsonApiContent('AssetDocument'),
             },
             '400': errorResponse('Invalid request body, invalid update data, or repository failure.'),
+            '404': errorResponse('Asset not found.'),
             '500': internalErrorResponse,
           },
         },
