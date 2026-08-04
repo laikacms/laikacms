@@ -607,6 +607,55 @@ describe('PATCH /published/:key', () => {
     expect(body.errors).toHaveLength(1);
     expect(body.errors[0]!.status).toBe('500');
   });
+
+  it('returns 400 when data.id is missing (LCMS-403)', async () => {
+    const repo = {
+      updateDocument: vi.fn(() => LaikaTask.make(() => Effect.succeed(makeDocument('posts/hello')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fhello', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'published',
+            attributes: { status: 'published', content: { title: 'Updated' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(repo.updateDocument).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 when data.id does not match the URL key (LCMS-403)', async () => {
+    const repo = {
+      updateDocument: vi.fn(() => LaikaTask.make(() => Effect.succeed(makeDocument('posts/hello')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/published/posts%2Fhello', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'published',
+            id: 'posts/other',
+            attributes: { status: 'published', content: { title: 'Updated' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('409');
+    expect(repo.updateDocument).not.toHaveBeenCalled();
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -1454,6 +1503,55 @@ describe('PATCH /unpublished/:key', () => {
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
     expect(body.errors[0]!.status).toBe('400');
     expect(body.errors[0]!.code).toBe('invalid_data');
+  });
+
+  it('returns 400 when data.id is missing (LCMS-403)', async () => {
+    const repo = {
+      updateUnpublished: vi.fn(() => LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/draft')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fdraft', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'unpublished',
+            attributes: { status: 'draft', content: { title: 'Updated Draft' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(400);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+    expect(repo.updateUnpublished).not.toHaveBeenCalled();
+  });
+
+  it('returns 409 when data.id does not match the URL key (LCMS-403)', async () => {
+    const repo = {
+      updateUnpublished: vi.fn(() => LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/draft')))),
+    } as unknown as DocumentsRepository;
+
+    const api = buildJsonApi({ repo });
+    const res = await api.fetch(
+      new Request('http://localhost/unpublished/posts%2Fdraft', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'unpublished',
+            id: 'posts/other',
+            attributes: { status: 'draft', content: { title: 'Updated Draft' } },
+          },
+        }),
+      }),
+    );
+    expect(res.status).toBe(409);
+    const body = await res.json() as { errors: Array<{ status: string, code: string }> };
+    expect(body.errors[0]!.status).toBe('409');
+    expect(repo.updateUnpublished).not.toHaveBeenCalled();
   });
 });
 

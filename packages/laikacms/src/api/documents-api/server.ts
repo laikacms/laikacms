@@ -5,6 +5,7 @@ import * as S from 'effect/Schema';
 import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
 import {
   BadRequestError,
+  ConflictError,
   ErrorCodeToStatusMap,
   InternalError,
   InvalidData,
@@ -1074,6 +1075,22 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       const bodyResult = await parseBody(request, decodeDocumentCreateBody);
       if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
       const { data } = bodyResult.success;
+      if (!data.id) {
+        return failResponse(
+          Result.fail(new BadRequestError('data.id is required — must match the {key} in the URL')),
+          400,
+        );
+      }
+      if (data.id !== key) {
+        return failResponse(
+          Result.fail(
+            new ConflictError(
+              `Body data.id ('${data.id}') does not match URL key ('${key}'). Use the URL key as the resource identifier.`,
+            ),
+          ),
+          409,
+        );
+      }
       const updateData = {
         key,
         ...data.attributes,
@@ -1158,6 +1175,16 @@ export function buildJsonApi(options: DocumentsApiOptions) {
       const bodyResult = await parseBody(request, decodeUnpublishedUpdateBody);
       if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
       const { data: bodyData } = bodyResult.success;
+      if (bodyData.id !== key) {
+        return failResponse(
+          Result.fail(
+            new ConflictError(
+              `Body data.id ('${bodyData.id}') does not match URL key ('${key}'). Use the URL key as the resource identifier.`,
+            ),
+          ),
+          409,
+        );
+      }
       const updateData = unpublishedUpdateFromJsonApi({
         type: 'unpublished',
         id: bodyData.id,
