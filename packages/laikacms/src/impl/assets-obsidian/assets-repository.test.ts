@@ -133,31 +133,36 @@ describe('ObsidianAssetsRepository — listing', () => {
     expect(asset?.key).toBe('attachments/a.png');
   });
 
-  it('listResources surfaces an unreadable subdirectory as a recoverableError + still returns siblings', async () => {
-    await fs.mkdir(path.join(vaultDir, 'good'), { recursive: true });
-    await fs.mkdir(path.join(vaultDir, 'forbidden'), { recursive: true });
-    await fs.writeFile(path.join(vaultDir, 'good/a.png'), Buffer.from(PNG));
-    await fs.writeFile(path.join(vaultDir, 'forbidden/secret.png'), Buffer.from(PNG));
-    await fs.chmod(path.join(vaultDir, 'forbidden'), 0o000);
+  // chmod 0o000 is a no-op for root; permission-denied path is unreachable
+  const isRoot = typeof process.getuid === 'function' && process.getuid() === 0;
+  it.skipIf(isRoot)(
+    'listResources surfaces an unreadable subdirectory as a recoverableError + still returns siblings',
+    async () => {
+      await fs.mkdir(path.join(vaultDir, 'good'), { recursive: true });
+      await fs.mkdir(path.join(vaultDir, 'forbidden'), { recursive: true });
+      await fs.writeFile(path.join(vaultDir, 'good/a.png'), Buffer.from(PNG));
+      await fs.writeFile(path.join(vaultDir, 'forbidden/secret.png'), Buffer.from(PNG));
+      await fs.chmod(path.join(vaultDir, 'forbidden'), 0o000);
 
-    try {
-      const repo = new ObsidianAssetsRepository(vaultDir);
-      const collected = await LaikaStream.runPromiseCollect(
-        repo.listResources('', { depth: 3, pagination: { offset: 0, limit: 100 } }),
-      );
+      try {
+        const repo = new ObsidianAssetsRepository(vaultDir);
+        const collected = await LaikaStream.runPromiseCollect(
+          repo.listResources('', { depth: 3, pagination: { offset: 0, limit: 100 } }),
+        );
 
-      const keys = collected.data.map(r => r.key).sort();
-      // 'good' and its child are visible; 'forbidden' is listed as a folder but
-      // its contents could not be enumerated.
-      expect(keys).toContain('good');
-      expect(keys).toContain('good/a.png');
-      expect(keys).toContain('forbidden');
-      expect(keys).not.toContain('forbidden/secret.png');
-      expect(collected.recoverableErrors.length).toBeGreaterThan(0);
-    } finally {
-      await fs.chmod(path.join(vaultDir, 'forbidden'), 0o700);
-    }
-  });
+        const keys = collected.data.map(r => r.key).sort();
+        // 'good' and its child are visible; 'forbidden' is listed as a folder but
+        // its contents could not be enumerated.
+        expect(keys).toContain('good');
+        expect(keys).toContain('good/a.png');
+        expect(keys).toContain('forbidden');
+        expect(keys).not.toContain('forbidden/secret.png');
+        expect(collected.recoverableErrors.length).toBeGreaterThan(0);
+      } finally {
+        await fs.chmod(path.join(vaultDir, 'forbidden'), 0o700);
+      }
+    },
+  );
 
   it('filter[search] returns only keys that contain the substring, case-insensitively', async () => {
     await fs.writeFile(path.join(vaultDir, 'Banner.PNG'), Buffer.from(PNG));
