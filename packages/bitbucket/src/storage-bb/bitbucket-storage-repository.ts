@@ -32,6 +32,7 @@ import {
   type StorageObjectUpdate,
   StorageRepository,
   type StorageSerializerRegistry,
+  unsupportedChanges,
 } from 'laikacms/storage';
 import * as minimatch from 'minimatch';
 
@@ -416,6 +417,7 @@ export class BitbucketStorageRepository extends StorageRepository {
 
   getCapabilities(): LaikaTask.LaikaTask<Capabilities> {
     return LaikaTask.succeed<Capabilities>({
+      changes: unsupportedChanges,
       compatibilityDate: CompatibilityDate.make('2026-05-20'),
       fileExtensions: {
         supported: true,

@@ -280,11 +280,35 @@ const schemas: Record<string, OpenApiSchema> = {
       description: { type: 'string' },
     },
   },
+  ChangesCapability: {
+    oneOf: [
+      {
+        type: 'object',
+        required: ['supported', 'description'],
+        properties: {
+          supported: { const: false },
+          description: { type: 'string' },
+        },
+      },
+      {
+        type: 'object',
+        required: ['supported', 'description', 'syncToken', 'changeFeed', 'subscription'],
+        properties: {
+          supported: { const: true },
+          description: { type: 'string' },
+          syncToken: { type: 'boolean' },
+          changeFeed: { type: 'boolean' },
+          subscription: { type: 'boolean' },
+        },
+      },
+    ],
+  },
   Capabilities: {
     type: 'object',
-    required: ['compatibilityDate', 'fileExtensions', 'pagination'],
+    required: ['compatibilityDate', 'fileExtensions', 'pagination', 'changes'],
     properties: {
       compatibilityDate: { type: 'string' },
+      changes: ref('ChangesCapability'),
       fileExtensions: {
         oneOf: [
           ref('UnsupportedCapability'),

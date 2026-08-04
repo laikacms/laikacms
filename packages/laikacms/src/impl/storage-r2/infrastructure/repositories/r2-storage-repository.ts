@@ -33,6 +33,7 @@ import {
   naturalCompare,
   pathCombine,
   StorageRepository,
+  unsupportedChanges,
 } from 'laikacms/storage';
 import * as minimatch from 'minimatch';
 
@@ -409,6 +410,7 @@ export class R2StorageRepository extends StorageRepository {
         description: 'In-memory slicing over object listings; cursor pagination is not supported.',
         styles: { offset: true, page: true, cursor: false },
       },
+      changes: unsupportedChanges,
     });
   }
 }

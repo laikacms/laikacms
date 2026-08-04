@@ -1,4 +1,5 @@
 import * as fs from 'fs/promises';
+import { type FSWatcher, watch } from 'node:fs';
 import * as path from 'path';
 
 import * as Effect from 'effect/Effect';
@@ -17,6 +18,8 @@ import {
 import type {
   Atom,
   AtomSummary,
+  ChangeListener,
+  ChangeSummary,
   Folder,
   FolderCreate,
   ListAtomsDone,
@@ -27,6 +30,8 @@ import type {
   StorageObjectCreate,
   StorageObjectUpdate,
   StorageSerializerRegistry,
+  SubscribeChangesOptions,
+  Unsubscribe,
 } from 'laikacms/storage';
 import {
   applyPagination,
@@ -66,9 +71,20 @@ const liftSerialize = <A>(p: Promise<A>): Effect.Effect<A, LaikaError> =>
     },
   });
 
+/** Quiet window before a coalesced change batch is delivered to listeners. */
+const CHANGE_DEBOUNCE_MS = 50;
+
 export class FileSystemStorageRepository extends StorageRepository {
   private excludeFilter: minimatch.MMRegExp[];
   private fileSystemDataSource: FileSystemDataSource;
+
+  /** The single shared `fs.watch` handle, started lazily on first subscriber. */
+  private watcher: FSWatcher | undefined;
+  /** Active subscribers, each with the scope it asked for. */
+  private readonly changeSubscriptions = new Map<ChangeListener, SubscribeChangesOptions>();
+  /** Coalesced changes awaiting the next flush: key → its on-disk relative path. */
+  private pendingChanges = new Map<string, string>();
+  private flushTimer: ReturnType<typeof setTimeout> | undefined;
 
   constructor(
     private readonly rootDirectory: string,
@@ -505,6 +521,118 @@ export class FileSystemStorageRepository extends StorageRepository {
         description: 'In-memory slicing over directory listings; cursor pagination is not supported.',
         styles: { offset: true, page: true, cursor: false },
       },
+      changes: {
+        supported: true,
+        description: 'Live change notifications via a recursive fs.watch on the root directory. '
+          + 'No historical sync token or change feed (getSyncToken/listChanges are unsupported).',
+        syncToken: false,
+        changeFeed: false,
+        subscription: true,
+      },
     });
+  }
+
+  /**
+   * Subscribe to live filesystem changes under `options.folder` (or the whole
+   * root when omitted). Lazily starts a single recursive `fs.watch` shared by
+   * all subscribers; the returned {@link Unsubscribe} removes this listener and
+   * closes the watch handle once the last subscriber leaves.
+   *
+   * Emissions are debounced by {@link CHANGE_DEBOUNCE_MS} and coalesced by key,
+   * so a burst of writes to one file yields a single {@link ChangeSummary}. The
+   * `deleted` flag is resolved by `stat`ing the path at flush time (missing →
+   * `deleted: true`); a rename surfaces as a delete of the old key plus an add
+   * of the new key.
+   */
+  override subscribeChanges(
+    options: SubscribeChangesOptions,
+    listener: ChangeListener,
+  ): Unsubscribe {
+    this.changeSubscriptions.set(listener, options);
+    this.ensureWatcher();
+    let active = true;
+    return () => {
+      if (!active) return;
+      active = false;
+      this.changeSubscriptions.delete(listener);
+      if (this.changeSubscriptions.size === 0) this.stopWatcher();
+    };
+  }
+
+  private ensureWatcher(): void {
+    if (this.watcher) return;
+    this.watcher = watch(
+      this.rootDirectory,
+      { recursive: true },
+      (_eventType, filename) => {
+        if (filename === null) return;
+        this.enqueueChange(filename);
+      },
+    );
+  }
+
+  private stopWatcher(): void {
+    if (this.flushTimer) {
+      clearTimeout(this.flushTimer);
+      this.flushTimer = undefined;
+    }
+    this.pendingChanges.clear();
+    if (this.watcher) {
+      this.watcher.close();
+      this.watcher = undefined;
+    }
+  }
+
+  /** Normalize a raw watch filename to a repo-relative POSIX path and queue it. */
+  private enqueueChange(rawRelPath: string): void {
+    const relPath = rawRelPath.split(path.sep).join('/');
+    if (relPath === '') return;
+    // Drop ignoreList matches, reusing the same exclude filter as listings.
+    if (this.excludeFilter.some(pattern => pattern.test(relPath))) return;
+    const key = this.keyFromRelPath(relPath);
+    this.pendingChanges.set(key, relPath);
+    this.scheduleFlush();
+  }
+
+  /** Strip a trailing registered-serializer extension to recover the key. */
+  private keyFromRelPath(relPath: string): string {
+    for (const ext of Object.keys(this.serializerRegistry)) {
+      if (relPath.endsWith(`.${ext}`)) return relPath.slice(0, -(ext.length + 1));
+    }
+    return relPath;
+  }
+
+  private scheduleFlush(): void {
+    if (this.flushTimer) clearTimeout(this.flushTimer);
+    this.flushTimer = setTimeout(() => {
+      this.flushTimer = undefined;
+      void this.flushChanges();
+    }, CHANGE_DEBOUNCE_MS);
+    this.flushTimer.unref();
+  }
+
+  private async flushChanges(): Promise<void> {
+    if (this.pendingChanges.size === 0) return;
+    const pending = this.pendingChanges;
+    this.pendingChanges = new Map();
+
+    const changes: ChangeSummary[] = [];
+    for (const [key, relPath] of pending) {
+      let deleted = false;
+      try {
+        await fs.stat(path.join(this.rootDirectory, relPath));
+      } catch {
+        deleted = true;
+      }
+      changes.push({ key, deleted });
+    }
+    if (changes.length === 0) return;
+
+    for (const [listener, options] of this.changeSubscriptions) {
+      const scoped = options.folder === undefined
+        ? changes
+        : changes.filter(change => change.key === options.folder || change.key.startsWith(`${options.folder}/`));
+      if (scoped.length > 0) listener(scoped);
+    }
   }
 }

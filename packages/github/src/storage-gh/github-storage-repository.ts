@@ -32,6 +32,7 @@ import {
   type StorageObjectUpdate,
   StorageRepository,
   type StorageSerializerRegistry,
+  unsupportedChanges,
 } from 'laikacms/storage';
 import * as minimatch from 'minimatch';
 
@@ -412,6 +413,7 @@ export class GithubStorageRepository extends StorageRepository {
 
   getCapabilities(): LaikaTask.LaikaTask<Capabilities> {
     return LaikaTask.succeed<Capabilities>({
+      changes: unsupportedChanges,
       fileExtensions: {
         supported: true,
         description: 'Supported file types depend on the serializers provided to this repository.',

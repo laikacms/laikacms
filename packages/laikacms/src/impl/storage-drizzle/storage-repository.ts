@@ -24,7 +24,7 @@ import type {
   StorageObjectCreate,
   StorageObjectUpdate,
 } from 'laikacms/storage';
-import { Capabilities, CompatibilityDate, pathCombine, StorageRepository } from 'laikacms/storage';
+import { Capabilities, CompatibilityDate, pathCombine, StorageRepository, unsupportedChanges } from 'laikacms/storage';
 
 /**
  * Model type for storage objects — defines the shape of database rows.
@@ -388,6 +388,7 @@ export class DrizzleStorageRepository extends StorageRepository {
         description: 'Backed by SQL OFFSET/LIMIT and page-based windowing.',
         styles: { offset: true, page: true, cursor: false },
       },
+      changes: unsupportedChanges,
     });
   }
 }

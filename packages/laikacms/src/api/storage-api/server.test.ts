@@ -13,7 +13,7 @@ import type {
   StorageObjectUpdate,
   StorageRepository,
 } from 'laikacms/storage';
-import { CompatibilityDate } from 'laikacms/storage';
+import { CompatibilityDate, unsupportedChanges } from 'laikacms/storage';
 
 import { buildJsonApi } from './server.js';
 
@@ -666,6 +666,7 @@ const makeStorageCapabilities = (cursorSupported = false): Capabilities => ({
     description: 'Offset/page based',
     styles: { offset: true, page: true, cursor: cursorSupported },
   },
+  changes: unsupportedChanges,
 });
 
 describe('GET /capabilities (LCMS-178)', () => {

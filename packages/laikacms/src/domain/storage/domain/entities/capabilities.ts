@@ -121,10 +121,55 @@ export const ChangesSupportEnabled = S.Struct({
 export const ChangesCapabilitySchema = S.Union([UnsupportedCapability, ChangesSupportEnabled]);
 export type ChangesCapability = S.Schema.Type<typeof ChangesCapabilitySchema>;
 
+/**
+ * Storage's change-signal surface. Mirrors {@link ChangesSupportEnabled} (the
+ * shared Documents/Assets shape) and adds a `subscription` flag for the PUSH
+ * channel:
+ *
+ * - `syncToken` / `changeFeed`: the pull feed (`getSyncToken` / `listChanges`).
+ * - `subscription`: `subscribeChanges` delivers live change batches to a
+ *   listener — a distinct surface from the pull feed, so a backend may support
+ *   one without the other (the filesystem repository, for instance, offers a
+ *   live watch but no historical sync token).
+ *
+ * A `true` flag means callers can rely on the method; `false` means it fails
+ * (or, for `subscribeChanges`, throws) with `NotImplementedError`.
+ */
+export const StorageChangesSupportEnabled = S.Struct({
+  supported: S.Literal(true),
+  description: S.String,
+  syncToken: S.Boolean,
+  changeFeed: S.Boolean,
+  subscription: S.Boolean,
+});
+
+export const StorageChangesCapabilitySchema = S.Union([
+  UnsupportedCapability,
+  StorageChangesSupportEnabled,
+]);
+export type StorageChangesCapability = S.Schema.Type<typeof StorageChangesCapabilitySchema>;
+
+/**
+ * Shared "no change signals" descriptor. A storage repository that implements
+ * neither the pull feed nor the push subscription advertises
+ * `changes: unsupportedChanges`.
+ */
+export const unsupportedChanges: StorageChangesCapability = {
+  supported: false,
+  description: 'This storage repository exposes no change signals; getSyncToken, listChanges, '
+    + 'and subscribeChanges are not implemented.',
+};
+
 export const CapabilitiesSchema = S.toStandardSchemaV1(S.Struct({
   compatibilityDate: CompatibilityDate,
   fileExtensions: S.Union([UnsupportedCapability, FileExtensionsSupportEnabled]),
   pagination: PaginationCapabilitySchema,
+
+  /**
+   * Change-signal surface: the pull feed (`getSyncToken` / `listChanges`) and
+   * the push subscription (`subscribeChanges`).
+   */
+  changes: StorageChangesCapabilitySchema,
 }));
 
 export type Capabilities = S.Schema.Type<typeof CapabilitiesSchema>;

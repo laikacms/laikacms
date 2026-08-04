@@ -31,3 +31,33 @@ export const ChangeSummarySchema = S.toStandardSchemaV1(S.Struct({
 }));
 
 export type ChangeSummary = S.Schema.Type<typeof ChangeSummarySchema>;
+
+/**
+ * A PUSH subscriber. Receives one non-empty batch of {@link ChangeSummary}
+ * entries every time the subscribed scope changes. Batches are coalesced by
+ * key, so a listener sees at most one entry per key per notification.
+ */
+export type ChangeListener = (changes: readonly ChangeSummary[]) => void;
+
+/**
+ * Tears down a {@link ChangeListener} subscription. Idempotent: calling it more
+ * than once is a no-op. When the last listener of a repository unsubscribes,
+ * the repository releases any underlying watch resource.
+ */
+export type Unsubscribe = () => void;
+
+/**
+ * Options for `subscribeChanges`.
+ *
+ * This is the PUSH counterpart to the pull `getSyncToken` / `listChanges` feed:
+ * instead of polling, a listener is invoked as changes happen.
+ */
+export interface SubscribeChangesOptions {
+  /** Scope the subscription to a folder; omit for the whole store. */
+  folder?: string;
+  /**
+   * A token previously obtained from the pull feed. Advisory: backends that
+   * only support live notifications (no historical replay) ignore it.
+   */
+  since?: SyncToken;
+}

@@ -34,6 +34,7 @@ import {
   naturalCompare,
   pathToSegments,
   StorageRepository,
+  unsupportedChanges,
 } from 'laikacms/storage';
 
 import { WebDavConfig, WebDavDataSource } from '../datasources/webdav-datasource.js';
@@ -454,6 +455,7 @@ export class WebDavStorageRepository extends StorageRepository {
         description: 'In-memory slicing over a PROPFIND Depth:1 listing; cursor pagination is not supported.',
         styles: { offset: true, page: true, cursor: false },
       },
+      changes: unsupportedChanges,
     });
   }
 }

@@ -13,7 +13,7 @@ import type {
   StorageObjectCreate,
   StorageObjectUpdate,
 } from '../index.js';
-import { applyPagination, CompatibilityDate, StorageRepository } from '../index.js';
+import { applyPagination, CompatibilityDate, StorageRepository, unsupportedChanges } from '../index.js';
 
 /**
  * A `StorageRepository` backed by an in-memory `Map`. Intended for use as the
@@ -42,6 +42,7 @@ export class InMemoryStorageRepository extends StorageRepository {
         description: 'Naive in-memory slicing by offset/limit.',
         styles: { offset: true, page: true, cursor: false },
       },
+      changes: unsupportedChanges,
     } as Capabilities);
   }
 

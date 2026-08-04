@@ -16,6 +16,7 @@ import {
   type StorageObjectCreate,
   type StorageObjectUpdate,
   StorageRepository,
+  unsupportedChanges,
 } from 'laikacms/storage';
 import {
   atomFromJsonApi,
@@ -353,6 +354,7 @@ export class StorageJsonApiProxyRepository extends StorageRepository {
             description: 'JSON:API pagination is forwarded to the remote endpoint.',
             styles: { offset: true, page: true, cursor: true },
           },
+          changes: unsupportedChanges,
         };
         this.cachedCapabilities = fallback;
         return fallback;
