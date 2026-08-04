@@ -15,10 +15,12 @@ let originalFetch: typeof fetch | null = null;
 export const jsonApiProxyAssetsContractCase: AssetsContractCase = {
   name: 'AssetsJsonApiProxyRepository (in-process JSON:API + in-memory backing)',
   /**
-   * The assets proxy currently wraps every server-side LaikaError as
-   * `InvalidData` rather than reconstructing the original typed class — so
-   * "key not found after delete" surfaces as `invalid_data` instead of
-   * `not_found`. That's a fidelity gap in the proxy, not a CRUDL bug.
+   * `deleteAsset`/`deleteFolder` in-process backing throws a `NotFoundError`
+   * that fails `instanceof LaikaError` against the JSON:API layer's
+   * `errorToJsonApiMapper` in this test's module graph (a dual-module-
+   * instance mismatch on `laikacms/core`, unrelated to LCMS-287's proxy
+   * rehydration fix) — the server flattens it to a generic 500 before the
+   * proxy ever sees a `code`. See LCMS-287 PR discussion.
    */
   skip: ['deleteAsset', 'deleteFolder'],
   makeRepo: () => {
