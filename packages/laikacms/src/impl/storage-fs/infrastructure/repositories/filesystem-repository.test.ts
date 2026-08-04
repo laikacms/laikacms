@@ -117,15 +117,14 @@ describe('FileSystemStorageRepository pagination total', () => {
 });
 
 describe('FileSystemStorageRepository listing a missing folder', () => {
-  it('listAtomSummaries yields no data and a NotFoundError as a recoverable error', async () => {
+  it('listAtomSummaries treats a missing folder as an empty listing with no warnings (#809)', async () => {
     const repo = makeRepo();
     const stream = repo.listAtomSummaries('does/not/exist', { pagination: { offset: 0, limit: 100 } });
     const collected = await Effect.runPromise(LaikaStream.runCollect(stream));
 
     expect(collected.data).toEqual([]);
     expect(collected.done).toEqual({ total: 0 });
-    expect(collected.recoverableErrors).toHaveLength(1);
-    expect(collected.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
+    expect(collected.recoverableErrors).toHaveLength(0);
   });
 
   it('listAtoms yields no data and a NotFoundError as a recoverable error', async () => {
