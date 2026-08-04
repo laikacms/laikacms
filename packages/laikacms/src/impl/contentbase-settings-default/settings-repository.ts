@@ -82,17 +82,9 @@ export class DefaultContentBaseSettingsProvider extends ContentBaseSettingsProvi
         );
         if (Result.isFailure(settingsFile)) {
           if (settingsFile.failure.code === NotFoundError.CODE) {
-            const defaultSettings = createDefaultSettingsFile();
-            yield* runForwarding(
-              this.storage.createOrUpdateObject({
-                key: SETTINGS_KEY,
-                type: 'object',
-                content: defaultSettings,
-                metadata: { extension: 'json' },
-              }),
-              emit,
-            );
-            return defaultSettings;
+            // No settings file yet: return the in-memory default without
+            // persisting it. Writing only happens through the put* methods.
+            return createDefaultSettingsFile();
           }
           return yield* Effect.fail(settingsFile.failure);
         }
