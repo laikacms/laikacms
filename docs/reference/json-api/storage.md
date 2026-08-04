@@ -140,12 +140,20 @@ empty key.
 
 **Query Parameters**
 
-| Parameter       | Type   | Default | Description                               |
-| --------------- | ------ | ------- | ----------------------------------------- |
-| `page[after]`   | string | —       | Forward cursor for pagination             |
-| `page[before]`  | string | —       | Backward cursor for pagination            |
-| `page[size]`    | number | 10      | Items per page; max 100, clamped silently |
-| `filter[depth]` | number | `1`     | Traversal depth (minimum 1)               |
+| Parameter       | Type   | Default | Description                                                                                           |
+| --------------- | ------ | ------- | ----------------------------------------------------------------------------------------------------- |
+| `page[number]`  | number | —       | Page number (1-based) for page-based pagination                                                       |
+| `page[size]`    | number | 100     | Items per page (page- and cursor-based). When no `page[*]` param is present, defaults to 100          |
+| `page[offset]`  | number | —       | Zero-based offset for offset-based pagination                                                         |
+| `page[limit]`   | number | —       | Maximum items for offset-based pagination                                                             |
+| `page[after]`   | string | —       | Forward cursor. Rejected with 400 when backend capabilities report `pagination.styles.cursor: false`  |
+| `page[before]`  | string | —       | Backward cursor. Rejected with 400 when backend capabilities report `pagination.styles.cursor: false` |
+| `filter[depth]` | number | `1`     | Traversal depth (minimum 1)                                                                           |
+
+> **Note:** Cursor params (`page[after]` / `page[before]`) are rejected with HTTP 400 on all
+> built-in backends (FS, R2, WebDAV, Drizzle, libSQL, …) because they report
+> `pagination.styles.cursor: false` in `GET /capabilities`. Use `page[number]`, `page[offset]`, or
+> `page[limit]` for those backends.
 
 **Response** — collection of `object` and/or `folder` resources
 
