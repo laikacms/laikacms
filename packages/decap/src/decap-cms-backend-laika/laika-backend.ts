@@ -70,7 +70,13 @@ export interface LaikaBackendConfig {
  */
 export interface GetDocumentsRepositoryOptions {
   tokenPromise: () => Promise<string>;
-  /** Base URL for the API (apiUrl) */
+  /**
+   * The combined API base URL: `Url.combine(base_url, api_root)` from the Decap backend config.
+   * With `base_url: 'https://api.example.com'` and `api_root: '/api'` this is
+   * `'https://api.example.com/api'`, not the raw `base_url`.
+   * To override what the default factory appends `/documents` to, pass `documentsApiBaseUrl`
+   * to `createLaikaBackend` instead of deriving from this value.
+   */
   baseUrl: string;
 }
 
@@ -79,7 +85,13 @@ export interface GetDocumentsRepositoryOptions {
  */
 export interface GetAssetsRepositoryOptions {
   tokenPromise: () => Promise<string>;
-  /** Base URL for the API (apiUrl) */
+  /**
+   * The combined API base URL: `Url.combine(base_url, api_root)` from the Decap backend config.
+   * With `base_url: 'https://api.example.com'` and `api_root: '/api'` this is
+   * `'https://api.example.com/api'`, not the raw `base_url`.
+   * To override what the default factory appends `/assets` to, pass `assetsApiBaseUrl`
+   * to `createLaikaBackend` instead of deriving from this value.
+   */
   baseUrl: string;
 }
 
