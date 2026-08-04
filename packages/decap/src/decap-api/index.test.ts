@@ -37,6 +37,7 @@ function makeOptions(overrides: Partial<DecapOptions> = {}): DecapOptions {
     documents: {} as DecapOptions['documents'],
     storage: {} as DecapOptions['storage'],
     authenticateAccessToken: vi.fn().mockResolvedValue(MOCK_USER),
+    authorize: () => true,
     logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
     ...overrides,
   };
@@ -949,41 +950,46 @@ describe('logger forwarding — documents sub-API (LCMS-366)', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Suite: scope enforcement — a read-only principal may not mutate
+// Suite: authorize() — the sole authorization gate.
 //
-// The gate lives in fetch(), right after authentication and before endpoint
-// dispatch, so it is endpoint-agnostic. Blocked cases target /documents and
-// /storage to show it fires across sub-APIs (the repos are never reached, so
-// no repo mock is needed). Pass-through cases target /session, which dispatches
-// without a repository, to observe that the gate lets the request continue.
+// Authentication returns identity; authorize() decides access. The gate lives
+// in fetch(), right after authentication and before endpoint dispatch, so it is
+// endpoint-agnostic. Blocked cases target /documents and /storage to show it
+// fires across sub-APIs (the repos are never reached, so no repo mock is
+// needed). Pass-through cases target /session, which dispatches without a
+// repository, to observe that the gate lets the request continue.
 // ---------------------------------------------------------------------------
 
-describe('scope enforcement (read-only principal)', () => {
-  const readUser: User = { id: 'ro', email: 'ro@example.com', scope: 'read' };
-  const writeUser: User = { id: 'rw', email: 'rw@example.com', scope: 'write' };
+describe('authorize() gate', () => {
+  const user: User = { id: 'u', email: 'u@example.com' };
 
-  function apiForUser(user: User) {
+  function apiWith(authorize: DecapOptions['authorize']) {
     return decapApi(makeOptions({
       authenticateAccessToken: vi.fn().mockResolvedValue(user),
-      documents: {} as DocumentsRepository,
-      storage: {} as StorageRepository,
+      authorize,
     }));
   }
 
-  it('returns 403 for POST /documents when scope is "read"', async () => {
-    const api = apiForUser(readUser);
-    const res = await api.fetch(
-      makeRequest('/documents/published', { Authorization: 'Bearer t' }, 'POST'),
-    );
+  // A read-only policy expressed against the parsed operation.
+  const readOnly: DecapOptions['authorize'] = ctx => ctx.operation === 'read';
+
+  it('allows the request when authorize returns true', async () => {
+    const api = apiWith(() => true);
+    const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'POST'));
+
+    expect(res.status).not.toBe(403);
+  });
+
+  it('returns 403 when authorize returns false', async () => {
+    const api = apiWith(() => false);
+    const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'POST'));
 
     expect(res.status).toBe(403);
   });
 
   it('403 body is a JSON:API forbidden error', async () => {
-    const api = apiForUser(readUser);
-    const res = await api.fetch(
-      makeRequest('/documents/published', { Authorization: 'Bearer t' }, 'POST'),
-    );
+    const api = apiWith(() => false);
+    const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'POST'));
     const body = await res.json();
 
     expect(res.headers.get('Content-Type')).toContain('vnd.api+json');
@@ -991,9 +997,9 @@ describe('scope enforcement (read-only principal)', () => {
   });
 
   it.each(['POST', 'PATCH', 'DELETE'])(
-    'blocks %s across sub-APIs for a read-only principal',
+    'a read-only authorize() blocks %s across sub-APIs',
     async method => {
-      const api = apiForUser(readUser);
+      const api = apiWith(readOnly);
       const res = await api.fetch(
         makeRequest('/storage/objects/x', { Authorization: 'Bearer t' }, method),
       );
@@ -1002,10 +1008,11 @@ describe('scope enforcement (read-only principal)', () => {
     },
   );
 
-  it('does NOT reach the repository when blocked', async () => {
+  it('does NOT reach the repository when denied', async () => {
     const documents = { create: vi.fn() } as unknown as DocumentsRepository;
     const api = decapApi(makeOptions({
-      authenticateAccessToken: vi.fn().mockResolvedValue(readUser),
+      authenticateAccessToken: vi.fn().mockResolvedValue(user),
+      authorize: readOnly,
       documents,
     }));
 
@@ -1015,26 +1022,94 @@ describe('scope enforcement (read-only principal)', () => {
       .not.toHaveBeenCalled();
   });
 
-  it('allows safe (GET) requests for a read-only principal', async () => {
-    const api = apiForUser(readUser);
+  it('allows safe (GET) requests under a read-only authorize()', async () => {
+    const api = apiWith(readOnly);
     const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'GET'));
 
     expect(res.status).toBe(200);
   });
 
-  it('does NOT block a mutating request when scope is "write"', async () => {
-    const api = apiForUser(writeUser);
-    const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'POST'));
+  it('awaits an async authorize callback', async () => {
+    const api = apiWith(async () => false);
+    const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'GET'));
 
-    expect(res.status).not.toBe(403);
+    expect(res.status).toBe(403);
   });
 
-  it('does NOT block a mutating request when scope is unset (backwards compatible)', async () => {
-    const api = decapApi(makeOptions({
-      authenticateAccessToken: vi.fn().mockResolvedValue(MOCK_USER), // no scope field
-    }));
-    const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'POST'));
+  it('is not consulted for an unmatched path (404 before authorize)', async () => {
+    const authorize = vi.fn().mockReturnValue(true);
+    const api = apiWith(authorize);
+    const res = await api.fetch(makeRequest('/nope', { Authorization: 'Bearer t' }, 'GET'));
 
-    expect(res.status).not.toBe(403);
+    expect(res.status).toBe(404);
+    expect(authorize).not.toHaveBeenCalled();
+  });
+
+  it('fails closed (403) when authorize throws', async () => {
+    const api = apiWith(() => {
+      throw new Error('boom');
+    });
+    const res = await api.fetch(makeRequest('/session', { Authorization: 'Bearer t' }, 'GET'));
+
+    expect(res.status).toBe(403);
+  });
+
+  // -------------------------------------------------------------------------
+  // The parsed AuthorizeContext handed to the policy.
+  // -------------------------------------------------------------------------
+  describe('AuthorizeContext', () => {
+    async function ctxFor(path: string, method: string) {
+      const authorize = vi.fn().mockReturnValue(true);
+      const api = apiWith(authorize);
+      await api.fetch(makeRequest(path, { Authorization: 'Bearer t' }, method));
+      return authorize.mock.calls[0][0] as {
+        user: User,
+        request: Request,
+        method: string,
+        domain: string,
+        operation: string,
+        collection?: string,
+        itemId?: string,
+      };
+    }
+
+    it('carries the identity, raw request and method', async () => {
+      const ctx = await ctxFor('/session', 'PATCH');
+      expect(ctx.user.id).toBe('u');
+      expect(ctx.request).toBeInstanceOf(Request);
+      expect(ctx.method).toBe('PATCH');
+    });
+
+    it('resolves the domain per endpoint', async () => {
+      expect((await ctxFor('/session', 'GET')).domain).toBe('session');
+      expect((await ctxFor('/storage/objects/x', 'GET')).domain).toBe('storage');
+      expect((await ctxFor('/documents/published', 'GET')).domain).toBe('documents');
+    });
+
+    it('maps method + action segment to an operation', async () => {
+      expect((await ctxFor('/documents/published/blog%2Fpost-1', 'GET')).operation).toBe('read');
+      expect((await ctxFor('/documents/published', 'POST')).operation).toBe('create');
+      expect((await ctxFor('/documents/published/blog%2Fpost-1', 'PATCH')).operation).toBe('update');
+      expect((await ctxFor('/documents/published/blog%2Fpost-1', 'DELETE')).operation).toBe('delete');
+      expect(
+        (await ctxFor('/documents/published/blog%2Fpost-1/unpublish', 'POST')).operation,
+      ).toBe('unpublish');
+    });
+
+    it('exposes collection and URL-decoded itemId from the path', async () => {
+      const ctx = await ctxFor('/documents/published/blog%2Fpost-1', 'GET');
+      expect(ctx.collection).toBe('published');
+      expect(ctx.itemId).toBe('blog/post-1');
+    });
+
+    it('leaves collection/itemId undefined at the domain root', async () => {
+      const ctx = await ctxFor('/session', 'GET');
+      expect(ctx.collection).toBeUndefined();
+      expect(ctx.itemId).toBeUndefined();
+    });
+
+    it('treats every /session request as a read regardless of method', async () => {
+      expect((await ctxFor('/session', 'POST')).operation).toBe('read');
+    });
   });
 });

@@ -21,6 +21,7 @@ const api = decapApi({
   documents: {} as DecapOptions['documents'],
   storage: {} as DecapOptions['storage'],
   authenticateAccessToken: vi.fn().mockResolvedValue(MOCK_USER),
+  authorize: () => true,
   cors: { origins: [ADMIN_ORIGIN] },
 });
 

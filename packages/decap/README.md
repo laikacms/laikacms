@@ -30,62 +30,79 @@ pnpm add @laikacms/decap
 
 Key options accepted by `decapApi(options)`:
 
-| Option                    | Type                                              | Required | Description                                                                                                                                                            |
-| ------------------------- | ------------------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `documents`               | `DocumentsRepository`                             | yes      | Document storage backend                                                                                                                                               |
-| `storage`                 | `StorageRepository`                               | yes      | Raw file storage backend                                                                                                                                               |
-| `assets`                  | `AssetsRepository`                                | no       | Binary asset storage; enables the `/assets` endpoint when provided                                                                                                     |
-| `basePath`                | `string`                                          | no       | URL prefix for all endpoints (e.g. `'/api/decap'`)                                                                                                                     |
-| `authenticateAccessToken` | `(token: string) => Promise<User>`                | yes      | Validates a Bearer access token and returns the user                                                                                                                   |
-| `authenticateApiToken`    | `(key: string) => Promise<User>`                  | no       | Validates an API key sent via `X-API-Key` or `Authorization: ApiKey` for M2M access                                                                                    |
-| `logger`                  | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | no       | Receives structured diagnostic output; forwarded to storage, documents, and assets API sub-handlers                                                                    |
-| `cors`                    | `CorsOptions`                                     | no       | CORS configuration; required when the admin UI is served from a different origin than the API. Set `origins: '*'` for local dev, explicit origins list for production. |
+| Option                    | Type                                                     | Required | Description                                                                                                                                                                      |
+| ------------------------- | -------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `documents`               | `DocumentsRepository`                                    | yes      | Document storage backend                                                                                                                                                         |
+| `storage`                 | `StorageRepository`                                      | yes      | Raw file storage backend                                                                                                                                                         |
+| `assets`                  | `AssetsRepository`                                       | no       | Binary asset storage; enables the `/assets` endpoint when provided                                                                                                               |
+| `basePath`                | `string`                                                 | no       | URL prefix for all endpoints (e.g. `'/api/decap'`)                                                                                                                               |
+| `authenticateAccessToken` | `(token: string) => Promise<User>`                       | yes      | Validates a Bearer access token and returns the principal's **identity**                                                                                                         |
+| `authenticateApiToken`    | `(key: string) => Promise<User>`                         | no       | Validates an API key sent via `X-API-Key` or `Authorization: ApiKey` for M2M access                                                                                              |
+| `authorize`               | `(ctx: AuthorizeContext) => boolean \| Promise<boolean>` | yes      | The authorization gate — decides what the authenticated principal may do. Receives the pre-parsed `ctx` (below). Return `false` to reject with `403`. Fails closed if it throws. |
+| `logger`                  | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>`        | no       | Receives structured diagnostic output; forwarded to storage, documents, and assets API sub-handlers                                                                              |
+| `cors`                    | `CorsOptions`                                            | no       | CORS configuration; required when the admin UI is served from a different origin than the API. Set `origins: '*'` for local dev, explicit origins list for production.           |
 
 #### `User` type
 
-Both `authenticateAccessToken` and `authenticateApiToken` must return a `User` object. The built-in
-fields are:
+The `authenticate*` callbacks return a `User` — the principal's **identity**, nothing more.
+Authorization is a separate concern handled by `authorize` (see below), so `User` carries no
+access/permission fields. The built-in identity fields are:
 
-| Field          | Type                | Required | Description                                                                     |
-| -------------- | ------------------- | -------- | ------------------------------------------------------------------------------- |
-| `id`           | `string`            | yes      | Unique identifier for the principal                                             |
-| `email`        | `string`            | yes      | Email address                                                                   |
-| `name`         | `string`            | no       | Display name                                                                    |
-| `passwordHash` | `string`            | no       | Stored by `decap-oauth2`; stripped before the user object is sent to the client |
-| `scope`        | `'read' \| 'write'` | no       | Access scope — see below. Defaults to full access when omitted or `'write'`.    |
+| Field          | Type     | Required | Description                                                                     |
+| -------------- | -------- | -------- | ------------------------------------------------------------------------------- |
+| `id`           | `string` | yes      | Unique identifier for the principal                                             |
+| `email`        | `string` | yes      | Email address                                                                   |
+| `name`         | `string` | no       | Display name                                                                    |
+| `passwordHash` | `string` | no       | Stored by `decap-oauth2`; stripped before the user object is sent to the client |
 
-**`scope` — read-only credentials**
-
-Return `scope: 'read'` to restrict a principal to safe (GET / HEAD / OPTIONS) requests only. Any
-mutating method (POST, PUT, PATCH, DELETE) is rejected with `403 Forbidden` at the API boundary
-before it reaches the underlying repositories. This lets you wire a read-only API key without
-needing repositories that enforce per-credential access control:
-
-```ts
-authenticateApiToken: async key => {
-  const apiKey = await db.apiKeys.findByKey(key);
-  if (!apiKey) throw new Error('Invalid API key');
-  return {
-    id: apiKey.userId,
-    email: apiKey.email,
-    scope: apiKey.readOnly ? 'read' : 'write', // ← restrict writes for read-only keys
-  };
-},
-```
-
-Omitting `scope` (or setting it to `'write'`) leaves the principal with full access — this is the
-default, so existing callbacks need no changes.
-
-You can extend the `User` interface with custom fields by augmenting the module:
+Extend `User` with whatever identity/claim fields your `authorize` policy needs by augmenting the
+module:
 
 ```ts
 declare module '@laikacms/decap/decap-api' {
   interface User {
-    role: 'admin' | 'editor';
+    roles: string[];
     organizationId: string;
   }
 }
 ```
+
+#### `authorize` — the authorization gate (required)
+
+Authentication answers _who_ the principal is; `authorize(ctx)` answers _what they may do_. Return
+`true` to allow, `false` to reject with `403 Forbidden` before the request reaches any repository. A
+thrown callback fails closed. There is no implicit default — you must state the policy.
+
+`ctx` is an `AuthorizeContext` — the principal plus the request pre-parsed so a policy needn't
+re-parse the URL:
+
+```ts
+interface AuthorizeContext {
+  user: User; // identity from your authenticate* callback
+  request: Request; // raw request, for anything the parsed fields don't cover
+  method: string; // upper-cased HTTP method
+  domain: 'documents' | 'storage' | 'assets' | 'session';
+  operation: 'read' | 'create' | 'update' | 'delete' | 'publish' | 'unpublish';
+  collection?: string; // first path segment after the domain (the API resource)
+  itemId?: string; // item key/slug, URL-decoded, when present
+}
+```
+
+```ts
+// Allow everything authenticated:
+authorize: () => true,
+
+// Read-only — allow reads, reject anything that mutates:
+authorize: ctx => ctx.operation === 'read',
+
+// Role-based (with `interface User { roles: string[] }` augmented in):
+authorize: ctx =>
+  ctx.operation === 'read' ? true : ctx.user.roles.includes('editor'),
+```
+
+"Scopes" and "roles" are just identity fields you attach to the `User` and check here — the API
+imposes no fixed permission vocabulary. Map `ctx.domain`/`ctx.collection`/`ctx.operation` to your
+own permissions; reach for `ctx.request` only for what the parsed fields don't cover.
 
 #### `decap-api` return value
 

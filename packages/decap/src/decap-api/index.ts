@@ -55,14 +55,21 @@ export const SECURITY_DEFAULTS = {
 } as const;
 
 /**
- * Default user interface with required fields.
- * Consumers can extend this by declaring the module:
+ * The authenticated principal — its *identity*, nothing more.
+ *
+ * Authentication (the `authenticate*` callbacks) answers "who is this?" and
+ * returns a `User`. Authorization ("what may they do?") is a separate concern,
+ * decided entirely by the required {@link DecapOptions.authorize} callback — a
+ * `User` carries no access/permission fields itself.
+ *
+ * Consumers extend this with whatever identity/claim fields their `authorize`
+ * callback needs, by declaring the module:
  *
  * @example
  * ```typescript
  * declare module '@laikacms/decap/decap-api' {
  *   interface User {
- *     role: 'admin' | 'editor';
+ *     roles: string[];
  *     organizationId: string;
  *   }
  * }
@@ -73,26 +80,43 @@ export interface User {
   email: string;
   name?: string;
   passwordHash?: string;
-  /**
-   * Optional access scope for the authenticated principal.
-   *
-   * When explicitly `'read'`, the principal may only perform SAFE (non-mutating)
-   * requests — any other method is rejected with 403 at the API boundary (see
-   * {@link decapApi}). This lets consumers wire a read-only credential (e.g. a
-   * read-only API key) even though the underlying repositories grant every
-   * authenticated principal full read+write.
-   *
-   * Left unset (or `'write'`) the principal keeps full access, so this is
-   * backwards compatible for consumers that don't populate it.
-   */
-  scope?: 'read' | 'write';
 }
 
+/** Which sub-API a request targets. */
+export type CmsDomain = 'documents' | 'storage' | 'assets' | 'session';
+
 /**
- * HTTP methods that never mutate state. A read-only principal is allowed these;
- * everything else requires write scope.
+ * The operation a request performs, derived from its HTTP method and action
+ * path segment. `publish`/`unpublish` come from the `/publish` `/unpublish`
+ * action segments on the documents API; the rest map from the method.
  */
-const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
+export type CmsOperation = 'read' | 'create' | 'update' | 'delete' | 'publish' | 'unpublish';
+
+/**
+ * The argument passed to {@link DecapOptions.authorize}. Carries the principal,
+ * the raw {@link Request}, and the request pre-parsed into resource/operation so
+ * a tenant policy can decide access without re-parsing the URL itself.
+ *
+ * The parse is request-level (cheap, one path split). For `create` there is no
+ * key in the URL, so `itemId` — and often `collection` — are `undefined`;
+ * per-item fidelity on every route is a future, sub-API-threaded concern.
+ */
+export interface AuthorizeContext {
+  /** The authenticated principal (identity) returned by the `authenticate*` callback. */
+  user: User;
+  /** The raw request — use it for anything the parsed fields below don't cover. */
+  request: Request;
+  /** Upper-cased HTTP method, e.g. `'GET'`, `'POST'`. */
+  method: string;
+  /** Which sub-API the request targets. */
+  domain: CmsDomain;
+  /** The operation, derived from method + action segment. */
+  operation: CmsOperation;
+  /** First path segment after the domain (the API resource), if present. */
+  collection?: string;
+  /** The item key/slug — second path segment, URL-decoded — if present. */
+  itemId?: string;
+}
 
 export interface DecapOptions {
   documents: DocumentsRepository;
@@ -113,6 +137,42 @@ export interface DecapOptions {
    * API keys can be passed via X-API-Key header or Authorization: ApiKey <key>
    */
   authenticateApiToken?: (token: string) => Promise<User>;
+  /**
+   * The authorization gate — decides whether the authenticated principal may
+   * perform this request. Evaluated at the API boundary before the request is
+   * dispatched to any sub-API. Return `true` to allow, `false` to reject with
+   * `403 Forbidden`. If it throws, the request fails closed (treated as a
+   * denial).
+   *
+   * This is the ONLY place access is decided: authentication returns identity,
+   * authorization happens here. The repositories grant any authenticated
+   * principal full read+write, so a request that reaches them has already been
+   * authorized. There is no implicit default — you must state the policy.
+   *
+   * The callback receives an {@link AuthorizeContext}: the principal, the raw
+   * {@link Request}, and the request pre-parsed into `{ domain, operation,
+   * collection?, itemId? }` so a policy can map resource + operation → required
+   * permission without re-parsing the URL. Anything the parse doesn't cover is
+   * still reachable via `ctx.request`.
+   *
+   * @example Everything authenticated is allowed:
+   * ```ts
+   * authorize: () => true,
+   * ```
+   * @example Read-only principal:
+   * ```ts
+   * authorize: ctx => ctx.operation === 'read',
+   * ```
+   * @example Role-based (with `interface User { roles: string[] }` augmented in):
+   * ```ts
+   * authorize: ctx => {
+   *   if (ctx.operation === 'read') return true;
+   *   if (ctx.operation === 'delete') return ctx.user.roles.includes('admin');
+   *   return ctx.user.roles.includes('editor');
+   * },
+   * ```
+   */
+  authorize: (ctx: AuthorizeContext) => boolean | Promise<boolean>;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
   /**
    * Optional CORS configuration. Required when the Decap admin UI is served
@@ -192,6 +252,44 @@ const securityHeaders = () => ({
   'Cache-Control': 'no-store, no-cache, must-revalidate',
   'Pragma': 'no-cache',
 });
+
+/** Map an HTTP method plus action path segment to a {@link CmsOperation}. */
+function deriveOperation(method: string, action: string | undefined): CmsOperation {
+  if (action === 'publish') return 'publish';
+  if (action === 'unpublish') return 'unpublish';
+  switch (method) {
+    case 'POST':
+      return 'create';
+    case 'PUT':
+    case 'PATCH':
+      return 'update';
+    case 'DELETE':
+      return 'delete';
+    default:
+      // GET / HEAD / OPTIONS and any other non-mutating method.
+      return 'read';
+  }
+}
+
+/**
+ * Parse the resource/operation fields of an {@link AuthorizeContext} from the
+ * request path *relative to the domain endpoint* (leading slash already
+ * stripped). `collection` is the first segment (the API resource), `itemId` the
+ * second (the key/slug, URL-decoded), `action` the third (e.g. `publish`).
+ */
+function parseAuthzTarget(
+  method: string,
+  domain: CmsDomain,
+  domainSubPath: string,
+): Pick<AuthorizeContext, 'operation' | 'collection' | 'itemId'> {
+  const segments = domainSubPath.split('/').filter(Boolean);
+  const collection = segments[0];
+  const itemId = segments[1] ? decodeURIComponent(segments[1]) : undefined;
+  const action = segments[2];
+  // /session is read-only identity — never a mutation regardless of method.
+  const operation = domain === 'session' ? 'read' : deriveOperation(method, action);
+  return { operation, collection, itemId };
+}
 
 export const decapApi = (options: DecapOptions): DecapApi => {
   const { documents, storage, assets, authenticateAccessToken, authenticateApiToken, basePath, cors } = options;
@@ -311,20 +409,62 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       }
       const user = authenticated;
 
-      // Scope enforcement (defence in depth). A principal whose scope is
-      // explicitly `'read'` may only issue SAFE requests. The repositories
-      // themselves grant any authenticated principal full read+write, so a
-      // read-only credential can ONLY be honoured here, at the boundary, before
-      // the request reaches a sub-API. Unset/`'write'` scope keeps full access.
-      if (user.scope === 'read' && !SAFE_METHODS.has(request.method.toUpperCase())) {
+      // Resolve which sub-API this request targets. A path that matches none
+      // serves no data, so it 404s here — before authorization runs and before
+      // we try to build a context for it.
+      let domain: CmsDomain;
+      let domainEndpoint: string;
+      if (pathname.startsWith(sessionEndpoint)) {
+        domain = 'session';
+        domainEndpoint = sessionEndpoint;
+      } else if (pathname.startsWith(storageEndpoint)) {
+        domain = 'storage';
+        domainEndpoint = storageEndpoint;
+      } else if (pathname.startsWith(documentsEndpoint)) {
+        domain = 'documents';
+        domainEndpoint = documentsEndpoint;
+      } else if (assets && pathname.startsWith(assetsEndpoint)) {
+        domain = 'assets';
+        domainEndpoint = assetsEndpoint;
+      } else {
+        options.logger?.debug('Endpoint not found:', pathname);
+        return await respond(
+          new Response(
+            JSON.stringify(errorToJsonApiMapper(new NotFoundError('Endpoint not found'))),
+            { status: 404, headers: securityHeaders() },
+          ),
+        );
+      }
+
+      // Authorization gate. Authentication established *who* the principal is;
+      // authorize(ctx) decides *what they may do*. It is the only access
+      // decision — the repositories grant any authenticated principal full
+      // read+write, so a request that gets past here has been explicitly
+      // authorized. A thrown callback fails closed.
+      const method = request.method.toUpperCase();
+      const ctx: AuthorizeContext = {
+        user,
+        request,
+        method,
+        domain,
+        ...parseAuthzTarget(method, domain, pathname.slice(domainEndpoint.length)),
+      };
+      let allowed: boolean;
+      try {
+        allowed = await options.authorize(ctx);
+      } catch (e) {
+        options.logger?.error(`authorize() threw for principal ${user.id}; denying:`, e);
+        allowed = false;
+      }
+      if (!allowed) {
         options.logger?.warn(
-          `Rejecting ${request.method} ${pathname}: read-only principal ${user.id} may not mutate.`,
+          `Rejecting ${method} ${pathname}: authorize() denied principal ${user.id}.`,
         );
         return await respond(
           new Response(
             JSON.stringify(
               errorToJsonApiMapper(
-                new ForbiddenError('This credential is not permitted to perform write operations.'),
+                new ForbiddenError('This credential is not permitted to perform this action.'),
               ),
             ),
             { status: 403, headers: securityHeaders() },
@@ -332,7 +472,8 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         );
       }
 
-      if (pathname.startsWith(sessionEndpoint)) {
+      // Dispatch to the resolved sub-API.
+      if (domain === 'session') {
         options.logger?.debug('Session endpoint for user:', user.id);
 
         // Return user data excluding sensitive fields and JSON:API §7.2.2 reserved keys.
@@ -353,20 +494,22 @@ export const decapApi = (options: DecapOptions): DecapApi => {
             { status: 200, headers: { ...securityHeaders(), 'Content-Type': 'application/json' } },
           ),
         );
-      } else if (pathname.startsWith(storageEndpoint)) {
+      } else if (domain === 'storage') {
         const storageApi = buildStorageApi({ repo: storage, basePath: `${base}/storage`, logger: options.logger });
         return await respond(await storageApi.fetch(request));
-      } else if (pathname.startsWith(documentsEndpoint)) {
+      } else if (domain === 'documents') {
         const documentsApi = buildDocumentsApi({
           repo: documents,
           basePath: `${base}/documents`,
           logger: options.logger,
         });
         return await respond(await documentsApi.fetch(request));
-      } else if (assets && pathname.startsWith(assetsEndpoint)) {
+      } else if (domain === 'assets' && assets) {
         const assetsApi = buildAssetsApi({ repository: assets, basePath: `${base}/assets`, logger: options.logger });
         return await respond(await assetsApi.fetch(request));
       } else {
+        // Unreachable: domain resolution above already guaranteed a served
+        // endpoint (and that `assets` is present when domain === 'assets').
         options.logger?.debug('Endpoint not found:', pathname);
         return await respond(
           new Response(
