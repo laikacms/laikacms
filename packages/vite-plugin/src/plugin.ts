@@ -7,6 +7,7 @@ import { createFsStorage, createRepositories, type LaikaRepositories, readItem }
 import { bodyOf, chunkPath, chunkSpecifier, pruneChunks, writeChunk } from './bodies.js';
 import { createRepositoryChangeChannel } from './change-channel.js';
 import { rewriteLaikaGlobs } from './glob.js';
+import { type LaikaLocalApiOptions, mountLocalApi } from './local-api.js';
 import { renderModule } from './module.js';
 import { isLaikaSource, isVirtualId, parseLaikaId, toVirtualId } from './protocol.js';
 import type { ContentChangeChannel, ContentChangeEvent } from './typegen/channel.js';
@@ -60,6 +61,15 @@ export interface LaikaVitePluginOptions {
    * (`@mdx-js/rollup`, ahead of your JSX plugin). Off by default.
    */
   mdx?: boolean;
+  /**
+   * Mount LaikaCMS's own JSON:API over this plugin's repositories while the
+   * Vite dev server is running ("local mode"), so a JSON:API client (e.g. the
+   * Decap admin) reads and writes content locally instead of a remote
+   * backend. `true` uses the default `/__laika` base path; pass an object to
+   * override it. Unauthenticated by design. Off by default — mounted only
+   * from the dev-server hook, so a production build/preview never exposes it.
+   */
+  localApi?: boolean | LaikaLocalApiOptions;
 }
 
 /**
@@ -226,6 +236,10 @@ export function laikacms(options: LaikaVitePluginOptions = {}): Plugin {
       // Construct the typegen instance (subscribes to the change channel in dev).
       getTypegen();
       server.httpServer?.once('close', () => void typegen?.dispose());
+
+      // Local mode: mount LaikaCMS's own JSON:API over the plugin's repositories.
+      // Dev-server-only by construction — no build/preview equivalent exists.
+      if (options.localApi) mountLocalApi(server, getRepos(), options.localApi);
     },
 
     async closeBundle() {
