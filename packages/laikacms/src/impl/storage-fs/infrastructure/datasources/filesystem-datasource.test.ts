@@ -436,6 +436,61 @@ describe('FileSystemDataSource dotted-key round-trip (LCMS-350)', () => {
   });
 });
 
+describe('FileSystemDataSource non-serializer extensions round-trip unchanged (LCMS-540)', () => {
+  it('createOrUpdate + getFileContents round-trips uploads/pic.png as uploads/pic.png (png is not a registered serializer)', async () => {
+    const ds = new FileSystemDataSource(['json'], 'json');
+    const created = await ds.createOrUpdate(tmpDir, 'uploads/pic.png', '{"data":"..."}', 'json');
+
+    expect(Result.isSuccess(created)).toBe(true);
+    if (Result.isSuccess(created)) {
+      expect(created.success.path).toBe('uploads/pic.png');
+    }
+    // Physical file carries the real serializer extension, not a truncated one.
+    await fs.access(path.join(tmpDir, 'uploads/pic.png.json'));
+    await expect(fs.access(path.join(tmpDir, 'uploads/pic.json'))).rejects.toThrow();
+
+    const read = await ds.getFileContents(tmpDir, 'uploads/pic.png');
+    expect(Result.isSuccess(read)).toBe(true);
+    if (Result.isSuccess(read)) {
+      expect(read.success.path).toBe('uploads/pic.png');
+      expect(read.success.extension).toBe('json');
+    }
+  });
+
+  it('a key with multiple dots and an unregistered extension stays intact end-to-end', async () => {
+    const ds = new FileSystemDataSource(['json'], 'json');
+    const created = await ds.createOrUpdate(tmpDir, 'uploads/nested/file.with.dots.jpg', '{}', 'json');
+
+    expect(Result.isSuccess(created)).toBe(true);
+    if (Result.isSuccess(created)) {
+      expect(created.success.path).toBe('uploads/nested/file.with.dots.jpg');
+    }
+
+    const read = await ds.getFileContents(tmpDir, 'uploads/nested/file.with.dots.jpg');
+    expect(Result.isSuccess(read)).toBe(true);
+    if (Result.isSuccess(read)) {
+      expect(read.success.path).toBe('uploads/nested/file.with.dots.jpg');
+    }
+  });
+
+  it('a key with a registered serializer extension still strips it (content/posts/entry.md -> content/posts/entry)', async () => {
+    const ds = new FileSystemDataSource(['md', 'json'], 'md');
+    const created = await ds.createOrUpdate(tmpDir, 'content/posts/entry.md', '# Hi', 'md');
+
+    expect(Result.isSuccess(created)).toBe(true);
+    if (Result.isSuccess(created)) {
+      expect(created.success.path).toBe('content/posts/entry');
+    }
+
+    const read = await ds.getFileContents(tmpDir, 'content/posts/entry');
+    expect(Result.isSuccess(read)).toBe(true);
+    if (Result.isSuccess(read)) {
+      expect(read.success.path).toBe('content/posts/entry');
+      expect(read.success.extension).toBe('md');
+    }
+  });
+});
+
 describe('FileSystemDataSource.fsStat (error mapping)', () => {
   it('maps ENOENT to NotFoundError', async () => {
     const ds = new FileSystemDataSource([], '');
