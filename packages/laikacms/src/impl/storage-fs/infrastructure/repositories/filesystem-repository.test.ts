@@ -6,6 +6,7 @@ import * as path from 'path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { rawSerializer } from 'laikacms/serializers/raw';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { FileSystemStorageRepository } from './filesystem-repository.js';
 
 let tmpDir: string;
@@ -258,6 +259,69 @@ describe('FileSystemStorageRepository removeAtoms dotted-key (LCMS-278)', () => 
     const keys = after.data.map(s => s.key);
     expect(keys).not.toContain('releases/v1.2-notes');
     expect(keys).toContain('releases/v1.9-notes');
+  });
+});
+
+// LCMS-269: ContentBase keys its settings/trash/drafts/revisions under a
+// top-level dot-prefixed segment (`.contentbase/...`, `.laikacms/...`). Those
+// segments are also in the default ignoreList, but getObject must still
+// settle (resolve the object or fail NotFound) for them — ignoreList only
+// governs listings, not direct key reads. Guarded with a race-against-timeout
+// so a regression to a hung LaikaTask fails fast instead of hanging CI.
+describe('FileSystemStorageRepository getObject on top-level dot-prefixed keys (LCMS-269)', () => {
+  const withTimeout = <A>(promise: Promise<A>, label: string): Promise<A> =>
+    Promise.race([
+      promise,
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`${label} hung — LCMS-269 regression`)), 3000)
+      ),
+    ]);
+
+  it('resolves NotFoundError (rather than hanging) for a top-level dot-prefixed key with no file', async () => {
+    const repo = new FileSystemStorageRepository(tmpDir, { json: jsonSerializer }, 'json');
+
+    for (const key of ['.contentbase/settings', '.contentbase', '.hidden/x', '.dotfile']) {
+      const result = await withTimeout(LaikaTask.runPromiseResult(repo.getObject(key)), `getObject('${key}')`);
+      expect(result._tag).toBe('Failure');
+      expect((result as { failure: NotFoundError }).failure).toBeInstanceOf(NotFoundError);
+    }
+  });
+
+  it('reads back real content stored under a top-level dot-prefixed key', async () => {
+    const repo = new FileSystemStorageRepository(tmpDir, { json: jsonSerializer }, 'json');
+
+    await withTimeout(
+      LaikaTask.runPromise(
+        repo.createObject({
+          key: '.contentbase/settings',
+          type: 'object',
+          content: { collections: {} },
+        }),
+      ),
+      "createObject('.contentbase/settings')",
+    );
+
+    const result = await withTimeout(
+      LaikaTask.runPromiseResult(repo.getObject('.contentbase/settings')),
+      "getObject('.contentbase/settings')",
+    );
+    expect(result._tag).toBe('Success');
+    expect((result as { success: { key: string, content: unknown } }).success.content).toEqual({ collections: {} });
+  });
+
+  it('does not mis-resolve a dot-prefixed key to the empty-key file at the storage root', async () => {
+    const repo = new FileSystemStorageRepository(tmpDir, { json: jsonSerializer }, 'json');
+
+    // Write the empty-key file directly (simulates a pre-existing root default).
+    await fs.writeFile(path.join(tmpDir, '.json'), JSON.stringify({ marker: 'root-empty-key' }));
+
+    const result = await withTimeout(
+      LaikaTask.runPromiseResult(repo.getObject('.dotfile')),
+      "getObject('.dotfile')",
+    );
+    // Must not resolve to the unrelated root `.json` file's content.
+    expect(result._tag).toBe('Failure');
+    expect((result as { failure: NotFoundError }).failure).toBeInstanceOf(NotFoundError);
   });
 });
 
