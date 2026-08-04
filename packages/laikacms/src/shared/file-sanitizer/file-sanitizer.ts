@@ -1,7 +1,7 @@
 /**
  * FileSanitizerImpl - Implementation of the abstract Sanitizer interface
  *
- * Provides file sanitization for PNG, GIF, and WebP files.
+ * Provides file sanitization for PNG, GIF, WebP, and JPEG files.
  */
 
 import type {
@@ -23,7 +23,7 @@ import { canSanitize, getSupportedFileTypes, sanitizeFile } from './sanitizer.js
  * const sanitizer = new FileSanitizerImpl();
  *
  * // Check supported types
- * console.log(sanitizer.getSupportedFileTypes()); // ['png', 'gif', 'webp']
+ * console.log(sanitizer.getSupportedFileTypes()); // ['png', 'gif', 'webp', 'jpeg']
  *
  * // Sanitize a file
  * const result = await sanitizer.sanitize(fileData);
