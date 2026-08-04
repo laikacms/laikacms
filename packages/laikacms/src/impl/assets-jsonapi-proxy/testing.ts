@@ -14,13 +14,6 @@ let originalFetch: typeof fetch | null = null;
 
 export const jsonApiProxyAssetsContractCase: AssetsContractCase = {
   name: 'AssetsJsonApiProxyRepository (in-process JSON:API + in-memory backing)',
-  /**
-   * The assets proxy currently wraps every server-side LaikaError as
-   * `InvalidData` rather than reconstructing the original typed class — so
-   * "key not found after delete" surfaces as `invalid_data` instead of
-   * `not_found`. That's a fidelity gap in the proxy, not a CRUDL bug.
-   */
-  skip: ['deleteAsset', 'deleteFolder'],
   makeRepo: () => {
     const storage = new InMemoryStorageRepository();
     const settings = new TestSettingsProvider();

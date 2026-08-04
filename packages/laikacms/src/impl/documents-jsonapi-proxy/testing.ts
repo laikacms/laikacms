@@ -17,14 +17,10 @@ export const jsonApiProxyDocumentsContractCase: DocumentsContractCase = {
   name: 'DocumentsJsonApiProxyRepository (in-process JSON:API + in-memory backing)',
   /**
    * Known gaps in the in-process server/proxy pair:
-   * - `respondVoid` on DELETE returns `{ meta: { deleted: true } }` rather than
-   *   propagating a typed NotFoundError back through the proxy when the
-   *   follow-up GET fails on a key that was just deleted (the proxy's fetch
-   *   layer interprets the response shape as InvalidData rather than 404).
    * - `listRecordSummaries` is not yet wired through the proxy's
    *   `/record-summaries` path.
    */
-  skip: ['deleteDocument', 'deleteUnpublished', 'listRecordSummaries'],
+  skip: ['listRecordSummaries'],
   makeRepo: () => {
     const storage = new InMemoryStorageRepository();
     const settings = new TestSettingsProvider();

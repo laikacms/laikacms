@@ -21,7 +21,15 @@ import {
   type Resource,
 } from 'laikacms/assets';
 
-import { InternalError, InvalidData, type LaikaDone, type LaikaError, LaikaStream, LaikaTask } from 'laikacms/core';
+import {
+  ErrorCodeToClassMap,
+  InternalError,
+  InvalidData,
+  type LaikaDone,
+  type LaikaError,
+  LaikaStream,
+  LaikaTask,
+} from 'laikacms/core';
 import { type JsonApiCollectionResponse, warningsFromMeta } from 'laikacms/json-api';
 
 import { type ChangeSummary, type Folder, type FolderCreate, SyncToken } from 'laikacms/storage';
@@ -64,19 +72,17 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     this.transport = new JsonApiHttpTransport(options);
   }
 
+  /**
+   * Always re-hydrates the upstream error's typed `LaikaError` subclass from
+   * its `code` field (falling back to `InvalidData`), so a 404/400/409 from
+   * the backing API surfaces through the proxy as `NotFoundError`/
+   * `BadRequestError`/`ConflictError` instead of a generic 500.
+   */
   private fetchJson<T = Record<string, unknown>>(
     path: string,
     init: { method: string, body?: unknown, multipart?: FormData } = { method: 'GET' },
-    opts?: {
-      /**
-       * Re-hydrate the upstream error's typed LaikaError subclass from its
-       * `code` field (falling back to InvalidData). Opt-in so the historic
-       * InvalidData-only behavior of the existing routes stays untouched.
-       */
-      rehydrateErrorCodes?: boolean,
-    },
   ): Effect.Effect<T, LaikaError> {
-    return this.transport.fetchJson(path, init, opts) as Effect.Effect<T, LaikaError>;
+    return this.transport.fetchJson(path, init, { rehydrateErrorCodes: true }) as Effect.Effect<T, LaikaError>;
   }
 
   private fetchVoid(
@@ -107,11 +113,21 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         r => r._tag === 'Success' && r.success !== null ? r.success : {} as Record<string, unknown>,
       );
       if (response.status < 200 || response.status >= 300) {
-        const json = (yield* readJson) as { errors?: Array<{ detail?: string, title?: string }> };
+        const json = (yield* readJson) as {
+          errors?: Array<{ detail?: string, title?: string, code?: string }>,
+        };
         const errors = json.errors || [{ detail: 'Request failed' }];
-        return yield* Effect.fail(
-          new InvalidData(errors.map(e => e.detail || e.title || 'Unknown error').join(', ')),
-        );
+        const detail = errors.map(e => e.detail || e.title || 'Unknown error').join(', ');
+        // Re-hydrate the upstream error's typed LaikaError subclass from its
+        // `code` field (falling back to InvalidData) — mirrors
+        // JsonApiHttpTransport#fetchJson's `rehydrateErrorCodes` behavior, so
+        // a 404/400/409 on a void route (DELETE) surfaces as
+        // NotFoundError/BadRequestError/ConflictError instead of a 500.
+        const firstCode = errors[0]?.code;
+        const ErrorCtor = firstCode
+          ? (ErrorCodeToClassMap as Record<string, new(msg: string) => LaikaError>)[firstCode]
+          : undefined;
+        return yield* Effect.fail(ErrorCtor ? new ErrorCtor(detail) : new InvalidData(detail));
       }
       // 204 No Content carries no body; 200 + JSON may have meta.warnings.
       if (!emit || response.status === 204) return;
@@ -181,7 +197,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
         const json = yield* this.fetchJson<{
           data?: { attributes?: { syncToken?: unknown } },
           meta?: Record<string, unknown>,
-        }>(`/sync-token${qs}`, { method: 'GET' }, { rehydrateErrorCodes: true });
+        }>(`/sync-token${qs}`, { method: 'GET' });
         for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
         const token = json.data?.attributes?.syncToken;
         if (typeof token !== 'string') {
@@ -205,7 +221,7 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
 
         const json = yield* this.fetchJson<
           JsonApiCollectionResponse & { meta?: { syncToken?: unknown, page?: { total?: number } } }
-        >(`/changes?${params}`, { method: 'GET' }, { rehydrateErrorCodes: true });
+        >(`/changes?${params}`, { method: 'GET' });
         for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
 
         let emitted = 0;

@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { InternalError, InvalidData, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import {
+  BadRequestError,
+  ConflictError,
+  InternalError,
+  InvalidData,
+  LaikaStream,
+  LaikaTask,
+  NotFoundError,
+} from 'laikacms/core';
 
 import { AssetsJsonApiProxyRepository } from './assets-jsonapi-proxy-repository.js';
 
@@ -55,6 +63,66 @@ describe('AssetsJsonApiProxyRepository.deleteAsset', () => {
     const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
     const collected = await LaikaTask.runPromiseCollect(proxy.deleteAsset('pic.png'));
     expect(collected.recoverableErrors).toEqual([]);
+  });
+
+  it('rejects with NotFoundError (preserving the upstream 404) when the key is missing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          { errors: [{ code: 'not_found', status: '404', title: 'Not Found', detail: 'no such asset' }] },
+          404,
+        )
+      ),
+    );
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const err = await LaikaTask.runPromiseCollect(proxy.deleteAsset('missing.png')).catch(e => e);
+    expect(err).toBeInstanceOf(NotFoundError);
+    expect((err as NotFoundError).status).toBe(404);
+  });
+
+  it('rejects with BadRequestError (preserving the upstream 400) on a malformed key', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          { errors: [{ code: 'bad_request', status: '400', title: 'Bad Request', detail: 'invalid key' }] },
+          400,
+        )
+      ),
+    );
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const err = await LaikaTask.runPromiseCollect(proxy.deleteAsset('bad key')).catch(e => e);
+    expect(err).toBeInstanceOf(BadRequestError);
+    expect((err as BadRequestError).status).toBe(400);
+  });
+
+  it('rejects with ConflictError (preserving the upstream 409) on a version conflict', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          { errors: [{ code: 'conflict', status: '409', title: 'Conflict', detail: 'locked' }] },
+          409,
+        )
+      ),
+    );
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const err = await LaikaTask.runPromiseCollect(proxy.deleteAsset('locked.png')).catch(e => e);
+    expect(err).toBeInstanceOf(ConflictError);
+    expect((err as ConflictError).status).toBe(409);
+  });
+
+  it('still fails as a synthetic 5xx (InvalidData) when the upstream is unreachable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('fetch failed');
+      }),
+    );
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const err = await LaikaTask.runPromiseCollect(proxy.deleteAsset('pic.png')).catch(e => e);
+    expect(err).toBeInstanceOf(InvalidData);
   });
 });
 
@@ -323,7 +391,7 @@ describe('AssetsJsonApiProxyRepository.getResource', () => {
     expect(collected.recoverableErrors[0]!.message).toContain('thumbnail missing');
   });
 
-  it('rejects with a LaikaError on a non-ok JSON:API error response', async () => {
+  it('rejects with the re-hydrated typed LaikaError (NotFoundError) on a non-ok JSON:API error response', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () =>
@@ -339,7 +407,7 @@ describe('AssetsJsonApiProxyRepository.getResource', () => {
     const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
     await expect(
       LaikaTask.runPromiseCollect(proxy.getResource('images/ghost.jpg')),
-    ).rejects.toBeInstanceOf(InvalidData);
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 
   it('adds include=variations,urls query params when hints are set', async () => {
@@ -514,7 +582,7 @@ describe('AssetsJsonApiProxyRepository.updateAsset', () => {
     expect(collected.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
   });
 
-  it('rejects with a LaikaError on a non-ok response', async () => {
+  it('rejects with the re-hydrated typed LaikaError (NotFoundError) on a non-ok response', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () =>
@@ -530,7 +598,7 @@ describe('AssetsJsonApiProxyRepository.updateAsset', () => {
     const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
     await expect(
       LaikaTask.runPromiseCollect(proxy.updateAsset({ key: 'images/ghost.jpg' })),
-    ).rejects.toBeInstanceOf(InvalidData);
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 
@@ -584,6 +652,50 @@ describe('AssetsJsonApiProxyRepository.deleteFolder', () => {
     expect(collected.recoverableErrors[0]).toBeInstanceOf(NotFoundError);
     expect(collected.recoverableErrors[0]!.message).toContain('child already gone');
   });
+
+  it('rejects with NotFoundError (preserving the upstream 404) when the folder is missing', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          { errors: [{ code: 'not_found', status: '404', title: 'Not Found', detail: 'no such folder' }] },
+          404,
+        )
+      ),
+    );
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const err = await LaikaTask.runPromiseCollect(proxy.deleteFolder('missing/')).catch(e => e);
+    expect(err).toBeInstanceOf(NotFoundError);
+    expect((err as NotFoundError).status).toBe(404);
+  });
+
+  it('rejects with ConflictError (preserving the upstream 409) when the folder is not empty', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(
+          { errors: [{ code: 'conflict', status: '409', title: 'Conflict', detail: 'folder not empty' }] },
+          409,
+        )
+      ),
+    );
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const err = await LaikaTask.runPromiseCollect(proxy.deleteFolder('images/')).catch(e => e);
+    expect(err).toBeInstanceOf(ConflictError);
+    expect((err as ConflictError).status).toBe(409);
+  });
+
+  it('still fails as a synthetic 5xx (InvalidData) when the upstream is unreachable', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        throw new TypeError('fetch failed');
+      }),
+    );
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const err = await LaikaTask.runPromiseCollect(proxy.deleteFolder('images/')).catch(e => e);
+    expect(err).toBeInstanceOf(InvalidData);
+  });
 });
 
 // ─── getFolder ────────────────────────────────────────────────────────────────
@@ -623,7 +735,7 @@ describe('AssetsJsonApiProxyRepository.getFolder', () => {
     ).rejects.toBeInstanceOf(InvalidData);
   });
 
-  it('rejects with a LaikaError on a non-ok response', async () => {
+  it('rejects with the re-hydrated typed LaikaError (NotFoundError) on a non-ok response', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () =>
@@ -639,7 +751,7 @@ describe('AssetsJsonApiProxyRepository.getFolder', () => {
     const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
     await expect(
       LaikaTask.runPromiseCollect(proxy.getFolder('images/ghost/')),
-    ).rejects.toBeInstanceOf(InvalidData);
+    ).rejects.toBeInstanceOf(NotFoundError);
   });
 });
 
