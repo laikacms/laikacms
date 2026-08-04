@@ -19,11 +19,25 @@ async function writeObject(key: string, content: unknown): Promise<void> {
   await fs.writeFile(file, JSON.stringify(content), 'utf8');
 }
 
+/** Plugins created via `makePlugin` this test, so afterEach can flush their typegen. */
+let activePlugins: Array<ReturnType<typeof laikacms>>;
+
 beforeEach(async () => {
   tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'laika-loader-'));
+  activePlugins = [];
 });
 
 afterEach(async () => {
+  // `load()` fires the typegen's `ingest()` without awaiting it (by design — it
+  // must not block module resolution), which schedules a debounced write of
+  // `.laika/types.d.ts` a tick later. Left unflushed, that write can land after
+  // (or mid-) the `rm` below and recreate an entry the recursive delete already
+  // listed, failing with ENOTEMPTY under load. `closeBundle` — the same hook a
+  // real Vite build calls — awaits the typegen's `dispose()`, which flushes (or
+  // no-ops) synchronously, so no write can outlive this test.
+  await Promise.all(
+    activePlugins.splice(0).map(plugin => (plugin.closeBundle as (() => Promise<void>) | undefined)?.()),
+  );
   await fs.rm(tmpDir, { recursive: true, force: true });
 });
 
@@ -91,6 +105,7 @@ describe('plugin hooks', () => {
       root: tmpDir,
       command: 'build',
     });
+    activePlugins.push(plugin);
     return plugin;
   };
 
