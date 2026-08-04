@@ -1,4 +1,4 @@
-import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
+import { LaikaStream, LaikaTask, NotFoundError, TooManyRequestsError } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -324,5 +324,30 @@ describe('GitlabStorageRepository CRUD round-trip', () => {
     );
     expect(collected.data.map(s => s.key)).toEqual(['notes']);
     expect(collected.data[0].type).toBe('folder-summary');
+  });
+});
+
+describe('GitlabStorageRepository mapError', () => {
+  it('maps a 429 response to TooManyRequestsError', async () => {
+    const fetch429: typeof fetch = async () => new Response('{"message":"429 Too Many Requests"}', { status: 429 });
+    const repo = new GitlabStorageRepository({
+      projectId: PROJECT_ID,
+      branch: BRANCH,
+      apiUrl: API_URL,
+      auth: { token: 'glpat-test' },
+      fetch: fetch429,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+    });
+
+    await expect(
+      LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'some-key', content: { body: 'hi' } })),
+    ).rejects.toBeInstanceOf(TooManyRequestsError);
   });
 });
