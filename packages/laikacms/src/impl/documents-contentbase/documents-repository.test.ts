@@ -341,6 +341,32 @@ describe('ContentBaseDocumentsRepository', () => {
         expect(result.success.language).toBe('en');
       }
     });
+
+    // LCMS-450: the LCMS-448 guard landed on createDocument but was missed on updateDocument,
+    // leaving the same character-indexed-spread corruption reachable via PATCH.
+    it('rejects string content with BadRequestError (LCMS-450 guard)', async () => {
+      await resolveTask(
+        repo.createDocument({
+          key: 'editable-guard',
+          type: 'published',
+          status: 'published',
+          content: { v: 1 },
+          language: 'en',
+        }),
+      );
+
+      const result = await resolveTask(
+        repo.updateDocument({
+          key: 'editable-guard',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          content: '---\ntitle: T\n---\nB\n' as any,
+        }),
+      );
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe(BadRequestError.CODE);
+      }
+    });
   });
 
   describe('deleteDocument', () => {
@@ -598,6 +624,32 @@ describe('ContentBaseDocumentsRepository', () => {
         expect(readback.success.status).toBe('pending_review');
         expect(readback.success.language).toBe('fr');
         expect(readback.success.content).toMatchObject({ title: 'Edited', body: 'new' });
+      }
+    });
+
+    // LCMS-450: the LCMS-448 guard landed on createUnpublished but was missed on updateUnpublished,
+    // leaving the same character-indexed-spread corruption reachable via PATCH.
+    it('rejects string content with BadRequestError (LCMS-450 guard)', async () => {
+      await resolveTask(
+        repo.createUnpublished({
+          key: 'posts/draft-guard',
+          type: 'unpublished',
+          content: { title: 'Original' },
+          language: 'en',
+          status: 'draft',
+        }),
+      );
+
+      const result = await resolveTask(
+        repo.updateUnpublished({
+          key: 'posts/draft-guard',
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          content: '---\ntitle: T\n---\nB\n' as any,
+        }),
+      );
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure.code).toBe(BadRequestError.CODE);
       }
     });
 

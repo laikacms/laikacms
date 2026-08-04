@@ -231,6 +231,17 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   override updateDocument(update: DocumentUpdate): LaikaTask.LaikaTask<Document> {
     return LaikaTask.make<Document>(emit =>
       Effect.gen({ self: this }, function*() {
+        if (
+          update.content !== undefined
+          && (typeof update.content !== 'object' || update.content === null || Array.isArray(update.content))
+        ) {
+          return yield* Effect.fail(
+            new BadRequestError(
+              `updateDocument: content must be a plain object; got ${typeof update
+                .content}. Serialize the document to a structured object before calling updateDocument.`,
+            ),
+          );
+        }
         const path = yield* this.getDocumentPath(update.key, emit);
         const existing = yield* LaikaTask.runValueForwarding(this.getDocument(update.key), emit);
         const newLanguage = update.language ?? existing.language;
@@ -339,6 +350,16 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
   override updateUnpublished(update: UnpublishedUpdate): LaikaTask.LaikaTask<Unpublished> {
     return LaikaTask.make<Unpublished>(emit =>
       Effect.gen({ self: this }, function*() {
+        if (
+          update.content !== undefined
+          && (typeof update.content !== 'object' || update.content === null || Array.isArray(update.content))
+        ) {
+          return yield* Effect.fail(
+            new BadRequestError(
+              `updateUnpublished: content must be a plain object; got ${typeof update.content}.`,
+            ),
+          );
+        }
         const existing = yield* LaikaTask.runValueForwarding(this.getUnpublished(update.key), emit);
 
         if (update.status && update.status !== existing.status) {
