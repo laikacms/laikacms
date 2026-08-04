@@ -1,9 +1,23 @@
 import { useEffect, useState } from 'react';
 
-import { LAIKA_SWAP } from '../data';
 import { hl } from '../highlight';
 import { useCopy } from '../hooks';
 import { IconCheck, IconCopy, IconSwap } from './icons';
+
+/** One entry in the repository-swap demo: rewrites two lines of the sample worker. */
+export interface Repository {
+  id: string;
+  label: string;
+  cls: string;
+  path: string;
+  ctor: string;
+}
+
+export interface CodePanelProps {
+  file: string;
+  label: string;
+  repositories: Repository[];
+}
 
 const CHIP_BASE =
   'font-mono text-xs text-code-dim bg-transparent border border-code-line rounded-[7px] py-[5px] px-[11px] cursor-pointer transition-[color,border-color,background] duration-150 hover:text-code-ink hover:border-[#4a4f74]';
@@ -15,11 +29,11 @@ const COPY_BTN =
 
 const LINE = 'flex gap-4 whitespace-pre rounded-[5px] px-1.5 -mx-1.5';
 
-export function CodePanel() {
+export function CodePanel({ file, label, repositories }: CodePanelProps) {
   const [active, setActive] = useState(0);
   const [pulse, setPulse] = useState(0);
   const [copied, copy] = useCopy();
-  const b = LAIKA_SWAP[active]!;
+  const b = repositories[active]!;
 
   useEffect(() => {
     setPulse(p => p + 1);
@@ -45,7 +59,7 @@ export default { fetch: api.fetch };`;
           <i className="w-[11px] h-[11px] rounded-full block bg-[#e0b15a]" />
           <i className="w-[11px] h-[11px] rounded-full block bg-[#5cb877]" />
         </span>
-        <span className="text-code-dim text-[12.5px] font-mono">worker.ts</span>
+        <span className="text-code-dim text-[12.5px] font-mono">{file}</span>
         <button className={`${COPY_BTN} font-mono ml-auto`} onClick={() => copy(code)}>
           {copied ? <IconCheck size={14} /> : <IconCopy size={14} />}
           {copied ? 'copied' : 'copy'}
@@ -55,10 +69,10 @@ export default { fetch: api.fetch };`;
       {/* repo swap row */}
       <div className="flex items-center gap-3.5 px-3.5 py-3 border-b border-code-line bg-[color-mix(in_oklab,var(--color-code-bg),black_12%)]">
         <span className="text-code-dim text-[11.5px] inline-flex items-center gap-1.5 uppercase tracking-[0.08em] flex-none font-mono">
-          <IconSwap size={15} /> repository
+          <IconSwap size={15} /> {label}
         </span>
         <div className="flex gap-[7px] flex-wrap">
-          {LAIKA_SWAP.map((s, i) => (
+          {repositories.map((s, i) => (
             <button
               key={s.id}
               className={CHIP_BASE + (i === active ? CHIP_ACTIVE : '')}

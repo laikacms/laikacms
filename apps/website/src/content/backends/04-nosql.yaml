@@ -1,0 +1,30 @@
+id: nosql
+label: NoSQL & multi-model
+note: >-
+  Document, columnar and multi-model databases, each with a first-class
+  repository.
+items:
+  - name: MongoDB
+    sub: '@laikacms/mongodb'
+    icon: { si: mongodb }
+  - name: CouchDB
+    sub: '@laikacms/couchdb'
+    icon: { si: apachecouchdb }
+  - name: Firestore
+    sub: '@laikacms/firestore'
+    icon: { si: firebase }
+  - name: Convex
+    sub: '@laikacms/convex'
+    icon: { si: convex }
+  - name: SurrealDB
+    sub: '@laikacms/surrealdb'
+    icon: { si: surrealdb }
+  - name: ArangoDB
+    sub: '@laikacms/arangodb'
+    icon: { si: arangodb }
+  - name: Gel
+    sub: '@laikacms/gel'
+    icon: { svg: graph }
+  - name: ClickHouse
+    sub: '@laikacms/clickhouse'
+    icon: { si: clickhouse }

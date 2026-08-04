@@ -120,3 +120,38 @@
   -webkit-mask: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
   mask: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
 }
+
+/* ─── MDX bodies ──────────────────────────────────────────────────────────── */
+/* Inline elements are styled once, here: content can say `laika-gateway` in
+   backticks and get monospace without the section knowing. Block-level spacing
+   stays with the section, which is why every `<Body>` is wrapped in a div
+   carrying `[&>p]:…` — the section lead and the card bodies inside a Pillar
+   want different type, and only the section knows which is which. */
+.prose code {
+  font-family: var(--font-mono);
+}
+
+.prose strong {
+  color: var(--color-ink);
+  font-weight: 600;
+}
+
+.prose em {
+  font-style: italic;
+}
+
+.prose a {
+  color: var(--color-indigo);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* ─── sticky nav ──────────────────────────────────────────────────────────── */
+/* Toggled by the scroll listener in Base.astro; a class rather than React state
+   so the header needs no hydration. */
+#site-nav.is-scrolled {
+  background: color-mix(in oklab, var(--color-bg), transparent 18%);
+  backdrop-filter: saturate(1.4) blur(14px);
+  -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  border-color: var(--color-hairline);
+}

@@ -5,24 +5,26 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview",
-    "typecheck": "vite build && tsc --noEmit"
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
   },
   "dependencies": {
-    "@tanstack/react-router": "catalog:tanstack",
     "react": "catalog:react",
     "react-dom": "catalog:react"
   },
   "devDependencies": {
+    "@astrojs/check": "catalog:astro",
+    "@astrojs/mdx": "catalog:astro",
+    "@astrojs/react": "catalog:astro",
+    "@laikacms/vite-plugin": "workspace:*",
     "@tailwindcss/vite": "catalog:default",
-    "@tanstack/router-plugin": "catalog:tanstack",
+    "@types/mdx": "catalog:types",
     "@types/react": "catalog:types",
     "@types/react-dom": "catalog:types",
-    "@vitejs/plugin-react": "catalog:react",
+    "astro": "catalog:astro",
     "tailwindcss": "catalog:default",
-    "typescript": "catalog:tools",
-    "vite": "catalog:tools"
+    "typescript": "catalog:tools"
   }
 }

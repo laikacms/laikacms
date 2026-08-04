@@ -1,6 +1,4 @@
-import { type ReactNode, useState } from 'react';
-
-import type { BackendIconSpec, GenericSvgKey } from '../data';
+import type { ReactNode } from 'react';
 
 interface IconProps {
   d: ReactNode;
@@ -214,7 +212,9 @@ export const IconPlug = ({ size = 17 }: { size?: number }) => (
   />
 );
 
-const GENERIC: Record<GenericSvgKey, ReactNode> = {
+/* Keyed by the `icon.svg` name in content — an unknown name falls back to the
+   generic file glyph rather than rendering nothing. */
+const GENERIC: Record<string, ReactNode> = {
   folder: (
     <Icon
       size={26}
@@ -258,38 +258,67 @@ const GENERIC: Record<GenericSvgKey, ReactNode> = {
       }
     />
   ),
+  // WebDAV — files over the network; a cloud, not the plain `folder`.
+  cloud: (
+    <Icon
+      size={26}
+      stroke={1.6}
+      d={<path d="M6.5 19a4.5 4.5 0 0 1 .4-9 5.5 5.5 0 0 1 10.4-1A3.8 3.8 0 0 1 17.5 19Z" />}
+    />
+  ),
+  // JSON:API proxy — a node relaying requests both ways.
+  proxy: (
+    <Icon
+      size={26}
+      stroke={1.6}
+      d={
+        <>
+          <rect x="9" y="9" width="6" height="6" rx="1.5" />
+          <path d="M3 12h5" />
+          <path d="M16 12h5" />
+          <path d="m6 9.5-2.5 2.5 2.5 2.5" />
+          <path d="m18 9.5 2.5 2.5-2.5 2.5" />
+        </>
+      }
+    />
+  ),
+  // Gel — a graph-relational store; connected nodes, not `braces`.
+  graph: (
+    <Icon
+      size={26}
+      stroke={1.6}
+      d={
+        <>
+          <circle cx="6" cy="7" r="2.3" />
+          <circle cx="18" cy="9" r="2.3" />
+          <circle cx="10" cy="18" r="2.3" />
+          <path d="M8.2 7.6 15.8 8.5" />
+          <path d="m6.7 9.1 2.5 6.9" />
+          <path d="m11.6 16.4 5-5.6" />
+        </>
+      }
+    />
+  ),
+  // LDAP — a directory tree; a parent branching to children, not `folder`.
+  tree: (
+    <Icon
+      size={26}
+      stroke={1.6}
+      d={
+        <>
+          <rect x="9" y="3" width="6" height="4" rx="1" />
+          <rect x="3" y="17" width="6" height="4" rx="1" />
+          <rect x="15" y="17" width="6" height="4" rx="1" />
+          <path d="M12 7v5" />
+          <path d="M6 17v-4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v4" />
+        </>
+      }
+    />
+  ),
 };
 
-const BICON = 'inline-grid place-items-center w-8 h-8';
-
-export function BackendIcon({ icon, size = 28 }: { icon: BackendIconSpec, size?: number }) {
-  const [failed, setFailed] = useState(false);
-  if ('svg' in icon) {
-    return <span className={`${BICON} text-indigo`}>{GENERIC[icon.svg]}</span>;
-  }
-  if (failed) {
-    return (
-      <span
-        className={`inline-grid place-items-center w-[30px] h-[30px] rounded-md bg-indigo-tint text-indigo text-xs font-semibold font-mono`}
-      >
-        {icon.si.slice(0, 2)}
-      </span>
-    );
-  }
-  return (
-    <span className={BICON}>
-      <img
-        src={`https://cdn.simpleicons.org/${icon.si}`}
-        width={size}
-        height={size}
-        alt=""
-        loading="lazy"
-        onError={() => setFailed(true)}
-        className="block w-[30px] h-[30px] object-contain"
-      />
-    </span>
-  );
-}
+/** The glyph for an `{ svg: name }` icon spec. See BackendIcon.astro. */
+export const GenericIcon = ({ name }: { name: string }) => <>{GENERIC[name] ?? GENERIC.file}</>;
 
 export const Logo = ({ height = 30 }: { height?: number }) => (
   <span className="inline-flex items-center gap-[11px]">

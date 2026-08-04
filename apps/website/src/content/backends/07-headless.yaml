@@ -1,0 +1,21 @@
+id: headless
+label: Headless CMSes
+note: >-
+  Already invested in another CMS? Point Laika at it and keep one content API in
+  front.
+items:
+  - name: Contentful
+    sub: '@laikacms/contentful'
+    icon: { si: contentful }
+  - name: Sanity
+    sub: '@laikacms/sanity'
+    icon: { si: sanity }
+  - name: Hygraph
+    sub: '@laikacms/hygraph'
+    icon: { img: hygraph }
+  - name: PocketBase
+    sub: '@laikacms/pocketbase'
+    icon: { si: pocketbase }
+  - name: Airtable
+    sub: '@laikacms/airtable'
+    icon: { si: airtable }

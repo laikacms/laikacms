@@ -1,0 +1,21 @@
+id: collab
+label: Collaboration tools
+note: >-
+  Where teams already write: read and write content straight from the tools they
+  live in.
+items:
+  - name: Notion
+    sub: '@laikacms/notion'
+    icon: { si: notion }
+  - name: Dropbox
+    sub: '@laikacms/dropbox'
+    icon: { si: dropbox }
+  - name: Google Drive
+    sub: '@laikacms/google'
+    icon: { si: googledrive }
+  - name: OneDrive
+    sub: '@laikacms/microsoft'
+    icon: { img: onedrive }
+  - name: Trello
+    sub: '@laikacms/trello'
+    icon: { si: trello }

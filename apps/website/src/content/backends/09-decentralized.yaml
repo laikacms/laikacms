@@ -1,0 +1,18 @@
+id: decentralized
+label: Decentralized & directories
+note: >-
+  Content-addressed networks, the social web, and even LDAP. The contract is the
+  contract.
+items:
+  - name: IPFS / Pinata
+    sub: '@laikacms/pinata'
+    icon: { si: ipfs }
+  - name: Solid
+    sub: '@laikacms/solid'
+    icon: { si: solid }
+  - name: AT Protocol
+    sub: '@laikacms/atproto'
+    icon: { si: bluesky }
+  - name: LDAP
+    sub: '@laikacms/ldap'
+    icon: { svg: tree }

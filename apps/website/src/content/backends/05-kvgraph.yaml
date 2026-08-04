@@ -1,0 +1,24 @@
+id: kvgraph
+label: Key-value, graph & search
+note: >-
+  Edges, keys and indexes: Laika's repository contract doesn't care what shape
+  your store is.
+items:
+  - name: Neo4j
+    sub: '@laikacms/neo4j'
+    icon: { si: neo4j }
+  - name: etcd
+    sub: '@laikacms/etcd'
+    icon: { si: etcd }
+  - name: Upstash
+    sub: '@laikacms/upstash'
+    icon: { si: upstash }
+  - name: Algolia
+    sub: '@laikacms/algolia'
+    icon: { si: algolia }
+  - name: MeiliSearch
+    sub: '@laikacms/meilisearch'
+    icon: { si: meilisearch }
+  - name: InfluxDB
+    sub: '@laikacms/influxdb'
+    icon: { si: influxdb }

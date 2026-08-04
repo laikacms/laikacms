@@ -1,0 +1,175 @@
+---
+import { Footer } from '../components/Footer';
+import { Nav } from '../components/Nav';
+import '../styles.css';
+
+/* The document shell is the one thing that stays Astro. Every section is a
+   React component, but the `<head>` cannot be: Astro injects the Tailwind
+   bundle at the `renderHead()` marker only the `.astro` compiler emits, and
+   React 19 drops `<link rel="stylesheet">` / `preconnect` from
+   `renderToStaticMarkup` as hoistable resources. Body chrome (Nav, Footer) is
+   React; this file is head + slot.
+
+   Pages are MDX documents that compose sections; Astro hands their frontmatter
+   to the layout under `frontmatter`. */
+interface Props {
+  frontmatter: { title: string };
+}
+
+const { title } = Astro.props.frontmatter;
+
+const DESCRIPTION =
+  'Modular, runtime-agnostic, open-source CMS. One content interface across 40+ swappable storage backends. MIT-licensed and self-hostable.';
+
+/* Canonical and og:url follow the page being rendered; everything else in the
+   head is the same on every page. */
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+
+/* The nav marks the active tab; a React component has no `Astro.url`. */
+const path = Astro.url.pathname.replace(/(.)\/$/, '$1');
+
+/* Site chrome copy lives here, in the one place that renders the chrome. A tab
+   with `to` is a page on this site; a tab with `href` leaves it. */
+const NAV = {
+  tabs: [
+    { label: 'Features', to: '/' },
+    { label: 'Docs', href: '/docs/' },
+    { label: 'Community', to: '/community' },
+  ],
+  githubLabel: 'GitHub',
+  githubHref: 'https://github.com/laikacms/laikacms',
+  cta: { label: 'Get started', href: '/docs/getting-started' },
+};
+
+const FOOTER = {
+  tagline:
+    'An MIT-licensed component library for dashboards and CMSs, plus a content API for any backend. Self-hosted by default.',
+  legal: 'MIT · © 2026 Laika CMS contributors',
+  columns: [
+    {
+      heading: 'Project',
+      links: [
+        { label: 'GitHub', href: 'https://github.com/laikacms/laikacms' },
+        { label: 'Contributing', href: 'https://github.com/laikacms/laikacms/blob/develop/CONTRIBUTING.md' },
+        { label: 'Releases', href: 'https://github.com/laikacms/laikacms/releases' },
+        { label: 'Issues', href: 'https://github.com/laikacms/laikacms/issues' },
+      ],
+    },
+    {
+      heading: 'Docs',
+      links: [
+        { label: 'Getting Started', href: '/docs/getting-started' },
+        { label: 'Architecture', href: '/docs/architecture' },
+        { label: 'API Reference', href: '/docs/api-reference' },
+        { label: 'Packages', href: '/docs/packages' },
+      ],
+    },
+    {
+      heading: 'For machines',
+      links: [{ label: 'AGENTS.md', href: 'https://github.com/laikacms/laikacms/blob/develop/AGENTS.md' }],
+    },
+    {
+      heading: 'Trust',
+      links: [
+        { label: 'MIT License', href: 'https://github.com/laikacms/laikacms/blob/develop/LICENSE' },
+        { label: 'Security policy', href: 'https://github.com/laikacms/laikacms/blob/develop/SECURITY.md' },
+      ],
+    },
+  ],
+};
+
+const STRUCTURED_DATA = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'SoftwareApplication',
+      name: 'Laika CMS',
+      applicationCategory: 'DeveloperApplication',
+      operatingSystem: 'Node, Bun, Deno, Cloudflare Workers, Browser',
+      description:
+        'Modular, runtime-agnostic, open-source CMS. One content interface across 40+ swappable storage backends.',
+      url: 'https://laikacms.com/',
+      license: 'https://opensource.org/licenses/MIT',
+      softwareHelp: 'https://laikacms.com/docs/',
+      offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+      publisher: { '@id': 'https://laikacms.com/#org' },
+    },
+    {
+      '@type': 'Organization',
+      '@id': 'https://laikacms.com/#org',
+      name: 'Laika CMS',
+      url: 'https://laikacms.com/',
+      logo: 'https://laikacms.com/assets/laika-icon.png',
+      sameAs: ['https://github.com/laikacms/laikacms'],
+    },
+  ],
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    <meta
+      name="description"
+      content="Laika is a modular, runtime-agnostic, open-source CMS. One content interface across 40+ swappable storage backends. MIT-licensed and self-hostable."
+    />
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content="index, follow" />
+    <meta name="author" content="Laika CMS contributors" />
+    <meta name="theme-color" content="#3F51B5" />
+
+    <!-- Open Graph — scrapers don't run JS, so these live statically here -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Laika CMS" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={DESCRIPTION} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content="https://laikacms.com/assets/og-image.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Laika CMS: one content API, 40+ swappable backends." />
+    <meta property="og:locale" content="en_US" />
+
+    <!-- Twitter / X card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={DESCRIPTION} />
+    <meta name="twitter:image" content="https://laikacms.com/assets/og-image.png" />
+    <meta name="twitter:image:alt" content="Laika CMS: one content API, 40+ swappable backends." />
+
+    <link rel="icon" href="/assets/laika-icon.png" />
+    <link rel="apple-touch-icon" href="/assets/laika-icon.png" />
+
+    <script type="application/ld+json" is:inline set:html={JSON.stringify(STRUCTURED_DATA)} />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;450;500;600&family=IBM+Plex+Mono:wght@400;500&family=Archivo:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="top">
+      <Nav path={path} {...NAV} />
+      <main class="min-h-[60vh]">
+        <slot />
+      </main>
+      <Footer {...FOOTER} />
+    </div>
+
+    <!-- Toggles `#site-nav.is-scrolled` (see styles.css) so the header picks up
+         its blurred background once the page scrolls. A class rather than React
+         state keeps the header hydration-free. -->
+    <script>
+      const nav = document.getElementById('site-nav');
+      const onScroll = () => nav?.classList.toggle('is-scrolled', window.scrollY > 12);
+      onScroll();
+      window.addEventListener('scroll', onScroll, { passive: true });
+    </script>
+  </body>
+</html>

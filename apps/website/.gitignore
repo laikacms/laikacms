@@ -1,0 +1,5 @@
+.laika/
+# Astro's generated types + build cache.
+.astro/
+# ContentBase writes its (unused here) collection settings into the content dir.
+src/content/.contentbase/

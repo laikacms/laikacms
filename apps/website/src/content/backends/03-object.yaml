@@ -1,0 +1,18 @@
+id: object
+label: Object stores
+note: >-
+  Buckets and blob storage: content lives as objects, served at the edge or the
+  origin.
+items:
+  - name: AWS S3
+    sub: '@laikacms/aws'
+    icon: { img: aws }
+  - name: Azure Blob
+    sub: '@laikacms/azure'
+    icon: { img: azure }
+  - name: Backblaze B2
+    sub: '@laikacms/backblaze'
+    icon: { si: backblaze }
+  - name: Vercel Blob
+    sub: '@laikacms/vercel'
+    icon: { si: vercel }

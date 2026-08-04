@@ -1,0 +1,18 @@
+---
+layout: ../layouts/Base.astro
+title: Platform | Laika CMS
+---
+
+import { Platform } from '../components/Platform';
+
+<Platform
+  badge="Coming soon"
+  heading="A hosted gateway,"
+  headingSecondLine="without standing up your own."
+  primaryCta={{ label: 'Watch the repo', href: 'https://github.com/laikacms/laikacms' }}
+  secondaryCta={{ label: 'Self-host today', href: '/docs/deployment' }}
+>
+  Today you can self-install `laika-gateway`, a multi-tenant Cloudflare Worker that points Decap CMS
+  at your own repository. The managed Platform will take that further: one place to provision
+  gateways, manage tenants, and connect backends. Same open core underneath, nothing locked away.
+</Platform>

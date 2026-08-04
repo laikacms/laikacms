@@ -1,0 +1,40 @@
+# The repository-swap demo in the hero: each entry rewrites two lines of the
+# sample worker, which is the whole point Laika is making.
+file: worker.ts
+label: repository
+repositories:
+  - id: fs
+    label: Filesystem
+    cls: FileSystemStorageRepository
+    path: laikacms/storage-fs
+    ctor: 'new FileSystemStorageRepository({ basePath: "./content" })'
+  - id: r2
+    label: Cloudflare R2
+    cls: R2StorageRepository
+    path: laikacms/storage-r2
+    ctor: 'new R2StorageRepository({ bucket: env.CONTENT_BUCKET })'
+  - id: gh
+    label: GitHub
+    cls: GitHubStorageRepository
+    path: '@laikacms/github/storage-gh'
+    ctor: 'new GitHubStorageRepository({ app, repo: "acme/content" })'
+  - id: sql
+    label: SQL (Drizzle)
+    cls: DrizzleStorageRepository
+    path: laikacms/storage-drizzle
+    ctor: 'new DrizzleStorageRepository({ db })'
+  - id: notion
+    label: Notion
+    cls: NotionStorageRepository
+    path: '@laikacms/notion'
+    ctor: 'new NotionStorageRepository({ token, databaseId })'
+  - id: neo4j
+    label: Neo4j
+    cls: Neo4jStorageRepository
+    path: '@laikacms/neo4j'
+    ctor: 'new Neo4jStorageRepository({ driver })'
+  - id: ipfs
+    label: IPFS
+    cls: PinataStorageRepository
+    path: '@laikacms/pinata'
+    ctor: 'new PinataStorageRepository({ jwt: env.PINATA_JWT })'

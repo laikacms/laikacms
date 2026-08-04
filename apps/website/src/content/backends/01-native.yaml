@@ -1,0 +1,21 @@
+id: native
+label: First-party
+note: >-
+  Shipped in the box, no extra package: the repositories the core is built
+  around.
+items:
+  - name: Filesystem
+    sub: laikacms/storage-fs
+    icon: { svg: folder }
+  - name: Cloudflare R2
+    sub: laikacms/storage-r2
+    icon: { si: cloudflare }
+  - name: WebDAV
+    sub: laikacms/storage-webdav
+    icon: { svg: cloud }
+  - name: JSON:API proxy
+    sub: laikacms/storage-jsonapi-proxy
+    icon: { svg: proxy }
+  - name: Drizzle (SQL)
+    sub: laikacms/storage-drizzle
+    icon: { si: drizzle }

@@ -1,0 +1,21 @@
+---
+layout: ../layouts/Base.astro
+title: Community & backends | Laika CMS
+---
+
+import { Community, Card } from '../components/Community';
+
+<Community
+  eyebrow="Community"
+  heading="40+ backends, two contracts, one content API."
+  involveHeading="Get involved"
+>
+  The storage layer is where Laika is most extensible. Every tile below is a real StorageRepository
+  that ships today: buckets, SQL, Git, document stores, search indexes, Notion, a graph database.
+  Adapters are small; an author can add the next one.
+
+  <Card icon="github" title="Repository" blurb="laikacms/laikacms" href="https://github.com/laikacms/laikacms" />
+  <Card icon="plug" title="Contributing" blurb="Set up the workspace, send a PR" href="https://github.com/laikacms/laikacms/blob/develop/CONTRIBUTING.md" />
+  <Card icon="arrow" title="Releases" blurb="Changesets, shipped in the open" href="https://github.com/laikacms/laikacms/releases" />
+  <Card icon="bolt" title="Issues" blurb="Bugs, ideas, discussions" href="https://github.com/laikacms/laikacms/issues" />
+</Community>

@@ -1,0 +1,18 @@
+id: git
+label: Git platforms
+note: >-
+  Treat a repository as your content store: every save is a commit, every change
+  a diff.
+items:
+  - name: GitHub
+    sub: '@laikacms/github'
+    icon: { si: github }
+  - name: GitLab
+    sub: '@laikacms/gitlab'
+    icon: { si: gitlab }
+  - name: Bitbucket
+    sub: '@laikacms/bitbucket'
+    icon: { si: bitbucket }
+  - name: Gist
+    sub: '@laikacms/gist'
+    icon: { si: github }

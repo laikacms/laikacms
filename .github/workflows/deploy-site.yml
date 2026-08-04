@@ -1,0 +1,121 @@
+name: Deploy site
+
+# Builds the marketing site and the docs in parallel, combines them into one
+# static tree, and publishes it to GitHub Pages. laikacms.com is served at the
+# root; the VitePress docs (built with base '/docs/') are served under /docs/.
+#
+# Deploys only from the primary branch
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/website/**'
+      - 'docs/**'
+      - '.github/workflows/deploy-site.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time; a newer push supersedes an in-flight one.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  website:
+    name: Build website
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Cache turbo build
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-website-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-website-${{ runner.os }}-
+      - name: Build
+        run: pnpm turbo run build --filter=@laikacms/website
+      - name: Upload website dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-dist
+          path: apps/website/dist
+
+  docs:
+    name: Build docs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Cache turbo build
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-docs-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            turbo-docs-${{ runner.os }}-
+      - name: Build
+        run: pnpm turbo run build --filter=@laikacms/docs
+      - name: Upload docs dist
+        uses: actions/upload-artifact@v4
+        with:
+          name: docs-dist
+          path: docs/.vitepress/dist
+
+  deploy:
+    name: Combine and deploy
+    needs: [website, docs]
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Marketing site at the root, docs under /docs/ (matches VitePress base).
+      - name: Download website dist
+        uses: actions/download-artifact@v4
+        with:
+          name: website-dist
+          path: site-dist
+      - name: Download docs dist
+        uses: actions/download-artifact@v4
+        with:
+          name: docs-dist
+          path: site-dist/docs
+      - name: Finalize static tree
+        run: |
+          # _headers/_redirects are Cloudflare-only and inert on Pages; .nojekyll
+          # keeps underscore dirs (e.g. _astro/) from being stripped by Jekyll.
+          rm -f site-dist/_headers site-dist/_redirects
+          touch site-dist/.nojekyll
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site-dist
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

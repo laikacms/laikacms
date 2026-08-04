@@ -1,0 +1,121 @@
+---
+layout: ../layouts/Base.astro
+title: 'Laika CMS: one content API, any backend'
+---
+
+import codeSwap from 'laika:store/code-swap/hero';
+import compare from 'laika:store/compare/field';
+
+import { CodePanel } from '../components/CodePanel';
+import { Compare } from '../components/Compare';
+import { Features } from '../components/Features';
+import { Hero } from '../components/Hero';
+import { Pillar } from '../components/Pillar';
+import { PillarGrid } from '../components/PillarGrid';
+import { Pledge } from '../components/Pledge';
+import { PledgePromise } from '../components/PledgePromise';
+import { PromiseGrid } from '../components/PromiseGrid';
+
+{/* The sections are React components. Their copy lives here as props and MDX
+    children, except the two data-heavy blocks — the hero's repository-swap demo
+    and the comparison table — which are content files under `content/` served
+    through Laika's own store (`laika:store/*`), same as the backend catalogue.
+    The one island — `<CodePanel client:load>` — sits here because a client
+    directive only works in an `.astro`/`.mdx` file. */}
+
+<Hero
+  tag="MIT licensed · open source · self-hostable"
+  headline="Components for dashboards & CMSs."
+  headlineAccent="One content API, any backend."
+  primaryCta={{ label: 'Get started', href: '/docs/getting-started' }}
+  secondaryCta={{ label: 'View source', href: 'https://github.com/laikacms/laikacms' }}
+  runtimesLabel="runs in"
+  runtimes={['Node', 'Bun', 'Deno', 'Cloudflare Workers', 'Browser']}
+>
+  Laika CMS is a component library for building dashboards and CMSs, paired with a content API.
+  Compose an admin from ready-made modules, define your content once, and serve it as a JSON:API.
+  Self-hosted by default, backed by the filesystem, a database, a Git repo, or the CMS you already
+  run. 40+ backends in all.
+
+  <CodePanel client:load slot="panel" {...codeSwap} />
+</Hero>
+
+<Features eyebrow="What Laika is" heading="An open-source content layer you actually own.">
+  Laika CMS is two things: a component library for building dashboards and CMSs, and a content API.
+  The admin is a modular dashboard you compose and extend, not a UI you inherit. And the storage
+  backend is a swappable detail, not an architecture you marry, so it ships with 40+ of them,
+  including the headless CMS you may already run. All of it yours, self-hosted, under the MIT license.
+
+  <PillarGrid>
+    <Pillar icon="scales" title="MIT licensed, forever" badge="MIT">
+      Dashboard components, the content API, storage adapters, the Decap bridge: every line is MIT. No
+      proprietary tier, no upsell, no vendor capture. Self-hosting is the default. Read the source
+      before you adopt it.
+    </Pillar>
+
+    <Pillar icon="layers" title="Headless by design">
+      Your content lives behind an API, not inside a theme. Render it with React, Vue, Astro, a static
+      site generator, a mobile app, or all of them at once, from the same source of truth.
+    </Pillar>
+
+    <Pillar icon="swap" title="Backend-agnostic: 40+ stores">
+      Back your content with the filesystem, object storage, a Git repo, any SQL database, MongoDB,
+      Notion, Neo4j, IPFS: 40+ stores in all. Change the repository in a single line.
+    </Pillar>
+
+    <Pillar icon="layout" title="A component library for dashboards">
+      The admin is not a fixed UI: compose your dashboard from ready-made components and extend it
+      with your own screens. The same library powers production back offices today.
+    </Pillar>
+
+    <Pillar icon="globe" title="Runtime-agnostic">
+      The API hands back a standard fetch handler, so the same code runs on Node, Bun, Deno,
+      Cloudflare Workers, or in the browser.
+    </Pillar>
+
+    <Pillar icon="cube" title="API-first">
+      A clean JSON:API over your content. Point Decap CMS at it, or build your own front end on the
+      very same endpoints.
+    </Pillar>
+
+    <Pillar icon="book" title="Pluggable serializers">
+      Store content as JSON, YAML, Markdown with frontmatter, or raw bytes. The on-disk format is a
+      choice, not a constraint.
+    </Pillar>
+
+    <Pillar icon="spark" title="Decap-native">
+      A git-gateway-compatible HTTP handler with OAuth2 + PKCE built in. Point Decap CMS straight at
+      Laika, or self-install the hosted gateway. All MIT.
+    </Pillar>
+
+    <Pillar icon="plug" title="Developed in the open">
+      Built publicly on GitHub with changesets and open issues. Contributions, adapters and issues
+      welcome.
+    </Pillar>
+  </PillarGrid>
+</Features>
+
+<Compare {...compare} />
+
+<Pledge eyebrow="Why this exists" heading="Open Source">
+  Too many beloved CMSes went fully commercial and then shut down, taking a generation of workflows
+  with them. That is the failure mode this project is built to rule out: a tool you build on should
+  not be able to change its mind about you.
+
+  <PromiseGrid>
+    <PledgePromise icon="check" title="Free, forever">
+      The complete CMS: content modeling, the JSON:API, every storage backend, the dashboard, the
+      Decap bridge, auth. If you need it to run Laika in production, it is MIT.
+    </PledgePromise>
+
+    <PledgePromise icon="spark" title="Paid, eventually">
+      Optional conveniences that save you time and raise productivity. Everything paid is something
+      you could self-host or simply skip. Self-hosting stays the default.
+    </PledgePromise>
+
+    <PledgePromise icon="ban" title="Never">
+      Features moved behind a paywall after you adopted them. An enterprise edition. Rent charged on
+      access to your own content.
+    </PledgePromise>
+  </PromiseGrid>
+</Pledge>
