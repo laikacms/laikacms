@@ -4,6 +4,18 @@
 
 ### Patch Changes
 
+- 7cc69ce: Advertise `changes: unsupportedChanges` in `getCapabilities()` to satisfy the
+  now-required `changes` capability on the storage `Capabilities` interface. These git-backed
+  repositories do not expose a push change channel, so they report the no-op channel;
+  `subscribeChanges` remains unsupported.
+- Updated dependencies [68c658f]
+- Updated dependencies [d26bdfe]
+  - laikacms@3.0.0
+
+## 1.0.1
+
+### Patch Changes
+
 - Updated dependencies [e488528]
   - laikacms@1.0.1
 
