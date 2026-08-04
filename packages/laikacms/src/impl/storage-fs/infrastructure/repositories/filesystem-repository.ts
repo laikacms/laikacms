@@ -366,8 +366,7 @@ export class FileSystemStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
-        const { summaries, total, missingFolder } = yield* this.collectFilteredSummaries(folderKey, options);
-        if (missingFolder) yield* emit.recoverableError(missingFolder);
+        const { summaries, total } = yield* this.collectFilteredSummaries(folderKey, options);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
         return { total };
       })
