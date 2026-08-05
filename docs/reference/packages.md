@@ -9,14 +9,15 @@ Packages** — see [Package reference docs](../contributing/package-docs) for th
 packages currently have co-located docs: [`laikacms`](./packages/laikacms/) and
 [`@laikacms/decap`](./packages/decap/).
 
-> **Repository layout (June 2026, updated July 2026).** This monorepo now carries only the two core
-> packages — `laikacms` and `@laikacms/decap` (`@laikacms/decap-ai` and the client-side decap extras
-> moved into the `@laikacms/decap-cms` fork in July 2026, DCMS-492). The other packages documented
-> below (`@laikacms/aws`, `@laikacms/github`, `@laikacms/gitlab`, `@laikacms/bitbucket`,
-> `@laikacms/git-gateway`, `laikacli`, `decap-cms-widget-lexicaleditor`,
-> `decap-cms-widget-portabletext-editor`, `decap-cms-lexical-core`, and the rest of the adapters)
-> are still published to npm under the same names but are now developed in **separate
-> repositories**. Their npm names are unchanged, so consumers install them exactly as before.
+> **Repository layout (June 2026, updated July 2026, updated August 2026).** This monorepo carries
+> three core packages — `laikacms`, `@laikacms/decap`, and `@laikacms/vite-plugin`
+> (`@laikacms/decap-ai` and the client-side decap extras moved into the `@laikacms/decap-cms` fork
+> in July 2026, DCMS-492). The other packages documented below (`@laikacms/aws`, `@laikacms/github`,
+> `@laikacms/gitlab`, `@laikacms/bitbucket`, `@laikacms/git-gateway`, `laikacli`,
+> `decap-cms-widget-lexicaleditor`, `decap-cms-widget-portabletext-editor`,
+> `decap-cms-lexical-core`, and the rest of the adapters) are still published to npm under the same
+> names but are now developed in **separate repositories**. Their npm names are unchanged, so
+> consumers install them exactly as before.
 
 ## `laikacms`
 
@@ -127,6 +128,46 @@ Decap CMS server-side integrations: the Decap-compatible API and the OAuth2 serv
 | `@laikacms/decap/decap-oauth2/i18n`       | i18n bundle index for the OAuth2 UI        |
 | `@laikacms/decap/decap-oauth2/i18n/en`    | English translations for the OAuth2 UI     |
 | `@laikacms/decap/decap-oauth2/i18n/nl`    | Dutch translations for the OAuth2 UI       |
+
+## `@laikacms/vite-plugin`
+
+A Vite / [Rolldown](https://rolldown.rs) plugin that loads Laika CMS content as ES modules at build
+time via the `laika:` protocol (e.g. `import { title } from 'laika:doc/posts/hello'`), tree-shaken
+per field and type-generated from the real content data. It also has an opt-in dev-server-only
+"local mode" that mounts a real JSON:API (storage, documents, and optionally assets) for tools that
+need one, such as the Decap admin. See
+[`packages/vite-plugin/README.md`](https://github.com/laikacms/laikacms/blob/develop/packages/vite-plugin/README.md)
+for the full reference (the `laika:` protocol, `import.meta.glob` support, MDX bodies, hot reload,
+and all plugin options).
+
+### Install
+
+```sh
+npm install -D @laikacms/vite-plugin laikacms
+```
+
+Requires Vite `>=8` (Rolldown-based).
+
+### Basic usage
+
+```ts
+// vite.config.ts
+import { laikacms } from '@laikacms/vite-plugin';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [laikacms({ dir: 'content' })],
+});
+```
+
+### Main exports
+
+| Export                 | Description                                                                             |
+| ---------------------- | --------------------------------------------------------------------------------------- |
+| `laikacms()`           | The Vite plugin factory — the default export consumers use in `vite.config.ts`          |
+| `mountLocalApi()`      | Mounts local mode's JSON:API onto any dev server, independent of the `localApi` option  |
+| `LaikaLocalApiOptions` | Type for `mountLocalApi()`'s options                                                    |
+| `createRepositories()` | Helper to build the storage/documents repository pair when supplying your own `storage` |
 
 ## `decap-cms-lexical-core`
 
