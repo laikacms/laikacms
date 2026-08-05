@@ -436,6 +436,63 @@ describe('FileSystemDataSource dotted-key round-trip (LCMS-350)', () => {
   });
 });
 
+describe('FileSystemDataSource stripExtension respects availableExtensions (LCMS-278)', () => {
+  it('releases/v1.2-notes and releases/v1.9-notes do not collide onto the same file', async () => {
+    const ds = new FileSystemDataSource(['json'], 'json');
+
+    const first = await ds.createOrUpdate(tmpDir, 'releases/v1.2-notes', '{"title":"v1.2 release"}', 'json');
+    expect(Result.isSuccess(first)).toBe(true);
+    if (Result.isSuccess(first)) {
+      expect(first.success.path).toBe('releases/v1.2-notes');
+    }
+
+    const second = await ds.createOrUpdate(
+      tmpDir,
+      'releases/v1.9-notes',
+      '{"title":"v1.9 release - DIFFERENT"}',
+      'json',
+    );
+    expect(Result.isSuccess(second)).toBe(true);
+    if (Result.isSuccess(second)) {
+      expect(second.success.path).toBe('releases/v1.9-notes');
+    }
+
+    // Two distinct on-disk files, not one shared v1.json.
+    await fs.access(path.join(tmpDir, 'releases/v1.2-notes.json'));
+    await fs.access(path.join(tmpDir, 'releases/v1.9-notes.json'));
+    await expect(fs.access(path.join(tmpDir, 'releases/v1.json'))).rejects.toThrow();
+
+    const readFirst = await ds.getFileContents(tmpDir, 'releases/v1.2-notes');
+    const readSecond = await ds.getFileContents(tmpDir, 'releases/v1.9-notes');
+    expect(Result.isSuccess(readFirst) && readFirst.success.content).toBe('{"title":"v1.2 release"}');
+    expect(Result.isSuccess(readSecond) && readSecond.success.content).toBe('{"title":"v1.9 release - DIFFERENT"}');
+  });
+
+  it('posts/photo.jpg is preserved unchanged when registry is { json } (jpg is not a registered extension)', async () => {
+    const ds = new FileSystemDataSource(['json'], 'json');
+    const created = await ds.createOrUpdate(tmpDir, 'posts/photo.jpg', '{"caption":"x"}', 'json');
+
+    expect(Result.isSuccess(created)).toBe(true);
+    if (Result.isSuccess(created)) {
+      expect(created.success.path).toBe('posts/photo.jpg');
+    }
+    await fs.access(path.join(tmpDir, 'posts/photo.jpg.json'));
+    await expect(fs.access(path.join(tmpDir, 'posts/photo.json'))).rejects.toThrow();
+  });
+
+  it('notes/hello.json strips to notes/hello when json is a registered extension', async () => {
+    const ds = new FileSystemDataSource(['json'], 'json');
+    const result = await ds.createOrUpdate(tmpDir, 'notes/hello.json', '{}', 'json');
+
+    expect(Result.isSuccess(result)).toBe(true);
+    if (Result.isSuccess(result)) {
+      expect(result.success.path).toBe('notes/hello');
+    }
+    await fs.access(path.join(tmpDir, 'notes/hello.json'));
+    await expect(fs.access(path.join(tmpDir, 'notes/hello.json.json'))).rejects.toThrow();
+  });
+});
+
 describe('FileSystemDataSource non-serializer extensions round-trip unchanged (LCMS-540)', () => {
   it('createOrUpdate + getFileContents round-trips uploads/pic.png as uploads/pic.png (png is not a registered serializer)', async () => {
     const ds = new FileSystemDataSource(['json'], 'json');
