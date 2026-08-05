@@ -5,8 +5,9 @@ A [Vite](https://vitejs.dev) / [Rolldown](https://rolldown.rs) plugin that loads
 
 Import content through the `laika:` protocol and each item is read from the documents or storage
 repository and emitted as a module with **one named export per field**. Because content is inlined
-at build time, this works in a fully static, **client-only build** — no server, no JSON:API, nothing
-to deploy alongside your app.
+at build time, this is the default and primary mode: a fully static, **client-only build** — no
+server, no JSON:API, nothing to deploy alongside your app. There's also an opt-in dev-server-only
+"local mode" that mounts a real JSON:API for tools that need one — see [Local mode](#local-mode).
 
 ## Install
 
@@ -59,6 +60,59 @@ Rollup/ Rolldown tree-shakes whatever you don't read.
 | --------- | ----------------------- | ------------------ |
 | `doc`     | documents (ContentBase) | `getDocument(key)` |
 | `store`   | storage                 | `getObject(key)`   |
+
+## Local mode
+
+The `laika:` protocol above is build-time-inline and stays the default. Separately, and off by
+default, the plugin can mount LaikaCMS's own JSON:API over its repositories while `vite dev` is
+running — for a JSON:API client (e.g. the Decap admin) that needs to read and write content against
+a real HTTP API in dev instead of a remote backend:
+
+```ts
+// vite.config.ts
+import { laikacms } from '@laikacms/vite-plugin';
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  plugins: [laikacms({ dir: 'content', localApi: true })],
+});
+```
+
+`localApi: true` mounts, under the default base path `/__laika`:
+
+- `/__laika/storage` — the storage repository's JSON:API (`storage-api`'s `buildJsonApi`)
+- `/__laika/documents` — the documents repository's JSON:API (`documents-api`'s `buildJsonApi`)
+- `/__laika/session` — a trivial stub-identity responder; local mode does no real auth, so every
+  request gets the same fixed identity. It exists because `LaikaBackend.authenticate()`
+  (`@laikacms/decap`) always pings `${apiUrl}/session` to resolve a display identity, even when the
+  local backend authenticates with a dummy token.
+
+Pass an options object instead of `true` to override the base path or mount an assets API:
+
+```ts
+laikacms({
+  dir: 'content',
+  localApi: {
+    // Base path both storage and documents sub-routes mount under.
+    // Default: '/__laika'.
+    basePath: '/__laika',
+    // A user-provided assets repository. When supplied, `/__laika/assets` is
+    // mounted so Decap media uploads land locally. Omitted by default — no
+    // assets repository means no `/__laika/assets` route at all (a request
+    // to it 404s as if it never existed).
+    assets: myAssetsRepository,
+  },
+});
+```
+
+Local mode is unauthenticated by design and only ever wired up from Vite's `configureServer` hook —
+nothing in the `build` phase or `configurePreviewServer` calls it, so a production build has no
+route to it by construction. If the dev server isn't bound to loopback (e.g. `--host`), the plugin
+logs a warning that the mounted API is reachable, unauthenticated, from the network.
+
+`mountLocalApi` (and its `LaikaLocalApiOptions` type) are also exported directly from
+`@laikacms/vite-plugin` for callers who want to mount the same API onto their own dev server
+instance rather than going through the `localApi` plugin option.
 
 ## `import.meta.glob`
 
