@@ -16,6 +16,7 @@ import {
 import type { JsonApiError, JsonApiLogger, JsonApiResponse } from 'laikacms/json-api';
 import { errorToJsonApiMapper, openApiDocumentToYaml, recoverableErrorsToWarnings } from 'laikacms/json-api';
 import type {
+  Atom,
   Folder,
   FolderCreate,
   StorageObject,
@@ -302,6 +303,7 @@ export type StorageAuthorizeAction =
   }
   | { action: 'getObject', key: string }
   | { action: 'getFolder', key: string }
+  | { action: 'getAtom', key: string }
   | { action: 'createObject', data: StorageObjectCreate }
   | { action: 'createFolder', data: FolderCreate }
   | { action: 'updateObject', data: StorageObjectUpdate }
@@ -407,6 +409,7 @@ export function buildJsonApi(options: StorageApiOptions) {
               },
               { path: '/atoms', methods: ['POST'], description: 'Create a folder' },
               { path: '/atoms/{key}', methods: ['GET'], description: 'List atoms in a folder' },
+              { path: '/atom/{key}', methods: ['GET'], description: 'Read a single atom (object or folder)' },
               {
                 path: '/atom-summaries/{key}',
                 methods: ['GET'],
@@ -618,7 +621,23 @@ export function buildJsonApi(options: StorageApiOptions) {
         201,
       );
     } else if (resource === 'atom-summaries' && request.method === 'GET') return listAtomSummaries();
-    else if (resource === 'objects' && request.method === 'GET') {
+    else if (resource === 'atom' && request.method === 'GET') {
+      if (!key) return failResponse(Result.fail(new InvalidData('Missing atom key')), 400);
+      const denied = await authorizeAction({ action: 'getAtom', key });
+      if (denied) return denied;
+      const result = await runTaskWithMetadata(repo.getAtom(key));
+      if (Result.isFailure(result)) {
+        const status = ErrorCodeToStatusMap[result.failure.code as keyof typeof ErrorCodeToStatusMap]
+          ?? 500;
+        return failResponse(result, status);
+      }
+      return respondResourceWithConverter(
+        Result.succeed(result.success.value),
+        (atom: Atom) => atomToJsonApi(atom),
+        basePath,
+        result.success.recoverableErrors,
+      );
+    } else if (resource === 'objects' && request.method === 'GET') {
       if (!key) return failResponse(Result.fail(new InvalidData('Missing object key')), 400);
       const denied = await authorizeAction({ action: 'getObject', key });
       if (denied) return denied;
@@ -950,7 +969,8 @@ export function buildJsonApi(options: StorageApiOptions) {
 
       type AtomicResultEntry =
         | { data: JsonApiResource, meta?: { warnings: JsonApiError['errors'] } }
-        | { meta: { deleted: true, ref: { type: string, id: string } } };
+        | { meta: { deleted: true, ref: { type: string, id: string } } }
+        | { errors: JsonApiError['errors'] };
       const atomicResults: AtomicResultEntry[] = [];
       for (const promiseResult of atomicsSettled) {
         if (promiseResult.status === 'rejected') continue;
@@ -984,6 +1004,14 @@ export function buildJsonApi(options: StorageApiOptions) {
               meta: { deleted: true, ref: { type: ref.type, id: ref.key } },
             });
           }
+        } else if (value.operation.op === 'remove') {
+          // Unlike add/update (LCMS-453: failed ops are omitted from
+          // `atomic:results` entirely), a failed remove (e.g. key doesn't
+          // exist) must still produce a result entry — `removeAtoms`
+          // callers walk `atomic:results` index-aligned with the keys they
+          // requested to derive removed/skipped counts, and an omitted
+          // entry would silently undercount `skipped`.
+          atomicResults.push({ errors: errorToJsonApiMapper(op.failure, logger).errors });
         }
       }
 
