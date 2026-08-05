@@ -42,6 +42,13 @@ export default defineConfig({
           { text: 'Deployment', link: '/guides/deployment' },
           { text: 'Security', link: '/guides/security' },
           {
+            text: 'Advanced',
+            collapsed: true,
+            items: [
+              { text: 'Raw Storage API (buildJsonApi)', link: '/guides/advanced/raw-storage-api' },
+            ],
+          },
+          {
             text: 'Decap CMS',
             collapsed: false,
             items: [
