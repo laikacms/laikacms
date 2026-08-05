@@ -14,6 +14,7 @@ import type {
   StorageObjectUpdate,
 } from 'laikacms/storage';
 import { beforeEach, describe, expect, it } from 'vitest';
+
 import { ContentBaseDocumentsRepository } from './documents-repository.js';
 
 // ---- helpers ----
@@ -841,6 +842,43 @@ describe('ContentBaseDocumentsRepository — EntryAlreadyExistsError detail rema
       expect(result.failure.message).not.toContain('.contentbase');
     }
   });
+
+  it(
+    'updateUnpublished status-change into an occupied target status remaps EntryAlreadyExistsError detail to domain key (LCMS-283)',
+    async () => {
+      const settings = makeSettingsProvider({
+        unpublishedStatuses: {
+          draft: { directory: 'draft', name: 'Draft' },
+          review: { directory: 'review', name: 'Review' },
+        },
+      });
+      // getUnpublished('posts/hello') must resolve via the 'draft' status dir;
+      // the 'review' status dir is already occupied, so the status-change's
+      // createObject() call conflicts on the storage-side path.
+      const storage: StorageRepository = {
+        ...makeMemoryStorage(),
+        getObject(key: string) {
+          return key === '.contentbase/posts/draft/hello'
+            ? LaikaTask.succeed(makeStorageObject(key, {}))
+            : LaikaTask.fail(new NotFoundError(`Not found: ${key}`));
+        },
+        createObject() {
+          return LaikaTask.fail(new EntryAlreadyExistsError('Already exists: .contentbase/posts/review/hello'));
+        },
+      } as unknown as StorageRepository;
+      const repo = new ContentBaseDocumentsRepository(storage, settings);
+
+      const result = await resolveTask(
+        repo.updateUnpublished({ key: 'posts/hello', status: 'review' }),
+      );
+      expect(Result.isFailure(result)).toBe(true);
+      if (Result.isFailure(result)) {
+        expect(result.failure instanceof EntryAlreadyExistsError).toBe(true);
+        expect(result.failure.message).toBe('Already exists: posts/hello');
+        expect(result.failure.message).not.toContain('.contentbase');
+      }
+    },
+  );
 });
 
 describe('ContentBaseDocumentsRepository — getCapabilities', () => {

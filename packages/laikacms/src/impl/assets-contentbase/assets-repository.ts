@@ -22,7 +22,7 @@ import {
 } from 'laikacms/assets';
 import type { ContentBaseSettingsProvider, MediaCollectionSettings } from 'laikacms/contentbase-settings';
 import type { LaikaDone, LaikaError } from 'laikacms/core';
-import { BadRequestError, LaikaStream, LaikaTask } from 'laikacms/core';
+import { BadRequestError, EntryAlreadyExistsError, LaikaStream, LaikaTask } from 'laikacms/core';
 import type { Atom, Folder, FolderCreate, StorageRepository } from 'laikacms/storage';
 import { pathCombine, pathToSegments } from 'laikacms/storage';
 
@@ -311,6 +311,12 @@ export class ContentBaseAssetsRepository extends AssetsRepository {
             content: storedContent,
           }),
           emit,
+        ).pipe(
+          Effect.mapError(e =>
+            e instanceof EntryAlreadyExistsError
+              ? new EntryAlreadyExistsError(`Already exists: ${create.key}`)
+              : e
+          ),
         );
         return {
           type: 'asset',

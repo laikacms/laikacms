@@ -1,4 +1,6 @@
-import { LaikaStream, LaikaTask } from 'laikacms/core';
+import type { ContentBaseSettingsProvider, MediaCollectionSettings } from 'laikacms/contentbase-settings';
+import { EntryAlreadyExistsError, LaikaStream, LaikaTask } from 'laikacms/core';
+import type { StorageRepository } from 'laikacms/storage';
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { InMemoryStorageRepository } from '../../domain/storage/testing/in-memory-storage.js';
@@ -16,6 +18,25 @@ let repo: ContentBaseAssetsRepository;
 beforeEach(() => {
   repo = new ContentBaseAssetsRepository(new InMemoryStorageRepository(), new TestSettingsProvider());
 });
+
+/** A settings provider whose media collection directory diverges from the collection name. */
+function makeCustomDirectorySettingsProvider(directory: string): ContentBaseSettingsProvider {
+  const media: MediaCollectionSettings = { type: 'media', key: 'uploads', name: 'Uploads', directory };
+  return {
+    getSettings() {
+      return LaikaTask.succeed({ collections: { uploads: media } } as never);
+    },
+    putSettings() {
+      return LaikaTask.succeed(undefined as void);
+    },
+    getMediaCollectionSettings() {
+      return LaikaTask.succeed(media);
+    },
+    putMediaCollectionSettings() {
+      return LaikaTask.succeed(undefined as void);
+    },
+  } as ContentBaseSettingsProvider;
+}
 
 describe('ContentBaseAssetsRepository — getCapabilities', () => {
   it('returns a capabilities object with a compatibilityDate and pagination', async () => {
@@ -71,6 +92,34 @@ describe('ContentBaseAssetsRepository — createAsset / getAsset', () => {
     expect(fetched.content.contentType).toBe('image/png');
     expect(fetched.content.size).toBe(PNG.length);
   });
+
+  it(
+    'remaps EntryAlreadyExistsError detail to the domain key, not the physical storage path (LCMS-283)',
+    async () => {
+      // With directory '_media/uploads', the physical storage key is
+      // '_media/uploads/dup.png' but the domain key is 'uploads/dup.png'.
+      const storage: StorageRepository = {
+        ...new InMemoryStorageRepository(),
+        createObject() {
+          return LaikaTask.fail(new EntryAlreadyExistsError('Already exists: _media/uploads/dup.png'));
+        },
+      } as unknown as StorageRepository;
+      const customRepo = new ContentBaseAssetsRepository(
+        storage,
+        makeCustomDirectorySettingsProvider('_media/uploads'),
+      );
+
+      const result = await LaikaTask.runPromiseResult(
+        customRepo.createAsset({ key: 'uploads/dup.png', content: PNG, mimeType: 'image/png' }),
+      );
+      expect(result._tag).toBe('Failure');
+      if (result._tag === 'Failure') {
+        expect(result.failure instanceof EntryAlreadyExistsError).toBe(true);
+        expect(result.failure.message).toBe('Already exists: uploads/dup.png');
+        expect(result.failure.message).not.toContain('_media');
+      }
+    },
+  );
 });
 
 describe('ContentBaseAssetsRepository — updateAsset', () => {
