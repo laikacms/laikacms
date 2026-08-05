@@ -181,6 +181,11 @@
       "import": "./dist/impl/storage-s3/index.js",
       "default": "./dist/impl/storage-s3/index.js"
     },
+    "./storage/web": {
+      "types": "./dist/impl/storage-web/index.d.ts",
+      "import": "./dist/impl/storage-web/index.js",
+      "default": "./dist/impl/storage-web/index.js"
+    },
     "./storage/webdav": {
       "types": "./dist/impl/storage-webdav/index.d.ts",
       "import": "./dist/impl/storage-webdav/index.js",
@@ -345,6 +350,11 @@
       "types": "./dist/impl/storage-s3/index.d.ts",
       "import": "./dist/impl/storage-s3/index.js",
       "default": "./dist/impl/storage-s3/index.js"
+    },
+    "./storage-web": {
+      "types": "./dist/impl/storage-web/index.d.ts",
+      "import": "./dist/impl/storage-web/index.js",
+      "default": "./dist/impl/storage-web/index.js"
     },
     "./storage-webdav": {
       "types": "./dist/impl/storage-webdav/index.d.ts",

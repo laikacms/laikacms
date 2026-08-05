@@ -63,6 +63,8 @@ export const errorCode = {
   CORRUPTED_FILE: 'corrupted_file',
   EMBEDDED_CONTENT: 'embedded_content',
   FILE_TOO_LARGE: 'file_too_large',
+  // Storage capacity errors
+  QUOTA_EXCEEDED: 'quota_exceeded',
 } as const;
 
 export type ErrorCode = typeof errorCode[keyof typeof errorCode];
@@ -95,6 +97,8 @@ export const errorStatus = {
   CORRUPTED_FILE: 422, // Unprocessable Entity
   EMBEDDED_CONTENT: 422, // Unprocessable Entity
   FILE_TOO_LARGE: 413, // Payload Too Large
+  // Storage capacity errors
+  QUOTA_EXCEEDED: 507, // Insufficient Storage
 } as const satisfies Record<ErrorKey, number>;
 
 export type ErrorStatus = typeof errorStatus[keyof typeof errorStatus];
@@ -261,4 +265,18 @@ export class FileTooLargeError extends LaikaError<typeof errorCode.FILE_TOO_LARG
   public static override TITLE = 'File Too Large';
   public static override CODE = errorCode.FILE_TOO_LARGE;
   public static override STATUS = errorStatus.FILE_TOO_LARGE;
+}
+
+/**
+ * The backing storage medium is full (or over its allotted quota) and refused a write.
+ * Storage repositories backed by a capacity-limited medium (e.g. the Web Storage API's
+ * `localStorage`/`sessionStorage`, which typically caps out around 5-10MiB per origin)
+ * must map the platform's native "storage full" failure (a `QuotaExceededError`
+ * `DOMException`, or equivalent) to this typed error rather than letting the raw
+ * exception cross the `LaikaTask`/`LaikaStream` boundary.
+ */
+export class QuotaExceededError extends LaikaError<typeof errorCode.QUOTA_EXCEEDED, typeof errorStatus.QUOTA_EXCEEDED> {
+  public static override TITLE = 'Storage Quota Exceeded';
+  public static override CODE = errorCode.QUOTA_EXCEEDED;
+  public static override STATUS = errorStatus.QUOTA_EXCEEDED;
 }

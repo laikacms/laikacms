@@ -41,10 +41,10 @@ pnpm add --allow-build=esbuild --allow-build=msgpackr-extract \
   laikacms @laikacms/decap '@hono/node-server@^2' hono
 ```
 
-> **Version pin:** `laikacms` peer-depends on `@hono/node-server@^2.0.10` (see its
-> `package.json`). Pinning the major here keeps a bare `npm install`/`pnpm add` from picking up a
-> future `@hono/node-server` major before `laikacms` declares support for it — check
-> `laikacms`'s `peerDependencies` if you hit an ERESOLVE here.
+> **Version pin:** `laikacms` peer-depends on `@hono/node-server@^2.0.10` (see its `package.json`).
+> Pinning the major here keeps a bare `npm install`/`pnpm add` from picking up a future
+> `@hono/node-server` major before `laikacms` declares support for it — check `laikacms`'s
+> `peerDependencies` if you hit an ERESOLVE here.
 
 > pnpm records the `--allow-build` grants in a `pnpm-workspace.yaml` it writes next to your
 > `package.json`, so you only pass the flags once. `pnpm approve-builds` is the interactive
