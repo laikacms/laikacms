@@ -417,6 +417,23 @@ describe('GET /session', () => {
     expect(body.data.attributes).not.toHaveProperty('type');
   });
 
+  it('strips a `type` field from the user object out of attributes (LCMS-282)', async () => {
+    // A consumer's augmented `User` (via module augmentation) could add a
+    // `type` field; it must never leak into `attributes` alongside `id`.
+    const userWithType = { ...MOCK_USER, type: 'admin' } as User;
+    const api = decapApi(makeOptions({
+      authenticateAccessToken: vi.fn().mockResolvedValue(userWithType),
+    }));
+
+    const res = await api.fetch(
+      makeRequest('/session', { Authorization: 'Bearer good-token' }),
+    );
+    const body = await res.json();
+
+    expect(body.data.attributes).not.toHaveProperty('type');
+    expect(body.data.type).toBe('session');
+  });
+
   it('strips passwordHash from the /session response', async () => {
     const userWithHash: User = { ...MOCK_USER, passwordHash: 'super-secret-hash' };
     const api = decapApi(makeOptions({

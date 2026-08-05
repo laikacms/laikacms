@@ -477,8 +477,12 @@ export const decapApi = (options: DecapOptions): DecapApi => {
         options.logger?.debug('Session endpoint for user:', user.id);
 
         // Return user data excluding sensitive fields and JSON:API §7.2.2 reserved keys.
-        // `id` must live at the resource level only, not inside `attributes`.
-        const { passwordHash: _passwordHash, id: _id, ...safeUserData } = user;
+        // `id` and `type` must live at the resource level only, not inside `attributes`.
+        // `type` isn't declared on the base `User` interface, but consumers can add it
+        // via module augmentation, so widen the type here to strip it defensively.
+        const { passwordHash: _passwordHash, id: _id, type: _type, ...safeUserData } = user as User & {
+          type?: unknown,
+        };
 
         return await respond(
           new Response(
