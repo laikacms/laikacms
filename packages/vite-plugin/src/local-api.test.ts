@@ -4,6 +4,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { Readable } from 'node:stream';
 
+import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createFsStorage, createRepositories } from './backend.js';
@@ -91,6 +93,13 @@ function callMiddleware(handler: ConnectMiddleware, request: Request): Promise<R
 /** Build a plugin's repositories backed by a temp filesystem storage. */
 function makeRepos() {
   return createRepositories(createFsStorage({ dir: path.join(tmpDir, 'content') }));
+}
+
+/** Build an in-memory-backed assets repository, mirroring how {@link makeRepos} sets up storage/documents. */
+function makeAssetsRepo() {
+  const storage = createFsStorage({ dir: path.join(tmpDir, 'assets-content') });
+  const settings = new DefaultContentBaseSettingsProvider({ storage });
+  return new ContentBaseAssetsRepository(storage, settings);
 }
 
 describe('mountLocalApi', () => {
@@ -221,6 +230,75 @@ describe('mountLocalApi', () => {
       expect(warnings).toHaveLength(0);
     },
   );
+});
+
+describe('mountLocalApi — assets', () => {
+  it('does not register the assets route when no assets repository is supplied', () => {
+    const repos = makeRepos();
+    const { server, routes } = fakeServer();
+
+    mountLocalApi(server, repos, true);
+
+    expect(routes.has(`${DEFAULT_LOCAL_API_BASE_PATH}/assets`)).toBe(false);
+    expect([...routes.keys()].sort()).toEqual([
+      `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
+      `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
+    ]);
+  });
+
+  it('registers the assets route at the default base path when an assets repository is supplied', () => {
+    const repos = makeRepos();
+    const { server, routes } = fakeServer();
+
+    mountLocalApi(server, repos, { assets: makeAssetsRepo() });
+
+    expect([...routes.keys()].sort()).toEqual([
+      `${DEFAULT_LOCAL_API_BASE_PATH}/assets`,
+      `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
+      `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
+    ]);
+  });
+
+  it('relocates the assets route under a custom basePath', () => {
+    const repos = makeRepos();
+    const { server, routes } = fakeServer();
+
+    mountLocalApi(server, repos, { basePath: '/api/local', assets: makeAssetsRepo() });
+
+    expect(routes.has('/api/local/assets')).toBe(true);
+  });
+
+  it('reads and writes assets with no authorization required', async () => {
+    const repos = makeRepos();
+    const { server, routes } = fakeServer();
+    mountLocalApi(server, repos, { assets: makeAssetsRepo() });
+    const assetsHandler = routes.get(`${DEFAULT_LOCAL_API_BASE_PATH}/assets`)!;
+
+    const base64Content = Buffer.from('hello world').toString('base64');
+    const createRes = await callMiddleware(
+      assetsHandler,
+      new Request(`http://localhost${DEFAULT_LOCAL_API_BASE_PATH}/assets/resources`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          data: {
+            type: 'asset',
+            id: 'images/hello.txt',
+            attributes: { mimeType: 'text/plain', filename: 'hello.txt', content: base64Content },
+          },
+        }),
+      }),
+    );
+    expect(createRes.status).toBe(201);
+
+    const getRes = await callMiddleware(
+      assetsHandler,
+      new Request(`http://localhost${DEFAULT_LOCAL_API_BASE_PATH}/assets/resources/images%2Fhello.txt`),
+    );
+    expect(getRes.status).toBe(200);
+    const getBody = await getRes.json() as { data: { attributes: { content: { contentType: string } } } };
+    expect(getBody.data.attributes.content.contentType).toBe('text/plain');
+  });
 });
 
 describe('laikacms() plugin — localApi wiring', () => {

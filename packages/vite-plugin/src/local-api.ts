@@ -11,15 +11,17 @@
  * `configurePreviewServer` calls it, so a production build has no route to
  * it by construction.
  *
- * The assets endpoint (`${basePath}/assets`) is a separate slice (issue
- * #849) and is intentionally not mounted here; {@link LaikaLocalApiOptions.assets}
- * is reserved for it.
+ * The assets endpoint (`${basePath}/assets`) mounts only when a caller
+ * supplies {@link LaikaLocalApiOptions.assets} — with no assets repository
+ * the route is never registered, so a request to it 404s as if it never
+ * existed rather than being stubbed out.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 
 import type { AssetsRepository } from 'laikacms/assets';
+import { buildAssetsApi } from 'laikacms/assets-api';
 import { buildJsonApi as buildDocumentsJsonApi } from 'laikacms/documents-api';
 import { buildJsonApi as buildStorageJsonApi } from 'laikacms/storage-api';
 
@@ -35,8 +37,10 @@ export interface LaikaLocalApiOptions {
    */
   basePath?: string;
   /**
-   * Reserved for the assets endpoint (`${basePath}/assets`), shipped
-   * separately in issue #849. Not read by {@link mountLocalApi} yet.
+   * A user-provided assets repository. When supplied, LaikaCMS's own
+   * `buildAssetsApi` is mounted at `${basePath}/assets` so Decap media
+   * uploads in dev land locally. When omitted, `${basePath}/assets` is not
+   * registered at all — no phantom endpoint.
    */
   assets?: AssetsRepository;
 }
@@ -132,8 +136,9 @@ function toConnectMiddleware(fetchHandler: (request: Request) => Promise<Respons
 
 /**
  * Mount LaikaCMS's own JSON:API over `repos` at `${basePath}/storage` and
- * `${basePath}/documents`. No auth, no CORS — call this only from
- * `configureServer`.
+ * `${basePath}/documents`, plus `${basePath}/assets` when
+ * {@link LaikaLocalApiOptions.assets} is supplied. No auth, no CORS — call
+ * this only from `configureServer`.
  */
 export function mountLocalApi(
   server: LocalApiServer,
@@ -157,4 +162,9 @@ export function mountLocalApi(
 
   server.middlewares.use(`${basePath}/storage`, toConnectMiddleware(storageApi.fetch));
   server.middlewares.use(`${basePath}/documents`, toConnectMiddleware(documentsApi.fetch));
+
+  if (resolved.assets) {
+    const assetsApi = buildAssetsApi({ repository: resolved.assets, basePath: `${basePath}/assets` });
+    server.middlewares.use(`${basePath}/assets`, toConnectMiddleware(assetsApi.fetch));
+  }
 }
