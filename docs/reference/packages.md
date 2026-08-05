@@ -3,6 +3,12 @@
 Most functionality lives in `laikacms` as subpath exports; specialized integrations live in their
 own packages.
 
+This page is the hand-authored package map. Package-specific reference/usage docs are co-located
+with the code under `packages/<pkg>/docs/` and aggregated into the site under **Reference >
+Packages** — see [Package reference docs](../contributing/package-docs) for the convention. Two
+packages currently have co-located docs: [`laikacms`](./packages/laikacms/) and
+[`@laikacms/decap`](./packages/decap/).
+
 > **Repository layout (June 2026, updated July 2026).** This monorepo now carries only the two core
 > packages — `laikacms` and `@laikacms/decap` (`@laikacms/decap-ai` and the client-side decap extras
 > moved into the `@laikacms/decap-cms` fork in July 2026, DCMS-492). The other packages documented
