@@ -103,7 +103,7 @@ function makeAssetsRepo() {
 }
 
 describe('mountLocalApi', () => {
-  it('mounts storage and documents JSON:API under the default base path', async () => {
+  it('mounts storage, documents, and session JSON:API under the default base path', async () => {
     const repos = makeRepos();
     const { server, routes } = fakeServer();
 
@@ -111,17 +111,39 @@ describe('mountLocalApi', () => {
 
     expect([...routes.keys()].sort()).toEqual([
       `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
+      `${DEFAULT_LOCAL_API_BASE_PATH}/session`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
     ]);
   });
 
-  it('relocates both sub-routes under a custom basePath', () => {
+  it('relocates all sub-routes under a custom basePath', () => {
     const repos = makeRepos();
     const { server, routes } = fakeServer();
 
     mountLocalApi(server, repos, { basePath: '/api/local' });
 
-    expect([...routes.keys()].sort()).toEqual(['/api/local/documents', '/api/local/storage']);
+    expect([...routes.keys()].sort()).toEqual([
+      '/api/local/documents',
+      '/api/local/session',
+      '/api/local/storage',
+    ]);
+  });
+
+  it('serves a trivial, unauthenticated stub identity at ${basePath}/session', async () => {
+    const repos = makeRepos();
+    const { server, routes } = fakeServer();
+    mountLocalApi(server, repos, true);
+    const sessionHandler = routes.get(`${DEFAULT_LOCAL_API_BASE_PATH}/session`)!;
+
+    const res = await callMiddleware(
+      sessionHandler,
+      new Request(`http://localhost${DEFAULT_LOCAL_API_BASE_PATH}/session`),
+    );
+
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { type: string, id: string, attributes: { email: string } } };
+    expect(body.data.type).toBe('session');
+    expect(body.data.attributes.email).toBeTruthy();
   });
 
   it('reads and writes storage objects with no authorization required', async () => {
@@ -218,7 +240,7 @@ describe('mountLocalApi', () => {
 
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toMatch(/non-loopback|--host/);
-    expect(routes.size).toBe(2);
+    expect(routes.size).toBe(3);
   });
 
   it.each([undefined, 'localhost', '127.0.0.1', '::1'] as const)(
@@ -242,6 +264,7 @@ describe('mountLocalApi — assets', () => {
     expect(routes.has(`${DEFAULT_LOCAL_API_BASE_PATH}/assets`)).toBe(false);
     expect([...routes.keys()].sort()).toEqual([
       `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
+      `${DEFAULT_LOCAL_API_BASE_PATH}/session`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
     ]);
   });
@@ -255,6 +278,7 @@ describe('mountLocalApi — assets', () => {
     expect([...routes.keys()].sort()).toEqual([
       `${DEFAULT_LOCAL_API_BASE_PATH}/assets`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
+      `${DEFAULT_LOCAL_API_BASE_PATH}/session`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
     ]);
   });
@@ -330,6 +354,7 @@ describe('laikacms() plugin — localApi wiring', () => {
 
     expect([...routes.keys()].sort()).toEqual([
       `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
+      `${DEFAULT_LOCAL_API_BASE_PATH}/session`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
     ]);
   });

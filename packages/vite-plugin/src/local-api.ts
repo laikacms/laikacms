@@ -11,6 +11,13 @@
  * `configurePreviewServer` calls it, so a production build has no route to
  * it by construction.
  *
+ * `${basePath}/session` is a trivial, unauthenticated stub-identity responder,
+ * not a repository-backed sub-API: `LaikaBackend.authenticate()`
+ * (`@laikacms/decap`) always pings it to resolve a display identity, even
+ * when `resolveLaikaBackend`'s local backend authenticates with a dummy
+ * token, so it must exist for the local backend to complete login (LCMS-449
+ * slice 2, issue #848).
+ *
  * The assets endpoint (`${basePath}/assets`) mounts only when a caller
  * supplies {@link LaikaLocalApiOptions.assets} — with no assets repository
  * the route is never registered, so a request to it 404s as if it never
@@ -119,6 +126,35 @@ async function writeFetchResponse(response: Response, res: ServerResponse): Prom
   }
 }
 
+/**
+ * The dummy identity local mode reports at `${basePath}/session`. Local mode
+ * performs no real auth (see the module doc), so this is a fixed stub, not a
+ * lookup — every request gets the same response.
+ */
+const LOCAL_SESSION_USER = { name: 'Local Dev', email: 'local-dev@laikacms.local' };
+
+/**
+ * A trivial `${basePath}/session` responder. `resolveLaikaBackend`'s local
+ * backend (`@laikacms/decap`) authenticates with a dummy token and never
+ * performs the PKCE OAuth dance, but `LaikaBackend.authenticate()` always
+ * pings `${apiUrl}/session` to resolve the display identity regardless of how
+ * the token was obtained — local mode has no real session to report, so this
+ * always succeeds with the same stub identity. Matches the JSON:API shape
+ * `decap-api`'s own `/session` endpoint returns.
+ */
+async function sessionHandler(_request: Request): Promise<Response> {
+  return new Response(
+    JSON.stringify({
+      data: {
+        type: 'session',
+        id: LOCAL_SESSION_USER.email,
+        attributes: LOCAL_SESSION_USER,
+      },
+    }),
+    { status: 200, headers: { 'Content-Type': 'application/json' } },
+  );
+}
+
 /** Adapt a `fetch(Request) => Promise<Response>` handler to a Connect middleware. */
 function toConnectMiddleware(fetchHandler: (request: Request) => Promise<Response>): ConnectMiddleware {
   return (req, res, next) => {
@@ -162,6 +198,7 @@ export function mountLocalApi(
 
   server.middlewares.use(`${basePath}/storage`, toConnectMiddleware(storageApi.fetch));
   server.middlewares.use(`${basePath}/documents`, toConnectMiddleware(documentsApi.fetch));
+  server.middlewares.use(`${basePath}/session`, toConnectMiddleware(sessionHandler));
 
   if (resolved.assets) {
     const assetsApi = buildAssetsApi({ repository: resolved.assets, basePath: `${basePath}/assets` });
