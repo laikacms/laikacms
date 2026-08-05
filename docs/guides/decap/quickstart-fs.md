@@ -27,7 +27,10 @@ integration lives in `@laikacms/decap`:
 ```bash
 # npm — add hono explicitly: §4a's --legacy-peer-deps prunes auto-installed peers, and
 # @hono/node-server's type declarations import from hono (needed if you use server.ts).
-npm install laikacms @laikacms/decap @hono/node-server hono
+# Pin @hono/node-server to the major laikacms peer-depends on (currently ^2) — an
+# unpinned install can otherwise pull a newer major than laikacms supports and fail
+# with an ERESOLVE peer conflict before anything installs.
+npm install laikacms @laikacms/decap '@hono/node-server@^2' hono
 
 # pnpm — hono for the same reason: pnpm satisfies @hono/node-server's peer internally, but does
 # not expose it at your project root, so a server.ts would not typecheck without it.
@@ -35,8 +38,13 @@ npm install laikacms @laikacms/decap @hono/node-server hono
 # and exits non-zero when it skips any — without these flags this command fails outright with
 # ERR_PNPM_IGNORED_BUILDS (msgpackr-extract, and esbuild once §4a adds it).
 pnpm add --allow-build=esbuild --allow-build=msgpackr-extract \
-  laikacms @laikacms/decap @hono/node-server hono
+  laikacms @laikacms/decap '@hono/node-server@^2' hono
 ```
+
+> **Version pin:** `laikacms` peer-depends on `@hono/node-server@^2.0.10` (see its
+> `package.json`). Pinning the major here keeps a bare `npm install`/`pnpm add` from picking up a
+> future `@hono/node-server` major before `laikacms` declares support for it — check
+> `laikacms`'s `peerDependencies` if you hit an ERESOLVE here.
 
 > pnpm records the `--allow-build` grants in a `pnpm-workspace.yaml` it writes next to your
 > `package.json`, so you only pass the flags once. `pnpm approve-builds` is the interactive
