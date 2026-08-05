@@ -16,17 +16,10 @@ let originalFetch: typeof fetch | null = null;
 export const jsonApiProxyDocumentsContractCase: DocumentsContractCase = {
   name: 'DocumentsJsonApiProxyRepository (in-process JSON:API + in-memory backing)',
   /**
-   * Known gaps in the in-process server/proxy pair:
-   * - `listRecordSummaries` is not yet wired through the proxy's
-   *   `/record-summaries` path.
-   * - `deleteDocument`/`deleteUnpublished`: the in-process backing's
-   *   `NotFoundError` on a follow-up GET fails `instanceof LaikaError`
-   *   against `errorToJsonApiMapper` in this test's module graph (a
-   *   dual-module-instance mismatch on `laikacms/core`, unrelated to
-   *   LCMS-287's proxy rehydration fix) — flattens to a generic 500 before
-   *   the proxy ever sees a `code`. See LCMS-287 PR discussion.
+   * `listRecordSummaries` is not yet wired through the proxy's
+   * `/record-summaries` path (unrelated to LCMS-456/LCMS-287).
    */
-  skip: ['deleteDocument', 'deleteUnpublished', 'listRecordSummaries'],
+  skip: ['listRecordSummaries'],
   makeRepo: () => {
     const storage = new InMemoryStorageRepository();
     const settings = new TestSettingsProvider();
