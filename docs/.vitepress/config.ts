@@ -97,6 +97,10 @@ export default defineConfig({
         collapsed: true,
         items: [
           { text: 'Overview', link: '/contributing/' },
+          { text: 'Local Setup', link: '/contributing/local-setup' },
+          { text: 'Inner Loop', link: '/contributing/inner-loop' },
+          { text: 'Landing a PR', link: '/contributing/landing-a-pr' },
+          { text: 'House Style', link: '/contributing/house-style' },
           { text: 'Package Reference Docs', link: '/contributing/package-docs' },
           { text: 'Starter Templates', link: '/contributing/starters' },
         ],
