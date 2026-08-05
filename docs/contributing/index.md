@@ -4,6 +4,8 @@ Notes for people working _on_ LaikaCMS rather than _with_ it.
 
 - **[Starter templates](./starters)** — status of the `starter-*` reference apps and the core
   building blocks they demonstrated.
+- **[Package reference docs](./package-docs)** — where package-specific reference/usage docs live
+  and how they're aggregated into this site.
 
 The general contribution workflow lives in
 [CONTRIBUTING.md](https://github.com/laikacms/laikacms/blob/develop/CONTRIBUTING.md) at the repo

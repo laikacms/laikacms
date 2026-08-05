@@ -5,12 +5,16 @@
   "description": "Laika CMS documentation site (VitePress).",
   "type": "module",
   "scripts": {
-    "dev": "vitepress dev",
-    "build": "vitepress build",
-    "preview": "vitepress preview"
+    "aggregate-package-docs": "node scripts/aggregate-package-docs.mjs",
+    "dev": "npm run aggregate-package-docs && vitepress dev",
+    "build": "npm run aggregate-package-docs && vitepress build",
+    "preview": "vitepress preview",
+    "test": "vitest run"
   },
   "devDependencies": {
+    "gray-matter": "catalog:",
     "vitepress": "catalog:vue",
+    "vitest": "catalog:tools",
     "vue": "catalog:vue"
   },
   "engines": {
