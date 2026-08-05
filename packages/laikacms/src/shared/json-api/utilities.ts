@@ -17,6 +17,30 @@ interface SchemaParseError {
 /** Subset of `Console` accepted anywhere a diagnostic logger is threaded through the JSON:API layer. */
 export type JsonApiLogger = Pick<Console, 'error' | 'warn' | 'info' | 'debug'>;
 
+const knownErrorCodes: ReadonlySet<string> = new Set(Object.values(errors.errorCode));
+
+/**
+ * Structural check for a {@link LaikaError}, robust to the module resolving
+ * `laikacms/core` more than once in the same process (a classic monorepo /
+ * vitest "dual package hazard" — one import resolving through `dist/**`,
+ * another through source, each instantiating its own copy of the
+ * `LaikaError` class). `instanceof LaikaError` only holds when `err` was
+ * constructed against the *same* copy of the class that's imported here, so
+ * it silently fails across the module-instance boundary even though the
+ * error is structurally identical (LCMS-456).
+ *
+ * Falls back to duck-typing on the stable `code`/`status` pair every
+ * `LaikaError` subclass carries — `code` is checked against the known
+ * `errorCode` value set so an arbitrary object with a `code` string can't
+ * spoof this.
+ */
+const isLaikaErrorLike = (err: unknown): err is LaikaError<errors.ErrorCode, number> => {
+  if (err instanceof LaikaError) return true;
+  if (!(err instanceof Error)) return false;
+  const { code, status } = err as { code?: unknown, status?: unknown };
+  return typeof code === 'string' && knownErrorCodes.has(code) && typeof status === 'number';
+};
+
 export const errorToJsonApiMapper = (
   err: unknown,
   logger?: JsonApiLogger,
@@ -63,7 +87,7 @@ const mapErrorToJsonApi = (err: unknown): JsonApiError & { status: errors.ErrorS
     };
   }
 
-  if (err instanceof LaikaError) {
+  if (isLaikaErrorLike(err)) {
     return {
       errors: [
         {
@@ -73,7 +97,7 @@ const mapErrorToJsonApi = (err: unknown): JsonApiError & { status: errors.ErrorS
           detail: err.message,
         },
       ],
-      status: err.status,
+      status: err.status as errors.ErrorStatus,
     };
   }
 
@@ -268,7 +292,7 @@ export const errorFromResponse = async (response: Response) => {
 };
 
 export const isLaikaError = (error: unknown): error is LaikaError<errors.ErrorCode, number> => {
-  return error instanceof LaikaError;
+  return isLaikaErrorLike(error);
 };
 
 export const toUserErrorMessage = (error: unknown): string => {
