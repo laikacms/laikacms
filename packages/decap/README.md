@@ -155,6 +155,54 @@ const LaikaBackend = createLaikaBackend({
 export default LaikaBackend;
 ```
 
+#### `resolveLaikaBackend` — dev/remote backend selector (LCMS-449)
+
+`@laikacms/vite-plugin`'s `localApi` option (Slice 1) mounts LaikaCMS's own JSON:API on the Vite dev
+server at `/__laika` by default, so Decap can read and write local content while you develop instead
+of mutating a remote backend. `resolveLaikaBackend({ local, remote })` picks the Decap `backend:`
+config to hand to `CMS.init` — the local one while `vite dev` is running, the remote OAuth one
+everywhere else — so a single admin config needs no manual switching:
+
+```ts
+import { createLaikaBackend, resolveLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
+import CMS from 'decap-cms-app';
+
+CMS.registerBackend('laika', createLaikaBackend());
+
+CMS.init({
+  config: {
+    backend: resolveLaikaBackend({
+      remote: { name: 'laika', base_url: 'https://api.example.com', app_id: 'your-app-id' },
+    }),
+    collections: [
+      /* ... */
+    ],
+  },
+});
+```
+
+The selector reads `import.meta.env.DEV` — **this requires the admin config to be bundled by Vite**;
+a standalone/non-Vite admin is treated as remote. It fails safe to `remote` whenever the dev flag
+isn't truthy, so a production build (or any context where Vite hasn't substituted the flag) never
+targets the local endpoint.
+
+| Option   | Type                       | Required | Description                                                                                                                                                                  |
+| -------- | -------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `local`  | `LocalLaikaBackendOptions` | no       | `{ basePath?, devToken? }` — overrides for the local backend. `basePath` defaults to `/__laika` (must match `localApi.basePath`); `devToken` defaults to a fixed dummy value |
+| `remote` | `LaikaBackendModuleConfig` | yes      | The remote OAuth `backend:` config, used as-is whenever the dev flag isn't truthy                                                                                            |
+| `dev`    | `boolean`                  | no       | Overrides `import.meta.env.DEV`; only tests should pass this — real usage relies on the default so no wiring is needed                                                       |
+
+The local backend uses `dev_token` under the hood — the same mechanism `DevAuthenticationPage`
+already renders for whenever `config.backend.dev_token` is set (see
+`decap-cms-backend-laika/laika-backend.ts`) — so no interactive login happens locally. Both
+`createLaikaBackend` and `DevAuthenticationPage` stay exported for hand-wiring a custom local/remote
+arrangement instead of using `resolveLaikaBackend`.
+
+> **The local API's `/session` endpoint is a trivial stub.** `LaikaBackend.authenticate()` always
+> pings `${apiUrl}/session` to resolve a display identity, even for the dummy-token local path.
+> `@laikacms/vite-plugin`'s `localApi` therefore also mounts `${basePath}/session`, returning a
+> fixed unauthenticated stub identity — not a fourth repository-backed sub-API.
+
 ### i18n
 
 i18n bundles are exposed per-module: `…/decap-oauth2/i18n`, `…/decap-oauth2/i18n/en`,
