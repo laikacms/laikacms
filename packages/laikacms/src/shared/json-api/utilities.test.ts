@@ -144,6 +144,46 @@ describe('errorToJsonApiMapper', () => {
     expect(result.errors[0]!.detail).toBe('not here');
   });
 
+  // LCMS-456: a LaikaError subclass constructed against a *different* copy
+  // of the `laikacms/core` module (e.g. one resolved through `dist/**`, the
+  // other through source — a dual-module-instance / "dual package hazard")
+  // fails `instanceof LaikaError` even though it's structurally identical.
+  // `LookalikeNotFoundError` below deliberately does NOT extend the real
+  // `LaikaError` class imported at the top of this file, simulating exactly
+  // that cross-module-instance shape.
+  class LookalikeNotFoundError extends Error {
+    static override TITLE = NotFoundError.TITLE;
+    static override STATUS = NotFoundError.STATUS;
+    static override CODE = NotFoundError.CODE;
+    status = NotFoundError.STATUS;
+    code = NotFoundError.CODE;
+    title = NotFoundError.TITLE;
+    constructor(message?: string) {
+      super(message);
+    }
+  }
+
+  it('maps a NotFoundError-shaped error from a different module instance to 404, not 500 (LCMS-456)', () => {
+    const lookalike = new LookalikeNotFoundError('Resource not found');
+    expect(lookalike).not.toBeInstanceOf(NotFoundError);
+
+    const result = errorToJsonApiMapper(lookalike);
+    expect(result.status).toBe(404);
+    expect(result.errors[0]!.code).toBe(NotFoundError.CODE);
+    expect(result.errors[0]!.status).toBe('404');
+    expect(result.errors[0]!.detail).toBe('Resource not found');
+  });
+
+  it('does not treat an arbitrary Error with a spoofed code as a LaikaError', () => {
+    const spoofed = Object.assign(new Error('not a laika error'), {
+      code: NotFoundError.CODE,
+      // no numeric `status` — should fail the duck-type check
+    });
+    const result = errorToJsonApiMapper(spoofed);
+    expect(result.status).toBe(500);
+    expect(result.errors[0]!.code).toBe(InternalError.CODE);
+  });
+
   it('maps BadRequestError to status 400 with correct code', () => {
     const result = errorToJsonApiMapper(new BadRequestError('bad input'));
     expect(result.status).toBe(400);
@@ -395,6 +435,17 @@ describe('isLaikaError', () => {
 
   it('returns false for null', () => {
     expect(isLaikaError(null)).toBe(false);
+  });
+
+  it('returns true for a LaikaError-shaped error from a different module instance (LCMS-456)', () => {
+    class LookalikeNotFoundError extends Error {
+      status = NotFoundError.STATUS;
+      code = NotFoundError.CODE;
+      title = NotFoundError.TITLE;
+    }
+    const lookalike = new LookalikeNotFoundError('nope');
+    expect(lookalike).not.toBeInstanceOf(NotFoundError);
+    expect(isLaikaError(lookalike)).toBe(true);
   });
 });
 
