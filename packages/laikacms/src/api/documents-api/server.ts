@@ -1,6 +1,7 @@
 import * as Effect from 'effect/Effect';
 import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
+import * as SchemaIssue from 'effect/SchemaIssue';
 
 import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
 import {
@@ -257,9 +258,24 @@ async function respondCollection<T, R extends JsonApiResource>(
   return json(response);
 }
 
-/** Convert any caught throw into a LaikaError, preserving LaikaError instances and wrapping defects in InternalError. */
+/**
+ * Convert any caught throw into a LaikaError, preserving LaikaError instances,
+ * mapping Effect Schema decode failures to InvalidData (400), and wrapping
+ * everything else (genuine defects) in InternalError (500).
+ *
+ * `S.decodeUnknownSync` throws a plain `Error` whose `cause` is the Effect
+ * Schema `Issue` tree (see `effect/SchemaParser`'s `asSync`) — it is NOT an
+ * `effect/Schema` `SchemaError`/`isSchemaError` instance, so detect it via
+ * `SchemaIssue.isIssue(err.cause)` instead. This is a defense-in-depth
+ * choke point: `parseBody`/`parseQuery` already convert decode failures to
+ * InvalidData at each call site, but any decoder invoked outside those
+ * helpers still lands here.
+ */
 function toLaikaError(err: unknown): LaikaError {
   if (err instanceof LaikaError) return err;
+  if (err instanceof Error && SchemaIssue.isIssue(err.cause)) {
+    return new InvalidData(err.message, { cause: err });
+  }
   if (err instanceof Error) return new InternalError(err.message, { cause: err });
   return new InternalError(String(err));
 }

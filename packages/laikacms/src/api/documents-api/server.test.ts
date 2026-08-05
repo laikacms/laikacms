@@ -1,4 +1,5 @@
 import * as Effect from 'effect/Effect';
+import * as S from 'effect/Schema';
 import type {
   DocumentsCapabilities,
   DocumentsRepository,
@@ -185,6 +186,34 @@ describe('documents-api meta.warnings', () => {
     expect(body.errors[0]!.status).toBe('500');
     expect(body.errors[0]!.code).toBe('internal_error');
   });
+
+  it(
+    'returns 400 invalid_data (not 500 internal_error) when a repo throws an Effect Schema decode error (LCMS-264)',
+    async () => {
+      const onError = vi.fn();
+      const partialRepo = {
+        getDocument: (_key: string) => {
+          // Simulate a repo implementation that decodes something internally
+          // (e.g. a stored envelope) and lets the ParseError-equivalent throw
+          // escape as a synchronous defect — same shape as a body-decoder
+          // throw, but reaching `toLaikaError` via the outer fetch catch
+          // rather than the `parseBody`/`parseQuery` helpers.
+          S.decodeUnknownSync(S.Struct({ type: S.Literal('published') }))({ type: 'WRONG' });
+          throw new Error('unreachable');
+        },
+      } as unknown as DocumentsRepository;
+
+      const api = buildJsonApi({ repo: partialRepo, onError });
+      const res = await api.fetch(new Request('http://localhost/published/boom'));
+      expect(res.status).toBe(400);
+      expect(onError).toHaveBeenCalledOnce();
+
+      const body = await res.json() as { errors: Array<{ status: string, code: string, title: string }> };
+      expect(body.errors[0]!.status).toBe('400');
+      expect(body.errors[0]!.code).toBe('invalid_data');
+      expect(body.errors[0]!.title).toBe('Invalid Data');
+    },
+  );
 
   it('surfaces recoverableErrors on per-op meta.warnings for atomic remove results', async () => {
     const partialRepo = {
