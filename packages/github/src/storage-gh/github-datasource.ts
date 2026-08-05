@@ -354,7 +354,11 @@ export class GithubDataSource {
       if (isOctokitError(e) && e.status === 404) {
         throw new NotFoundError(`The path at ${relativePath} does not exist`);
       }
-      throw e;
+      // Route non-404 failures (429 rate-limit, 403 forbidden, 5xx, ...) through the same
+      // status→domain-error mapping used elsewhere, so callers can distinguish a real
+      // rate-limit/forbidden response from a generic failure instead of treating them alike.
+      const mapped = this.mapError<never>(e, relativePath);
+      throw Result.isFailure(mapped) ? mapped.failure : e;
     }
   }
 
