@@ -18,15 +18,45 @@ Both resource types use the collection `key` as the JSON:API `id`.
 
 ### Endpoints
 
-| Method | Path                | Status | Description              |
-| ------ | ------------------- | ------ | ------------------------ |
-| GET    | `/collections`      | 200    | List all collections     |
-| GET    | `/collections/:key` | 200    | Read a single collection |
-| POST   | `/collections`      | 201    | Create a collection      |
-| PATCH  | `/collections/:key` | 200    | Update a collection      |
-| DELETE | `/collections/:key` | 204    | Delete a collection      |
+| Method | Path                | Status | Description                                     |
+| ------ | ------------------- | ------ | ----------------------------------------------- |
+| GET    | `/openapi.json`     | 200    | OpenAPI 3.1 specification for this API          |
+| GET    | `/openapi.yaml`     | 200    | OpenAPI 3.1 specification for this API, as YAML |
+| GET    | `/collections`      | 200    | List all collections                            |
+| GET    | `/collections/:key` | 200    | Read a single collection                        |
+| POST   | `/collections`      | 201    | Create a collection                             |
+| PATCH  | `/collections/:key` | 200    | Update a collection                             |
+| DELETE | `/collections/:key` | 204    | Delete a collection                             |
 
 All responses carry `Cache-Control: no-store`.
+
+#### GET /openapi.json
+
+Returns the OpenAPI 3.1 specification for the ContentBase API as a JSON document.
+
+**Response** — `200 OK`, `Content-Type: application/json`
+
+The response body is an OpenAPI 3.1.0 document. The `servers` array is rewritten to the absolute
+mount point so the document is usable as-is by code generators and API clients.
+
+```json
+{
+  "openapi": "3.1.0",
+  "info": { "title": "ContentBase API", "version": "1.0.0" },
+  "servers": [{ "url": "https://example.com/api/contentbase" }],
+  "paths": { ... }
+}
+```
+
+---
+
+#### GET /openapi.yaml
+
+Returns the same OpenAPI 3.1 specification as `GET /openapi.json`, serialized as YAML.
+
+**Response** — `200 OK`, `Content-Type: application/yaml`
+
+---
 
 #### GET /collections
 
