@@ -4,11 +4,13 @@ Task-oriented walkthroughs for getting LaikaCMS running and wired into your stac
 
 ## Getting up and running
 
-- **[Getting Started](./getting-started)** — install `laikacms`, stand up a JSON:API server, and
-  understand the no-auth default.
+- **[Getting Started](./getting-started)** — the progressive path: read/write content in the
+  browser, stand up a secure-by-default server, or compile content at build time for a static site.
 - **[Deployment](./deployment)** — run the API on Cloudflare Workers or Node.js, add auth and CORS
   as middleware, configure logging, and work through the production security checklist.
 - **[Security](./security)** — handling secrets, error hygiene, and production hardening.
+- **[Advanced: raw Storage API](./advanced/raw-storage-api)** — the low-level `buildJsonApi`
+  primitive with no built-in auth. You secure it yourself; most projects want `decapApi` instead.
 
 ## Decap CMS
 
