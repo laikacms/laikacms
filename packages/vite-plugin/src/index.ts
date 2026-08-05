@@ -24,6 +24,14 @@ export {
   type RepositoryChangeChannelOptions,
 } from './change-channel.js';
 export { isSafeIdentifier, RESERVED_WORDS } from './identifier.js';
+export {
+  type ConnectMiddleware,
+  DEFAULT_LOCAL_API_BASE_PATH,
+  type LaikaLocalApiOptions,
+  type LocalApiMiddlewares,
+  type LocalApiServer,
+  mountLocalApi,
+} from './local-api.js';
 export { renderModule, type RenderModuleOptions } from './module.js';
 export {
   laikacms,
