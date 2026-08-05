@@ -280,16 +280,17 @@ export class GithubStorageRepository extends StorageRepository {
         const typeResult = yield* Effect.result(
           Effect.tryPromise({
             try: () => this.dataSource.pathType(key),
-            catch: e =>
-              e instanceof NotFoundError
-                ? e
-                : e instanceof Error
-                ? new BadRequestError(e.message)
-                : new BadRequestError(String(e)),
+            // pathType already maps octokit failures onto domain errors (NotFoundError,
+            // TooManyRequestsError, ForbiddenError, ...); preserve them as-is here.
+            catch: (e): LaikaError => (e instanceof Error ? e as LaikaError : new BadRequestError(String(e))),
           }),
         );
-        // pathType failures (incl. NotFound) → probe as file with an extension via getObject.
+        // pathType NotFound → probe as file with an extension via getObject. All other
+        // failures (429, 403, 5xx) must propagate unchanged instead of falling through.
         if (typeResult._tag === 'Failure') {
+          if (!(typeResult.failure instanceof NotFoundError)) {
+            return yield* Effect.fail(typeResult.failure);
+          }
           return yield* LaikaTask.runValue(this.getObject(key));
         }
         if (typeResult.success === 'file') {
