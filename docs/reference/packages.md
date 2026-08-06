@@ -140,6 +140,33 @@ Decap CMS server-side integrations: the Decap-compatible API and the OAuth2 serv
 | `@laikacms/decap/decap-oauth2/i18n/en`    | English translations for the OAuth2 UI                                                                           |
 | `@laikacms/decap/decap-oauth2/i18n/nl`    | Dutch translations for the OAuth2 UI                                                                             |
 
+## `@laikacms/decap-cms`
+
+The scoped single-package fork of Decap CMS v4. It is a **required peer dependency of
+`@laikacms/decap`** — the admin bundle esbuild step resolves its subpaths at build time, so without
+it the build fails with unresolved `@laikacms/decap-cms/…` errors.
+
+See [The `@laikacms/decap-cms` fork](../guides/decap/fork) for the full package reference.
+
+### Install
+
+```sh
+pnpm add @laikacms/decap-cms
+```
+
+### Key subpaths
+
+| Subpath                            | Used by                                                 |
+| ---------------------------------- | ------------------------------------------------------- |
+| `@laikacms/decap-cms/core`         | Core CMS bootstrap                                      |
+| `@laikacms/decap-cms/lib/util`     | Internal utilities consumed by the Laika backend        |
+| `@laikacms/decap-cms/lib/auth`     | Auth primitives consumed by the Laika backend           |
+| `@laikacms/decap-cms/ui-default`   | Default editor UI (bundled into `admin/bundle.js`)      |
+| `@laikacms/decap-cms/laika-app`    | Full Laika-wired admin app (alternative to root export) |
+| `@laikacms/decap-cms/config-types` | TypeScript types for `config.yml` / `config.json`       |
+| `@laikacms/decap-cms/locales/*`    | Locale bundles (e.g. `./locales/nl`, `./locales/en`)    |
+| `@laikacms/decap-cms/widgets/*`    | Extra widgets (aichat, lucide-icon, radix-icon, …)      |
+
 ## `@laikacms/vite-plugin`
 
 A Vite / [Rolldown](https://rolldown.rs) plugin that loads Laika CMS content as ES modules at build
