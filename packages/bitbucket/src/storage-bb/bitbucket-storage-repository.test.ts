@@ -1,4 +1,13 @@
-import { ForbiddenError, LaikaStream, LaikaTask, NotFoundError, TooManyRequestsError } from 'laikacms/core';
+import {
+  AuthenticationError,
+  ForbiddenError,
+  InternalError,
+  LaikaStream,
+  LaikaTask,
+  NotFoundError,
+  ServiceUnavailableError,
+  TooManyRequestsError,
+} from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -388,6 +397,66 @@ describe('BitbucketStorageRepository.getAtom error propagation', () => {
     const atom = await LaikaTask.runPromise(repo.getAtom('notes'));
     expect(atom.type).toBe('folder');
     expect(atom.key).toBe('notes');
+  });
+
+  it('propagates AuthenticationError (401) instead of falling through to getFolder', async () => {
+    const fetch401: typeof fetch = async () =>
+      new Response(JSON.stringify({ error: { message: 'Invalid credentials' } }), { status: 401 });
+    const repo = makeRepoWithFetch(fetch401);
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(AuthenticationError);
+  });
+
+  it('propagates ServiceUnavailableError (503) instead of falling through to getFolder', async () => {
+    const fetch503: typeof fetch = async () =>
+      new Response(JSON.stringify({ error: { message: 'Under maintenance' } }), { status: 503 });
+    const repo = makeRepoWithFetch(fetch503);
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(ServiceUnavailableError);
+  });
+
+  it('maps an unmapped >=500 status (502) to ServiceUnavailableError', async () => {
+    const fetch502: typeof fetch = async () =>
+      new Response(JSON.stringify({ error: { message: 'Bad gateway' } }), { status: 502 });
+    const repo = makeRepoWithFetch(fetch502);
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(ServiceUnavailableError);
+  });
+});
+
+describe('BitbucketStorageRepository.getFolder pagination safety loop', () => {
+  it('fails with InternalError after 100 pages when the listing always returns a `next` link', async () => {
+    const fetchAlwaysNext: typeof fetch = async () =>
+      new Response(
+        JSON.stringify({
+          values: [],
+          next: 'https://mock.bitbucket.test/2.0/repositories/esstudio/content/src/main/notes/?pagelen=100&page=2',
+        }),
+        { status: 200 },
+      );
+    const repo = new BitbucketStorageRepository({
+      workspace: WS,
+      repo: REPO,
+      branch: BRANCH,
+      auth: { appPassword: { username: 'alice', password: 'app-pw' } },
+      apiUrl: API_URL,
+      fetch: fetchAlwaysNext,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+      commitAuthor: { name: 'Laika Bot', email: 'bot@example.com' },
+    });
+    await expect(
+      LaikaTask.runPromise(repo.getFolder('notes')),
+    ).rejects.toBeInstanceOf(InternalError);
   });
 });
 
