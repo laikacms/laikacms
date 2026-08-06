@@ -295,9 +295,9 @@ collections:
       - { name: body,  label: Body,  widget: richtext }
 ```
 
-> The v4.beta bundle deprecates `widget: markdown` (DCMS-483) in favour of `widget: richtext`.
-> Migration guide:
-> [BREAKING_CHANGES_V4_BETA.md](https://github.com/laikacms/decap-cms/blob/v4.beta/BREAKING_CHANGES_V4_BETA.md)
+> `widget: markdown` is deprecated (DCMS-483) in favour of `widget: richtext`; a back-compat alias
+> still resolves `markdown` fields with a runtime warning. Migration guide:
+> [breaking-changes-v4-beta.md](https://github.com/laikacms/decap-cms/blob/main/docs/contributing/decisions/breaking-changes-v4-beta.md)
 > in `laikacms/decap-cms`.
 
 > **`format: json` is required.** Omitting `format:` makes Decap default to markdown-frontmatter,
