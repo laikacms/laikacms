@@ -401,47 +401,59 @@ These are the things that consistently bite first-time integrators:
 
 ## 5. Decision tree
 
-> "I need to build X. Which starter should I copy?"
+> "I need to build X. Which pattern should I use?"
+
+The `starter-*` names below identify the **pattern**. The starter directories themselves were moved
+to separate repos in June 2026 (locations TBD — see the note at the top of this file). For the two
+canonical starting points, use the in-repo quickstart guides directly:
+
+- **Minimal Node example** →
+  [docs/guides/decap/quickstart-fs.md](./docs/guides/decap/quickstart-fs.md)
+  (`FileSystemStorageRepository` + Hono + Decap admin shell, running locally)
+- **Minimal edge example** →
+  [docs/guides/decap/standalone-worker.md](./docs/guides/decap/standalone-worker.md)
+  (`R2StorageRepository` + Hono + Cloudflare Workers Assets)
+- **Inline wiring code** → sections 2a (Node) and 2c (Workers/R2) above have copy-paste-ready code
 
 ```
 ┌─ Building a public website? ─────────────────────────────────────┐
 │                                                                  │
-│  React?           → starter-next-blog (App Router SSR)            │
-│  Vue?             → starter-nuxt-blog                             │
-│  Svelte?          → starter-sveltekit-blog                        │
-│  Solid?           → starter-solid-start                           │
-│  Qwik?            → starter-qwik-blog                             │
-│  Astro?           → starter-astro-blog                            │
-│  Eleventy/static? → starter-eleventy-jamstack                     │
-│  TanStack Router? → starter-tanstack-blog                         │
-│  Marko?           → starter-marko-blog                            │
-│  Hypermedia/HTMX? → starter-htmx-hono                             │
-│  Web Components?  → starter-lit-spa                               │
-│  Just want SPA?   → starter-vite-vue-spa or starter-vite-solid-spa│
+│  React?           → starter-next-blog pattern (App Router SSR)    │
+│  Vue?             → starter-nuxt-blog pattern                     │
+│  Svelte?          → starter-sveltekit-blog pattern                │
+│  Solid?           → starter-solid-start pattern                   │
+│  Qwik?            → starter-qwik-blog pattern                     │
+│  Astro?           → starter-astro-blog pattern                    │
+│  Eleventy/static? → starter-eleventy-jamstack pattern             │
+│  TanStack Router? → starter-tanstack-blog pattern                 │
+│  Marko?           → starter-marko-blog pattern                    │
+│  Hypermedia/HTMX? → starter-htmx-hono pattern                     │
+│  Web Components?  → starter-lit-spa pattern                       │
+│  Just want SPA?   → starter-vite-vue-spa or vite-solid-spa pattern│
 └──────────────────────────────────────────────────────────────────┘
 
 ┌─ Building a backend API (no public UI)? ─────────────────────────┐
 │                                                                  │
-│  Hono on Node?        → starter-hono-backend                      │
-│  Express?             → starter-express-backend                   │
-│  Fastify?             → starter-fastify-backend                   │
-│  Koa?                 → starter-koa-backend                       │
-│  Bun runtime?         → starter-bun-backend                       │
-│  Deno runtime?        → starter-deno-backend                      │
-│  Effect Platform?     → starter-effect-platform-blog              │
+│  Hono on Node?        → starter-hono-backend pattern              │
+│  Express?             → starter-express-backend pattern           │
+│  Fastify?             → starter-fastify-backend pattern           │
+│  Koa?                 → starter-koa-backend pattern               │
+│  Bun runtime?         → starter-bun-backend pattern               │
+│  Deno runtime?        → starter-deno-backend pattern              │
+│  Effect Platform?     → starter-effect-platform-blog pattern      │
 └──────────────────────────────────────────────────────────────────┘
 
 ┌─ Deploying to edge/serverless? ──────────────────────────────────┐
 │                                                                  │
-│  Cloudflare Workers? → starter-workers-r2 ✅                       │
-│  AWS Lambda?         → starter-lambda-blog                        │
-│  Vercel Edge?        → starter-vercel-edge 🟡 (PoC — storage gap)  │
-│  Netlify Functions?  → starter-netlify-functions 🟡 (dev only)     │
+│  Cloudflare Workers? → quickstart-fs.md§c / standalone-worker.md  │
+│  AWS Lambda?         → starter-lambda-blog pattern               │
+│  Vercel Edge?        → starter-vercel-edge pattern (PoC)         │
+│  Netlify Functions?  → starter-netlify-functions pattern (dev)   │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
-If your target isn't listed: pick the closest pattern and copy the shape. `starter-hono-backend` is
-the canonical "minimal Node example"; `starter-workers-r2` is the canonical "minimal edge example".
+If your target isn't listed: pick the closest pattern and copy the wiring from sections 2a–2c above,
+or from the `quickstart-fs.md` / `standalone-worker.md` guides in `docs/guides/decap/`.
 
 ---
 
