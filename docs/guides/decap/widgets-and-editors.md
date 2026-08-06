@@ -22,9 +22,9 @@ Each widget registers under a unique name (`lucide-icon` / `radix-icon`) so both
 same app without one overwriting the other.
 
 ```ts
+import { DecapCmsApp as CMS } from '@laikacms/decap-cms';
 import LucideWidgetIcon from '@laikacms/decap-cms/widgets/lucide-icon';
 import RadixWidgetIcon from '@laikacms/decap-cms/widgets/radix-icon';
-import CMS from 'decap-cms-app';
 
 // Registers as 'lucide-icon'
 CMS.registerWidget(LucideWidgetIcon.Widget());
@@ -33,10 +33,10 @@ CMS.registerWidget(LucideWidgetIcon.Widget());
 CMS.registerWidget(RadixWidgetIcon.Widget());
 ```
 
-> **`decap-cms-app` vs `@laikacms/decap-cms` root import:** use `import CMS from 'decap-cms-app'`
-> (consistent with [quickstart-fs.md](./quickstart-fs) and [admin-shell.md](./admin-shell)). The
-> `@laikacms/decap-cms` root export (`dist/app/index.js`) imports the Node.js `path` module and
-> fails when bundled for the browser with esbuild.
+> **Root import:** `import { DecapCmsApp as CMS } from '@laikacms/decap-cms'` (consistent with
+> [quickstart-fs.md](./quickstart-fs) and [admin-shell.md](./admin-shell)) — the root export has no
+> default export; `DecapCmsApp` is the classic `CMS`-shaped object (`registerWidget`,
+> `registerBackend`, `init`, …). It bundles cleanly for the browser with esbuild.
 
 In collection config, reference them by their distinct names:
 
@@ -58,7 +58,7 @@ There are **two** packages in the laika-cms ecosystem with confusingly similar n
 
 - **`@laikacms/decap-cms`** — fork of upstream Decap CMS itself (the React `App`,
   `DecapCmsProvider`, widgets, backends like `backend-github`, etc.). Lives in
-  [`laikacms/decap-cms#v4.beta`](https://github.com/laikacms/decap-cms).
+  [`laikacms/decap-cms`](https://github.com/laikacms/decap-cms).
 - **`@laikacms/decap`** — adapters _around_ Decap: the `laika` Decap backend (`createLaikaBackend`),
   the Decap-compatible HTTP API (`decapApi`), the `decapOauth2` server, custom widgets. Lives in
   this repo under `packages/decap/`.

@@ -203,24 +203,17 @@ endpoint the Decap `laika` backend pings to confirm the server is reachable.
 
 ### 4a. Install the Decap CMS app
 
-`@laikacms/decap` was already installed in §1. Install the Decap CMS browser bundle, the
-`@laikacms/decap-cms` peer (provides the `lib/util`, `lib/auth`, `ui/default`, and `core` subpaths
-that the Laika backend imports at bundle time), and esbuild (used to compile the TypeScript entry
-file into a browser bundle):
+`@laikacms/decap` was already installed in §1. Install the Decap CMS browser bundle — the
+`@laikacms/decap-cms` fork (its root export is the classic app bootstrap; it also provides the
+`lib/util`, `lib/auth`, `ui-default`, and `core` subpaths that the Laika backend imports at bundle
+time) — its required peer dependencies, and esbuild (used to compile the TypeScript entry file into
+a browser bundle):
 
 ```bash
-# npm — --legacy-peer-deps is required because decap-cms-app@3 pulls in
-# codemirror@5 subpath imports (decap-cms-widget-code), while @laikacms/decap-cms@4
-# declares a codemirror@^6 peer; npm@9+ rejects the conflict by default.
-# codemirror@5 must also be installed as a direct dependency so npm hoists v5 to
-# the top level and nests the @laikacms/decap-cms@4 requirement (codemirror@^6)
-# underneath it — without this, npm@11 deduplicates both to codemirror@6 and
-# esbuild fails with ~94 "Could not resolve codemirror/keymap/…" errors.
-npm install --legacy-peer-deps decap-cms-app @laikacms/decap-cms codemirror@5
-npm install --legacy-peer-deps --save-dev esbuild
+npm install @laikacms/decap-cms @emotion/react @emotion/styled
+npm install --save-dev esbuild
 
-# pnpm — pnpm v11+ keeps both codemirror versions side-by-side automatically; no override needed.
-pnpm add decap-cms-app @laikacms/decap-cms
+pnpm add @laikacms/decap-cms @emotion/react @emotion/styled
 pnpm add -D esbuild
 ```
 
@@ -231,16 +224,16 @@ pnpm add -D esbuild
 > The `laika` backend ships as `@laikacms/decap/decap-cms-backend-laika` (a subpath of the
 > `@laikacms/decap` package). Import `createLaikaBackend` from there.
 >
-> `@laikacms/decap-cms` is the scoped Decap CMS fork that provides the
-> `@laikacms/decap-cms/lib/util`, `/lib/auth`, `/ui/default`, and `/core` subpaths required by the
-> Laika backend. Without it the esbuild step will fail with "Could not resolve
-> `@laikacms/decap-cms/…`" errors and produce no `admin/bundle.js`.
+> `@emotion/react` and `@emotion/styled` are required (non-optional) peer dependencies of
+> `@laikacms/decap-cms` — the admin shell is styled with Emotion. Without them the esbuild step will
+> fail with "Could not resolve `@emotion/…`" errors and produce no `admin/bundle.js`.
 
-> **pnpm peer warnings:** after this install, `pnpm peers check` may report unmet peers for
-> `graphql` (`^16` wanted, `15.x` installed by `decap-cms-app@3`) and for `react`/`react-dom`
-> (`^16 || ^17 || ^18` from `react-scroll-sync` and similar transitive deps inside `decap-cms-app`).
-> These originate inside `decap-cms-app`'s own dependency tree and are harmless — the admin UI
-> starts and functions correctly with React 19. You can safely ignore them.
+> **Optional peer warnings:** `@laikacms/decap-cms` also declares optional peers for specific
+> widgets — `@apollo/client` / `graphql` / `graphql-tag` (GraphQL-backed widgets), `ol` (the map
+> widget), `uploadcare-widget` / `uploadcare-widget-tab-effects` (the Uploadcare media library), and
+> `lucide-react` / `@radix-ui/react-icons` (icon widgets). `npm`/`pnpm` will warn that these are
+> unmet — that's expected unless you register the corresponding widget; install only the ones you
+> actually use.
 
 ### 4b. Create the HTML entry point
 
@@ -265,8 +258,8 @@ The static file server needs an `index.html` to load your compiled bundle:
 
 ```typescript
 // admin/index.ts
+import { DecapCmsApp as CMS } from '@laikacms/decap-cms';
 import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
-import CMS from 'decap-cms-app';
 
 // No explicit documentsApiBaseUrl / assetsApiBaseUrl needed: the backend
 // derives both from base_url + api_root in config.yml (→ http://localhost:3000/api).
@@ -355,7 +348,7 @@ npx esbuild admin/index.ts --bundle --outfile=admin/bundle.js --format=iife --ta
 npx serve admin/ -l 5000
 ```
 
-esbuild bundles `admin/index.ts` together with `decap-cms-app` and
+esbuild bundles `admin/index.ts` together with `@laikacms/decap-cms` and
 `@laikacms/decap/decap-cms-backend-laika` into a single `admin/bundle.js` that the browser can load
 directly. The `-l 5000` flag pins `serve` to port 5000 — without it, `serve` defaults to port 3000
 and falls back to a random ephemeral port when the API already holds 3000, breaking the hardcoded
