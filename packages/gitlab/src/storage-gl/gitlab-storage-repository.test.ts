@@ -1,4 +1,12 @@
-import { LaikaStream, LaikaTask, NotFoundError, TooManyRequestsError } from 'laikacms/core';
+import {
+  ForbiddenError,
+  LaikaStream,
+  LaikaTask,
+  NotFoundError,
+  ServiceUnavailableError,
+  TooManyRequestsError,
+  VersionMismatchError,
+} from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -349,5 +357,67 @@ describe('GitlabStorageRepository mapError', () => {
     await expect(
       LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'some-key', content: { body: 'hi' } })),
     ).rejects.toBeInstanceOf(TooManyRequestsError);
+  });
+
+  const makeRepoWithFetch = (fetchImpl: typeof fetch) =>
+    new GitlabStorageRepository({
+      projectId: PROJECT_ID,
+      branch: BRANCH,
+      apiUrl: API_URL,
+      auth: { token: 'glpat-test' },
+      fetch: fetchImpl,
+      serializerRegistry: {
+        md: {
+          format: { mediaType: 'text/markdown' } as never,
+          serializeDocumentFileContents: async content => String((content as { body?: string }).body ?? ''),
+          deserializeDocumentFileContents: async raw => ({ body: raw }),
+        },
+      },
+      defaultFileExtension: 'md',
+    });
+
+  it('maps a 409 response on write to VersionMismatchError', async () => {
+    const fetch409: typeof fetch = async () => new Response('{"message":"409 Conflict"}', { status: 409 });
+    const repo = makeRepoWithFetch(fetch409);
+
+    await expect(
+      LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'some-key', content: { body: 'hi' } })),
+    ).rejects.toBeInstanceOf(VersionMismatchError);
+  });
+
+  it('maps a 412 response on write to VersionMismatchError', async () => {
+    const fetch412: typeof fetch = async () => new Response('{"message":"412 Precondition Failed"}', { status: 412 });
+    const repo = makeRepoWithFetch(fetch412);
+
+    await expect(
+      LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'some-key', content: { body: 'hi' } })),
+    ).rejects.toBeInstanceOf(VersionMismatchError);
+  });
+
+  it('maps a 422 response on write to VersionMismatchError (stale last_commit_id)', async () => {
+    const fetch422: typeof fetch = async () => new Response('{"message":"422 Unprocessable Entity"}', { status: 422 });
+    const repo = makeRepoWithFetch(fetch422);
+
+    await expect(
+      LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'some-key', content: { body: 'hi' } })),
+    ).rejects.toBeInstanceOf(VersionMismatchError);
+  });
+
+  it('maps a 405 response to ForbiddenError', async () => {
+    const fetch405: typeof fetch = async () => new Response('{"message":"405 Method Not Allowed"}', { status: 405 });
+    const repo = makeRepoWithFetch(fetch405);
+
+    await expect(
+      LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'some-key', content: { body: 'hi' } })),
+    ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('maps a 503 response to ServiceUnavailableError', async () => {
+    const fetch503: typeof fetch = async () => new Response('{"message":"503 Service Unavailable"}', { status: 503 });
+    const repo = makeRepoWithFetch(fetch503);
+
+    await expect(
+      LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'some-key', content: { body: 'hi' } })),
+    ).rejects.toBeInstanceOf(ServiceUnavailableError);
   });
 });
