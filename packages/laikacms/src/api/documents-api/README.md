@@ -97,17 +97,22 @@ All responses carry `Content-Type: application/vnd.api+json` and `Cache-Control:
 
 ### `GET /records` and `GET /record-summaries`
 
-| Parameter        | Type                                    | Default       | Description                                                                                  |
-| ---------------- | --------------------------------------- | ------------- | -------------------------------------------------------------------------------------------- |
-| `filter[type]`   | `'published' \| 'unpublished' \| 'all'` | `'published'` | Filter by document state. `'all'` returns both published and unpublished records.            |
-| `filter[folder]` | `string`                                | `''`          | Limit results to the given folder path (e.g. `blog/`).                                       |
-| `filter[depth]`  | `number` (≥ 1)                          | `1`           | Folder traversal depth. `1` returns only the immediate folder; higher values recurse.        |
-| `page[size]`     | `number`                                | —             | Offset pagination: number of items per page.                                                 |
-| `page[number]`   | `number`                                | —             | Offset pagination: 1-based page number.                                                      |
-| `page[limit]`    | `number`                                | —             | Offset pagination alternative: maximum items to return.                                      |
-| `page[offset]`   | `number`                                | —             | Offset pagination alternative: number of items to skip.                                      |
-| `page[after]`    | `string`                                | —             | Cursor pagination: return items after this cursor. Requires cursor support in capabilities.  |
-| `page[before]`   | `string`                                | —             | Cursor pagination: return items before this cursor. Requires cursor support in capabilities. |
+| Parameter        | Type                                    | Default       | Description                                                                                                                                                                                   |
+| ---------------- | --------------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `filter[type]`   | `'published' \| 'unpublished' \| 'all'` | `'published'` | Filter by document state. `'all'` returns both published and unpublished records.                                                                                                             |
+| `filter[folder]` | `string`                                | `''`          | Collection folder to list from (e.g. `posts` or `posts/drafts`). Omit or pass `''` to list all collections as `folder` resources (one per configured collection) instead of document records. |
+| `filter[depth]`  | `number` (≥ 1)                          | `1`           | Folder traversal depth. `1` returns only the immediate folder; higher values recurse.                                                                                                         |
+| `page[size]`     | `number`                                | —             | Offset pagination: number of items per page.                                                                                                                                                  |
+| `page[number]`   | `number`                                | —             | Offset pagination: 1-based page number.                                                                                                                                                       |
+| `page[limit]`    | `number`                                | —             | Offset pagination alternative: maximum items to return.                                                                                                                                       |
+| `page[offset]`   | `number`                                | —             | Offset pagination alternative: number of items to skip.                                                                                                                                       |
+| `page[after]`    | `string`                                | —             | Cursor pagination: return items after this cursor. Requires cursor support in capabilities.                                                                                                   |
+| `page[before]`   | `string`                                | —             | Cursor pagination: return items before this cursor. Requires cursor support in capabilities.                                                                                                  |
+
+When `filter[folder]` is omitted or empty, both `/records` and `/record-summaries` return one
+`folder` (or `folder-summary`) resource per configured document collection instead of document
+records. Pass a non-empty folder path (e.g. `posts`) to receive document records for that
+collection.
 
 Cursor pagination (`page[after]` / `page[before]`) returns `400` if the backing repository does not
 declare cursor support in `GET /capabilities`. Use `page[number]` / `page[size]` or `page[offset]` /
