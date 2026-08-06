@@ -152,6 +152,14 @@ serve({ fetch: api.fetch, port: 3000 }, () => {
 });
 ```
 
+> **Which settings provider?** `DefaultContentBaseSettingsProvider` maps collection names to
+> same-name storage folders and auto-creates its settings object on first use — no seeding required.
+> It is the right choice for this quickstart and for most simple setups. Switch to
+> `DecapContentBaseSettingsProvider` (`laikacms/contentbase-settings-decap`) when you need the
+> server and browser Decap configs to stay in sync from one source of truth (it derives
+> collection/folder/media mappings from a Decap config JSON you seed into storage), or when you need
+> multi-folder or nested collection support.
+
 > **Production auth:** the `authenticateAccessToken` callback above accepts a hard-coded dev token.
 > For production, replace it with a real validator (JWT verification, database session lookup, etc.)
 > or use the bundled `decapOauth2` helper — see [Decap Integration](./auth).
