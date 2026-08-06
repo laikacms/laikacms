@@ -36,12 +36,13 @@ new ObsidianAssetsRepository(vaultPath: string, options?: ObsidianAssetsReposito
 
 ## Options
 
-| Option                 | Type                      | Default                                                     | Description                                                                                                  |
-| ---------------------- | ------------------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `attachmentsDirectory` | `string`                  | `''` (vault root)                                           | Subdirectory treated as the asset root. Asset keys are resolved relative to it.                              |
-| `documentExtensions`   | `string[]`                | `['md']`                                                    | File extensions (without the leading dot) excluded from listings because they belong to the documents layer. |
-| `ignore`               | `string[]`                | `['.obsidian', '.trash', '.git', '.DS_Store', 'Thumbs.db']` | Directory / file basenames skipped while listing.                                                            |
-| `createUrl`            | `(key: string) => string` | Returns the key unchanged                                   | Builds a serving URL for an asset key. Supply this to point at a static host or CDN.                         |
+| Option                 | Type                                              | Default                                                     | Description                                                                                                                   |
+| ---------------------- | ------------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `attachmentsDirectory` | `string`                                          | `''` (vault root)                                           | Subdirectory treated as the asset root. Asset keys are resolved relative to it.                                               |
+| `documentExtensions`   | `string[]`                                        | `['md']`                                                    | File extensions (without the leading dot) excluded from listings because they belong to the documents layer.                  |
+| `ignore`               | `string[]`                                        | `['.obsidian', '.trash', '.git', '.DS_Store', 'Thumbs.db']` | Directory / file basenames skipped while listing.                                                                             |
+| `createUrl`            | `(key: string) => string`                         | Returns the key unchanged                                   | Builds a serving URL for an asset key. Supply this to point at a static host or CDN.                                          |
+| `createVariations`     | `(key: string) => Record<string, AssetVariation>` | Returns `{}`                                                | Returns named variations (thumbnails, WebP versions, etc.) for an asset key. See [Image variations](#image-variations) below. |
 
 Every non-markdown file in the vault (images, PDFs, audio, …) is exposed as an `Asset` keyed by its
 vault-relative path. The implementation is read-oriented — for write-heavy workloads prefer
@@ -62,6 +63,36 @@ every asset whose key contains `"logo"` (e.g. `attachments/logo.png`, `images/lo
 Sending an undeclared filter name (anything other than `search`) returns `400 Bad Request`. Inspect
 `GET /capabilities` (`attributes.filtering.filters`) to see the current list of supported filter
 names at runtime.
+
+## Image variations
+
+`createVariations` lets you expose pre-generated responsive variants (thumbnails, WebP copies, size
+tiers) for each asset. The callback receives the asset key and returns a named map of
+`AssetVariation` objects; these are served via `GET /resources/:key?include=variations` on the
+`assets-api`.
+
+```ts
+import { ObsidianAssetsRepository } from 'laikacms/assets/obsidian';
+
+const assets = new ObsidianAssetsRepository('/path/to/vault', {
+  createUrl: key => `https://cdn.example.com/${key}`,
+  createVariations: key => ({
+    thumb: {
+      variant: 'thumb',
+      url: `https://cdn.example.com/thumb/${key}`,
+      width: 200,
+      height: 200,
+    },
+    webp: {
+      variant: 'webp',
+      url: `https://cdn.example.com/webp/${key.replace(/\.[^.]+$/, '.webp')}`,
+      mimeType: 'image/webp',
+    },
+  }),
+});
+```
+
+Return `{}` (or omit the option) for assets that have no variations.
 
 ## Limitations
 
