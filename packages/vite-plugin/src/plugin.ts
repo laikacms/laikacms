@@ -204,7 +204,7 @@ export function laikacms(options: LaikaVitePluginOptions = {}): Plugin {
       const { content, meta } = await readItem(getRepos(), laikaId);
       // Type the item from the data we just read (no extra fetch).
       const tg = getTypegen();
-      if (tg) void tg.ingest(laikaId, content, meta).catch(() => {});
+      if (tg) await tg.ingest(laikaId, content, meta);
       // Write the chunk before returning: the module we hand back imports it, so
       // it has to be on disk by the time the bundler resolves that import.
       const body = mdxEnabled ? bodyOf(content) : null;
