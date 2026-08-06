@@ -5,33 +5,54 @@ import { LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import { jsonSerializer } from '../../../../serializers/storage-serializers-json/index.js';
 import { R2StorageRepository } from './r2-storage-repository.js';
 
-type Stored = { key: string, body: string, uploaded: Date, etag: string };
+type Stored = { key: string, body: string, uploaded: Date, etag: string, customMetadata: Record<string, string> };
 
 /**
  * Simulates an R2 region under an eventual-consistency window where reads
  * for `simulateMissKey` never resolve, but writes durably land in `store`.
  * Used to assert createObject doesn't fail fatally when its post-write
  * readback hits the consistency window.
+ *
+ * Each `put` advances `uploaded` to a new timestamp (matching real R2
+ * behaviour) so tests can verify createdAt is preserved across writes.
  */
 const makeBucket = (simulateMissKey?: string) => {
   const store = new Map<string, Stored>();
   let etagCounter = 0;
+  let uploadedMs = new Date('2026-01-01T00:00:00Z').getTime();
   return {
     store,
     async head(key: string) {
       if (simulateMissKey !== undefined && key.startsWith(simulateMissKey)) return null;
       const o = store.get(key);
       if (!o) return null;
-      return { size: o.body.length, uploaded: o.uploaded, etag: o.etag };
+      return { size: o.body.length, uploaded: o.uploaded, etag: o.etag, customMetadata: o.customMetadata };
     },
     async get(key: string) {
       if (simulateMissKey !== undefined && key.startsWith(simulateMissKey)) return null;
       const o = store.get(key);
       if (!o) return null;
-      return { size: o.body.length, uploaded: o.uploaded, etag: o.etag, text: async () => o.body };
+      return {
+        size: o.body.length,
+        uploaded: o.uploaded,
+        etag: o.etag,
+        customMetadata: o.customMetadata,
+        text: async () => o.body,
+      };
     },
-    async put(key: string, body: string) {
-      store.set(key, { key, body, uploaded: new Date('2026-01-01T00:00:00Z'), etag: `etag-${++etagCounter}` });
+    async put(
+      key: string,
+      body: string,
+      options?: { httpMetadata?: unknown, customMetadata?: Record<string, string> },
+    ) {
+      uploadedMs += 1000;
+      store.set(key, {
+        key,
+        body,
+        uploaded: new Date(uploadedMs),
+        etag: `etag-${++etagCounter}`,
+        customMetadata: options?.customMetadata ?? {},
+      });
     },
     async delete(key: string) {
       store.delete(key);
@@ -213,6 +234,30 @@ describe('R2StorageRepository — missing folder recoverableError', () => {
     expect(collected.data).toHaveLength(0);
     expect(collected.done).toEqual({ total: 0 });
     expect(collected.recoverableErrors).toHaveLength(0);
+  });
+});
+
+describe('R2StorageRepository — createdAt stability across updates', () => {
+  it('createdAt is not overwritten when an object is updated (LCMS-285b)', async () => {
+    const bucket = makeBucket();
+    const repo = new R2StorageRepository(
+      bucket as unknown as R2Bucket,
+      { json: jsonSerializer },
+      'json',
+    );
+
+    const created = await LaikaTask.runPromise(
+      repo.createObject({ key: 'docs/item', type: 'object', content: { body: 'v1' } }),
+    );
+    const originalCreatedAt = created.createdAt;
+
+    // Simulate a later update — R2 will advance `uploaded` on the new put
+    await LaikaTask.runPromise(repo.updateObject({ key: 'docs/item', content: { body: 'v2' } }));
+
+    const after = await LaikaTask.runPromise(repo.getObject('docs/item'));
+    expect(after.createdAt).toBe(originalCreatedAt);
+    expect(after.updatedAt).not.toBe(originalCreatedAt);
+    expect(after.content).toEqual({ body: 'v2' });
   });
 });
 

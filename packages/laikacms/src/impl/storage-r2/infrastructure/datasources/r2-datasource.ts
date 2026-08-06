@@ -170,12 +170,15 @@ export class R2DataSource {
       // Return key without extension for the interface
       const keyWithoutExt = this.stripExtension(resolvedKey);
 
-      // R2 doesn't have a separate created time, so we use uploaded time for both
+      // Prefer the stored creation timestamp from custom metadata (set on first write).
+      // Falling back to uploaded is intentional for objects written before this fix.
+      const createdAtStr = object.customMetadata?.['x-laika-created-at'];
       const uploadedDate = object.uploaded;
+      const createdAt = createdAtStr ? new Date(createdAtStr) : uploadedDate;
 
       return Result.succeed({
         size: object.size,
-        createdAt: uploadedDate,
+        createdAt,
         updatedAt: uploadedDate,
         key: keyWithoutExt,
         extension,
@@ -277,12 +280,15 @@ export class R2DataSource {
   }
 
   /**
-   * Create or update an object in R2
+   * Create or update an object in R2.
+   * Pass `customMetadata` to embed fields that survive subsequent writes (e.g.
+   * `x-laika-created-at` set once on creation so `createdAt` never drifts).
    */
   async createOrUpdate(
     key: string,
     content: string,
     extension: string,
+    customMetadata?: Record<string, string>,
   ): Promise<LaikaResult<{ key: string }>> {
     const normalizedKey = this.normalizeKey(key);
     // Strip any extension user may have added and use the provided extension
@@ -294,6 +300,7 @@ export class R2DataSource {
         httpMetadata: {
           contentType: this.getContentType(extension),
         },
+        customMetadata,
       });
 
       // Return key without extension for the interface

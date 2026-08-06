@@ -168,7 +168,9 @@ export class R2StorageRepository extends StorageRepository {
         const ext = meta.extension;
         if (update.content) {
           const stringified = yield* Effect.promise(() => this.serialize(ext, update.content!));
-          yield* liftResult(this.r2DataSource.createOrUpdate(update.key, stringified, ext));
+          // Carry the original createdAt forward so R2's uploaded reset doesn't clobber it.
+          const customMetadata = { 'x-laika-created-at': meta.createdAt.toISOString() };
+          yield* liftResult(this.r2DataSource.createOrUpdate(update.key, stringified, ext, customMetadata));
         }
         return yield* LaikaTask.runValue(this.getObject(update.key));
       })
@@ -191,7 +193,12 @@ export class R2StorageRepository extends StorageRepository {
         }
         const ext = this.resolveExtension(create.key, create.metadata);
         const stringified = yield* Effect.promise(() => this.serialize(ext, create.content!));
-        yield* liftResult(this.r2DataSource.createOrUpdate(create.key, stringified, ext));
+        // Embed creation time in custom metadata so it survives later overwrites.
+        // R2's `uploaded` field resets on every put, which would clobber createdAt.
+        const createdAt = new Date().toISOString();
+        yield* liftResult(
+          this.r2DataSource.createOrUpdate(create.key, stringified, ext, { 'x-laika-created-at': createdAt }),
+        );
         return yield* this.readbackOrSynthesize(create, ext, emit);
       })
     );
