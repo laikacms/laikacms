@@ -1,0 +1,54 @@
+---
+/**
+ * Blog homepage — lists published posts using laika.documents.listRecordSummaries
+ * via laikacms/compat's collectStream (Promise-friendly, no Effect import needed).
+ */
+import { collectStream } from 'laikacms/compat';
+
+import Base from '../layouts/Base.astro';
+import { laika } from '../laika.js';
+
+const { items: records } = await collectStream(
+  laika.documents.listRecordSummaries({
+    pagination: { page: 1, perPage: 100 },
+    folder: 'posts',
+    depth: 1,
+    type: 'published',
+  })
+);
+
+// Keep only published documents (filter out folders and unpublished entries).
+const posts = records.filter(r => r.type === 'published-summary');
+posts.sort((a, b) => {
+  // Most-recent first; fall back to key order when updatedAt is absent.
+  if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
+  return b.key.localeCompare(a.key);
+});
+---
+
+<Base title="My Blog">
+  <h1>My Blog</h1>
+
+  {
+    posts.length === 0
+      ? (
+        <p>
+          No posts yet. <a href="/admin/">Open the CMS</a> to write your first post.
+        </p>
+      )
+      : (
+        <ul style="list-style:none;padding:0">
+          {posts.map(post => {
+            // key is "posts/<slug>" — derive the slug for the URL.
+            const slug = post.key.replace(/^posts\//, '').replace(/\.md$/, '');
+            return (
+              <li style="margin-bottom:1.5rem">
+                <a href={`/blog/${slug}`}>{slug}</a>
+                {post.updatedAt && <> · <time>{new Date(post.updatedAt).toLocaleDateString()}</time></>}
+              </li>
+            );
+          })}
+        </ul>
+      )
+  }
+</Base>

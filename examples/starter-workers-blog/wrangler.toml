@@ -1,0 +1,31 @@
+name = "starter-workers-blog"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+# nodejs_compat enables node:crypto and other Node-compatible APIs in Workers
+compatibility_flags = ["nodejs_compat"]
+
+# ── D1 database ──────────────────────────────────────────────────────────────
+# Used only for `wrangler d1` CLI commands (migrations, seeding).
+# The Worker itself accesses D1 through the Cloudflare REST API (see below).
+[[d1_databases]]
+binding = "DB"
+database_name = "starter-workers-blog-db"
+database_id = "replace-with-your-d1-database-id"
+
+# ── Required secrets ─────────────────────────────────────────────────────────
+# Set these with: wrangler secret put CF_API_TOKEN
+# (Never commit real values here.)
+#
+#   CF_API_TOKEN       — Cloudflare API token with D1:Edit permission
+#   CF_ACCOUNT_ID      — Your Cloudflare account ID
+#   CF_D1_DATABASE_ID  — The UUID shown in the Workers › D1 dashboard
+#
+# NOTE: LaikaCMS's D1 storage integration currently uses the Cloudflare REST
+# API rather than native D1 Worker bindings.  That means:
+#   • The Worker calls back to api.cloudflare.com on every request.
+#   • You need an API token even when running `wrangler dev`.
+# Native-binding support is tracked at github.com/laikacms/laikacms/issues.
+
+[vars]
+# Optional: override the bearer token Decap uses in dev mode.
+# DEV_TOKEN = "dev-local-laika-token"

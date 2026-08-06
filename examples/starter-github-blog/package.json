@@ -1,0 +1,27 @@
+{
+  "name": "@laikacms/starter-github-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog built with Hono + GitHub repository storage + LaikaCMS. Uses @laikacms/github/storage-gh — stores all content directly in a GitHub repo via the GitHub API, authenticated as a GitHub App. Ideal for JAMstack setups where content lives alongside code.",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:server",
+    "@laikacms/decap-integrations": "workspace:*",
+    "@laikacms/github": "workspace:*",
+    "hono": "catalog:server",
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "tsx": "catalog:tools",
+    "typescript": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

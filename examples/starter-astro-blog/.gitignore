@@ -1,0 +1,5 @@
+dist/
+node_modules/
+.astro/
+# Content directory is committed when you add real posts;
+# the .gitkeep keeps the folder tracked while empty.
