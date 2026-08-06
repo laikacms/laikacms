@@ -51,6 +51,8 @@ export default tseslint.config(
     ignores: [
       // Standalone examples workspace — not part of this pnpm project
       'examples/**',
+      // Download-and-go starter templates — standalone, deps not installed at repo root
+      'starters/**',
       // Assembled apex site (website + docs) for Cloudflare Pages
       'site-dist/**',
       '**/dist/**',

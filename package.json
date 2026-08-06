@@ -14,6 +14,8 @@
     "lint:fix": "eslint --fix --cache --config eslint.config.mjs .",
     "format": "dprint fmt",
     "format:check": "dprint check",
+    "version": "changeset version && node scripts/sync-starter-versions.mjs",
+    "check:starters": "node scripts/check-starter-versions.mjs",
     "release": "changeset publish",
     "prepare": "husky"
   },
@@ -33,9 +35,9 @@
     "typescript": "catalog:tools",
     "typescript-eslint": "catalog:lint"
   },
-  "packageManager": "pnpm@10.34.5",
+  "packageManager": "pnpm@11.20.0",
   "engines": {
     "node": "24.x",
-    "pnpm": ">=8 <11"
+    "pnpm": ">=11 <12"
   }
 }
