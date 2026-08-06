@@ -66,8 +66,13 @@ const liftSerialize = <A>(p: Promise<A>): Effect.Effect<A, LaikaError> =>
     try: () => p,
     catch: err => {
       if (err instanceof LaikaError) return err;
-      if (err instanceof Error) return new BadRequestError(err.message, { cause: err });
-      return new BadRequestError(String(err));
+      if (err instanceof Error) {
+        return new BadRequestError(err.message, {
+          cause: err,
+          translation: { message: 'storage.fs.invalidRequest' },
+        });
+      }
+      return new BadRequestError(String(err), { translation: { message: 'storage.fs.invalidRequest' } });
     },
   });
 
@@ -123,6 +128,7 @@ export class FileSystemStorageRepository extends StorageRepository {
       throw new BadRequestError(
         `No serializer found for file extension: .${ext}. `
           + `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`,
+        { translation: { message: 'storage.fs.invalidRequest' } },
       );
     }
     try {
@@ -130,6 +136,7 @@ export class FileSystemStorageRepository extends StorageRepository {
     } catch (error) {
       throw new BadRequestError(
         `Failed to serialize content: ${error instanceof Error ? error.message : String(error)}`,
+        { translation: { message: 'storage.fs.invalidRequest' } },
       );
     }
   }
@@ -142,6 +149,7 @@ export class FileSystemStorageRepository extends StorageRepository {
       throw new BadRequestError(
         `No serializer found for file extension: .${ext}. `
           + `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`,
+        { translation: { message: 'storage.fs.invalidRequest' } },
       );
     }
     try {
@@ -149,6 +157,7 @@ export class FileSystemStorageRepository extends StorageRepository {
     } catch (error) {
       throw new BadRequestError(
         `Failed to deserialize content: ${error instanceof Error ? error.message : String(error)}`,
+        { translation: { message: 'storage.fs.invalidRequest' } },
       );
     }
   }
@@ -232,7 +241,11 @@ export class FileSystemStorageRepository extends StorageRepository {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
         if (!create.content) {
-          return yield* Effect.fail(new InvalidData('Object content is required for creation'));
+          return yield* Effect.fail(
+            new InvalidData('Object content is required for creation', {
+              translation: { message: 'storage.fs.contentRequired' },
+            }),
+          );
         }
         const existingExt = yield* Effect.promise(() =>
           this.fileSystemDataSource.findExistingFileExtension(this.rootDirectory, create.key)
@@ -241,6 +254,7 @@ export class FileSystemStorageRepository extends StorageRepository {
           return yield* Effect.fail(
             new EntryAlreadyExistsError(
               `An object with key "${create.key}" already exists with extension .${existingExt}`,
+              { translation: { message: 'storage.fs.entryAlreadyExists' } },
             ),
           );
         }

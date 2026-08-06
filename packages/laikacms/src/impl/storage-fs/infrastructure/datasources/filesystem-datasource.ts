@@ -126,39 +126,62 @@ export class FileSystemDataSource {
       if (error instanceof Error && 'code' in error) {
         switch (error.code) {
           case 'ENOENT':
-            return Result.fail(new NotFoundError(`The file at ${fullPath} does not exist`, { cause: error }));
+            return Result.fail(
+              new NotFoundError(`The file at ${fullPath} does not exist`, {
+                cause: error,
+                translation: { message: 'storage.fs.fileNotFound' },
+              }),
+            );
           case 'EPERM':
             return Result.fail(
               new ForbiddenError(
                 `The file at ${fullPath} could not be deleted because you don't have the necessary permissions`,
-                { cause: error },
+                { cause: error, translation: { message: 'storage.fs.permissionDenied' } },
               ),
             );
           case 'EACCES':
             return Result.fail(
               new ForbiddenError(
                 `The file at ${fullPath} could not be deleted because you don't have access to it`,
-                { cause: error },
+                { cause: error, translation: { message: 'storage.fs.permissionDenied' } },
               ),
             );
           case 'ENOTEMPTY':
             return Result.fail(
               new ForbiddenError(
                 `The directory at ${fullPath} could not be deleted because it is not empty`,
-                { cause: error },
+                { cause: error, translation: { message: 'storage.fs.directoryNotEmpty' } },
               ),
             );
           case 'EISDIR':
-            return Result.fail(new DirInsteadOfFile(`The path ${fullPath} is a directory`, { cause: error }));
+            return Result.fail(
+              new DirInsteadOfFile(`The path ${fullPath} is a directory`, {
+                cause: error,
+                translation: { message: 'storage.fs.expectedFileFoundDirectory' },
+              }),
+            );
           case 'EEXIST':
-            return Result.fail(new FileInsteadOfDir(`The path ${fullPath} is a file`, { cause: error }));
+            return Result.fail(
+              new FileInsteadOfDir(`The path ${fullPath} is a file`, {
+                cause: error,
+                translation: { message: 'storage.fs.expectedDirectoryFoundFile' },
+              }),
+            );
           default:
             return Result.fail(
-              new InternalError('An unexpected error occurred while trying to delete the file', { cause: error }),
+              new InternalError('An unexpected error occurred while trying to delete the file', {
+                cause: error,
+                translation: { message: 'storage.fs.unexpectedFileSystemError' },
+              }),
             );
         }
       } else {
-        return Result.fail(new InternalError('Unexpected error during fs.stat', { cause: error }));
+        return Result.fail(
+          new InternalError('Unexpected error during fs.stat', {
+            cause: error,
+            translation: { message: 'storage.fs.unexpectedFileSystemError' },
+          }),
+        );
       }
     }
   }
@@ -171,7 +194,9 @@ export class FileSystemDataSource {
     for (const entry of entries) {
       const fullPath = path.join(basePath, entry.path);
       if (!isWithinRoot(basePath, fullPath)) {
-        yield Result.fail(new InvalidData(TRAVERSAL_ERROR));
+        yield Result.fail(
+          new InvalidData(TRAVERSAL_ERROR, { translation: { message: 'storage.fs.pathTraversalRejected' } }),
+        );
         continue;
       }
       const statResult = await this.fsStat(fullPath);
@@ -181,18 +206,26 @@ export class FileSystemDataSource {
       }
       const stat = statResult.success;
       if (stat.isDirectory() && entry.type !== 'dir') {
-        throw new DirInsteadOfFile(`The path ${fullPath} is a directory`);
+        throw new DirInsteadOfFile(`The path ${fullPath} is a directory`, {
+          translation: { message: 'storage.fs.expectedFileFoundDirectory' },
+        });
       }
       if (stat.isFile() && entry.type !== 'file') {
-        throw new FileInsteadOfDir(`The path ${fullPath} is a file`);
+        throw new FileInsteadOfDir(`The path ${fullPath} is a file`, {
+          translation: { message: 'storage.fs.expectedDirectoryFoundFile' },
+        });
       }
       if (!stat.isFile() && !stat.isDirectory()) {
-        throw new ForbiddenError(`Currently only files and directories can be deleted`);
+        throw new ForbiddenError(`Currently only files and directories can be deleted`, {
+          translation: { message: 'storage.fs.entryTypeUnsupported' },
+        });
       }
       if (entry.type === 'dir') {
         const listing = await fs.readdir(fullPath);
         if (listing.length > 0 && !ALLOW_RECURSIVE) {
-          throw new ForbiddenError('Due to security concerns, deleting directories with content is not allowed');
+          throw new ForbiddenError('Due to security concerns, deleting directories with content is not allowed', {
+            translation: { message: 'storage.fs.directoryNotEmpty' },
+          });
         }
       }
       successful.push(entry);
@@ -214,13 +247,19 @@ export class FileSystemDataSource {
     relativePath: string,
   ): Promise<LaikaResult<{ content: string, path: string, extension: string }>> => {
     if (!isWithinRoot(basePath, path.join(basePath, relativePath))) {
-      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+      return Result.fail(
+        new InvalidData(TRAVERSAL_ERROR, { translation: { message: 'storage.fs.pathTraversalRejected' } }),
+      );
     }
     try {
       const resolvedPath = await this.resolvePathWithExtension(basePath, relativePath);
 
       if (!resolvedPath) {
-        return Result.fail(new NotFoundError(`The file at ${relativePath} does not exist`));
+        return Result.fail(
+          new NotFoundError(`The file at ${relativePath} does not exist`, {
+            translation: { message: 'storage.fs.fileNotFound' },
+          }),
+        );
       }
 
       const fullPath = path.join(basePath, resolvedPath);
@@ -237,10 +276,16 @@ export class FileSystemDataSource {
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
-        return Result.fail(new NotFoundError(`The file at ${relativePath} does not exist`));
+        return Result.fail(
+          new NotFoundError(`The file at ${relativePath} does not exist`, {
+            translation: { message: 'storage.fs.fileNotFound' },
+          }),
+        );
       } else {
         return Result.fail(
-          new InternalError(`Failed to read file: ${error instanceof Error ? error.message : String(error)}`),
+          new InternalError(`Failed to read file: ${error instanceof Error ? error.message : String(error)}`, {
+            translation: { message: 'storage.fs.failedToReadFile' },
+          }),
         );
       }
     }
@@ -251,13 +296,19 @@ export class FileSystemDataSource {
     relativePath: string,
   ): Promise<LaikaResult<{ size: number, createdAt: Date, updatedAt: Date, path: string, extension: string }>> => {
     if (!isWithinRoot(basePath, path.join(basePath, relativePath))) {
-      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+      return Result.fail(
+        new InvalidData(TRAVERSAL_ERROR, { translation: { message: 'storage.fs.pathTraversalRejected' } }),
+      );
     }
     try {
       const resolvedPath = await this.resolvePathWithExtension(basePath, relativePath);
 
       if (!resolvedPath) {
-        return Result.fail(new NotFoundError(`The file at ${relativePath} does not exist`));
+        return Result.fail(
+          new NotFoundError(`The file at ${relativePath} does not exist`, {
+            translation: { message: 'storage.fs.fileNotFound' },
+          }),
+        );
       }
 
       const fullPath = path.join(basePath, resolvedPath);
@@ -277,9 +328,17 @@ export class FileSystemDataSource {
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
-        return Result.fail(new NotFoundError(`The file at ${relativePath} does not exist`));
+        return Result.fail(
+          new NotFoundError(`The file at ${relativePath} does not exist`, {
+            translation: { message: 'storage.fs.fileNotFound' },
+          }),
+        );
       } else {
-        return Result.fail(new InternalError(`Failed to get file metadata`));
+        return Result.fail(
+          new InternalError(`Failed to get file metadata`, {
+            translation: { message: 'storage.fs.failedToGetFileMetadata' },
+          }),
+        );
       }
     }
   };
@@ -290,7 +349,9 @@ export class FileSystemDataSource {
   ): Promise<LaikaResult<{ createdAt: Date, updatedAt: Date }>> => {
     const fullPath = path.join(basePath, relativePath);
     if (!isWithinRoot(basePath, fullPath)) {
-      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+      return Result.fail(
+        new InvalidData(TRAVERSAL_ERROR, { translation: { message: 'storage.fs.pathTraversalRejected' } }),
+      );
     }
     try {
       const st = await fs.stat(fullPath);
@@ -299,9 +360,17 @@ export class FileSystemDataSource {
     } catch (error) {
       console.error(error);
       if (get(error, 'code') === 'ENOENT') {
-        return Result.fail(new NotFoundError(`The directory at ${relativePath} does not exist`));
+        return Result.fail(
+          new NotFoundError(`The directory at ${relativePath} does not exist`, {
+            translation: { message: 'storage.fs.directoryNotFound' },
+          }),
+        );
       } else {
-        return Result.fail(new InternalError(`Failed to get directory metadata`));
+        return Result.fail(
+          new InternalError(`Failed to get directory metadata`, {
+            translation: { message: 'storage.fs.failedToGetDirectoryMetadata' },
+          }),
+        );
       }
     }
   };
@@ -314,7 +383,13 @@ export class FileSystemDataSource {
           return;
         }
         if (stderr) {
-          resolve(Result.fail(new InternalError(`Failed to list drives`)));
+          resolve(
+            Result.fail(
+              new InternalError(`Failed to list drives`, {
+                translation: { message: 'storage.fs.failedToListDrives' },
+              }),
+            ),
+          );
           return;
         }
         const drives = stdout
@@ -359,7 +434,9 @@ export class FileSystemDataSource {
   ): Promise<LaikaResult<DirSub[]>> => {
     const fullPath = path.join(basePath, relativePath);
     if (!isWithinRoot(basePath, fullPath)) {
-      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+      return Result.fail(
+        new InvalidData(TRAVERSAL_ERROR, { translation: { message: 'storage.fs.pathTraversalRejected' } }),
+      );
     }
     try {
       const listing = await this.listDirectory(fullPath);
@@ -374,12 +451,17 @@ export class FileSystemDataSource {
         // Expected when listing a folder that doesn't exist yet (e.g. a new
         // collection or an empty media folder) — surface as NotFound without
         // logging an error on the normal path.
-        return Result.fail(new NotFoundError(`The directory at ${fullPath} does not exist`));
+        return Result.fail(
+          new NotFoundError(`The directory at ${fullPath} does not exist`, {
+            translation: { message: 'storage.fs.directoryNotFound' },
+          }),
+        );
       } else {
         console.error(error);
         return Result.fail(
           new InternalError(
             `Failed to get directory contents: ${error instanceof Error ? error.message : String(error)}`,
+            { translation: { message: 'storage.fs.failedToListDirectory' } },
           ),
         );
       }
@@ -393,7 +475,9 @@ export class FileSystemDataSource {
     extension: string,
   ): Promise<LaikaResult<{ path: string }>> => {
     if (!isWithinRoot(basePath, path.join(basePath, relativePath))) {
-      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+      return Result.fail(
+        new InvalidData(TRAVERSAL_ERROR, { translation: { message: 'storage.fs.pathTraversalRejected' } }),
+      );
     }
     // Strip any extension user may have added and use the provided extension
     const pathWithoutExt = this.stripExtension(relativePath);
@@ -422,7 +506,7 @@ export class FileSystemDataSource {
   isDir = async (basePath: string, relativePath: string): Promise<boolean> => {
     const fullPath = path.join(basePath, relativePath);
     if (!isWithinRoot(basePath, fullPath)) {
-      throw new InvalidData(TRAVERSAL_ERROR);
+      throw new InvalidData(TRAVERSAL_ERROR, { translation: { message: 'storage.fs.pathTraversalRejected' } });
     }
     try {
       const stat = await fs.stat(fullPath);
@@ -440,7 +524,9 @@ export class FileSystemDataSource {
   ): Promise<LaikaResult<FileOrDir>> => {
     const fullPath = path.join(basePath, relativePath);
     if (!isWithinRoot(basePath, fullPath)) {
-      return Result.fail(new InvalidData(TRAVERSAL_ERROR));
+      return Result.fail(
+        new InvalidData(TRAVERSAL_ERROR, { translation: { message: 'storage.fs.pathTraversalRejected' } }),
+      );
     }
 
     try {
@@ -451,6 +537,7 @@ export class FileSystemDataSource {
           return Result.fail(
             new DirInsteadOfFile(
               `When fetching ${relativePath} a file was expected but a directory was found`,
+              { translation: { message: 'storage.fs.expectedFileFoundDirectory' } },
             ),
           );
         }
@@ -483,6 +570,7 @@ export class FileSystemDataSource {
           return Result.fail(
             new FileInsteadOfDir(
               `When fetching ${relativePath} a directory was expected but a file was found`,
+              { translation: { message: 'storage.fs.expectedDirectoryFoundFile' } },
             ),
           );
         }
@@ -496,6 +584,7 @@ export class FileSystemDataSource {
         return Result.fail(
           new ForbiddenError(
             `The path ${fullPath} is not a file or directory`,
+            { translation: { message: 'storage.fs.entryTypeUnsupported' } },
           ),
         );
       }
@@ -518,7 +607,9 @@ export class FileSystemDataSource {
         return Result.fail(error);
       }
       return Result.fail(
-        new InternalError(`Failed to list directory: ${error instanceof Error ? error.message : String(error)}`),
+        new InternalError(`Failed to list directory: ${error instanceof Error ? error.message : String(error)}`, {
+          translation: { message: 'storage.fs.failedToListDirectory' },
+        }),
       );
     }
   };
