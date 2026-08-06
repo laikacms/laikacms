@@ -112,6 +112,77 @@ Returns the same OpenAPI 3.1 specification as `GET /openapi.json`, serialized as
 
 ---
 
+#### GET /capabilities
+
+Returns the capabilities advertised by the underlying storage repository. Clients should call this
+before attempting cursor pagination — the `attributes.pagination.styles.cursor` field indicates
+whether the backend supports `page[after]` / `page[before]`. Sending cursor params to a backend that
+does not support them returns a `400 Bad Request`.
+
+**Response** — a single `storage-capabilities` resource
+
+```json
+{
+  "data": {
+    "type": "storage-capabilities",
+    "id": "self",
+    "attributes": {
+      "compatibilityDate": "2026-05-11",
+      "pagination": {
+        "supported": true,
+        "description": "Offset and page pagination are supported. Cursor pagination is not.",
+        "styles": {
+          "offset": true,
+          "page": true,
+          "cursor": false
+        }
+      },
+      "fileExtensions": {
+        "supported": true,
+        "description": "File extensions are tracked and mapped to serializer formats.",
+        "supportedExtensions": {
+          ".md": { "format": "markdown" },
+          ".yaml": { "format": "yaml" },
+          ".json": { "format": "json" }
+        }
+      },
+      "changes": {
+        "supported": false,
+        "description": "This backend does not expose change signals."
+      }
+    },
+    "links": {
+      "self": "/api/storage/capabilities"
+    }
+  }
+}
+```
+
+A backend that supports change signals and file-extension-less storage would include:
+
+```json
+{
+  "fileExtensions": {
+    "supported": false,
+    "description": "This backend stores objects without file extension tracking."
+  },
+  "changes": {
+    "supported": true,
+    "description": "Sync tokens, change feeds, and live subscriptions are supported.",
+    "syncToken": true,
+    "changeFeed": true,
+    "subscription": true
+  }
+}
+```
+
+When `pagination.supported` is `false` the `styles` field is absent. When `fileExtensions.supported`
+is `false` the `supportedExtensions` field is absent. `changes` is always present. The
+`compatibilityDate` is set by each backend and changes when the repository's contract evolves —
+clients may use it to detect incompatible backend versions.
+
+---
+
 #### POST /atoms
 
 Create a new folder.
