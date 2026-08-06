@@ -1,30 +1,58 @@
 # Architecture
 
+## Why it is layered
+
+Making an agnostic, headless content system that is useful turned out to be more difficult than it
+first appeared 🫠. Trial and error led to thinking in layers. Domain-driven design helped, which is
+why there is a lot of DDD-lite across the codebase. The continuing struggle between usefulness and
+complexity produced the layered architecture described here.
+
+The amount of terminology can make the original goal of simplicity sound counterintuitive. It
+becomes natural once you work with content this way, and the jargon quickly disappears into the
+background. Most CMSs contain these concepts too. They hide the complexity by tightly coupling
+concepts that do not need to be coupled, in the name of convenience.
+
+Laika CMS is layered so applications can adopt only the assumptions they need. At the core is a
+[storage object](./content-model.md#atoms-and-folders): content that is uniquely addressable through
+a key. It is comparable to an AWS S3 object: a generic thing that is uniquely addressable. An object
+can be each of the choices `red`, `green`, and `blue` in a select input (even when they have no
+value), a database record, a page, or a sensor metric. Laika CMS supplies the address and transport
+contracts. The application owns the content shape.
+
+Each conceptual layer adds assumptions on top of that foundation:
+
+1. **Core storage** — objects, folders, keys, and arbitrary content.
+2. **Documents and assets** — content with document or binary-asset behavior.
+3. **Repository contracts** — abstract interfaces and the protocol for accessing those resources.
+4. **Concrete repository implementations** — filesystem, R2, proxy, and composed repositories.
+5. **Repository settings** — configuration for repository behavior.
+6. **Settings providers** — providers can be chained. When settings live in content, a provider can
+   receive a repository and query it to return those settings.
+7. **Contract consumers** — APIs, admin interfaces, the custom Decap CMS fork, and other
+   applications built on the contracts.
+
+This is a union model: each layer adds assumptions the farther it gets from the core. The built-in
+document contract, for example, assumes a document has a status and language. Applications that do
+not use those concepts can expose a constant `published` status; language defaults to `und`, the
+valid BCP 47 tag for undetermined language.
+
+Common data sources have implementations you can pick and compose like a banquet. You can use one,
+extend one for your infrastructure, or implement a contract directly. The reason to use Laika CMS is
+that you don't want to model your domain around your CMS. The goal is to get you 90% there; you will
+most likely implement or extend a repository to make the last part fit your infrastructure. See
+[Repositories](./repositories.md) for composition and implementation guidance and
+[Packages](../reference/packages.md) for the available implementations and exports.
+
 ## Layers
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        API Layer                             │
-│  (storage-api, documents-api, assets-api, contentbase-api)  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Domain Layer                            │
-│        (storage, documents, assets, contentbase-settings)   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Implementation Layer                        │
-│   (storage-r2, storage-fs, documents-drizzle, assets-r2)    │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Shared Layer                             │
-│         (core, crypto, sanitizer, i18n, json-api)           │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+  api["API Layer<br/><small>storage-api, documents-api, assets-api, contentbase-api</small>"]
+  domain["Domain Layer<br/><small>storage, documents, assets, contentbase-settings</small>"]
+  implementation["Implementation Layer<br/><small>storage-r2, storage-fs, documents-drizzle, assets-r2</small>"]
+  shared["Shared Layer<br/><small>core, crypto, sanitizer, i18n, json-api</small>"]
+
+  api --> domain --> implementation --> shared
 ```
 
 ## Principles

@@ -59,29 +59,14 @@ features:
 
 ## Architecture Overview
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        API Layer                             │
-│  (storage-api, documents-api, assets-api, contentbase-api)  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Domain Layer                            │
-│        (storage, documents, assets, contentbase-settings)   │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                  Implementation Layer                        │
-│   (storage-r2, storage-fs, documents-drizzle, assets-r2)    │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                     Shared Layer                             │
-│        (core, auth, crypto, sanitizer, i18n, json-api)      │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+  api["API Layer<br/><small>storage-api, documents-api, assets-api, contentbase-api</small>"]
+  domain["Domain Layer<br/><small>storage, documents, assets, contentbase-settings</small>"]
+  implementation["Implementation Layer<br/><small>storage-r2, storage-fs, documents-drizzle, assets-r2</small>"]
+  shared["Shared Layer<br/><small>core, auth, crypto, sanitizer, i18n, json-api</small>"]
+
+  api --> domain --> implementation --> shared
 ```
 
 ## Getting Help

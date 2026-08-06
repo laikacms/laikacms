@@ -4,6 +4,13 @@
 Decap-compatible backend (`@laikacms/decap`) so you can pair that admin with any LaikaCMS storage
 repository — filesystem, R2, S3, WebDAV, and more.
 
+Laika CMS works with upstream Decap CMS and maintains a standalone
+[`@laikacms/decap-cms` fork](https://github.com/laikacms/decap-cms). The fork follows the same
+separation of an agnostic core from opinionated outer packages and can be used without Laika CMS. It
+is a general-purpose continuation of Decap CMS, not an admin UI coupled exclusively to this project.
+See [the fork overview](./fork) for its documentation and the boundary between the admin UI and the
+Laika backend.
+
 Two integration shapes are supported, in increasing order of complexity:
 
 | Pattern                                                  | When to use                                            | Backend host                                                                           | Auth                             |
