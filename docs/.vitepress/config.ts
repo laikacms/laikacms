@@ -53,6 +53,7 @@ export default defineConfig({
             collapsed: false,
             items: [
               { text: 'Overview', link: '/guides/decap/' },
+              { text: 'The decap-cms Fork', link: '/guides/decap/fork' },
               { text: 'Quickstart: FileSystem + Decap', link: '/guides/decap/quickstart-fs' },
               { text: 'Standalone Worker', link: '/guides/decap/standalone-worker' },
               { text: 'Serving the Admin Shell', link: '/guides/decap/admin-shell' },

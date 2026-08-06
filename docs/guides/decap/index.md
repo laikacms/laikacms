@@ -18,6 +18,8 @@ that handler.
 
 ## In this section
 
+- **[The `@laikacms/decap-cms` fork](./fork)** — the admin UI itself; links out to the fork's own
+  documentation on GitHub (overview, skills, CSP, contributing).
 - **[Self-Hosting Quickstart (FileSystem + Decap)](./quickstart-fs)** — the end-to-end starting
   point: a plain Node.js server with filesystem storage and the Decap admin, no cloud account.
 - **[Standalone Worker (BYO storage)](./standalone-worker)** — wire `decapApi(...)` by hand over any
