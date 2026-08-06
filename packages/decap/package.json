@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/decap",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "publishConfig": {
     "access": "public"
   },
@@ -72,16 +72,13 @@
     "prepack": "node ../../scripts/check-no-catalog-deps.mjs"
   },
   "dependencies": {
-    "aws-jwt-verify": "catalog:aws",
     "effect": "catalog:default",
-    "jsonwebtoken": "catalog:",
-    "jwt-decode": "catalog:",
     "laikacms": "workspace:*",
     "uuid": "catalog:",
     "yaml": "catalog:"
   },
   "peerDependencies": {
-    "@laikacms/decap-cms": ">=4.0.4-alpha.3",
+    "@laikacms/decap-cms": ">=4.1.0",
     "react": "catalog:react"
   },
   "peerDependenciesMeta": {
@@ -94,8 +91,7 @@
   },
   "devDependencies": {
     "@hono/node-server": "catalog:server",
-    "@laikacms/decap-cms": "4.0.4-alpha.3",
-    "@types/jsonwebtoken": "catalog:types",
+    "@laikacms/decap-cms": "4.1.0",
     "@types/node": "catalog:types",
     "@types/react": "catalog:types",
     "rimraf": "catalog:tools",

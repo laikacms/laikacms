@@ -1,5 +1,11 @@
 # @laikacms/vite-plugin
 
+## 3.0.1
+
+### Patch Changes
+
+- laikacms@3.0.1
+
 ## 3.0.0
 
 ### Minor Changes

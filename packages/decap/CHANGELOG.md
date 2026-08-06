@@ -1,5 +1,13 @@
 # @laikacms/decap
 
+## 3.0.1
+
+### Patch Changes
+
+- Bump the `@laikacms/decap-cms` peer dependency to `4.1.0` (and the dev dependency used for
+  type-checking/tests to match). The supported minimum is now `>=4.1.0`.
+  - laikacms@3.0.1
+
 ## 3.0.0
 
 ### Major Changes
