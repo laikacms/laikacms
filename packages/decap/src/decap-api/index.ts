@@ -24,6 +24,27 @@ export {
 } from './scopes.js';
 export type { GranularScope, Scope, ScopePolicyOptions } from './scopes.js';
 
+// PAT / bearer-resolution seam (implementation in laikacms/auth). Re-exported
+// so a decap-api consumer can wire scoped bearers (OAuth session + PAT) into
+// authenticateAccessToken from one import, and get user.scopes for the policy
+// above. See decap-cms docs/contributing/learnings/dcb-002-authorization-model.
+export {
+  hasRequiredScope,
+  InsufficientScopeError,
+  mintPersonalAccessToken,
+  requireScope,
+  resolveBearer,
+} from 'laikacms/auth';
+export type {
+  AuthContext,
+  MintPatDeps,
+  MintPatInput,
+  MintPatResult,
+  PatRecord,
+  ResolveBearerDeps,
+  SessionVerificationResult,
+} from 'laikacms/auth';
+
 import type { Scope } from './scopes.js';
 
 /**
