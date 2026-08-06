@@ -28,12 +28,13 @@ const assets = new R2AssetsRepository({
 
 ## Constructor options
 
-| Option                     | Type                      | Required | Description                                                                                                                          |
-| -------------------------- | ------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
-| `bucket`                   | `R2Bucket`                | Yes      | The Cloudflare R2 bucket binding from the Workers environment.                                                                       |
-| `sanitizer`                | `Sanitizer`               | Yes\*    | A `Sanitizer` instance that strips privacy-sensitive metadata (EXIF, GPS, …) from uploaded files. See [Sanitizer](#sanitizer) below. |
-| `createUrl`                | `(key: string) => string` | No       | Maps a storage key to a public URL. If omitted, `getUrls` returns the raw key.                                                       |
-| `dangerouslyAllowAllFiles` | `true`                    | No       | Bypasses sanitization entirely. **Do not use in production.** See [Escape hatch](#escape-hatch) below.                               |
+| Option                     | Type                                              | Required | Description                                                                                                                          |
+| -------------------------- | ------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `bucket`                   | `R2Bucket`                                        | Yes      | The Cloudflare R2 bucket binding from the Workers environment.                                                                       |
+| `sanitizer`                | `Sanitizer`                                       | Yes\*    | A `Sanitizer` instance that strips privacy-sensitive metadata (EXIF, GPS, …) from uploaded files. See [Sanitizer](#sanitizer) below. |
+| `createUrl`                | `(key: string) => string`                         | No       | Maps a storage key to a public URL. If omitted, `getUrls` returns the raw key.                                                       |
+| `createVariations`         | `(key: string) => Record<string, AssetVariation>` | No       | Returns named variations (thumbnails, WebP versions, etc.) for an asset key. See [Image variations](#image-variations) below.        |
+| `dangerouslyAllowAllFiles` | `true`                                            | No       | Bypasses sanitization entirely. **Do not use in production.** See [Escape hatch](#escape-hatch) below.                               |
 
 \* Either `sanitizer` **or** `{ dangerouslyAllowAllFiles: true }` is required. The constructor
 throws at runtime if neither is provided.
@@ -96,6 +97,39 @@ every asset whose key contains `"logo"` (e.g. `brand/logo.png`, `icons/logo-dark
 Sending an undeclared filter name (anything other than `search`) returns `400 Bad Request`. Inspect
 `GET /capabilities` (`attributes.filtering.filters`) to see the current list of supported filter
 names at runtime.
+
+## Image variations
+
+`createVariations` lets you expose pre-generated responsive variants (thumbnails, WebP copies, size
+tiers) for each asset. The callback receives the asset key and returns a named map of
+`AssetVariation` objects; these are served via `GET /resources/:key?include=variations` on the
+`assets-api`.
+
+```ts
+import { R2AssetsRepository } from 'laikacms/assets/r2';
+import { FileSanitizerImpl } from 'laikacms/file-sanitizer';
+
+const assets = new R2AssetsRepository({
+  bucket: env.MY_BUCKET,
+  sanitizer: new FileSanitizerImpl(),
+  createUrl: key => `https://assets.example.com/${key}`,
+  createVariations: key => ({
+    thumb: {
+      variant: 'thumb',
+      url: `https://assets.example.com/thumb/${key}`,
+      width: 200,
+      height: 200,
+    },
+    webp: {
+      variant: 'webp',
+      url: `https://assets.example.com/webp/${key.replace(/\.[^.]+$/, '.webp')}`,
+      mimeType: 'image/webp',
+    },
+  }),
+});
+```
+
+Return `{}` (or omit the option) for assets that have no variations.
 
 ## TypeScript
 

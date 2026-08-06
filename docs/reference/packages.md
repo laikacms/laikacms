@@ -11,10 +11,10 @@ packages currently have co-located docs: [`laikacms`](./packages/laikacms/) and
 
 > **Repository layout (June 2026, updated July 2026, updated August 2026).** This monorepo carries
 > `laikacms`, `@laikacms/decap`, `@laikacms/vite-plugin`, `@laikacms/github`, `@laikacms/gitlab`,
-> and `@laikacms/bitbucket` as actively developed packages
-> (`@laikacms/decap-ai` and the client-side decap extras moved into the `@laikacms/decap-cms` fork
-> in July 2026, DCMS-492). The other packages documented below (`@laikacms/aws`, `@laikacms/git-gateway`,
-> `laikacli`, `decap-cms-widget-lexicaleditor`, `decap-cms-widget-portabletext-editor`,
+> and `@laikacms/bitbucket` as actively developed packages (`@laikacms/decap-ai` and the client-side
+> decap extras moved into the `@laikacms/decap-cms` fork in July 2026, DCMS-492). The other packages
+> documented below (`@laikacms/aws`, `@laikacms/git-gateway`, `laikacli`,
+> `decap-cms-widget-lexicaleditor`, `decap-cms-widget-portabletext-editor`,
 > `decap-cms-lexical-core`, and the rest of the adapters) are still published to npm under the same
 > names but are now developed in **separate repositories**. Their npm names are unchanged, so
 > consumers install them exactly as before.
