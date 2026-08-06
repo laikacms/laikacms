@@ -12,6 +12,20 @@ import { buildLocksApi, type LockStore } from './locks.js';
 export type { EntryLock, LockOwner, LockStore } from './locks.js';
 export { createInMemoryLockStore, DEFAULT_ENTRY_LOCK_TTL_MS } from './locks.js';
 
+export {
+  ADMIN_SCOPE,
+  createScopePolicy,
+  GRANULAR_SCOPES,
+  hasScope,
+  isScope,
+  normalizeScopes,
+  requiredScopeFor,
+  WILDCARD_SCOPE,
+} from './scopes.js';
+export type { GranularScope, Scope, ScopePolicyOptions } from './scopes.js';
+
+import type { Scope } from './scopes.js';
+
 /**
  * CORS configuration for `decapApi`.
  *
@@ -84,6 +98,13 @@ export interface User {
   email: string;
   name?: string;
   passwordHash?: string;
+  /**
+   * The principal's granted scopes (open `resource:action` vocabulary). Read by
+   * {@link createScopePolicy}; populate it in `authenticateAccessToken`,
+   * typically from the OAuth session's granted scope. Omitted means "no scopes"
+   * (the default policy then denies everything except identity-only routes).
+   */
+  scopes?: Scope[];
 }
 
 /** Which sub-API a request targets. */
