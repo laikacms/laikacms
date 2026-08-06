@@ -82,6 +82,16 @@ utilities. Imported via subpath exports.
 | `laikacms/serializers/markdown` | Markdown with frontmatter |
 | `laikacms/serializers/raw`      | Raw binary/text           |
 
+`StorageSerializer` implementations (`StorageFormat`-typed, for wiring into a `StorageRepository`)
+are exported as separate `storage-serializers-*` subpaths rather than under `serializers/*`:
+
+| Subpath                                 | Description                                       |
+| --------------------------------------- | ------------------------------------------------- |
+| `laikacms/storage-serializers-json`     | `StorageSerializer` for JSON documents            |
+| `laikacms/storage-serializers-yaml`     | `StorageSerializer` for YAML documents            |
+| `laikacms/storage-serializers-markdown` | `StorageSerializer` for Markdown with frontmatter |
+| `laikacms/storage-serializers-raw`      | `StorageSerializer` for raw binary/text           |
+
 ### Shared (`packages/laikacms/src/shared/`)
 
 | Subpath                      | Description                                                                                                                                                                                                                                               |
