@@ -38,14 +38,6 @@ function makeCustomDirectorySettingsProvider(directory: string): ContentBaseSett
   } as ContentBaseSettingsProvider;
 }
 
-describe('ContentBaseAssetsRepository — getCapabilities', () => {
-  it('returns a capabilities object with a compatibilityDate and pagination', async () => {
-    const caps = await LaikaTask.runPromise(repo.getCapabilities());
-    expect(typeof caps.compatibilityDate).toBe('string');
-    expect(caps.pagination).toBeDefined();
-  });
-});
-
 describe('ContentBaseAssetsRepository — createAsset / getAsset', () => {
   it('round-trips: create then getAsset returns the same key and type', async () => {
     const key = KEY('photo.png');

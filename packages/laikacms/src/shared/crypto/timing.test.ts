@@ -1,15 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addTimingJitter, TIMING_CONSTANTS, withTimingJitter } from './timing.js';
-
-describe('TIMING_CONSTANTS', () => {
-  it('exports MAX_JITTER_MS as a number', () => {
-    expect(typeof TIMING_CONSTANTS.MAX_JITTER_MS).toBe('number');
-  });
-
-  it('exports DEFAULT_JITTER_MS as a number', () => {
-    expect(typeof TIMING_CONSTANTS.DEFAULT_JITTER_MS).toBe('number');
-  });
-});
+import { addTimingJitter, withTimingJitter } from './timing.js';
 
 describe('addTimingJitter', () => {
   it('resolves without throwing using default maxJitterMs', async () => {

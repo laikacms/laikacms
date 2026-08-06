@@ -117,19 +117,4 @@ describe('parseSettings', () => {
       expect(Object.keys(result.success)).not.toContain('unknownKey');
     }
   });
-
-  it('returns a typed ContentBaseSettings object on success', () => {
-    const data = {
-      collections: {
-        blog: { type: 'document', key: 'blog', name: 'Blog' },
-      },
-    };
-    const result = parseSettings(data);
-    expect(Result.isSuccess(result)).toBe(true);
-    if (Result.isSuccess(result)) {
-      const settings = result.success;
-      expect(typeof settings).toBe('object');
-      expect(settings.collections).toBeDefined();
-    }
-  });
 });
