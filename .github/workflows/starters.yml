@@ -1,0 +1,95 @@
+name: Starters
+
+on:
+  pull_request:
+    paths:
+      - 'starters/**'
+      - 'packages/**'
+      - 'scripts/starter-versions.mjs'
+      - 'scripts/sync-starter-versions.mjs'
+      - 'scripts/check-starter-versions.mjs'
+      - '.github/workflows/starters.yml'
+  push:
+    branches: [develop, main]
+    paths:
+      - 'starters/**'
+      - 'packages/**'
+      - 'scripts/*starter-versions*.mjs'
+
+permissions:
+  contents: read
+
+jobs:
+  # Guard: starters must ship published semver in sync with the current release,
+  # and must never carry workspace:/catalog:/link:/file: protocols (a downloaded
+  # starter would fail to install). Pure package.json inspection — no install.
+  versions:
+    name: Version + protocol guard
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Check starter versions
+        run: node scripts/check-starter-versions.mjs
+
+  # Build each starter against the LOCAL library build via a dependency override,
+  # so breakage surfaces before a release while the committed package.json keeps
+  # its published caret ranges (proving copy-and-go structure).
+  #
+  # DISABLED until the starter source migration lands (LCMS-455): the trees still
+  # import the pre-3.x package layout and starter-vite-react-blog needs
+  # WebStorageRepository (LCMS-451). Flip `if` to enable once they build.
+  build:
+    name: "Build (${{ matrix.starter }})"
+    if: ${{ false }}
+    needs: versions
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        starter:
+          - starter-vite-react-blog
+          - starter-hono-blog
+          - starter-workers-blog
+          - starter-astro-blog
+          - starter-github-blog
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Build the library from local source
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm run build
+
+      - name: Pack local @laikacms packages
+        id: pack
+        run: |
+          mkdir -p "$RUNNER_TEMP/tgz"
+          for pkg in laikacms decap github; do
+            pnpm --filter "./packages/$pkg" pack --out "$RUNNER_TEMP/tgz/$pkg.tgz"
+          done
+
+      - name: Install starter against the local build and typecheck/build
+        working-directory: starters/${{ matrix.starter }}
+        run: |
+          # Override published deps with the freshly packed local tarballs, so
+          # the starter builds against working-tree code, not the registry.
+          # pnpm 11 ignores the package.json "pnpm" field, so overrides go in
+          # a pnpm-workspace.yaml (which also keeps pnpm from climbing to the
+          # repo root workspace). Never committed — CI-only.
+          cat > pnpm-workspace.yaml <<EOF
+          overrides:
+            laikacms: "file:$RUNNER_TEMP/tgz/laikacms.tgz"
+            "@laikacms/decap": "file:$RUNNER_TEMP/tgz/decap.tgz"
+            "@laikacms/github": "file:$RUNNER_TEMP/tgz/github.tgz"
+          EOF
+          pnpm install --no-frozen-lockfile
+          pnpm run typecheck
+          pnpm run build --if-present

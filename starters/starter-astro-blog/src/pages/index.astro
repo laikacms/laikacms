@@ -1,0 +1,39 @@
+---
+/**
+ * Blog homepage — Vite expands this glob from the filesystem repository at
+ * build time. The resulting site has no production CMS server dependency.
+ */
+import Base from '../layouts/Base.astro';
+
+const modules = import.meta.glob('laika:doc/posts/*', { eager: true });
+const posts = Object.entries(modules).map(([id, value]) => ({
+  slug: id.slice('laika:doc/posts/'.length),
+  ...(value as { title?: string; date?: string; description?: string }),
+}));
+posts.sort((a, b) => (b.date ?? b.slug).localeCompare(a.date ?? a.slug));
+---
+
+<Base title="My Blog">
+  <h1>My Blog</h1>
+
+  {
+    posts.length === 0
+      ? (
+        <p>
+          No posts yet. <a href="/admin/">Open the CMS</a> to write your first post.
+        </p>
+      )
+      : (
+        <ul style="list-style:none;padding:0">
+          {posts.map(post => {
+            return (
+              <li style="margin-bottom:1.5rem">
+                <a href={`/blog/${post.slug}`}>{post.title ?? post.slug}</a>
+                {post.date && <> · <time>{new Date(post.date).toLocaleDateString()}</time></>}
+              </li>
+            );
+          })}
+        </ul>
+      )
+  }
+</Base>

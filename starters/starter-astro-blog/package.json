@@ -1,0 +1,31 @@
+{
+  "name": "@laikacms/starter-astro-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Static Astro blog with build-time LaikaCMS content and a local-dev JSON API.",
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "typecheck": "astro check"
+  },
+  "dependencies": {
+    "@laikacms/decap": "^3.0.1",
+    "@laikacms/decap-cms": "^4.1.0",
+    "@laikacms/vite-plugin": "^3.0.1",
+    "astro": "^7.1.6",
+    "laikacms": "^3.0.1",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.4"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^6.0.3"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}

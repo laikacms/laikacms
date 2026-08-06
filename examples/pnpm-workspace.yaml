@@ -9,6 +9,9 @@
 packages:
   - "../packages/laikacms"
 
+allowBuilds:
+  msgpackr-extract: true
+
 # Mirrors only the catalog entries that packages/laikacms/package.json
 # references. Must be kept in sync with the root pnpm-workspace.yaml.
 catalogs:
