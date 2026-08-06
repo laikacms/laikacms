@@ -117,17 +117,25 @@ const VERDICT_SCHEMA = {
   },
 }
 
-// The diff range is passed in by the GitHub Action via env vars; the scout
-// resolves it robustly and falls back to the last commit if they are absent.
+// The diff to review can come from three places, in priority order:
+//   1. an explicit range/description passed as `args` (local ad-hoc runs),
+//   2. GitHub Action env vars BASE_SHA/HEAD_SHA (CI runs),
+//   3. otherwise, whatever is uncommitted locally, or the branch vs its base.
+const requested =
+  typeof args === 'string' ? args : args && args.range ? args.range : ''
+
 phase('Scope')
 const scope = await agent(
   [
-    'You are scoping an adversarial security review of a single push. Determine the diff range and enumerate what changed.',
+    'You are scoping an adversarial security review of a code change. Determine what to diff and enumerate what changed.',
     '',
-    'Resolve the revision range in this order:',
-    '1. If env vars BASE_SHA and HEAD_SHA are set, BASE_SHA is not all-zeros, and `git cat-file -e "$BASE_SHA^{commit}"` succeeds, use "$BASE_SHA".."$HEAD_SHA".',
-    '2. Otherwise fall back to HEAD~1..HEAD.',
-    'Run `git --no-pager diff --stat <range>` and `git --no-pager diff <range>` to see the change. Read full files with Read when a hunk lacks context.',
+    'Resolve the change set in this order — use the first that applies:',
+    requested
+      ? `1. The caller specified this range/target explicitly — use it: \`${requested}\` (e.g. \`git --no-pager diff ${requested}\`).`
+      : '1. (no explicit range was passed)',
+    '2. If env vars BASE_SHA and HEAD_SHA are set, BASE_SHA is not all-zeros, and `git cat-file -e "$BASE_SHA^{commit}"` succeeds, diff "$BASE_SHA".."$HEAD_SHA" (a CI push).',
+    '3. Otherwise this is a local run: if `git status --porcelain` shows uncommitted changes, review the working tree — `git --no-pager diff HEAD` (include staged changes). If the tree is clean, diff the current branch against its base: find the base with `git merge-base HEAD origin/develop` (fall back to `develop`, then `origin/main`/`main`) and diff `<base>...HEAD`.',
+    'Run `git --no-pager diff --stat` and `git --no-pager diff` for the resolved change set. Read full files with Read when a hunk lacks context. State the resolved range in the `range` field.',
     '',
     'For every changed file, record a one-line summary, the exported/public symbols the diff altered (functions, classes, types, HTTP routes, config keys), and whether it is security-relevant.',
     'Ignore pure test fixtures, lockfiles, generated files, docs, and formatting-only changes — set them aside, do not list them.',
