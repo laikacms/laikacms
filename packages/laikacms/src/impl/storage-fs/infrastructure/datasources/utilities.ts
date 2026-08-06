@@ -1,5 +1,6 @@
 import { isError } from 'effect/Predicate';
 import { ErrorCode, ErrorCodeToClassMap, InternalError, LaikaError } from 'laikacms/core';
+import type { TranslationKey } from 'laikacms/i18n';
 
 // Common system errors#
 // This is a list of system errors commonly-encountered when writing a Node.js program. For a comprehensive list, see the errno(3) man page.
@@ -32,79 +33,101 @@ import { ErrorCode, ErrorCodeToClassMap, InternalError, LaikaError } from 'laika
 
 // ETIMEDOUT (Operation timed out): A connect or send request failed because the connected party did not properly respond after a period of time. Usually encountered by http or net. Often a sign that a socket.end() was not properly called.
 
+// `translationKey` follows the convention documented at
+// docs/concepts/recoverable-warning-translations.md — each entry reuses the closest matching
+// `storage.fs.*` key from the shared i18n catalog rather than minting a per-errno key.
 const systemErrors = {
   EACCES: {
     publicMessage: 'Permission denied',
     laikaCode: 'forbidden',
+    translationKey: 'storage.fs.permissionDenied',
   },
   EADDRINUSE: {
     laikaCode: 'conflict',
     publicMessage: 'Address already in use',
+    translationKey: 'storage.fs.unexpectedFileSystemError',
   },
   ECONNREFUSED: {
     publicMessage: 'Connection refused',
     laikaCode: 'bad_request',
+    translationKey: 'storage.fs.unexpectedFileSystemError',
   },
   ECONNRESET: {
     publicMessage: 'Connection reset by peer',
     laikaCode: 'bad_request',
+    translationKey: 'storage.fs.unexpectedFileSystemError',
   },
   EEXIST: {
     publicMessage: 'File exists',
     laikaCode: 'conflict',
+    translationKey: 'storage.fs.entryAlreadyExists',
   },
   EISDIR: {
     publicMessage: 'Is a directory',
     laikaCode: 'conflict',
+    translationKey: 'storage.fs.expectedFileFoundDirectory',
   },
   EMFILE: {
     publicMessage: 'Too many open files in system',
     laikaCode: 'service_unavailable',
+    translationKey: 'storage.fs.unexpectedFileSystemError',
   },
   ENAMETOOLONG: {
     publicMessage: 'Key or path segment too long (max 255 bytes per path component)',
     laikaCode: 'bad_request',
+    translationKey: 'storage.fs.invalidRequest',
   },
   ENOENT: {
     publicMessage: 'No such file or directory',
     laikaCode: 'not_found',
+    translationKey: 'storage.fs.fileNotFound',
   },
   ENOTDIR: {
     publicMessage: 'Not a directory',
     laikaCode: 'bad_request',
+    translationKey: 'storage.fs.expectedDirectoryFoundFile',
   },
   ENOTEMPTY: {
     publicMessage: 'Directory not empty',
     laikaCode: 'conflict',
+    translationKey: 'storage.fs.directoryNotEmpty',
   },
   ENOTFOUND: {
     publicMessage: 'DNS lookup failed',
     laikaCode: 'not_found',
+    translationKey: 'storage.fs.fileNotFound',
   },
   EPERM: {
     publicMessage: 'Operation not permitted',
     laikaCode: 'forbidden',
+    translationKey: 'storage.fs.permissionDenied',
   },
   EPIPE: {
     publicMessage: 'Broken pipe',
     laikaCode: 'bad_request',
+    translationKey: 'storage.fs.unexpectedFileSystemError',
   },
   ETIMEDOUT: {
     publicMessage: 'Operation timed out',
     laikaCode: 'gateway_timeout',
+    translationKey: 'storage.fs.unexpectedFileSystemError',
   },
-} as const satisfies Record<string, { publicMessage: string, laikaCode: ErrorCode }>;
+} as const satisfies Record<string, { publicMessage: string, laikaCode: ErrorCode, translationKey: TranslationKey }>;
 
 export const mapFsErrorToLaikaError = (error: unknown): LaikaError => {
   if (isError(error)) {
     if (error instanceof LaikaError) return error;
     if ('code' in error && typeof error.code === 'string') {
       if (error.code in systemErrors) {
-        const { publicMessage: description, laikaCode } = systemErrors[error.code as keyof typeof systemErrors];
+        const { publicMessage: description, laikaCode, translationKey } =
+          systemErrors[error.code as keyof typeof systemErrors];
         const ErrorClass = ErrorCodeToClassMap[laikaCode];
-        return new ErrorClass(description, { cause: error });
+        return new ErrorClass(description, { cause: error, translation: { message: translationKey } });
       }
     }
   }
-  return new InternalError(`An unexpected error occurred while accessing the file system.`, { cause: error });
+  return new InternalError(`An unexpected error occurred while accessing the file system.`, {
+    cause: error,
+    translation: { message: 'storage.fs.unexpectedFileSystemError' },
+  });
 };

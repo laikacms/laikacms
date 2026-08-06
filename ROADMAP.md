@@ -44,10 +44,11 @@ Deliberate cautions to avoid over-positioning Laika before adoption earns it.
 The Effect-based warning pipeline is feature-complete (see Completed below). These items are small,
 lower-priority extensions to it.
 
-- [ ] **i18n for recoverable warning messages** — warnings currently surface as plain English
-      strings from each backend. Define a translation-key convention (or attach
-      `translation.message` per `LaikaError`) so the Decap UI can localise them when it gains a
-      partial-success affordance.
+- [x] **i18n for recoverable warning messages** — translation-key convention documented at
+      `docs/concepts/recoverable-warning-translations.md` (LCMS-471); `storage-fs` is the reference
+      implementation. Remaining backends (`storage-r2`, `storage-s3`, `storage-drizzle`,
+      `storage-webdav`, `documents-jsonapi-proxy`, `contentbase`, `obsidian`, …) still need the same
+      treatment — follow-up work, not blocking.
 - [ ] **`documents-jsonapi-proxy` atomic-batch warnings** — same pattern: when the proxy starts
       sending `/operations` POSTs (rather than individual HTTP calls per op), it should forward
       per-result `meta.warnings` from the upstream response.

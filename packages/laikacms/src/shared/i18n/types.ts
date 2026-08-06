@@ -45,6 +45,27 @@ export interface Translation {
   invalidEmail: string;
   invalidUrl: string;
   noPermissionAccessDocument: string;
+
+  // Recoverable-warning translation keys — see
+  // docs/concepts/recoverable-warning-translations.md for the naming convention.
+  // storage-fs (reference implementation, LCMS-471)
+  'storage.fs.fileNotFound': string;
+  'storage.fs.directoryNotFound': string;
+  'storage.fs.permissionDenied': string;
+  'storage.fs.directoryNotEmpty': string;
+  'storage.fs.expectedFileFoundDirectory': string;
+  'storage.fs.expectedDirectoryFoundFile': string;
+  'storage.fs.entryTypeUnsupported': string;
+  'storage.fs.pathTraversalRejected': string;
+  'storage.fs.entryAlreadyExists': string;
+  'storage.fs.contentRequired': string;
+  'storage.fs.invalidRequest': string;
+  'storage.fs.failedToReadFile': string;
+  'storage.fs.failedToGetFileMetadata': string;
+  'storage.fs.failedToGetDirectoryMetadata': string;
+  'storage.fs.failedToListDirectory': string;
+  'storage.fs.failedToListDrives': string;
+  'storage.fs.unexpectedFileSystemError': string;
 }
 
 export type TranslationKey = keyof Translation;

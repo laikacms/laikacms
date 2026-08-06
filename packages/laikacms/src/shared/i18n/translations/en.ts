@@ -46,6 +46,27 @@ export const en = {
   invalidEmail: 'Must be a valid email address',
   invalidUrl: 'Must be a valid URL',
   noPermissionAccessDocument: 'You do not have permission to access this document',
+
+  // Recoverable-warning translation keys — see
+  // docs/concepts/recoverable-warning-translations.md for the naming convention.
+  // storage-fs (reference implementation, LCMS-471)
+  'storage.fs.fileNotFound': 'The requested file could not be found.',
+  'storage.fs.directoryNotFound': 'The requested folder could not be found.',
+  'storage.fs.permissionDenied': 'You do not have the necessary file system permissions for this operation.',
+  'storage.fs.directoryNotEmpty': 'The folder could not be deleted because it still contains items.',
+  'storage.fs.expectedFileFoundDirectory': 'A file was expected here, but a folder was found instead.',
+  'storage.fs.expectedDirectoryFoundFile': 'A folder was expected here, but a file was found instead.',
+  'storage.fs.entryTypeUnsupported': 'Only files and folders can be managed here.',
+  'storage.fs.pathTraversalRejected': 'The requested path is outside the allowed storage location.',
+  'storage.fs.entryAlreadyExists': 'An item with this key already exists.',
+  'storage.fs.contentRequired': 'Content is required to create this item.',
+  'storage.fs.invalidRequest': 'The request could not be processed.',
+  'storage.fs.failedToReadFile': 'The file could not be read.',
+  'storage.fs.failedToGetFileMetadata': 'The file metadata could not be retrieved.',
+  'storage.fs.failedToGetDirectoryMetadata': 'The folder metadata could not be retrieved.',
+  'storage.fs.failedToListDirectory': 'The folder contents could not be listed.',
+  'storage.fs.failedToListDrives': 'The available drives could not be listed.',
+  'storage.fs.unexpectedFileSystemError': 'An unexpected file system error occurred.',
 };
 
 /**
