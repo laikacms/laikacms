@@ -12,19 +12,21 @@ with esbuild, then serve the resulting files as static assets.
 ### Install build dependencies
 
 ```bash
-npm install @laikacms/decap @laikacms/decap-cms decap-cms-app esbuild --save-dev
+npm install @laikacms/decap @laikacms/decap-cms @emotion/react @emotion/styled esbuild --save-dev
 ```
 
 `@laikacms/decap-cms` is the scoped Decap CMS fork that provides the `@laikacms/decap-cms/lib/util`,
 `/lib/auth`, `/ui-default`, and `/core` subpaths required by the Laika backend at bundle time.
-Without it the esbuild step will fail with "Could not resolve" errors.
+Without it the esbuild step will fail with "Could not resolve" errors. `@emotion/react` and
+`@emotion/styled` are required (non-optional) peer dependencies of `@laikacms/decap-cms` — the admin
+shell is styled with Emotion.
 
 ### Create the admin entry point
 
 ```typescript
 // admin/index.ts
+import { DecapCmsApp as CMS } from '@laikacms/decap-cms';
 import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
-import CMS from 'decap-cms-app';
 
 const LaikaBackend = createLaikaBackend();
 CMS.registerBackend('laika', LaikaBackend);

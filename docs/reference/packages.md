@@ -151,8 +151,13 @@ See [The `@laikacms/decap-cms` fork](../guides/decap/fork) for the full package 
 ### Install
 
 ```sh
-pnpm add @laikacms/decap-cms
+pnpm add @laikacms/decap-cms @emotion/react @emotion/styled
 ```
+
+`@emotion/react` and `@emotion/styled` are required (non-optional) peer dependencies — the admin
+shell is styled with Emotion. `@laikacms/decap-cms` also declares optional peers for specific
+widgets (`@apollo/client`, `graphql`, `ol`, `uploadcare-widget`, `lucide-react`,
+`@radix-ui/react-icons`, …); install only the ones the widgets you use require.
 
 ### Key subpaths
 
@@ -264,7 +269,7 @@ pnpm add decap-cms-widget-lexicaleditor decap-cms-lexical-core
 ### Basic usage
 
 ```ts
-import CMS from 'decap-cms-app';
+import { DecapCmsApp as CMS } from '@laikacms/decap-cms';
 import { Widget } from 'decap-cms-widget-lexicaleditor';
 
 CMS.registerWidget(Widget);
@@ -308,7 +313,7 @@ pnpm add decap-cms-widget-portabletext-editor
 ### Basic usage
 
 ```ts
-import CMS from 'decap-cms-app';
+import { DecapCmsApp as CMS } from '@laikacms/decap-cms';
 import { Widget } from 'decap-cms-widget-portabletext-editor';
 
 CMS.registerWidget(Widget);

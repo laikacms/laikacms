@@ -195,8 +195,8 @@ config to hand to `CMS.init` — the local one while `vite dev` is running, the 
 everywhere else — so a single admin config needs no manual switching:
 
 ```ts
+import { DecapCmsApp as CMS } from '@laikacms/decap-cms';
 import { createLaikaBackend, resolveLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
-import CMS from 'decap-cms-app';
 
 CMS.registerBackend('laika', createLaikaBackend());
 
