@@ -16,6 +16,8 @@ import type {
   CmsConfig as Config,
   CmsCredentials as Credentials,
   CmsDisplayURL as DisplayURL,
+  CmsEntryLock as EntryLock,
+  CmsEntryLockOwner as EntryLockOwner,
   CmsFileEntry as Entry,
   CmsImplementation as Implementation,
   CmsImplementationEntry as ImplementationEntry,
@@ -1412,6 +1414,93 @@ export default function createLaikaBackend(
     async getDeployPreview(_collection: string, _slug: string): Promise<{ url: string, status: string } | null> {
       // Deploy preview is not supported in this implementation
       return null;
+    }
+
+    // ===== ADVISORY ENTRY LOCKING =====
+    //
+    // Implements the fork's optional lock capability against the decap-api
+    // `/locks` endpoint. Locks are advisory — they only drive the "being edited
+    // by X" banner, they never block a write.
+    //
+    // Degradation contract (see @laikacms/decap-cms core/actions/entryLock):
+    // - a **409** must throw, so the CMS re-fetches the current holder and shows
+    //   the conflict banner;
+    // - anything else (endpoint absent because the deployment has no lock store,
+    //   or a transient network error) resolves `null`/void, so locking silently
+    //   degrades to "unsupported" instead of false-alarming a conflict or
+    //   blocking the edit. The interface types acquire/refresh as non-null, so
+    //   the degraded return is cast.
+
+    private lockEndpoint(path: string): string {
+      return `${this.apiUrl}/locks/${encodeURIComponent(path)}`;
+    }
+
+    private async lockAuthHeaders(): Promise<Record<string, string>> {
+      const token = await this.getToken();
+      return { Authorization: `Bearer ${token}` };
+    }
+
+    async getEntryLock(path: string): Promise<EntryLock | null> {
+      try {
+        const res = await fetch(this.lockEndpoint(path), { headers: await this.lockAuthHeaders() });
+        if (!res.ok) return null;
+        const body = await res.json();
+        return (body?.data as EntryLock | null) ?? null;
+      } catch {
+        return null;
+      }
+    }
+
+    async acquireEntryLock(
+      path: string,
+      owner: EntryLockOwner,
+      opts?: { force?: boolean },
+    ): Promise<EntryLock> {
+      let res: Response;
+      try {
+        res = await fetch(this.lockEndpoint(path), {
+          method: 'POST',
+          headers: { ...(await this.lockAuthHeaders()), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ owner: { name: owner.name }, force: opts?.force ?? false }),
+        });
+      } catch {
+        return null as unknown as EntryLock; // transient — degrade to unsupported
+      }
+      if (res.status === 409) {
+        throw new APIError('Entry is locked by another user', 409, 'Laika Backend');
+      }
+      if (!res.ok) return null as unknown as EntryLock;
+      const body = await res.json();
+      return (body?.data ?? null) as EntryLock;
+    }
+
+    async refreshEntryLock(path: string, owner: EntryLockOwner): Promise<EntryLock> {
+      let res: Response;
+      try {
+        res = await fetch(`${this.lockEndpoint(path)}/refresh`, {
+          method: 'POST',
+          headers: { ...(await this.lockAuthHeaders()), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ owner: { name: owner.name } }),
+        });
+      } catch {
+        return null as unknown as EntryLock;
+      }
+      if (res.status === 409) {
+        throw new APIError('Entry lock was taken by another user', 409, 'Laika Backend');
+      }
+      if (!res.ok) return null as unknown as EntryLock;
+      const body = await res.json();
+      return (body?.data ?? null) as EntryLock;
+    }
+
+    async releaseEntryLock(path: string, _owner: EntryLockOwner): Promise<void> {
+      // Best-effort — the server evicts the lock only if we still hold it, and a
+      // failed release just lets the lock lapse via its TTL.
+      try {
+        await fetch(this.lockEndpoint(path), { method: 'DELETE', headers: await this.lockAuthHeaders() });
+      } catch {
+        // ignore
+      }
     }
   };
 }

@@ -2391,3 +2391,119 @@ describe('LaikaBackend.restoreUser()', () => {
     expect(vi.mocked(unsentRequest.fetchWithTimeout)).toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// Suite: advisory entry locking (getEntryLock / acquire / refresh / release)
+//
+// These four methods call the decap-api `/locks` endpoint via the global
+// `fetch`. We stub `fetch` and assert the status→result mapping that the fork's
+// entry-lock action depends on: 409 must throw (→ conflict banner), anything
+// else resolves null/void (→ locking silently unsupported, never a false
+// conflict or a blocked edit).
+// ---------------------------------------------------------------------------
+
+describe('LaikaBackend advisory entry locking', () => {
+  let backend: any;
+  let fetchMock: ReturnType<typeof vi.fn>;
+
+  const OWNER = { id: 'alice@example.com', name: 'Alice' };
+  const LOCK = {
+    path: 'posts/hello',
+    owner: OWNER,
+    acquiredAt: '2026-01-01T00:00:00.000Z',
+    expiresAt: '2026-01-01T00:05:00.000Z',
+  };
+
+  const jsonResponse = (status: number, body: unknown) =>
+    new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
+
+  beforeEach(() => {
+    const LaikaBackend = createLaikaBackend();
+    backend = new LaikaBackend(makeConfig()) as any;
+    backend.tokenPromise = () => Promise.resolve('fake-token');
+    fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('getEntryLock returns the lock on 200 and URL-encodes the key + sends Bearer auth', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, { data: LOCK }));
+
+    const lock = await backend.getEntryLock('posts/hello');
+
+    expect(lock).toEqual(LOCK);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.example.com/locks/posts%2Fhello');
+    expect(init.headers.Authorization).toBe('Bearer fake-token');
+  });
+
+  it('getEntryLock returns null when the entry is unlocked (data: null)', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, { data: null }));
+    expect(await backend.getEntryLock('posts/hello')).toBeNull();
+  });
+
+  it('getEntryLock returns null on a non-200 (e.g. /locks not mounted → 404)', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(404, {}));
+    expect(await backend.getEntryLock('posts/hello')).toBeNull();
+  });
+
+  it('getEntryLock returns null on a network error', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+    expect(await backend.getEntryLock('posts/hello')).toBeNull();
+  });
+
+  it('acquireEntryLock returns the lock on 200 and POSTs owner name + force', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, { data: LOCK }));
+
+    const lock = await backend.acquireEntryLock('posts/hello', OWNER, { force: true });
+
+    expect(lock).toEqual(LOCK);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('https://api.example.com/locks/posts%2Fhello');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual({ owner: { name: 'Alice' }, force: true });
+  });
+
+  it('acquireEntryLock throws on 409 (conflict → the CMS shows the banner)', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(409, { data: LOCK }));
+    await expect(backend.acquireEntryLock('posts/hello', OWNER)).rejects.toThrow();
+  });
+
+  it('acquireEntryLock resolves null on a non-409 error (degrade to unsupported)', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(500, {}));
+    expect(await backend.acquireEntryLock('posts/hello', OWNER)).toBeNull();
+  });
+
+  it('acquireEntryLock resolves null on a network error', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+    expect(await backend.acquireEntryLock('posts/hello', OWNER)).toBeNull();
+  });
+
+  it('refreshEntryLock hits the /refresh sub-path and returns the lock on 200', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(200, { data: LOCK }));
+
+    const lock = await backend.refreshEntryLock('posts/hello', OWNER);
+
+    expect(lock).toEqual(LOCK);
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.example.com/locks/posts%2Fhello/refresh');
+  });
+
+  it('refreshEntryLock throws on 409 (lock force-taken mid-session)', async () => {
+    fetchMock.mockResolvedValue(jsonResponse(409, { data: LOCK }));
+    await expect(backend.refreshEntryLock('posts/hello', OWNER)).rejects.toThrow();
+  });
+
+  it('releaseEntryLock issues a DELETE and swallows errors', async () => {
+    fetchMock.mockRejectedValue(new Error('offline'));
+    await expect(backend.releaseEntryLock('posts/hello', OWNER)).resolves.toBeUndefined();
+
+    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    await backend.releaseEntryLock('posts/hello', OWNER);
+    const lastCall = fetchMock.mock.calls[fetchMock.mock.calls.length - 1];
+    expect(lastCall[0]).toBe('https://api.example.com/locks/posts%2Fhello');
+    expect(lastCall[1].method).toBe('DELETE');
+  });
+});

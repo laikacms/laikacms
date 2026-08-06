@@ -35,6 +35,8 @@ Key options accepted by `decapApi(options)`:
 | `documents`               | `DocumentsRepository`                                    | yes      | Document storage backend                                                                                                                                                         |
 | `storage`                 | `StorageRepository`                                      | yes      | Raw file storage backend                                                                                                                                                         |
 | `assets`                  | `AssetsRepository`                                       | no       | Binary asset storage; enables the `/assets` endpoint when provided                                                                                                               |
+| `locks`                   | `LockStore`                                              | no       | Shared store enabling **advisory entry locking**; mounts the `/locks` endpoint (see below)                                                                                       |
+| `locksTtlMs`              | `number`                                                 | no       | Advisory-lock lifetime in ms. Defaults to 5 minutes (matches the Decap admin's refresh cadence)                                                                                  |
 | `basePath`                | `string`                                                 | no       | URL prefix for all endpoints (e.g. `'/api/decap'`)                                                                                                                               |
 | `authenticateAccessToken` | `(token: string) => Promise<User>`                       | yes      | Validates a Bearer access token and returns the principal's **identity**                                                                                                         |
 | `authenticateApiToken`    | `(key: string) => Promise<User>`                         | no       | Validates an API key sent via `X-API-Key` or `Authorization: ApiKey` for M2M access                                                                                              |
@@ -112,6 +114,35 @@ own permissions; reach for `ctx.request` only for what the parsed fields don't c
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `fetch(request: Request): Promise<Response>`                       | Main catch-all handler — route all Decap API traffic here                                                                                                                                                                      |
 | `authenticateRequest(request: Request): Promise<Response \| User>` | Validates the request's auth (Bearer or API key) and returns a `User` on success, or a `Response` (401/403) on failure. Use in SSR route handlers to protect pages or inject the current user without routing through the API. |
+
+#### Advisory entry locking
+
+When two editors open the same entry, the Decap admin (`@laikacms/decap-cms` ≥ 4.1.0) can show a
+_"being edited by X"_ banner. This is an **advisory** signal only — it never blocks a write; it just
+warns before someone clobbers a concurrent edit. Pass a `locks` store to arbitrate those locks
+server-side, so two _different_ browsers/users see the same lock (the admin's bundled fallback only
+shares locks between tabs of one browser):
+
+```ts
+import { createInMemoryLockStore, decapApi } from '@laikacms/decap/decap-api';
+
+const api = decapApi({
+  // …documents, storage, authenticate*, authorize…
+  locks: createInMemoryLockStore(),
+});
+```
+
+- **Opt-in.** Omit `locks` and the `/locks` endpoint isn't mounted; the admin silently degrades to
+  "locking unsupported" (no banner, no errors).
+- **Owner identity is the authenticated principal's** (`user.email`), derived server-side — never
+  trusted from the request body — so a caller can't release or override someone else's lock.
+- **Bring a shared store for multi-node deploys.** `createInMemoryLockStore()` is a single-instance
+  reference; on more than one node its locks are invisible across nodes. Implement `LockStore` (a
+  small TTL key/value: `get`/`set`/`delete`) over Redis, a KV namespace, or a DB table. Locks are
+  advisory, so the store is best-effort — it need not be strictly atomic.
+
+The client backend (`createLaikaBackend()`) implements the admin's four optional lock methods
+against this endpoint automatically — no extra wiring.
 
 #### `decap-cms-backend-laika` options
 

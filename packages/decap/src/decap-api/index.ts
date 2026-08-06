@@ -7,6 +7,10 @@ import { buildJsonApi as buildDocumentsApi } from 'laikacms/documents/api';
 import { errorToJsonApiMapper, isLaikaError } from 'laikacms/json-api';
 import type { StorageRepository } from 'laikacms/storage';
 import { buildJsonApi as buildStorageApi } from 'laikacms/storage/api';
+import { buildLocksApi, type LockStore } from './locks.js';
+
+export type { EntryLock, LockOwner, LockStore } from './locks.js';
+export { createInMemoryLockStore, DEFAULT_ENTRY_LOCK_TTL_MS } from './locks.js';
 
 /**
  * CORS configuration for `decapApi`.
@@ -83,7 +87,7 @@ export interface User {
 }
 
 /** Which sub-API a request targets. */
-export type CmsDomain = 'documents' | 'storage' | 'assets' | 'session';
+export type CmsDomain = 'documents' | 'storage' | 'assets' | 'session' | 'locks';
 
 /**
  * The operation a request performs, derived from its HTTP method and action
@@ -126,6 +130,19 @@ export interface DecapOptions {
    * If provided, an /assets endpoint will be available using the assets-api.
    */
   assets?: AssetsRepository;
+  /**
+   * Optional shared store enabling **advisory entry locking**. When provided, a
+   * `/locks` endpoint is mounted and the Decap admin's "being edited by X"
+   * banner is arbitrated server-side (so two different browsers/users see the
+   * same lock). When omitted, `/locks` does not exist and the client degrades
+   * to "locking unsupported" — no banner, no errors.
+   *
+   * For locks to be visible across nodes the store must be shared; the bundled
+   * {@link createInMemoryLockStore} only works for a single server instance.
+   */
+  locks?: LockStore;
+  /** Advisory-lock lifetime in ms. Defaults to 5 minutes (matches the fork). */
+  locksTtlMs?: number;
   basePath?: string | undefined;
   /**
    * Authenticate a Bearer access token and return the user.
@@ -283,6 +300,20 @@ function parseAuthzTarget(
   domainSubPath: string,
 ): Pick<AuthorizeContext, 'operation' | 'collection' | 'itemId'> {
   const segments = domainSubPath.split('/').filter(Boolean);
+  // /locks keys are a single URL-encoded segment (`collection%2Fslug`), with an
+  // optional `/refresh` action. Decode the whole key into `itemId` and expose
+  // the collection portion so a policy can allow-list who may take locks.
+  if (domain === 'locks') {
+    const isRefresh = segments[segments.length - 1] === 'refresh';
+    const encoded = (isRefresh ? segments.slice(0, -1) : segments).join('/');
+    let key: string | undefined;
+    try {
+      key = encoded ? decodeURIComponent(encoded) : undefined;
+    } catch {
+      key = encoded || undefined;
+    }
+    return { operation: deriveOperation(method, undefined), collection: key?.split('/')[0], itemId: key };
+  }
   const collection = segments[0];
   const itemId = segments[1] ? decodeURIComponent(segments[1]) : undefined;
   const action = segments[2];
@@ -292,7 +323,7 @@ function parseAuthzTarget(
 }
 
 export const decapApi = (options: DecapOptions): DecapApi => {
-  const { documents, storage, assets, authenticateAccessToken, authenticateApiToken, basePath, cors } = options;
+  const { documents, storage, assets, locks, authenticateAccessToken, authenticateApiToken, basePath, cors } = options;
 
   const base = Url.normalize(basePath ?? '');
 
@@ -301,6 +332,7 @@ export const decapApi = (options: DecapOptions): DecapApi => {
   const documentsEndpoint = TL.url`${base}/documents`;
   const assetsEndpoint = TL.url`${base}/assets`;
   const sessionEndpoint = TL.url`${base}/session`;
+  const locksEndpoint = TL.url`${base}/locks`;
 
   const authenticateRequest = async (request: Request): Promise<Response | User> => {
     const authHeader = request.headers.get('Authorization') || undefined;
@@ -426,6 +458,9 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       } else if (assets && pathname.startsWith(assetsEndpoint)) {
         domain = 'assets';
         domainEndpoint = assetsEndpoint;
+      } else if (locks && pathname.startsWith(locksEndpoint)) {
+        domain = 'locks';
+        domainEndpoint = locksEndpoint;
       } else {
         options.logger?.debug('Endpoint not found:', pathname);
         return await respond(
@@ -511,6 +546,20 @@ export const decapApi = (options: DecapOptions): DecapApi => {
       } else if (domain === 'assets' && assets) {
         const assetsApi = buildAssetsApi({ repository: assets, basePath: `${base}/assets`, logger: options.logger });
         return await respond(await assetsApi.fetch(request));
+      } else if (domain === 'locks' && locks) {
+        const locksApi = buildLocksApi({
+          store: locks,
+          basePath: `${base}/locks`,
+          ttlMs: options.locksTtlMs,
+          logger: options.logger,
+        });
+        // Owner identity is the authenticated principal's, derived here — never
+        // trusted from the request body — so a caller can't release/override
+        // another user's lock. `email` matches the client's lock-owner id
+        // (Decap's `user.login`), so "locked-by-me" detection works.
+        return await respond(
+          await locksApi.fetch(request, { id: user.email, name: user.name ?? user.email }),
+        );
       } else {
         // Unreachable: domain resolution above already guaranteed a served
         // endpoint (and that `assets` is present when domain === 'assets').
