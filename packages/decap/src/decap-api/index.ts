@@ -12,6 +12,41 @@ import { buildLocksApi, type LockStore } from './locks.js';
 export type { EntryLock, LockOwner, LockStore } from './locks.js';
 export { createInMemoryLockStore, DEFAULT_ENTRY_LOCK_TTL_MS } from './locks.js';
 
+export {
+  ADMIN_SCOPE,
+  createScopePolicy,
+  GRANULAR_SCOPES,
+  hasScope,
+  isScope,
+  normalizeScopes,
+  requiredScopeFor,
+  WILDCARD_SCOPE,
+} from './scopes.js';
+export type { GranularScope, Scope, ScopePolicyOptions } from './scopes.js';
+
+// PAT / bearer-resolution seam (implementation in laikacms/auth). Re-exported
+// so a decap-api consumer can wire scoped bearers (OAuth session + PAT) into
+// authenticateAccessToken from one import, and get user.scopes for the policy
+// above. See decap-cms docs/contributing/learnings/dcb-002-authorization-model.
+export {
+  hasRequiredScope,
+  InsufficientScopeError,
+  mintPersonalAccessToken,
+  requireScope,
+  resolveBearer,
+} from 'laikacms/auth';
+export type {
+  AuthContext,
+  MintPatDeps,
+  MintPatInput,
+  MintPatResult,
+  PatRecord,
+  ResolveBearerDeps,
+  SessionVerificationResult,
+} from 'laikacms/auth';
+
+import type { Scope } from './scopes.js';
+
 /**
  * CORS configuration for `decapApi`.
  *
@@ -84,6 +119,13 @@ export interface User {
   email: string;
   name?: string;
   passwordHash?: string;
+  /**
+   * The principal's granted scopes (open `resource:action` vocabulary). Read by
+   * {@link createScopePolicy}; populate it in `authenticateAccessToken`,
+   * typically from the OAuth session's granted scope. Omitted means "no scopes"
+   * (the default policy then denies everything except identity-only routes).
+   */
+  scopes?: Scope[];
 }
 
 /** Which sub-API a request targets. */

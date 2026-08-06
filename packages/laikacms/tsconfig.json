@@ -113,6 +113,9 @@
       "laikacms/serializers/yaml": [
         "src/serializers/storage-serializers-yaml/index.ts"
       ],
+      "laikacms/auth": [
+        "src/shared/auth/index.ts"
+      ],
       "laikacms/core": [
         "src/shared/core/index.ts"
       ],

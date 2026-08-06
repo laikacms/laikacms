@@ -211,6 +211,11 @@
       "import": "./dist/serializers/storage-serializers-yaml/index.js",
       "default": "./dist/serializers/storage-serializers-yaml/index.js"
     },
+    "./auth": {
+      "types": "./dist/shared/auth/index.d.ts",
+      "import": "./dist/shared/auth/index.js",
+      "default": "./dist/shared/auth/index.js"
+    },
     "./core": {
       "types": "./dist/shared/core/index.d.ts",
       "import": "./dist/shared/core/index.js",
