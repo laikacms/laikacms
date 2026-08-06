@@ -14,7 +14,7 @@ JavaScript runtime.
 Docs are in `docs/` folder (no separate website). Use relative links:
 
 - To other docs: `[Architecture](./concepts/architecture.md)`
-- To packages: `[storage](../packages/domain/storage)`
+- To packages: `[storage](./packages/domain/storage)`
 
 ## Code Style
 
