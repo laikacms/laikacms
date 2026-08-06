@@ -900,12 +900,44 @@ describe('verifyAuthentication', () => {
     expect(result.error).toBe('Credential not found');
   });
 
-  it('returns success: false for counter replay attack (new counter <= stored)', async () => {
-    // First set stored signCount to 10
-    await cb.updateCredential(storedCredentialId, { signCount: 10 });
+  it('flags a non-increasing counter on a validly signed assertion as cloneWarning without rejecting', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      // First set stored signCount to 10
+      await cb.updateCredential(storedCredentialId, { signCount: 10 });
 
-    // Build auth data with signCount=5 (less than stored)
-    const { clientDataJSONb64, authenticatorDataB64, signatureB64 } = await buildValidAuthenticationData(5);
+      // Build auth data with signCount=5 (less than stored) but a VALID signature.
+      // Per WebAuthn §6.1.1 this is a cloning signal, not an auth failure —
+      // hard-rejecting would permanently lock out restored-from-backup authenticators.
+      const { clientDataJSONb64, authenticatorDataB64, signatureB64 } = await buildValidAuthenticationData(5);
+
+      const response = {
+        id: storedCredentialId,
+        rawId: storedCredentialId,
+        type: 'public-key' as const,
+        response: {
+          clientDataJSON: clientDataJSONb64,
+          authenticatorData: authenticatorDataB64,
+          signature: signatureB64,
+        },
+      };
+
+      const result = await verifyAuthentication(response, config);
+
+      expect(result.success).toBe(true);
+      expect(result.cloneWarning).toBe(true);
+      expect(warnSpy).toHaveBeenCalledOnce();
+
+      // Stored counter is monotonic: never decreased by a regressed assertion
+      const updated = await cb.getCredentialById(storedCredentialId);
+      expect(updated!.signCount).toBe(10);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it('does not set cloneWarning on a normal increasing counter', async () => {
+    const { clientDataJSONb64, authenticatorDataB64, signatureB64 } = await buildValidAuthenticationData(1);
 
     const response = {
       id: storedCredentialId,
@@ -919,9 +951,49 @@ describe('verifyAuthentication', () => {
     };
 
     const result = await verifyAuthentication(response, config);
+    expect(result.success).toBe(true);
+    expect(result.cloneWarning).toBeUndefined();
+  });
 
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('Sign count mismatch');
+  it('a forged assertion with a max-value counter cannot mutate stored state or lock out the credential', async () => {
+    // Forged assertion: huge counter, garbage signature
+    const { clientDataJSONb64 } = await buildValidAuthenticationData(1);
+    const forgedAuthData = await buildAuthenticatorDataForAuthentication('example.com', 0xffffffff);
+
+    const forged = {
+      id: storedCredentialId,
+      rawId: storedCredentialId,
+      type: 'public-key' as const,
+      response: {
+        clientDataJSON: clientDataJSONb64,
+        authenticatorData: base64UrlEncode(forgedAuthData),
+        signature: base64UrlEncode(new Uint8Array(64)),
+      },
+    };
+
+    const forgedResult = await verifyAuthentication(forged, config);
+    expect(forgedResult.success).toBe(false);
+
+    // A failed signature must never mutate stored state
+    const afterForged = await cb.getCredentialById(storedCredentialId);
+    expect(afterForged!.signCount).toBe(0);
+
+    // The legitimate authenticator still works afterwards
+    const { clientDataJSONb64: cd, authenticatorDataB64, signatureB64 } = await buildValidAuthenticationData(1);
+    const legit = {
+      id: storedCredentialId,
+      rawId: storedCredentialId,
+      type: 'public-key' as const,
+      response: {
+        clientDataJSON: cd,
+        authenticatorData: authenticatorDataB64,
+        signature: signatureB64,
+      },
+    };
+
+    const legitResult = await verifyAuthentication(legit, config);
+    expect(legitResult.success).toBe(true);
+    expect(legitResult.cloneWarning).toBeUndefined();
   });
 
   it('returns success: false when origin does not match', async () => {
@@ -1023,5 +1095,415 @@ describe('verifyAuthentication', () => {
     const result = await verifyAuthentication(response, config);
     expect(result.success).toBe(false);
     expect(result.error).toContain('RP ID');
+  });
+
+  it('a consumed challenge cannot be replayed', async () => {
+    const { clientDataJSONb64, authenticatorDataB64, signatureB64 } = await buildValidAuthenticationData(1);
+
+    const response = {
+      id: storedCredentialId,
+      rawId: storedCredentialId,
+      type: 'public-key' as const,
+      response: {
+        clientDataJSON: clientDataJSONb64,
+        authenticatorData: authenticatorDataB64,
+        signature: signatureB64,
+      },
+    };
+
+    const first = await verifyAuthentication(response, config);
+    expect(first.success).toBe(true);
+
+    const replay = await verifyAuthentication(response, config);
+    expect(replay.success).toBe(false);
+    expect(replay.error).toContain('challenge');
+  });
+
+  it('rejects an assertion when the challenge is bound to a different user', async () => {
+    // Challenge issued for user-2, but the assertion uses user-1's credential
+    const challengeBytes = new Uint8Array(32);
+    crypto.getRandomValues(challengeBytes);
+    const challenge = base64UrlEncode(challengeBytes);
+    await cb.storeChallenge({
+      challenge,
+      userId: 'user-2',
+      expiresAt: Date.now() + 300_000,
+      type: 'authentication',
+    });
+
+    const authData = await buildAuthenticatorDataForAuthentication('example.com', 1);
+    const clientDataJSONBytes = new TextEncoder().encode(
+      JSON.stringify({ type: 'webauthn.get', challenge, origin: 'https://example.com' }),
+    );
+    const clientDataHash = new Uint8Array(await crypto.subtle.digest('SHA-256', clientDataJSONBytes));
+    const signedData = new Uint8Array(authData.length + clientDataHash.length);
+    signedData.set(authData);
+    signedData.set(clientDataHash, authData.length);
+    const sig = await signEcdsa(privateKey, signedData);
+
+    const response = {
+      id: storedCredentialId,
+      rawId: storedCredentialId,
+      type: 'public-key' as const,
+      response: {
+        clientDataJSON: base64UrlEncode(clientDataJSONBytes),
+        authenticatorData: base64UrlEncode(authData),
+        signature: base64UrlEncode(sig),
+      },
+    };
+
+    const result = await verifyAuthentication(response, config);
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Credential does not belong to the challenged user');
+  });
+
+  it('rejects a malformed base64url signature instead of decoding garbage', async () => {
+    const { clientDataJSONb64, authenticatorDataB64 } = await buildValidAuthenticationData(1);
+
+    const response = {
+      id: storedCredentialId,
+      rawId: storedCredentialId,
+      type: 'public-key' as const,
+      response: {
+        clientDataJSON: clientDataJSONb64,
+        authenticatorData: authenticatorDataB64,
+        signature: '!!!not base64url!!!',
+      },
+    };
+
+    const result = await verifyAuthentication(response, config);
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Invalid base64url input');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// COSE key building helpers (integer keys, which encodeCBOR above cannot emit)
+// ---------------------------------------------------------------------------
+
+function cborIntBytes(n: number): Uint8Array {
+  if (n >= 0 && n < 24) return new Uint8Array([n]);
+  if (n >= 0 && n < 256) return new Uint8Array([0x18, n]);
+  if (n < 0) {
+    const v = -1 - n;
+    if (v < 24) return new Uint8Array([0x20 | v]);
+    if (v < 256) return new Uint8Array([0x38, v]);
+    if (v < 65536) return new Uint8Array([0x39, v >> 8, v & 0xff]);
+  }
+  throw new Error('int out of range');
+}
+
+function cborByteString(b: Uint8Array): Uint8Array {
+  let header: Uint8Array;
+  if (b.length < 24) header = new Uint8Array([0x40 | b.length]);
+  else if (b.length < 256) header = new Uint8Array([0x58, b.length]);
+  else header = new Uint8Array([0x59, b.length >> 8, b.length & 0xff]);
+  const result = new Uint8Array(header.length + b.length);
+  result.set(header);
+  result.set(b, header.length);
+  return result;
+}
+
+/** Build a CBOR map with integer keys, as used by COSE keys */
+function buildCoseKey(entries: Array<[number, number | Uint8Array]>): Uint8Array {
+  const parts: Uint8Array[] = [new Uint8Array([0xa0 | entries.length])];
+  for (const [key, value] of entries) {
+    parts.push(cborIntBytes(key));
+    parts.push(value instanceof Uint8Array ? cborByteString(value) : cborIntBytes(value));
+  }
+  const total = parts.reduce((s, p) => s + p.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const p of parts) {
+    out.set(p, off);
+    off += p.length;
+  }
+  return out;
+}
+
+/** Whether this runtime's WebCrypto supports Ed25519 (Node >= 18.4, workerd, Deno, Bun) */
+const ed25519Supported = await (async () => {
+  try {
+    await crypto.subtle.generateKey({ name: 'Ed25519' }, false, ['sign', 'verify']);
+    return true;
+  } catch {
+    return false;
+  }
+})();
+
+// ---------------------------------------------------------------------------
+// CBOR decoder hardening (pre-auth DoS surface)
+// ---------------------------------------------------------------------------
+
+describe('CBOR decoder hardening', () => {
+  let cb: ReturnType<typeof makeCallbacks>;
+  let config: PasskeyConfig;
+
+  beforeEach(() => {
+    cb = makeCallbacks();
+    config = makeConfig(cb);
+  });
+
+  /** Run verifyRegistration with valid client data but attacker-crafted attestation bytes */
+  async function attemptWithAttestation(attestationBytes: Uint8Array): Promise<{ success: boolean, error?: string }> {
+    const challengeBytes = new Uint8Array(32);
+    crypto.getRandomValues(challengeBytes);
+    const challenge = base64UrlEncode(challengeBytes);
+    await cb.storeChallenge({
+      challenge,
+      userId: 'user-1',
+      expiresAt: Date.now() + 300_000,
+      type: 'registration',
+    });
+
+    const clientDataJSON = JSON.stringify({ type: 'webauthn.create', challenge, origin: 'https://example.com' });
+
+    return verifyRegistration({
+      id: 'attacker-cred',
+      rawId: 'attacker-cred',
+      type: 'public-key',
+      response: {
+        clientDataJSON: base64UrlEncode(new TextEncoder().encode(clientDataJSON)),
+        attestationObject: base64UrlEncode(attestationBytes),
+      },
+    }, config);
+  }
+
+  it('rejects a tiny input declaring a ~4-billion-element array quickly, without hanging or allocating', async () => {
+    // 0x9a = array with 32-bit length, declared length 0xffffffff — 5 bytes total
+    const start = Date.now();
+    const result = await attemptWithAttestation(new Uint8Array([0x9a, 0xff, 0xff, 0xff, 0xff]));
+    const elapsedMs = Date.now() - start;
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('CBOR');
+    expect(elapsedMs).toBeLessThan(1000);
+  });
+
+  it('rejects a tiny input declaring a ~4-billion-entry map quickly', async () => {
+    // 0xba = map with 32-bit length
+    const start = Date.now();
+    const result = await attemptWithAttestation(new Uint8Array([0xba, 0xff, 0xff, 0xff, 0xff]));
+    const elapsedMs = Date.now() - start;
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('CBOR');
+    expect(elapsedMs).toBeLessThan(1000);
+  });
+
+  it('rejects a declared collection length that exceeds the remaining input', async () => {
+    // 0x98 0x64 = array of 100 elements, but no content follows
+    const result = await attemptWithAttestation(new Uint8Array([0x98, 0x64]));
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('CBOR');
+  });
+
+  it('rejects a byte string whose declared length exceeds the input', async () => {
+    // 0x5a = byte string with 32-bit length, claims 65536 bytes, none follow
+    const result = await attemptWithAttestation(new Uint8Array([0x5a, 0x00, 0x01, 0x00, 0x00]));
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('CBOR data truncated');
+  });
+
+  it('rejects deeply nested CBOR (stack exhaustion guard)', async () => {
+    // Twenty nested single-element arrays: 0x81 x20 then 0x00
+    const nested = new Uint8Array(21).fill(0x81);
+    nested[20] = 0x00;
+    const result = await attemptWithAttestation(nested);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('CBOR nesting too deep');
+  });
+
+  it('rejects truncated input instead of decoding garbage', async () => {
+    // Map of 2 entries but input ends after the header
+    const result = await attemptWithAttestation(new Uint8Array([0xa2, 0x01]));
+    expect(result.success).toBe(false);
+    expect(result.error).toBeTruthy();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Algorithm agreement: advertised set === verifiable set
+// ---------------------------------------------------------------------------
+
+describe('algorithm support agreement', () => {
+  let cb: ReturnType<typeof makeCallbacks>;
+  let config: PasskeyConfig;
+
+  beforeEach(() => {
+    cb = makeCallbacks();
+    config = makeConfig(cb);
+  });
+
+  async function storeRegistrationChallenge(): Promise<string> {
+    const challengeBytes = new Uint8Array(32);
+    crypto.getRandomValues(challengeBytes);
+    const challenge = base64UrlEncode(challengeBytes);
+    await cb.storeChallenge({
+      challenge,
+      userId: 'user-1',
+      expiresAt: Date.now() + 300_000,
+      type: 'registration',
+    });
+    return challenge;
+  }
+
+  async function registerWithCoseKey(
+    publicKeyCose: Uint8Array,
+    credentialId: Uint8Array,
+  ): Promise<{ success: boolean, credentialId?: string, error?: string }> {
+    const challenge = await storeRegistrationChallenge();
+    const authData = await buildAuthenticatorDataForRegistration('example.com', credentialId, publicKeyCose);
+    const clientDataJSON = JSON.stringify({ type: 'webauthn.create', challenge, origin: 'https://example.com' });
+    const attestationObject = encodeCBOR({ fmt: 'none', attStmt: {}, authData });
+
+    return verifyRegistration({
+      id: base64UrlEncode(credentialId),
+      rawId: base64UrlEncode(credentialId),
+      type: 'public-key',
+      response: {
+        clientDataJSON: base64UrlEncode(new TextEncoder().encode(clientDataJSON)),
+        attestationObject: base64UrlEncode(attestationObject),
+      },
+    }, config);
+  }
+
+  async function authenticate(
+    credentialId: string,
+    sign: (data: Uint8Array) => Promise<Uint8Array>,
+    signCount = 1,
+  ): Promise<{ success: boolean, userId?: string, error?: string }> {
+    const challengeBytes = new Uint8Array(32);
+    crypto.getRandomValues(challengeBytes);
+    const challenge = base64UrlEncode(challengeBytes);
+    await cb.storeChallenge({
+      challenge,
+      userId: 'user-1',
+      expiresAt: Date.now() + 300_000,
+      type: 'authentication',
+    });
+
+    const authData = await buildAuthenticatorDataForAuthentication('example.com', signCount);
+    const clientDataJSONBytes = new TextEncoder().encode(
+      JSON.stringify({ type: 'webauthn.get', challenge, origin: 'https://example.com' }),
+    );
+    const clientDataHash = new Uint8Array(await crypto.subtle.digest('SHA-256', clientDataJSONBytes));
+    const signedData = new Uint8Array(authData.length + clientDataHash.length);
+    signedData.set(authData);
+    signedData.set(clientDataHash, authData.length);
+
+    return verifyAuthentication({
+      id: credentialId,
+      rawId: credentialId,
+      type: 'public-key',
+      response: {
+        clientDataJSON: base64UrlEncode(clientDataJSONBytes),
+        authenticatorData: base64UrlEncode(authData),
+        signature: base64UrlEncode(await sign(signedData)),
+      },
+    }, config);
+  }
+
+  it('advertises EdDSA (alg -8) exactly when the runtime can verify it', async () => {
+    const result = await generateRegistrationOptions('user-1', config);
+    const algs = result.publicKey.pubKeyCredParams.map(p => p.alg);
+    expect(algs).toContain(-7);
+    expect(algs).toContain(-257);
+    expect(algs.includes(-8)).toBe(ed25519Supported);
+  });
+
+  it.runIf(ed25519Supported)('registers and authenticates an Ed25519 credential end-to-end', async () => {
+    const keyPair = await crypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']) as CryptoKeyPair;
+    const publicKeyRaw = new Uint8Array(await crypto.subtle.exportKey('raw', keyPair.publicKey));
+
+    // COSE OKP key: {1: 1 (OKP), 3: -8 (EdDSA), -1: 6 (Ed25519), -2: x}
+    const cose = buildCoseKey([[1, 1], [3, -8], [-1, 6], [-2, publicKeyRaw]]);
+
+    const credId = new Uint8Array(16);
+    crypto.getRandomValues(credId);
+
+    const registration = await registerWithCoseKey(cose, credId);
+    expect(registration.success).toBe(true);
+
+    const auth = await authenticate(
+      registration.credentialId!,
+      async data => new Uint8Array(await crypto.subtle.sign('Ed25519', keyPair.privateKey, data)),
+    );
+    expect(auth.success).toBe(true);
+    expect(auth.userId).toBe('user-1');
+  });
+
+  it('registers and authenticates an RS384 credential using the COSE alg hash (not hardcoded SHA-256)', async () => {
+    const keyPair = await crypto.subtle.generateKey(
+      {
+        name: 'RSASSA-PKCS1-v1_5',
+        modulusLength: 2048,
+        publicExponent: new Uint8Array([1, 0, 1]),
+        hash: 'SHA-384',
+      },
+      true,
+      ['sign', 'verify'],
+    );
+    const jwk = await crypto.subtle.exportKey('jwk', keyPair.publicKey);
+    const n = base64UrlDecode(jwk.n!);
+    const e = base64UrlDecode(jwk.e!);
+
+    // COSE RSA key: {1: 3 (RSA), 3: -258 (RS384), -1: n, -2: e}
+    const cose = buildCoseKey([[1, 3], [3, -258], [-1, n], [-2, e]]);
+
+    const credId = new Uint8Array(16);
+    crypto.getRandomValues(credId);
+
+    const registration = await registerWithCoseKey(cose, credId);
+    expect(registration.success).toBe(true);
+
+    const auth = await authenticate(
+      registration.credentialId!,
+      async data => new Uint8Array(await crypto.subtle.sign('RSASSA-PKCS1-v1_5', keyPair.privateKey, data)),
+    );
+    expect(auth.success).toBe(true);
+    expect(auth.userId).toBe('user-1');
+  });
+
+  it('rejects a credential with an unimplemented RSA algorithm (PS256) at registration time', async () => {
+    // {1: 3, 3: -37 (PS256), -1: n, -2: e} — verifySignature cannot verify PSS
+    const cose = buildCoseKey([[1, 3], [3, -37], [-1, new Uint8Array(8)], [-2, new Uint8Array(3)]]);
+    const result = await registerWithCoseKey(cose, new Uint8Array(16));
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Unsupported RSA algorithm');
+    expect(cb._credentials.size).toBe(0);
+  });
+
+  it('rejects a credential with an unknown key type at registration time', async () => {
+    const cose = buildCoseKey([[1, 5], [3, -7]]);
+    const result = await registerWithCoseKey(cose, new Uint8Array(16));
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Unsupported key type');
+    expect(cb._credentials.size).toBe(0);
+  });
+
+  it('rejects a registration challenge that has no user binding', async () => {
+    const challengeBytes = new Uint8Array(32);
+    crypto.getRandomValues(challengeBytes);
+    const challenge = base64UrlEncode(challengeBytes);
+    await cb.storeChallenge({
+      challenge,
+      expiresAt: Date.now() + 300_000,
+      type: 'registration',
+    });
+
+    const clientDataJSON = JSON.stringify({ type: 'webauthn.create', challenge, origin: 'https://example.com' });
+    const result = await verifyRegistration({
+      id: 'cred',
+      rawId: 'cred',
+      type: 'public-key',
+      response: {
+        clientDataJSON: base64UrlEncode(new TextEncoder().encode(clientDataJSON)),
+        attestationObject: '',
+      },
+    }, config);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe('Challenge is not bound to a user');
   });
 });

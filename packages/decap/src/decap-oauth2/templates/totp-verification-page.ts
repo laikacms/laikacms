@@ -17,7 +17,7 @@ import {
   totpStyles,
 } from './decap-styles.js';
 import type { HtmlTemplate, TemplateVariables } from './html.js';
-import { html, messages, processCustomLogo } from './html.js';
+import { escapeHtml, html, messages, processCustomLogo } from './html.js';
 
 // Template tag for CSS (enables intellisense)
 const css = String.raw;
@@ -131,20 +131,6 @@ export interface TotpVerificationPageOptions {
    * If not provided, defaults to English messages.
    */
   messages?: OAuthMessages;
-}
-
-/**
- * Escape HTML special characters to prevent XSS
- */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return text.replace(/[&<>"']/g, char => map[char]);
 }
 
 /**

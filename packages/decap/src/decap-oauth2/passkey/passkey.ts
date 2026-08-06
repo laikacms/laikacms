@@ -28,6 +28,12 @@ function base64UrlEncode(data: Uint8Array): string {
 }
 
 function base64UrlDecode(str: string): Uint8Array {
+  // Reject malformed input explicitly: some atob() implementations (notably
+  // Node's Buffer-backed one) silently ignore invalid characters, which would
+  // turn garbage into silently-wrong bytes instead of a verification error.
+  if (!/^[A-Za-z0-9_-]*$/.test(str) || str.length % 4 === 1) {
+    throw new Error('Invalid base64url input');
+  }
   // Add padding if needed
   let padded = str.replace(/-/g, '+').replace(/_/g, '/');
   while (padded.length % 4) {
@@ -39,6 +45,37 @@ function base64UrlDecode(str: string): Uint8Array {
     bytes[i] = binary.charCodeAt(i);
   }
   return bytes;
+}
+
+/**
+ * Known-valid Ed25519 public key (RFC 8032 test vector 1), used only to probe
+ * whether the runtime's WebCrypto implementation supports Ed25519.
+ */
+// dprint-ignore
+const ED25519_PROBE_KEY = new Uint8Array([
+  0xd7, 0x5a, 0x98, 0x01, 0x82, 0xb1, 0x0a, 0xb7, 0xd5, 0x4b, 0xfe, 0xd3, 0xc9, 0x64, 0x07, 0x3a,
+  0x0e, 0xe1, 0x72, 0xf3, 0xda, 0xa6, 0x23, 0x25, 0xaf, 0x02, 0x1a, 0x68, 0xf7, 0x07, 0x51, 0x1a,
+]);
+
+let ed25519SupportPromise: Promise<boolean> | undefined;
+
+/**
+ * Check whether this runtime's WebCrypto supports Ed25519 verification.
+ * Cached after the first probe. Used to keep the advertised algorithm set
+ * (`pubKeyCredParams`) in agreement with what `verifySignature` can verify:
+ * a credential we cannot verify must never be offered or stored, because with
+ * `passkey.required` it would permanently lock the user out.
+ */
+function supportsEd25519(): Promise<boolean> {
+  ed25519SupportPromise ??= (async () => {
+    try {
+      await crypto.subtle.importKey('raw', ED25519_PROBE_KEY, { name: 'Ed25519' }, false, ['verify']);
+      return true;
+    } catch {
+      return false;
+    }
+  })();
+  return ed25519SupportPromise;
 }
 
 /**
@@ -238,6 +275,17 @@ export async function generateRegistrationOptions(
   const userIdBytes = new TextEncoder().encode(userId);
   const userIdBase64 = base64UrlEncode(userIdBytes);
 
+  // Only advertise algorithms this runtime can actually verify. Advertising
+  // EdDSA on a runtime without Ed25519 support would let an authenticator
+  // enrol a credential that can never authenticate.
+  const pubKeyCredParams: RegistrationOptions['publicKey']['pubKeyCredParams'] = [
+    { type: 'public-key', alg: -7 }, // ES256 (ECDSA with P-256)
+    { type: 'public-key', alg: -257 }, // RS256 (RSASSA-PKCS1-v1_5 with SHA-256)
+  ];
+  if (await supportsEd25519()) {
+    pubKeyCredParams.push({ type: 'public-key', alg: -8 }); // EdDSA (Ed25519)
+  }
+
   return {
     publicKey: {
       challenge,
@@ -250,11 +298,7 @@ export async function generateRegistrationOptions(
         name: user.email,
         displayName: user.name || user.email,
       },
-      pubKeyCredParams: [
-        { type: 'public-key', alg: -7 }, // ES256 (ECDSA with P-256)
-        { type: 'public-key', alg: -257 }, // RS256 (RSASSA-PKCS1-v1_5 with SHA-256)
-        { type: 'public-key', alg: -8 }, // EdDSA
-      ],
+      pubKeyCredParams,
       timeout: 60000, // 60 seconds
       attestation: 'none', // We don't need attestation for most use cases
       authenticatorSelection: {
@@ -316,6 +360,12 @@ export async function verifyRegistration(
       return { success: false, error: 'Wrong challenge type' };
     }
 
+    // A registration challenge must be bound to a user; never store a
+    // credential with an undefined owner.
+    if (!storedChallenge.userId) {
+      return { success: false, error: 'Challenge is not bound to a user' };
+    }
+
     if (storedChallenge.expiresAt < Date.now()) {
       return { success: false, error: 'Challenge expired' };
     }
@@ -357,12 +407,20 @@ export async function verifyRegistration(
 
     const { credentialId, publicKey, aaguid } = parsedAuthData.attestedCredentialData;
 
+    // Reject credentials we can never verify (unsupported key type, curve or
+    // algorithm) at registration time. Storing one would enrol a credential
+    // that can never authenticate — permanent lockout under passkey.required.
+    const keyError = await validateCredentialPublicKey(publicKey);
+    if (keyError) {
+      return { success: false, error: keyError };
+    }
+
     // Store credential
     const credential: StoredCredential = {
       credentialId: base64UrlEncode(credentialId),
       publicKey: base64UrlEncode(publicKey),
       signCount: parsedAuthData.signCount,
-      userId: storedChallenge.userId!,
+      userId: storedChallenge.userId,
       createdAt: Date.now(),
       name: credentialName,
       aaguid: base64UrlEncode(aaguid),
@@ -466,11 +524,19 @@ export interface AuthenticationResponse {
 
 /**
  * Verify authentication response
+ *
+ * Signature counter semantics (WebAuthn L2 §6.1.1): the counter is a cloning
+ * *signal*, not an authentication gate. A signed assertion whose counter did
+ * not increase (common for synced/backup-restored passkeys, and authenticators
+ * that always report 0) still succeeds, but `cloneWarning` is set so callers
+ * can feed it into risk scoring. The stored counter is only ever mutated after
+ * the signature has verified, and is never decreased — so a forged assertion
+ * can never poison the stored counter and lock the credential out.
  */
 export async function verifyAuthentication(
   response: AuthenticationResponse,
   config: PasskeyConfig,
-): Promise<{ success: boolean, userId?: string, credentialId?: string, error?: string }> {
+): Promise<{ success: boolean, userId?: string, credentialId?: string, error?: string, cloneWarning?: boolean }> {
   const { rpId, origin, callbacks, userVerification = 'required' } = config;
 
   try {
@@ -506,6 +572,13 @@ export async function verifyAuthentication(
 
     if (storedChallenge.expiresAt < Date.now()) {
       return { success: false, error: 'Challenge expired' };
+    }
+
+    // If the challenge was issued for a specific user, the asserted credential
+    // must belong to that user — otherwise a challenge bound to user A could
+    // be satisfied with any other user's credential.
+    if (storedChallenge.userId && storedChallenge.userId !== credential.userId) {
+      return { success: false, error: 'Credential does not belong to the challenged user' };
     }
 
     // Decode authenticator data
@@ -549,17 +622,25 @@ export async function verifyAuthentication(
       return { success: false, error: 'Invalid signature' };
     }
 
-    // Verify sign count (replay attack prevention)
-    if (parsedAuthData.signCount > 0 || credential.signCount > 0) {
-      if (parsedAuthData.signCount <= credential.signCount) {
-        // Possible cloned authenticator
-        return { success: false, error: 'Sign count mismatch - possible cloned authenticator' };
-      }
+    // Signature counter (WebAuthn L2 §6.1.1): a non-increasing counter on a
+    // *validly signed* assertion is a cloning signal, not an authentication
+    // failure. Rejecting here would permanently lock out legitimate users whose
+    // authenticator was restored from backup or always reports 0. We surface it
+    // as `cloneWarning` and never decrease the stored counter. This code runs
+    // strictly after signature verification, so a forged assertion can never
+    // mutate stored state.
+    const counterInUse = parsedAuthData.signCount > 0 || credential.signCount > 0;
+    const cloneWarning = counterInUse && parsedAuthData.signCount <= credential.signCount;
+    if (cloneWarning) {
+      console.warn(
+        `Passkey sign count did not increase for credential ${credential.credentialId} `
+          + `(stored ${credential.signCount}, received ${parsedAuthData.signCount}) - possible cloned authenticator`,
+      );
     }
 
-    // Update credential
+    // Update credential (counter is monotonic: never decreased)
     await callbacks.updateCredential(credential.credentialId, {
-      signCount: parsedAuthData.signCount,
+      signCount: Math.max(parsedAuthData.signCount, credential.signCount),
       lastUsedAt: Date.now(),
     });
 
@@ -567,6 +648,7 @@ export async function verifyAuthentication(
       success: true,
       userId: credential.userId,
       credentialId: credential.credentialId,
+      ...(cloneWarning && { cloneWarning }),
     };
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Verification failed' };
@@ -618,6 +700,11 @@ interface ParsedAuthenticatorData {
 }
 
 function parseAuthenticatorData(data: Uint8Array): ParsedAuthenticatorData {
+  // rpIdHash (32) + flags (1) + signCount (4)
+  if (data.length < 37) {
+    throw new Error('Authenticator data too short');
+  }
+
   let offset = 0;
 
   // RP ID hash (32 bytes)
@@ -647,6 +734,11 @@ function parseAuthenticatorData(data: Uint8Array): ParsedAuthenticatorData {
 
   // Attested credential data (if present)
   if (parsedFlags.attestedCredentialData) {
+    // AAGUID (16 bytes) + credential ID length (2 bytes)
+    if (data.length < offset + 18) {
+      throw new Error('Attested credential data truncated');
+    }
+
     // AAGUID (16 bytes)
     const aaguid = data.slice(offset, offset + 16);
     offset += 16;
@@ -656,6 +748,9 @@ function parseAuthenticatorData(data: Uint8Array): ParsedAuthenticatorData {
     offset += 2;
 
     // Credential ID
+    if (data.length < offset + credentialIdLength) {
+      throw new Error('Attested credential data truncated');
+    }
     const credentialId = data.slice(offset, offset + credentialIdLength);
     offset += credentialIdLength;
 
@@ -673,16 +768,40 @@ function parseAuthenticatorData(data: Uint8Array): ParsedAuthenticatorData {
 }
 
 /**
- * Minimal CBOR decoder for attestation objects
+ * Maximum nesting depth accepted by the CBOR decoder. Attestation objects and
+ * COSE keys are shallow (2-3 levels); deep nesting is only ever an attack.
+ */
+const CBOR_MAX_DEPTH = 8;
+
+/**
+ * Hard ceiling on declared CBOR collection sizes. Real attestation objects
+ * and COSE keys contain a handful of entries; anything near this limit is
+ * malformed or malicious.
+ */
+const CBOR_MAX_COLLECTION_LENGTH = 1024;
+
+/**
+ * Minimal CBOR decoder for attestation objects.
+ *
+ * Hardened against attacker-supplied input (this runs pre-authentication):
+ * every declared length is capped against the remaining input size, collection
+ * sizes have a hard ceiling, nesting depth is limited, and reads past the end
+ * of input throw instead of yielding garbage.
  */
 function decodeCBOR(data: Uint8Array): Record<string, unknown> {
   let offset = 0;
 
   function readByte(): number {
+    if (offset >= data.length) {
+      throw new Error('CBOR data truncated');
+    }
     return data[offset++];
   }
 
   function readBytes(length: number): Uint8Array {
+    if (length > data.length - offset) {
+      throw new Error('CBOR data truncated');
+    }
     const bytes = data.slice(offset, offset + length);
     offset += length;
     return bytes;
@@ -702,7 +821,27 @@ function decodeCBOR(data: Uint8Array): Record<string, unknown> {
     throw new Error('Unsupported CBOR integer size');
   }
 
-  function decode(): unknown {
+  /**
+   * Read a collection length and validate it against the remaining input:
+   * a collection of N entries needs at least N * minBytesPerEntry more bytes,
+   * so a tiny input cannot declare a multi-billion-iteration loop.
+   */
+  function readCollectionLength(additionalInfo: number, minBytesPerEntry: number): number {
+    const length = readUint(additionalInfo);
+    if (length > CBOR_MAX_COLLECTION_LENGTH) {
+      throw new Error('CBOR collection length exceeds limit');
+    }
+    if (length * minBytesPerEntry > data.length - offset) {
+      throw new Error('CBOR collection length exceeds input size');
+    }
+    return length;
+  }
+
+  function decode(depth: number): unknown {
+    if (depth > CBOR_MAX_DEPTH) {
+      throw new Error('CBOR nesting too deep');
+    }
+
     const initial = readByte();
     const majorType = initial >> 5;
     const additionalInfo = initial & 0x1f;
@@ -723,19 +862,19 @@ function decodeCBOR(data: Uint8Array): Record<string, unknown> {
         return new TextDecoder().decode(readBytes(textLength));
       }
       case 4: { // Array
-        const arrayLength = readUint(additionalInfo);
+        const arrayLength = readCollectionLength(additionalInfo, 1);
         const array: unknown[] = [];
         for (let i = 0; i < arrayLength; i++) {
-          array.push(decode());
+          array.push(decode(depth + 1));
         }
         return array;
       }
       case 5: { // Map
-        const mapLength = readUint(additionalInfo);
+        const mapLength = readCollectionLength(additionalInfo, 2);
         const map: Record<string, unknown> = {};
         for (let i = 0; i < mapLength; i++) {
-          const key = decode();
-          const value = decode();
+          const key = decode(depth + 1);
+          const value = decode(depth + 1);
           map[String(key)] = value;
         }
         return map;
@@ -751,7 +890,78 @@ function decodeCBOR(data: Uint8Array): Record<string, unknown> {
     }
   }
 
-  return decode() as Record<string, unknown>;
+  return decode(0) as Record<string, unknown>;
+}
+
+/**
+ * Map a COSE RSASSA-PKCS1-v1_5 algorithm identifier to its WebCrypto hash.
+ * Returns undefined for algorithms we do not implement.
+ */
+function rsaHashForAlg(alg: number): string | undefined {
+  if (alg === -257) return 'SHA-256'; // RS256
+  if (alg === -258) return 'SHA-384'; // RS384
+  if (alg === -259) return 'SHA-512'; // RS512
+  return undefined;
+}
+
+/**
+ * Validate a COSE public key at registration time.
+ * Returns an error message when the key uses a type/curve/algorithm that
+ * `verifySignature` cannot verify on this runtime, null when the key is usable.
+ */
+async function validateCredentialPublicKey(publicKeyCose: Uint8Array): Promise<string | null> {
+  let coseKey: Record<string, unknown>;
+  try {
+    coseKey = decodeCBOR(publicKeyCose);
+  } catch {
+    return 'Malformed credential public key';
+  }
+
+  const kty = coseKey['1'] as number;
+  const alg = coseKey['3'] as number;
+
+  if (kty === 1) {
+    // OKP (EdDSA)
+    const crv = coseKey['-1'] as number;
+    if (crv !== 6 || alg !== -8) {
+      return `Unsupported OKP curve/algorithm: crv ${crv}, alg ${alg}`;
+    }
+    if (!(coseKey['-2'] instanceof Uint8Array)) {
+      return 'Malformed OKP public key';
+    }
+    if (!(await supportsEd25519())) {
+      return 'EdDSA is not supported by this runtime';
+    }
+    return null;
+  }
+
+  if (kty === 2) {
+    // EC2 (ECDSA)
+    const crv = coseKey['-1'] as number;
+    if (crv !== 1 && crv !== 2 && crv !== 3) {
+      return `Unsupported curve: ${crv}`;
+    }
+    if (alg !== -7 && alg !== -35 && alg !== -36) {
+      return `Unsupported algorithm: ${alg}`;
+    }
+    if (!(coseKey['-2'] instanceof Uint8Array) || !(coseKey['-3'] instanceof Uint8Array)) {
+      return 'Malformed EC2 public key';
+    }
+    return null;
+  }
+
+  if (kty === 3) {
+    // RSA
+    if (!rsaHashForAlg(alg)) {
+      return `Unsupported RSA algorithm: ${alg}`;
+    }
+    if (!(coseKey['-1'] instanceof Uint8Array) || !(coseKey['-2'] instanceof Uint8Array)) {
+      return 'Malformed RSA public key';
+    }
+    return null;
+  }
+
+  return `Unsupported key type: ${kty}`;
 }
 
 /**
@@ -769,7 +979,32 @@ async function verifySignature(
   const kty = coseKey['1'] as number; // Key type
   const alg = coseKey['3'] as number; // Algorithm
 
-  if (kty === 2) {
+  if (kty === 1) {
+    // OKP key (EdDSA / Ed25519)
+    const crv = coseKey['-1'] as number; // Curve
+    if (crv !== 6) {
+      throw new Error(`Unsupported OKP curve: ${crv}`);
+    }
+    if (!(await supportsEd25519())) {
+      throw new Error('EdDSA is not supported by this runtime');
+    }
+    const x = coseKey['-2'] as Uint8Array;
+
+    const publicKey = await crypto.subtle.importKey(
+      'raw',
+      toArrayBuffer(x),
+      { name: 'Ed25519' },
+      false,
+      ['verify'],
+    );
+
+    return crypto.subtle.verify(
+      'Ed25519',
+      publicKey,
+      toArrayBuffer(signature),
+      toArrayBuffer(data),
+    );
+  } else if (kty === 2) {
     // EC2 key (ECDSA)
     const crv = coseKey['-1'] as number; // Curve
     const x = coseKey['-2'] as Uint8Array;
@@ -813,9 +1048,15 @@ async function verifySignature(
       toArrayBuffer(data),
     );
   } else if (kty === 3) {
-    // RSA key
+    // RSA key — honour the COSE `alg`; verifying RS384/RS512 with SHA-256
+    // would silently mis-verify, so unknown algorithms are rejected instead.
     const n = coseKey['-1'] as Uint8Array;
     const e = coseKey['-2'] as Uint8Array;
+
+    const hash = rsaHashForAlg(alg);
+    if (!hash) {
+      throw new Error(`Unsupported RSA algorithm: ${alg}`);
+    }
 
     const publicKey = await crypto.subtle.importKey(
       'jwk',
@@ -824,7 +1065,7 @@ async function verifySignature(
         n: base64UrlEncode(n),
         e: base64UrlEncode(e),
       },
-      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      { name: 'RSASSA-PKCS1-v1_5', hash },
       false,
       ['verify'],
     );

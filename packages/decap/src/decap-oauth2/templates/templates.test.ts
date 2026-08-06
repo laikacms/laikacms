@@ -5,9 +5,18 @@
  */
 
 import { describe, expect, it } from 'vitest';
-import { getAuthorizationPageHTML } from './authorization-page.js';
+import { defaultMessages } from '../i18n/index.js';
+import { generatePasskeyScript, getAuthorizationPageHTML } from './authorization-page.js';
 import { oauthErrorResponse, renderErrorPage } from './error.js';
-import { buildCspWithLogo, html, processCustomLogo, templateVars } from './html.js';
+import {
+  buildCspWithLogo,
+  escapeHtml,
+  escapeHtmlAttribute,
+  html,
+  jsonForInlineScript,
+  processCustomLogo,
+  templateVars,
+} from './html.js';
 import { generateWebAuthnScript, renderEnhancedLoginPage } from './login-page.js';
 import { renderLogoutAllSuccessPage, renderLogoutSuccessPage } from './logout-page.js';
 import { renderPasskeySetupPage } from './passkey-setup-page.js';
@@ -618,5 +627,184 @@ describe('renderLogoutAllSuccessPage', () => {
   it('uses the provided loginUrl in the back link', () => {
     const { html } = renderLogoutAllSuccessPage({ loginUrl: '/auth/login' });
     expect(html).toContain('href="/auth/login"');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Reflected HTML-injection regression tests
+//
+// The html() tag performs no escaping, so every request-derived or
+// consumer-supplied value must be escaped at the point of interpolation.
+// These tests feed attribute-breakout payloads into the slots that were
+// previously interpolated raw and assert they are neutralised.
+// ---------------------------------------------------------------------------
+
+const SCRIPT_PAYLOAD = '"><script>alert(1)</script>';
+const FORM_PAYLOAD = '"><form action=https://evil.tld>';
+const INJECTION_PAYLOADS = [SCRIPT_PAYLOAD, FORM_PAYLOAD];
+
+/** Assert neither attribute-breakout payload survives unescaped. */
+function expectNeutralised(rendered: string): void {
+  expect(rendered).not.toContain('"><script>');
+  expect(rendered).not.toContain('<script>alert(1)</script>');
+  expect(rendered).not.toContain('"><form');
+  expect(rendered).not.toContain('<form action=https://evil.tld>');
+}
+
+describe('escapeHtml / escapeHtmlAttribute', () => {
+  it('escapes &, <, >, " and \'', () => {
+    expect(escapeHtml(`&<>"'`)).toBe('&amp;&lt;&gt;&quot;&#039;');
+  });
+
+  it('escapeHtmlAttribute uses the same implementation', () => {
+    expect(escapeHtmlAttribute(SCRIPT_PAYLOAD)).toBe(escapeHtml(SCRIPT_PAYLOAD));
+  });
+});
+
+describe('jsonForInlineScript', () => {
+  it('escapes < so </script> cannot terminate the script element', () => {
+    const out = jsonForInlineScript('</script><script>alert(1)</script>');
+    expect(out).not.toContain('</script>');
+    expect(out).toContain('\\u003C');
+  });
+
+  it('escapes U+2028 and U+2029 line terminators', () => {
+    const out = jsonForInlineScript('a\u2028b\u2029c');
+    expect(out).toBe('"a\\u2028b\\u2029c"');
+  });
+
+  it('round-trips through JSON.parse', () => {
+    const value = { challenge: '</script>', name: 'a\u2028b' };
+    expect(JSON.parse(jsonForInlineScript(value))).toEqual(value);
+  });
+});
+
+describe('reset token injection (renderResetPasswordPage)', () => {
+  it.each(INJECTION_PAYLOADS)('neutralises %s in the hidden token field', payload => {
+    const { html } = renderResetPasswordPage({
+      baseUrl: 'https://api.example.com/cms',
+      token: payload,
+      error: 'This reset link has expired or is invalid. Please request a new one.',
+    });
+    expectNeutralised(html);
+    // Page still renders with the escaped token in the hidden input
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain(`name="token" value="${escapeHtmlAttribute(payload)}"`);
+    expect(html).toContain('name="password"');
+  });
+});
+
+describe('authorize URL injection', () => {
+  it.each(INJECTION_PAYLOADS)('getAuthorizationPageHTML neutralises %s', payload => {
+    const { html } = getAuthorizationPageHTML(payload);
+    expectNeutralised(html);
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain(`action="${escapeHtmlAttribute(payload)}"`);
+  });
+
+  it.each(INJECTION_PAYLOADS)('renderEnhancedLoginPage neutralises %s', payload => {
+    const { html } = renderEnhancedLoginPage({ authorizeUrl: payload });
+    expectNeutralised(html);
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain(`action="${escapeHtmlAttribute(payload)}"`);
+  });
+
+  it.each(INJECTION_PAYLOADS)('renderTotpVerificationPage neutralises %s', payload => {
+    const { html } = renderTotpVerificationPage({ authorizeUrl: payload, sessionId: 'sess-1' });
+    expectNeutralised(html);
+    expect(html).toContain('<!DOCTYPE html>');
+  });
+});
+
+describe('setup token injection', () => {
+  it.each(INJECTION_PAYLOADS)('renderTotpSetupPage neutralises %s', payload => {
+    const result = renderTotpSetupPage({
+      qrCodeDataUrl: 'data:image/png;base64,abc',
+      secret: 'ABCDEFGHIJKLMNOP',
+      issuer: 'TestApp',
+      email: 'user@example.com',
+      setupToken: payload,
+      redirectUri: '/admin',
+    });
+    expectNeutralised(result);
+    expect(result).toContain('<!DOCTYPE html>');
+    expect(result).toContain(`name="setup_token" value="${escapeHtmlAttribute(payload)}"`);
+  });
+
+  it.each(INJECTION_PAYLOADS)('renderPasskeySetupPage neutralises %s', payload => {
+    const result = renderPasskeySetupPage({
+      setupToken: payload,
+      redirectUri: '/admin',
+      userId: 'user-42',
+      registrationOptions: {
+        challenge: 'base64challenge',
+        rp: { id: 'example.com', name: 'Test App' },
+        user: { id: 'dXNlci00Mg', name: 'user@example.com', displayName: 'User' },
+        pubKeyCredParams: [{ type: 'public-key' as const, alg: -7 }],
+        timeout: 60000,
+        attestation: 'none' as const,
+        authenticatorSelection: {
+          residentKey: 'required' as const,
+          userVerification: 'required' as const,
+        },
+        excludeCredentials: [],
+      },
+    });
+    expectNeutralised(result);
+    expect(result).toContain('<!DOCTYPE html>');
+    expect(result).toContain(`name="setup_token" value="${escapeHtmlAttribute(payload)}"`);
+  });
+});
+
+describe('translation string injection', () => {
+  it('neutralises a hostile translation in the authorization page passkey button', () => {
+    const { html } = getAuthorizationPageHTML('/auth', {
+      passkeyEnabled: true,
+      passkeyVerifyUrl: '/auth/passkey/verify',
+      messages: {
+        ...defaultMessages,
+        auth: { ...defaultMessages.auth, signInWithPasskey: SCRIPT_PAYLOAD },
+      },
+    });
+    expectNeutralised(html);
+    expect(html).toContain('<!DOCTYPE html>');
+    expect(html).toContain('id="passkey-button"');
+  });
+
+  it('neutralises a hostile translation embedded in inline-script i18n JSON', () => {
+    const script = generatePasskeyScript(
+      { challenge: 'c', rpId: 'example.com', timeout: 60000, userVerification: 'required' },
+      '/auth/passkey/verify',
+      { ...defaultMessages.auth, authenticating: '</script><script>alert(1)</script>' },
+    );
+    expect(script).not.toContain('</script><script>');
+    expect(script).toContain('\\u003C/script');
+  });
+
+  it('neutralises a hostile translation in generateWebAuthnScript i18n JSON', () => {
+    const script = generateWebAuthnScript(
+      { challenge: 'c', rpId: 'example.com', timeout: 60000, userVerification: 'required' },
+      '/auth/passkey/verify',
+      { ...defaultMessages.auth, authenticating: '</script><script>alert(1)</script>' },
+    );
+    expect(script).not.toContain('</script><script>');
+    expect(script).toContain('\\u003C/script');
+  });
+});
+
+describe('inline-script JSON injection (passkey options)', () => {
+  it('cannot break out of the script element via a </script> in the challenge', () => {
+    const { html } = renderEnhancedLoginPage({
+      authorizeUrl: '/auth',
+      passkeyOptions: {
+        challenge: '</script><script>alert(1)</script>',
+        rpId: 'example.com',
+        timeout: 60000,
+        userVerification: 'required',
+      },
+      passkeyVerifyUrl: '/auth/passkey/verify',
+    });
+    expect(html).not.toContain('</script><script>');
+    expect(html).toContain('\\u003C/script');
   });
 });

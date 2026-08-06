@@ -6,7 +6,15 @@
 
 import { defaultMessages, type OAuthMessages, type PasskeyTranslation } from '../i18n/index.js';
 import { decapLogo, loginPageStyles, passkeyIcon } from './decap-styles.js';
-import { html, type HtmlTemplate, messages, type TemplateVariables } from './html.js';
+import {
+  escapeHtml,
+  escapeHtmlAttribute,
+  html,
+  type HtmlTemplate,
+  jsonForInlineScript,
+  messages,
+  type TemplateVariables,
+} from './html.js';
 
 // Template tag for JavaScript (enables intellisense)
 const js = String.raw;
@@ -149,12 +157,12 @@ function getPasskeySetupScript(
   return js`
 <script>
 (function() {
-  const BASE_URL = '${baseUrl}';
+  const BASE_URL = ${jsonForInlineScript(baseUrl)};
   const REGISTRATION_OPTIONS = ${registrationOptionsJson};
   const i18n = {
-    browserNotSupported: ${JSON.stringify(browserNotSupportedText)},
-    setupFailed: ${JSON.stringify(setupFailedText)},
-    registrationFailed: ${JSON.stringify(registrationFailedText)}
+    browserNotSupported: ${jsonForInlineScript(browserNotSupportedText)},
+    setupFailed: ${jsonForInlineScript(setupFailedText)},
+    registrationFailed: ${jsonForInlineScript(registrationFailedText)}
   };
   const setupButton = document.getElementById('setup-passkey-btn');
   const loadingState = document.getElementById('loading-state');
@@ -400,20 +408,6 @@ const passkeySetupTemplate: HtmlTemplate = html`<!DOCTYPE html>
 </html>`;
 
 /**
- * Escape HTML special characters to prevent XSS
- */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return text.replace(/[&<>"']/g, char => map[char]);
-}
-
-/**
  * Options for rendering the passkey setup page
  */
 export interface PasskeySetupPageOptions {
@@ -442,14 +436,17 @@ export function renderPasskeySetupPage(options: PasskeySetupPageOptions): string
     ? ''
     : `<a href="${escapeHtml(options.redirectUri)}" class="skip-link">${escapeHtml(t.skipLink)}</a>`;
 
-  // Serialize registration options for embedding in the page
-  const registrationOptionsJson = JSON.stringify(options.registrationOptions);
+  // Serialize registration options for embedding in the page.
+  // jsonForInlineScript escapes `<` so a `</script>` sequence in any field
+  // cannot terminate the inline script element early.
+  const registrationOptionsJson = jsonForInlineScript(options.registrationOptions);
 
   const templateValues: PasskeySetupTemplateVariables = {
     [pageTitle]: escapeHtml(t.pageTitle),
     [title]: escapeHtml(t.title),
     [description]: escapeHtml(t.description),
-    [setupToken]: options.setupToken,
+    // Rendered into a hidden-input value attribute — never trust it raw.
+    [setupToken]: escapeHtmlAttribute(options.setupToken),
     [redirectUri]: escapeHtml(options.redirectUri),
     [userId]: escapeHtml(options.userId),
     [nameLabel]: escapeHtml(t.nameLabel),

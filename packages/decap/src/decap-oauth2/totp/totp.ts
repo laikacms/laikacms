@@ -73,6 +73,12 @@ export interface TOTPCallbacks {
 }
 
 /**
+ * Why a pending TOTP session token exists. Login-stage and enrollment-stage
+ * tokens are not interchangeable and must never be resolved across purposes.
+ */
+export type PendingTotpSessionPurpose = 'login' | 'setup';
+
+/**
  * OAuth-specific TOTP callbacks for simplified OAuth authentication flow.
  */
 export interface OAuthTotpCallbacks {
@@ -82,16 +88,41 @@ export interface OAuthTotpCallbacks {
   getTotpSecret(userId: string): Promise<string | null>;
   /** Store TOTP secret for a user */
   storeTotpSecret(userId: string, secret: string): Promise<void>;
-  /** Store a pending TOTP session (after password verification, before TOTP verification) */
-  storePendingTotpSession(sessionId: string, userId: string, expiresAt: number): Promise<void>;
-  /** Get a pending TOTP session */
-  getPendingTotpSession(sessionId: string): Promise<{ userId: string } | null>;
   /**
-   * Delete a pending TOTP session. Called after the session has been consumed
-   * (a TOTP code was successfully verified) so the same session token cannot be
-   * replayed. Optional — omitting relies on natural TTL expiry.
+   * Store a pending TOTP session.
+   *
+   * `purpose` distinguishes the two flows that both produce a short-lived
+   * session token, and it MUST be persisted and returned verbatim by
+   * {@link OAuthTotpCallbacks.getPendingTotpSession}:
+   *
+   * - `'login'` — password verified, awaiting a TOTP code.
+   * - `'setup'` — user is enrolling a new authenticator.
+   *
+   * Storing the two in one undifferentiated namespace is an authentication
+   * bypass: a login-stage token is visible to anyone who knows the password,
+   * and if enrollment accepts it, that password alone re-enrolls the second
+   * factor.
    */
-  deletePendingTotpSession?(sessionId: string): Promise<void>;
+  storePendingTotpSession(
+    sessionId: string,
+    userId: string,
+    expiresAt: number,
+    purpose: PendingTotpSessionPurpose,
+  ): Promise<void>;
+  /**
+   * Get a pending TOTP session. Must return the `purpose` it was stored with,
+   * and must not return sessions whose `expiresAt` has passed.
+   */
+  getPendingTotpSession(sessionId: string): Promise<{ userId: string, purpose: PendingTotpSessionPurpose } | null>;
+  /**
+   * Delete a pending TOTP session.
+   *
+   * Required. It is called after a session is consumed AND after every failed
+   * verification: without it a single password-authenticated session accepts
+   * unlimited guesses at a six-digit code for the session's whole TTL, which a
+   * distributed attacker exhausts in well under a second.
+   */
+  deletePendingTotpSession(sessionId: string): Promise<void>;
   /**
    * Return the most recently consumed TOTP time step for the user, or null if
    * none has been recorded. Together with `setLastTotpStep` this provides

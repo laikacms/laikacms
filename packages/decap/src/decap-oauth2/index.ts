@@ -10,6 +10,9 @@
 // OAuth 2.0 PKCE
 export * from './oauth2.js';
 
+// Runtime safety gate (blocking asserts + ignoreUnsafeReasons opt-out)
+export * from './safety-gate.js';
+
 // HTML Templates (login page with passkey and TOTP support)
 export * from './templates/index.js';
 

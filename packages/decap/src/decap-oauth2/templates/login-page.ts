@@ -6,24 +6,19 @@
 
 import { type AuthTranslation, defaultMessages, type OAuthMessages } from '../i18n/index.js';
 import { backIcon, loginPageStyles, passkeyIcon } from './decap-styles.js';
-import { html, type HtmlTemplate, messages, processCustomLogo, type TemplateVariables } from './html.js';
+import {
+  escapeHtml,
+  escapeHtmlAttribute,
+  html,
+  type HtmlTemplate,
+  jsonForInlineScript,
+  messages,
+  processCustomLogo,
+  type TemplateVariables,
+} from './html.js';
 
 // Template tag for JavaScript (enables intellisense)
 const js = String.raw;
-
-/**
- * Escape HTML special characters to prevent XSS
- */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return text.replace(/[&<>"']/g, char => map[char]);
-}
 
 /**
  * Passkey authentication options interface
@@ -51,10 +46,12 @@ export function generateWebAuthnScript(
   authMessages?: AuthTranslation,
 ): string {
   const msgs = authMessages ?? defaultMessages.auth;
-  // Serialize options to JSON for embedding in script
-  const optionsJson = passkeyOptions ? JSON.stringify(passkeyOptions) : 'null';
+  // Serialize options to JSON for embedding in script.
+  // jsonForInlineScript escapes `<` so a `</script>` sequence in any field
+  // cannot terminate the inline script element early.
+  const optionsJson = passkeyOptions ? jsonForInlineScript(passkeyOptions) : 'null';
   // Serialize messages for use in JavaScript
-  const messagesJson = JSON.stringify({
+  const messagesJson = jsonForInlineScript({
     authenticating: msgs.authenticating,
     passkeyOptionsNotAvailable: msgs.passkeyOptionsNotAvailable,
     passkeyAuthFailed: msgs.passkeyAuthFailed,
@@ -68,7 +65,7 @@ export function generateWebAuthnScript(
 (function() {
   // Embedded passkey options (pre-generated on server)
   var embeddedOpts = ${optionsJson};
-  var verifyUrl = ${JSON.stringify(verifyUrl)};
+  var verifyUrl = ${jsonForInlineScript(verifyUrl)};
   var i18n = ${messagesJson};
   
   // Check if WebAuthn is supported
@@ -452,7 +449,9 @@ export function renderEnhancedLoginPage(options: EnhancedLoginPageOptions): Enha
 
   const templateValues: EnhancedLoginTemplateVariables = {
     [pageTitle]: escapeHtml(authMsgs.pageTitle),
-    [authorizeUrl]: options.authorizeUrl,
+    // The authorize URL echoes request-derived data — escape for the
+    // form action attribute.
+    [authorizeUrl]: escapeHtmlAttribute(options.authorizeUrl),
     [emailLabel]: escapeHtml(authMsgs.emailLabel),
     [emailPlaceholder]: escapeHtml(authMsgs.emailPlaceholder),
     [passwordLabel]: escapeHtml(authMsgs.passwordLabel),

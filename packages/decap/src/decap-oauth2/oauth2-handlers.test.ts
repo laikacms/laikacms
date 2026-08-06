@@ -85,6 +85,7 @@ function makeConfig(callbacks: OAuthCallbacks, overrides: Partial<OAuthConfig> =
     callbacks,
     clientId: 'test-client',
     basePath: BASE_PATH,
+    allowedRedirectUris: ['https://auth.example.com/oauth2/authorize', 'https://example.com/callback'],
     ...overrides,
   };
 }
@@ -234,7 +235,7 @@ describe('handleTotpSetupPage', () => {
   it('returns 401 when user is not found', async () => {
     const callbacks = makeCallbacks({ getUserById: vi.fn().mockResolvedValue(null) });
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'setup' });
     const config = makeConfig(callbacks, { totp: totpConfig(totpCbs) });
     const router = decapOauth2(config);
 
@@ -254,7 +255,7 @@ describe('handleTotpSetupPage', () => {
     const user = makeUser();
     const callbacks = makeCallbacks({ getUserById: vi.fn().mockResolvedValue(user) });
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: user.id });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: user.id, purpose: 'setup' });
     const config = makeConfig(callbacks, { totp: totpConfig(totpCbs) });
     const router = decapOauth2(config);
 
@@ -346,7 +347,7 @@ describe('handleTotpSetupVerify', () => {
   it('returns 401 when TOTP secret is not found', async () => {
     const callbacks = makeCallbacks();
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'setup' });
     totpCbs.getTotpSecret.mockResolvedValue(null);
     const config = makeConfig(callbacks, { totp: totpConfig(totpCbs) });
     const router = decapOauth2(config);
@@ -364,7 +365,7 @@ describe('handleTotpSetupVerify', () => {
     vi.mocked(verifyOAuthTOTPSetup).mockResolvedValue({ success: false });
     const callbacks = makeCallbacks();
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'setup' });
     totpCbs.getTotpSecret.mockResolvedValue('BASE32SECRET');
     const config = makeConfig(callbacks, { totp: totpConfig(totpCbs) });
     const router = decapOauth2(config);
@@ -382,7 +383,7 @@ describe('handleTotpSetupVerify', () => {
     vi.mocked(verifyOAuthTOTPSetup).mockResolvedValue({ success: true });
     const callbacks = makeCallbacks();
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'setup' });
     totpCbs.getTotpSecret.mockResolvedValue('BASE32SECRET');
     const config = makeConfig(callbacks, { totp: totpConfig(totpCbs) });
     const router = decapOauth2(config);
@@ -404,7 +405,7 @@ describe('handleTotpSetupVerify', () => {
     vi.mocked(verifyOAuthTOTPSetup).mockResolvedValue({ success: true });
     const callbacks = makeCallbacks();
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'setup' });
     totpCbs.getTotpSecret.mockResolvedValue('BASE32SECRET');
     const config = makeConfig(callbacks, { totp: totpConfig(totpCbs) });
     const router = decapOauth2(config);
@@ -425,7 +426,7 @@ describe('handleTotpSetupVerify', () => {
     vi.mocked(verifyOAuthTOTPSetup).mockResolvedValue({ success: true });
     const callbacks = makeCallbacks();
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'setup' });
     totpCbs.getTotpSecret.mockResolvedValue('BASE32SECRET');
     const config = makeConfig(callbacks, { totp: totpConfig(totpCbs) });
     const router = decapOauth2(config);
@@ -531,7 +532,7 @@ describe('handlePasskeySetupPage', () => {
   it('returns 401 when user is not found', async () => {
     const callbacks = makeCallbacks({ getUserById: vi.fn().mockResolvedValue(null) });
     const passkeyCbs = makePasskeyCallbacks();
-    passkeyCbs.getPendingPasskeySetupSession.mockResolvedValue({ userId: 'user-1' });
+    passkeyCbs.getPendingPasskeySetupSession.mockResolvedValue({ userId: 'user-1', purpose: 'setup' });
     const config = makeConfig(callbacks, { passkey: passkeyConfig(passkeyCbs) });
     const router = decapOauth2(config);
 
@@ -548,7 +549,7 @@ describe('handlePasskeySetupPage', () => {
     const user = makeUser();
     const callbacks = makeCallbacks({ getUserById: vi.fn().mockResolvedValue(user) });
     const passkeyCbs = makePasskeyCallbacks();
-    passkeyCbs.getPendingPasskeySetupSession.mockResolvedValue({ userId: user.id });
+    passkeyCbs.getPendingPasskeySetupSession.mockResolvedValue({ userId: user.id, purpose: 'setup' });
     const config = makeConfig(callbacks, { passkey: passkeyConfig(passkeyCbs) });
     const router = decapOauth2(config);
 
@@ -640,7 +641,7 @@ describe('handlePasskeyRegister', () => {
     vi.mocked(verifyRegistration).mockResolvedValue({ success: false, error: 'Bad attestation' });
     const callbacks = makeCallbacks();
     const passkeyCbs = makePasskeyCallbacks();
-    passkeyCbs.getPendingPasskeySetupSession.mockResolvedValue({ userId: 'user-1' });
+    passkeyCbs.getPendingPasskeySetupSession.mockResolvedValue({ userId: 'user-1', purpose: 'setup' });
     const config = makeConfig(callbacks, { passkey: passkeyConfig(passkeyCbs) });
     const router = decapOauth2(config);
 
@@ -660,7 +661,7 @@ describe('handlePasskeyRegister', () => {
     vi.mocked(verifyRegistration).mockResolvedValue({ success: true });
     const callbacks = makeCallbacks();
     const passkeyCbs = makePasskeyCallbacks();
-    passkeyCbs.getPendingPasskeySetupSession.mockResolvedValue({ userId: 'user-1' });
+    passkeyCbs.getPendingPasskeySetupSession.mockResolvedValue({ userId: 'user-1', purpose: 'setup' });
     const config = makeConfig(callbacks, { passkey: passkeyConfig(passkeyCbs) });
     const router = decapOauth2(config);
 
@@ -758,6 +759,7 @@ describe('handlePasskeyAuthenticateVerify', () => {
     const router = decapOauth2(config);
 
     const url = makeUrl('passkey/authenticate/verify', {
+      client_id: 'test-client',
       redirect_uri: 'https://example.com/callback',
       code_challenge: 'abc123',
       code_challenge_method: 'S256',
@@ -858,8 +860,10 @@ describe('handlePasskeyAuthenticateVerify', () => {
     const router = decapOauth2(config);
 
     const url = makeUrl('passkey/authenticate/verify', {
+      client_id: 'test-client',
       redirect_uri: 'https://example.com/callback',
       code_challenge: 'abc123',
+      code_challenge_method: 'S256',
     });
     const request = new Request(url, {
       method: 'POST',

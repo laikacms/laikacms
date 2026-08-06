@@ -11,7 +11,7 @@
 import { defaultMessages, type OAuthMessages } from '../i18n/index.js';
 import { colors, loginPageStyles } from './decap-styles.js';
 import type { HtmlTemplate, TemplateVariables } from './html.js';
-import { html, messages, processCustomLogo } from './html.js';
+import { escapeHtml, escapeHtmlAttribute, html, messages, processCustomLogo } from './html.js';
 
 // Additional styles for logout pages
 const logoutStyles = `
@@ -137,18 +137,6 @@ export interface LogoutPageOptions {
 const DEFAULT_LOGIN_FALLBACK = 'javascript:history.back()';
 
 /**
- * Escape HTML special characters to prevent XSS
- */
-function escapeHtml(text: string): string {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
-
-/**
  * Result of rendering a logout page
  */
 export interface LogoutPageResult {
@@ -169,7 +157,7 @@ export function renderLogoutSuccessPage(options: LogoutPageOptions): LogoutPageR
 
   const html = logoutSuccessTemplate({
     [messages]: options.messages ?? defaultMessages,
-    [loginUrl]: options.loginUrl || DEFAULT_LOGIN_FALLBACK,
+    [loginUrl]: escapeHtmlAttribute(options.loginUrl || DEFAULT_LOGIN_FALLBACK),
     [logoHtml]: processedLogo.html,
     [pageTitle]: escapeHtml(t.pageTitle),
     [title]: escapeHtml(t.title),
@@ -194,7 +182,7 @@ export function renderLogoutAllSuccessPage(options: LogoutPageOptions): LogoutPa
 
   const html = logoutAllSuccessTemplate({
     [messages]: options.messages ?? defaultMessages,
-    [loginUrl]: options.loginUrl || DEFAULT_LOGIN_FALLBACK,
+    [loginUrl]: escapeHtmlAttribute(options.loginUrl || DEFAULT_LOGIN_FALLBACK),
     [logoHtml]: processedLogo.html,
     [pageTitle]: escapeHtml(t.allPageTitle),
     [title]: escapeHtml(t.allTitle),

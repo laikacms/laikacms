@@ -39,6 +39,16 @@ export function getMessages(values: TemplateVariables): OAuthMessages {
   return (values as Record<symbol, OAuthMessages>)[messages] ?? defaultMessages;
 }
 
+/**
+ * Tagged template that produces an {@link HtmlTemplate} with symbol-keyed slots.
+ *
+ * SECURITY: this tag performs NO escaping — every interpolated value is
+ * inserted into the output verbatim. Callers MUST escape any value that is
+ * not a trusted package constant or deliberately-raw HTML (custom logos,
+ * CAPTCHA widgets/scripts) with {@link escapeHtml} / {@link escapeHtmlAttribute}
+ * (or {@link jsonForInlineScript} for values embedded in inline scripts)
+ * before passing it in.
+ */
 export function html(strings: TemplateStringsArray, ...keys: (symbol | string | number)[]): HtmlTemplate {
   return (values: TemplateVariables): string => {
     const result: string[] = [strings[0]];
@@ -109,9 +119,10 @@ export function processCustomLogo(customLogo: string | undefined, altText: strin
 }
 
 /**
- * Escape a string for use in an HTML attribute
+ * Escape HTML special characters (`&`, `<`, `>`, `"`, `'`) so a string is
+ * safe to interpolate into HTML text content.
  */
-function escapeHtmlAttribute(text: string): string {
+export function escapeHtml(text: string): string {
   const map: Record<string, string> = {
     '&': '&amp;',
     '<': '&lt;',
@@ -120,6 +131,28 @@ function escapeHtmlAttribute(text: string): string {
     "'": '&#039;',
   };
   return text.replace(/[&<>"']/g, char => map[char]);
+}
+
+/**
+ * Escape a string for use in an HTML attribute.
+ * Same character set as {@link escapeHtml} (single implementation); kept as a
+ * named alias so call sites document which context they are escaping for.
+ */
+export function escapeHtmlAttribute(text: string): string {
+  return escapeHtml(text);
+}
+
+/**
+ * Serialize a value to JSON that is safe to embed inside an inline `<script>`.
+ * Escapes `<` so a `</script>` (or `<!--`) sequence inside the data cannot
+ * terminate the script element early, and U+2028/U+2029 which are line
+ * terminators in JavaScript source.
+ */
+export function jsonForInlineScript(value: unknown): string {
+  return JSON.stringify(value)
+    .replace(/</g, '\\u003C')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029');
 }
 
 /**

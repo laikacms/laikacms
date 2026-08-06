@@ -8,7 +8,7 @@
 import { defaultMessages, type OAuthMessages } from '../i18n/index.js';
 import { baseStyles, colors, lengths, logoStyles, shadows } from './decap-styles.js';
 import type { HtmlTemplate, TemplateVariables } from './html.js';
-import { buildCspWithLogo, html, messages, processCustomLogo } from './html.js';
+import { buildCspWithLogo, escapeHtml, escapeHtmlAttribute, html, messages, processCustomLogo } from './html.js';
 
 // Template tag for CSS (enables intellisense)
 const css = String.raw;
@@ -145,20 +145,6 @@ export interface ErrorPageOptions {
 }
 
 /**
- * Escape HTML special characters to prevent XSS
- */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return text.replace(/[&<>"']/g, char => map[char]);
-}
-
-/**
  * Format error code as a title (e.g., 'invalid_request' -> 'Invalid Request')
  */
 function formatErrorTitle(error: string): string {
@@ -198,6 +184,7 @@ export function renderErrorPage(options: ErrorPageOptions): ErrorPageResult {
     [errorDescription]: escapeHtml(description),
     [errorCode]: escapeHtml(options.error),
     [goBackButtonText]: escapeHtml(t.goBackButton),
+    [goBackHref]: escapeHtmlAttribute(options.goBackHref ?? ''),
   } as ErrorTemplateVariables);
 
   return {

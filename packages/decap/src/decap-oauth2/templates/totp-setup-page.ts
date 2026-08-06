@@ -7,7 +7,7 @@
 
 import { defaultMessages, type OAuthMessages } from '../i18n/index.js';
 import { decapLogo, loginPageStyles } from './decap-styles.js';
-import { html, type HtmlTemplate, messages, type TemplateVariables } from './html.js';
+import { escapeHtml, escapeHtmlAttribute, html, type HtmlTemplate, messages, type TemplateVariables } from './html.js';
 
 // Template tag for JavaScript (enables intellisense)
 const js = String.raw;
@@ -251,20 +251,6 @@ const totpSetupTemplate: HtmlTemplate = html`<!DOCTYPE html>
 </html>`;
 
 /**
- * Escape HTML special characters to prevent XSS
- */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return text.replace(/[&<>"']/g, char => map[char]);
-}
-
-/**
  * Options for rendering the TOTP setup page
  */
 export interface TotpSetupPageOptions {
@@ -302,12 +288,13 @@ export function renderTotpSetupPage(options: TotpSetupPageOptions): string {
     [setupStep1]: escapeHtml(t.setupStep1),
     [setupStep2]: escapeHtml(t.setupStep2),
     [setupStep3]: escapeHtml(t.setupStep3),
-    [qrCodeDataUrl]: options.qrCodeDataUrl,
+    [qrCodeDataUrl]: escapeHtmlAttribute(options.qrCodeDataUrl),
     [qrCodeAlt]: escapeHtml(qrCodeAltText),
     [manualKeyLabel]: escapeHtml(t.manualKeyLabel),
-    [formattedSecret]: formatted,
-    [baseUrl]: base,
-    [setupToken]: options.setupToken,
+    [formattedSecret]: escapeHtml(formatted),
+    [baseUrl]: escapeHtmlAttribute(base),
+    // Rendered into a hidden-input value attribute — never trust it raw.
+    [setupToken]: escapeHtmlAttribute(options.setupToken),
     [redirectUri]: escapeHtml(options.redirectUri),
     [enterVerificationCode]: escapeHtml(t.enterVerificationCode),
     [inputPlaceholder]: escapeHtml(t.inputPlaceholder),

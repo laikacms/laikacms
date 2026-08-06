@@ -45,12 +45,6 @@ describe('generateQRCodeSVG', () => {
       expect(() => generateQRCodeSVG('test', { errorCorrection: level })).not.toThrow();
     }
   });
-
-  it('escapes XML special characters in colors', () => {
-    // Provide a harmless non-special color; just verify no unescaped injection leaks through
-    const result = generateQRCodeSVG('x', { darkColor: '#000000', lightColor: '#ffffff' });
-    expect(result).not.toContain('&amp;');
-  });
 });
 
 describe('generateQRCodeDataURI', () => {

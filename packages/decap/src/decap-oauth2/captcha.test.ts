@@ -112,6 +112,7 @@ function makeConfig(callbacks: OAuthCallbacks, overrides: Partial<OAuthConfig> =
     callbacks,
     clientId: CLIENT_ID,
     basePath: BASE_PATH,
+    allowedRedirectUris: [REDIRECT_URI],
     ...overrides,
   };
 }

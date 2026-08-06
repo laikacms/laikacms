@@ -5,11 +5,14 @@ import {
   addTimingJitter,
   constantTimeEqual,
   generateSecureRandomString,
+  PASSWORD_CONSTANTS,
   sha256,
   verifyPassword,
 } from 'laikacms/crypto';
 import { type PasswordResetConfig, requestPasswordReset, resetPassword } from './email/email.js';
 import { type OAuthMessages } from './i18n/index.js';
+import type { GateInput, UnsafeReason } from './safety-gate.js';
+import { assertRuntimeSafety, assertRuntimeSafetyAsync, suppressedReasons, UNSAFE_REASONS } from './safety-gate.js';
 import {
   type OAuthTotpConfig,
   setupOAuthTOTP,
@@ -262,6 +265,38 @@ export interface CaptchaConfig {
 export interface OAuthConfig {
   callbacks: OAuthCallbacks;
   clientId: string;
+  /**
+   * Redirect URIs permitted to receive an authorization code, compared by exact
+   * string match (RFC 6749 §3.1.2.2, RFC 9700 §2.1).
+   *
+   * Required, and deliberately so. Accepting an arbitrary `redirect_uri` turns
+   * one clicked link into account takeover: the attacker supplies their own
+   * PKCE challenge, the victim completes the whole login — password, TOTP,
+   * passkey — and the code is delivered to the attacker's host, where their own
+   * verifier redeems it. There is no client secret in the token path to stop
+   * that, so this list is the control.
+   *
+   * @example ['https://cms.example.com/admin/', 'http://localhost:8080/admin/']
+   */
+  allowedRedirectUris: string[];
+  /**
+   * Safety-gate reasons to suppress. Each entry acknowledges that you
+   * understand the risk and accept it for this deployment; every suppressed
+   * reason is warned about through `logger` on every construction.
+   *
+   * @see UNSAFE_REASONS for the full registry of codes.
+   */
+  ignoreUnsafeReasons?: UnsafeReason[];
+  /**
+   * Which adversary this deployment defends against.
+   *
+   * - `'standard'` — a well-resourced classical attacker (default).
+   * - `'post-quantum'` — also a cryptographically relevant quantum computer.
+   *   Enables safety gates on primitives that have no post-quantum replacement
+   *   (WebAuthn's Shor-breakable ES256/RS256, password-only authentication, and
+   *   transport we cannot verify from inside the process).
+   */
+  threatModel?: 'standard' | 'post-quantum';
   // Access token expiration in seconds (default: 3600 = 1 hour)
   accessTokenExpiration?: number;
   // Refresh token expiration in seconds (default: 2592000 = 30 days)
@@ -341,17 +376,74 @@ function validateEmail(email: string | null | undefined): string | null {
 
 /**
  * Validate URI format and length.
+ *
+ * Only `http:` and `https:` are accepted. Any other scheme — `javascript:`,
+ * `data:`, custom app schemes — is rejected outright: a parseable URL is not a
+ * safe redirect target, and `javascript:` in particular reaches
+ * `window.location.href` in the browser templates.
+ *
+ * Parseability is NOT authorization. Every caller that uses the result as a
+ * redirect destination must additionally pass it through
+ * {@link isAllowedRedirectUri}.
  */
 function validateUri(uri: string | null | undefined): string | null {
   const validated = validateInputLength(uri, SECURITY_CONSTANTS.MAX_URI_LENGTH);
   if (!validated) return null;
 
   try {
-    // Attempt to parse as URL to validate format
-    new URL(validated);
+    const parsed = new URL(validated);
+    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+      return null;
+    }
     return validated;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Decide whether a redirect_uri may receive an authorization code.
+ *
+ * RFC 6749 §3.1.2.2 and RFC 9700 §2.1 require the authorization server to
+ * compare the requested redirect URI against pre-registered values using exact
+ * string matching. Anything looser — prefix, origin, or "it parses" — lets an
+ * attacker who can get a victim to follow one link receive the code on a host
+ * they control, and PKCE does not help because the attacker generated the
+ * challenge.
+ *
+ * Comparison is exact after normalising away a single trailing slash, which is
+ * the one difference the URL parser introduces without changing the
+ * destination. Query and fragment are NOT normalised away: a registered URI
+ * that carries a query string must be registered with it.
+ */
+function isAllowedRedirectUri(uri: string, config: OAuthConfig): boolean {
+  const normalize = (value: string): string => {
+    try {
+      const parsed = new URL(value);
+      return parsed.href.endsWith('/') ? parsed.href.slice(0, -1) : parsed.href;
+    } catch {
+      return value;
+    }
+  };
+
+  const candidate = normalize(uri);
+  return config.allowedRedirectUris.some(allowed => normalize(allowed) === candidate);
+}
+
+/**
+ * Whether a redirect target stays on this server's own origin.
+ *
+ * Enrollment pages (TOTP setup, passkey setup) hand a `redirect_uri` back to
+ * the browser after the ceremony completes, and the tokens they carry are full
+ * bearer credentials for the account. The legitimate destination is always the
+ * `/authorize` URL on this same origin, so anything else is an exfiltration
+ * attempt rather than a use case.
+ */
+function isSameOriginRedirect(redirectUri: string, requestUrl: URL): boolean {
+  try {
+    return new URL(redirectUri, requestUrl.origin).origin === requestUrl.origin;
+  } catch {
+    return false;
   }
 }
 
@@ -524,6 +616,22 @@ export async function handleAuthorize(
     });
   }
 
+  // Reject unregistered redirect targets before rendering the login page, so a
+  // crafted authorize link never gets the chance to collect credentials. The
+  // error is rendered here rather than redirected — redirecting to an
+  // unregistered URI is the exact thing being prevented.
+  if (!isAllowedRedirectUri(redirectUri, config)) {
+    config.logger?.warn('Rejected unregistered redirect_uri at /authorize');
+    await addTimingJitter();
+    return oauthErrorHtml({
+      error: 'invalid_request',
+      errorDescription: 'redirect_uri is not registered for this client',
+      status: 400,
+      messages: config.translations,
+      goBackHref: config.loginRedirectUrl || '/',
+    });
+  }
+
   if (!codeChallenge || codeChallenge.length < 43) {
     await addTimingJitter();
     return oauthErrorHtml({
@@ -553,7 +661,7 @@ export async function handleAuthorize(
     if (totpSessionParam && config.totp?.enabled) {
       // Verify the TOTP session exists
       const pendingSession = await config.totp.callbacks.getPendingTotpSession(totpSessionParam);
-      if (pendingSession) {
+      if (pendingSession && pendingSession.purpose === 'login') {
         // Show TOTP verification page
         const totpPage = getTotpVerificationPage(
           url.toString(),
@@ -679,7 +787,7 @@ export async function handleAuthorize(
   if (totpCode && totpSession && config.totp?.enabled) {
     // This is a TOTP verification request - get userId from the pending session
     const pendingSession = await config.totp.callbacks.getPendingTotpSession(totpSession);
-    if (!pendingSession) {
+    if (!pendingSession || pendingSession.purpose !== 'login') {
       await addTimingJitter();
       return oauthErrorHtml({
         error: 'access_denied',
@@ -700,6 +808,12 @@ export async function handleAuthorize(
     );
 
     if (!totpResult.valid) {
+      // One guess per session. A six-digit code has ~10^6 values and the
+      // default window accepts three of them, so a session that survives a
+      // wrong guess is a second factor a distributed attacker exhausts in under
+      // a second. Burning the session forces a fresh password authentication
+      // for every attempt.
+      await config.totp.callbacks.deletePendingTotpSession(totpSession);
       await addTimingJitter();
       return oauthErrorHtml({
         error: 'access_denied',
@@ -712,7 +826,7 @@ export async function handleAuthorize(
 
     // Pending TOTP session is single-use: delete it now so a stolen
     // session token cannot be replayed within its natural expiry window.
-    await config.totp.callbacks.deletePendingTotpSession?.(totpSession);
+    await config.totp.callbacks.deletePendingTotpSession(totpSession);
 
     // TOTP verified - generate authorization code
     const code = generateSecureRandomString(SECURITY_CONSTANTS.MIN_AUTH_CODE_LENGTH);
@@ -803,7 +917,12 @@ export async function handleAuthorize(
   // Always verify password (even with dummy hash) to prevent timing-based user enumeration
   const isValidPassword = await verifyPassword(
     password,
-    user?.passwordHash ?? '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+    // The dummy hash MUST carry the same cost factor as real hashes. It used to
+    // be cost 10 against a cost-12 minimum, which makes the no-such-user branch
+    // roughly four times faster — a ~100ms difference that no amount of jitter
+    // hides and that averaging over many requests resolves precisely. That is a
+    // user-enumeration oracle, and it is the whole reason this branch exists.
+    user?.passwordHash ?? PASSWORD_CONSTANTS.DUMMY_HASH,
   );
 
   if (!user || !isValidPassword) {
@@ -829,7 +948,7 @@ export async function handleAuthorize(
       setupUrl.searchParams.set('user_id', userId);
       // Store a setup session token
       const setupToken = generateSecureRandomString(SECURITY_CONSTANTS.MIN_SETUP_TOKEN_LENGTH);
-      await config.totp.callbacks.storePendingTotpSession(setupToken, userId, Date.now() + 600000); // 10 min
+      await config.totp.callbacks.storePendingTotpSession(setupToken, userId, Date.now() + 600000, 'setup'); // 10 min
       setupUrl.searchParams.set('setup_token', setupToken);
       return new Response(null, {
         status: 302,
@@ -865,7 +984,7 @@ export async function handleAuthorize(
       // Need to show TOTP verification form
       // Create a pending TOTP session
       const sessionId = generateSecureRandomString(SECURITY_CONSTANTS.MIN_SESSION_ID_LENGTH);
-      await config.totp.callbacks.storePendingTotpSession(sessionId, userId, Date.now() + 300000); // 5 min
+      await config.totp.callbacks.storePendingTotpSession(sessionId, userId, Date.now() + 300000, 'login'); // 5 min
 
       // Return TOTP verification page
       const totpPage = getTotpVerificationPage(url.toString(), sessionId, config.translations, config.customLogo);
@@ -1142,11 +1261,43 @@ async function handleRefreshTokenGrant(
 
 export interface DecapOauth2 {
   fetch(request: Request): Promise<Response>;
+  /**
+   * Resolve the safety-gate checks that need an await — the ones that ask
+   * `crypto.subtle` whether it genuinely implements the algorithms this package
+   * depends on. `fetch` awaits this itself on the first request; call it
+   * directly at startup to fail fast instead of on first traffic.
+   *
+   * @throws UnsafeRuntimeError when the runtime cannot uphold a guarantee and
+   * the reason has not been suppressed via `ignoreUnsafeReasons`.
+   */
+  ready(): Promise<void>;
 }
 
 export function decapOauth2(
   options: OAuthConfig,
 ): DecapOauth2 {
+  // Refuse to start on a runtime that cannot uphold what this package promises.
+  // Synchronous reasons are decided here, before a single endpoint exists;
+  // reasons that need an await (asking crypto.subtle whether it truly
+  // implements an algorithm) are decided once on the first request.
+  const gateInput: GateInput = {
+    ignoreUnsafeReasons: options.ignoreUnsafeReasons,
+    threatModel: options.threatModel,
+    passkeyEnabled: !!options.passkey?.enabled,
+    totpEnabled: !!options.totp?.enabled,
+  };
+  assertRuntimeSafety(gateInput);
+
+  // An accepted risk that nobody is reminded of is a forgotten risk.
+  for (const code of suppressedReasons(gateInput)) {
+    options.logger?.warn(
+      `[${code}] safety gate suppressed via ignoreUnsafeReasons: ${UNSAFE_REASONS[code].risk}`,
+    );
+  }
+
+  let asyncGate: Promise<void> | undefined;
+  const runAsyncGate = (): Promise<void> => (asyncGate ??= assertRuntimeSafetyAsync(gateInput));
+
   const authorizeEndpoint = options.authorizeEndpoint
     ? Url.normalize(options.authorizeEndpoint)
     : TL.url`${options.basePath}/authorize`;
@@ -1166,7 +1317,31 @@ export function decapOauth2(
   const config = options;
 
   return {
+    ready: runAsyncGate,
+
     async fetch(request: Request): Promise<Response> {
+      try {
+        await runAsyncGate();
+      } catch (err) {
+        // The codes and remedies describe our internals; they go to the
+        // operator's logs, never into a response served to whoever asked.
+        config.logger?.fatal('Runtime safety gate failed', err);
+        return oauthError('server_error', undefined, undefined, 503);
+      }
+
+      try {
+        return await route(request);
+      } catch (err) {
+        // Malformed bodies (a POST whose Content-Type makes formData() reject)
+        // must not escape as an unhandled rejection from fetch().
+        config.logger?.error('Unhandled error while serving OAuth request', err);
+        return oauthError('invalid_request', 'Malformed request', undefined, 400);
+      }
+    },
+  };
+
+  async function route(request: Request): Promise<Response> {
+    {
       const url = new URL(request.url);
       const pathname = Url.normalize(url.pathname);
 
@@ -1226,8 +1401,8 @@ export function decapOauth2(
 
       // Unknown OAuth2 route
       return oauthError('invalid_request', `Unknown OAuth2 endpoint: ${pathname}`, undefined, 404);
-    },
-  };
+    }
+  }
 }
 
 /**
@@ -1244,6 +1419,11 @@ async function handleTotpSetupPage(
     return oauthError('invalid_request', 'Missing redirect_uri parameter');
   }
 
+  if (!isSameOriginRedirect(redirectUri, url)) {
+    config.logger?.warn('Rejected cross-origin redirect_uri on the TOTP setup page');
+    return oauthError('invalid_request', 'redirect_uri must be on the same origin', undefined, 400);
+  }
+
   if (!config.totp?.enabled) {
     return oauthError('invalid_request', 'TOTP is not enabled');
   }
@@ -1254,10 +1434,24 @@ async function handleTotpSetupPage(
     return oauthError('invalid_request', 'Missing setup_token parameter');
   }
 
-  // Verify the setup token and get the pending session
+  // Verify the setup token and get the pending session.
+  //
+  // The purpose check is load-bearing. Login and enrollment used to share one
+  // pending-session namespace, so the session token embedded in the TOTP
+  // verification page — which an attacker holding only the password receives in
+  // their own response body — was also accepted here. A single GET then minted
+  // a fresh secret over the victim's existing one, destroying their second
+  // factor and letting the attacker enroll their own authenticator.
   const pendingSession = await config.totp.callbacks.getPendingTotpSession(setupToken);
-  if (!pendingSession) {
+  if (!pendingSession || pendingSession.purpose !== 'setup') {
     return oauthError('access_denied', 'Invalid or expired setup token', undefined, 401);
+  }
+
+  // Never re-enroll over a live secret. Rotating an existing second factor must
+  // be authenticated by the existing factor, which this endpoint cannot do.
+  if (await config.totp.callbacks.hasTotp(pendingSession.userId)) {
+    config.logger?.warn('Refused TOTP re-enrollment for a user who already has a secret');
+    return oauthError('access_denied', 'TOTP is already configured for this account', undefined, 403);
   }
 
   // Get the user
@@ -1319,9 +1513,10 @@ async function handleTotpSetupVerify(
     return oauthError('invalid_request', 'TOTP is not enabled');
   }
 
-  // Verify the setup token
+  // Verify the setup token. Enrollment tokens only — a login-stage session is
+  // obtainable with the password alone and must not complete an enrollment.
   const pendingSession = await config.totp.callbacks.getPendingTotpSession(setupToken);
-  if (!pendingSession) {
+  if (!pendingSession || pendingSession.purpose !== 'setup') {
     return oauthError('access_denied', 'Invalid or expired setup token', undefined, 401);
   }
 
@@ -1396,6 +1591,11 @@ async function handlePasskeySetupPage(
 
   if (!redirectUri) {
     return oauthError('invalid_request', 'Missing redirect_uri parameter');
+  }
+
+  if (!isSameOriginRedirect(redirectUri, url)) {
+    config.logger?.warn('Rejected cross-origin redirect_uri on the passkey setup page');
+    return oauthError('invalid_request', 'redirect_uri must be on the same origin', undefined, 400);
   }
 
   if (!config.passkey?.enabled) {
@@ -1578,7 +1778,7 @@ async function handlePasskeyAuthenticateVerify(
         // Create a pending TOTP session
         const totpSessionId = generateSecureRandomString(SECURITY_CONSTANTS.MIN_SESSION_ID_LENGTH);
         const expiresAt = Date.now() + 5 * 60 * 1000; // 5 minutes
-        await config.totp.callbacks.storePendingTotpSession(totpSessionId, verification.userId, expiresAt);
+        await config.totp.callbacks.storePendingTotpSession(totpSessionId, verification.userId, expiresAt, 'login');
 
         // Return the TOTP session ID - client will redirect to TOTP verification
         // Build the authorize URL for TOTP verification redirect
@@ -1615,6 +1815,34 @@ async function handlePasskeyAuthenticateVerify(
       });
     }
 
+    // This endpoint mints an authorization code, so it carries exactly the same
+    // obligations as /authorize: the redirect target must be registered, the
+    // client_id must match, and the challenge method must be one we support.
+    // Before this check it accepted any parseable URL and silently fell back to
+    // config.clientId when the caller supplied none.
+    if (!isAllowedRedirectUri(redirectUri, config)) {
+      config.logger?.warn('Rejected unregistered redirect_uri at /passkey/authenticate/verify');
+      return new Response(JSON.stringify({ error: 'redirect_uri is not registered for this client' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (!clientId || !(await constantTimeEqual(clientId, config.clientId))) {
+      await addTimingJitter();
+      return new Response(JSON.stringify({ error: 'Invalid or missing client_id' }), {
+        status: 401,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    if (codeChallengeMethod !== 'S256') {
+      return new Response(JSON.stringify({ error: 'Invalid code_challenge_method. Must be "S256"' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
     // Generate authorization code
     const code = generateSecureRandomString(SECURITY_CONSTANTS.MIN_AUTH_CODE_LENGTH);
     const codeExpiration = config.authCodeExpiration ?? 600;
@@ -1622,10 +1850,10 @@ async function handlePasskeyAuthenticateVerify(
     await config.callbacks.storeAuthorizationCode({
       code,
       userId: verification.userId,
-      clientId: clientId || config.clientId,
+      clientId,
       redirectUri,
       codeChallenge,
-      codeChallengeMethod: (codeChallengeMethod as 'S256') || 'S256',
+      codeChallengeMethod,
       scope,
       expiresAt: Date.now() + codeExpiration * 1000,
     });
@@ -1788,7 +2016,13 @@ async function handleForgotPassword(
       }
     }
 
-    const resetBaseUrl = TL.url`${url.origin}/${config.basePath}/reset-password`;
+    // Honour the operator's configured reset base URL. Spreading the config
+    // first and then overriding meant the derived value always won, so a
+    // configured `resetBaseUrl` was silently ignored and the emailed link was
+    // built from `url.origin` — i.e. from the client-supplied Host header. An
+    // attacker who can reach the endpoint with a forged Host then has the reset
+    // link point at their own server.
+    const derivedResetBaseUrl = TL.url`${url.origin}/${config.basePath}/reset-password`;
 
     const user = await config.callbacks.getUserByEmail(email);
 
@@ -1796,14 +2030,23 @@ async function handleForgotPassword(
       try {
         await requestPasswordReset(user, {
           ...config.passwordReset,
-          resetBaseUrl,
+          resetBaseUrl: config.passwordReset.resetBaseUrl ?? derivedResetBaseUrl,
         });
       } catch (err) {
         // Log error but don't expose it to prevent email enumeration
         config.logger?.error('Password reset request error:', err);
       }
     } else {
-      await new Promise(resolve => setTimeout(resolve, Math.random() * 200 + 100));
+      // Imitate the work the real branch does. This is deliberately CSPRNG
+      // jitter rather than Math.random, which is predictable and, on Cloudflare
+      // Workers, may be seeded per request — an attacker who can predict the
+      // delay subtracts it and recovers the enumeration signal.
+      //
+      // Note this closes the predictability hole, not the shape mismatch: the
+      // real branch awaits an email round trip whose duration we cannot
+      // imitate. Genuinely constant-time behaviour here requires the operator
+      // to enqueue delivery rather than await it. Documented in the README.
+      await addTimingJitter(200);
     }
 
     // Always show success message to prevent email enumeration

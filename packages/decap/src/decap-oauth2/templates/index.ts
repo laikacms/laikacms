@@ -8,8 +8,11 @@
 export {
   authorizeUrl,
   buildCspWithLogo,
+  escapeHtml,
+  escapeHtmlAttribute,
   forgotPasswordSection,
   html,
+  jsonForInlineScript,
   logoHtml,
   passkeyScript,
   passkeySection,

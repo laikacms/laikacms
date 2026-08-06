@@ -33,6 +33,15 @@ vi.mock('laikacms/crypto', () => ({
       .replace(/=/g, '');
   }),
   verifyPassword: vi.fn(),
+  // Cost 12 — the same factor real hashes use. A cheaper dummy makes the
+  // no-such-user branch measurably faster and reintroduces the enumeration
+  // oracle this constant exists to close.
+  PASSWORD_CONSTANTS: {
+    MIN_ROUNDS: 12,
+    MAX_PASSWORD_LENGTH: 1024,
+    RECOMMENDED_ROUNDS: 14,
+    DUMMY_HASH: '$2a$12$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy',
+  },
 }));
 
 vi.mock('./totp/totp.js', () => ({
@@ -104,6 +113,7 @@ function makeConfig(callbacks: OAuthCallbacks, overrides: Partial<OAuthConfig> =
     callbacks,
     clientId: CLIENT_ID,
     basePath: BASE_PATH,
+    allowedRedirectUris: [REDIRECT_URI],
     ...overrides,
   };
 }
@@ -510,7 +520,7 @@ describe('handleAuthorize POST — TOTP required → TOTP page', () => {
 
   it('returns 200 TOTP verification page when user has TOTP configured', async () => {
     const user = makeUser();
-    const pendingSessionStore: Record<string, string> = {};
+    const pendingSessionStore: Record<string, { userId: string, purpose: 'login' | 'setup' }> = {};
 
     const totpCallbacks = {
       hasTotp: vi.fn().mockResolvedValue(true),
@@ -518,11 +528,15 @@ describe('handleAuthorize POST — TOTP required → TOTP page', () => {
       storeTotpSecret: vi.fn().mockResolvedValue(undefined),
       deleteTotpSecret: vi.fn().mockResolvedValue(undefined),
       getPendingTotpSession: vi.fn().mockImplementation(async (id: string) => {
-        return pendingSessionStore[id] ? { userId: pendingSessionStore[id] } : null;
+        return pendingSessionStore[id]
+          ? { userId: pendingSessionStore[id].userId, purpose: pendingSessionStore[id].purpose }
+          : null;
       }),
-      storePendingTotpSession: vi.fn().mockImplementation(async (id: string, userId: string) => {
-        pendingSessionStore[id] = userId;
-      }),
+      storePendingTotpSession: vi.fn().mockImplementation(
+        async (id: string, userId: string, _expiresAt: number, purpose: 'login' | 'setup') => {
+          pendingSessionStore[id] = { userId, purpose };
+        },
+      ),
       deletePendingTotpSession: vi.fn().mockResolvedValue(undefined),
       getUsedTotpCode: vi.fn().mockResolvedValue(null),
       markTotpCodeUsed: vi.fn().mockResolvedValue(undefined),
@@ -571,7 +585,7 @@ describe('handleAuthorize GET — TOTP session', () => {
   it('returns 200 TOTP verification page when totp_session is valid', async () => {
     const callbacks = makeCallbacks();
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'login' });
     const config = makeConfig(callbacks, {
       totp: { enabled: true, callbacks: totpCbs },
     });
@@ -636,7 +650,7 @@ describe('handleAuthorize POST — TOTP verification', () => {
   it('redirects 302 with code when totp_code and totp_session are valid', async () => {
     const callbacks = makeCallbacks({ storeAuthorizationCode: vi.fn().mockResolvedValue(undefined) });
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'login' });
     const config = makeConfig(callbacks, {
       totp: { enabled: true, callbacks: totpCbs },
     });
@@ -656,7 +670,7 @@ describe('handleAuthorize POST — TOTP verification', () => {
   it('calls deletePendingTotpSession after successful verification', async () => {
     const callbacks = makeCallbacks({ storeAuthorizationCode: vi.fn().mockResolvedValue(undefined) });
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'login' });
     const config = makeConfig(callbacks, {
       totp: { enabled: true, callbacks: totpCbs },
     });
@@ -673,7 +687,7 @@ describe('handleAuthorize POST — TOTP verification', () => {
     vi.mocked(verifyOAuthTOTPWithReplayProtection).mockResolvedValue({ valid: false });
     const callbacks = makeCallbacks();
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'login' });
     const config = makeConfig(callbacks, {
       totp: { enabled: true, callbacks: totpCbs },
     });
@@ -693,7 +707,7 @@ describe('handleAuthorize POST — TOTP verification', () => {
     vi.mocked(verifyOAuthTOTPWithReplayProtection).mockResolvedValue({ valid: false, replay: true });
     const callbacks = makeCallbacks();
     const totpCbs = makeTotpCallbacks();
-    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1' });
+    totpCbs.getPendingTotpSession.mockResolvedValue({ userId: 'user-1', purpose: 'login' });
     const config = makeConfig(callbacks, {
       totp: { enabled: true, callbacks: totpCbs },
     });

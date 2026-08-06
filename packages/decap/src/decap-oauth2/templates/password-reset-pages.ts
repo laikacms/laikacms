@@ -12,7 +12,15 @@
 
 import { defaultMessages, type OAuthMessages } from '../i18n/index.js';
 import { colors, loginPageStyles } from './decap-styles.js';
-import { html, type HtmlTemplate, messages, processCustomLogo, type TemplateVariables } from './html.js';
+import {
+  escapeHtml,
+  escapeHtmlAttribute,
+  html,
+  type HtmlTemplate,
+  messages,
+  processCustomLogo,
+  type TemplateVariables,
+} from './html.js';
 
 // Additional styles for password reset pages
 const passwordResetStyles = `
@@ -316,20 +324,6 @@ export interface PasswordResetPageOptions {
   messages?: OAuthMessages;
 }
 
-/**
- * Escape HTML special characters to prevent XSS
- */
-function escapeHtml(text: string): string {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#039;',
-  };
-  return text.replace(/[&<>"']/g, char => map[char]);
-}
-
 // Default login URL uses JavaScript history.back() as a fallback
 const DEFAULT_LOGIN_FALLBACK = 'javascript:history.back()';
 
@@ -363,10 +357,10 @@ export function renderForgotPasswordPage(options: PasswordResetPageOptions): Pas
     [forgotPageTitle]: escapeHtml(t.forgotPageTitle),
     [forgotTitle]: escapeHtml(t.forgotTitle),
     [forgotDescription]: escapeHtml(t.forgotDescription),
-    [forgotFormUrl]: formUrl,
+    [forgotFormUrl]: escapeHtmlAttribute(formUrl),
     [sendResetLink]: escapeHtml(t.sendResetLink),
     [backToLogin]: escapeHtml(t.backToLogin),
-    [loginUrl]: backUrl,
+    [loginUrl]: escapeHtmlAttribute(backUrl),
     [errorMessage]: errorHtml,
     [logoHtml]: processedLogo.html,
     [captchaWidgetHtml]: captchaWidgetContent,
@@ -397,7 +391,7 @@ export function renderForgotPasswordSuccessPage(options: PasswordResetPageOption
     [checkEmailTitle]: escapeHtml(t.checkEmailTitle),
     [checkEmailDescription]: escapeHtml(t.checkEmailDescription),
     [backToLogin]: escapeHtml(t.backToLogin),
-    [loginUrl]: backUrl,
+    [loginUrl]: escapeHtmlAttribute(backUrl),
     [logoHtml]: processedLogo.html,
     [messages]: msgs,
   };
@@ -426,8 +420,10 @@ export function renderResetPasswordPage(options: PasswordResetPageOptions): Pass
     [resetPageTitle]: escapeHtml(t.resetPageTitle),
     [resetTitle]: escapeHtml(t.resetTitle),
     [resetDescription]: escapeHtml(t.resetDescription),
-    [resetFormUrl]: formUrl,
-    [resetToken]: tokenValue,
+    [resetFormUrl]: escapeHtmlAttribute(formUrl),
+    // The token comes straight from the request query/body on error paths —
+    // fully attacker-controlled, must be escaped for the hidden-input attribute.
+    [resetToken]: escapeHtmlAttribute(tokenValue),
     [newPasswordLabel]: escapeHtml(t.newPasswordLabel),
     [newPasswordPlaceholder]: escapeHtml(t.newPasswordPlaceholder),
     [confirmPasswordLabel]: escapeHtml(t.confirmPasswordLabel),
@@ -462,7 +458,7 @@ export function renderResetPasswordSuccessPage(options: PasswordResetPageOptions
     [successTitle]: escapeHtml(t.successTitle),
     [successDescription]: escapeHtml(t.successDescription),
     [signInLink]: escapeHtml(t.signInLink),
-    [loginUrl]: backUrl,
+    [loginUrl]: escapeHtmlAttribute(backUrl),
     [logoHtml]: processedLogo.html,
     [messages]: msgs,
   };

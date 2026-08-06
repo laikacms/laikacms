@@ -4,8 +4,11 @@ import {
   authorizeUrl,
   captchaScript,
   captchaWidget,
+  escapeHtml,
+  escapeHtmlAttribute,
   forgotPasswordSection,
   html,
+  jsonForInlineScript,
   logoHtml,
   passkeyScript,
   passkeySection,
@@ -99,7 +102,7 @@ const getPasskeySectionFragment = (signInWithPasskeyText: string) => `
         <path d="M21.8 16c.2-2 .131-5.354 0-6"/>
         <path d="M9 6.8a6 6 0 0 1 9 5.2c0 .47 0 1.17-.02 2"/>
       </svg>
-      ${signInWithPasskeyText}
+      ${escapeHtml(signInWithPasskeyText)}
     </button>
 `;
 
@@ -116,7 +119,9 @@ export function generatePasskeyScript(
   verifyUrl: string,
   messages?: AuthTranslation,
 ): string {
-  const optionsJson = passkeyOptions ? JSON.stringify(passkeyOptions) : 'null';
+  // jsonForInlineScript escapes `<` so a `</script>` sequence in any field
+  // cannot terminate the inline script element early.
+  const optionsJson = passkeyOptions ? jsonForInlineScript(passkeyOptions) : 'null';
 
   // Use provided messages or defaults
   const authenticatingText = messages?.authenticating ?? 'Authenticating...';
@@ -129,15 +134,15 @@ export function generatePasskeyScript(
   return `
   <script>
     (function() {
-      var verifyUrl = ${JSON.stringify(verifyUrl)};
+      var verifyUrl = ${jsonForInlineScript(verifyUrl)};
       var embeddedOpts = ${optionsJson};
       var i18n = {
-        authenticating: ${JSON.stringify(authenticatingText)},
-        signingInWithPasskey: ${JSON.stringify(signingInWithPasskeyText)},
-        passkeyAuthFailed: ${JSON.stringify(passkeyAuthFailedText)},
-        passkeyOptionsNotAvailable: ${JSON.stringify(passkeyOptionsNotAvailableText)},
-        noCredentialReturned: ${JSON.stringify(noCredentialReturnedText)},
-        authenticationFailed: ${JSON.stringify(authenticationFailedText)}
+        authenticating: ${jsonForInlineScript(authenticatingText)},
+        signingInWithPasskey: ${jsonForInlineScript(signingInWithPasskeyText)},
+        passkeyAuthFailed: ${jsonForInlineScript(passkeyAuthFailedText)},
+        passkeyOptionsNotAvailable: ${jsonForInlineScript(passkeyOptionsNotAvailableText)},
+        noCredentialReturned: ${jsonForInlineScript(noCredentialReturnedText)},
+        authenticationFailed: ${jsonForInlineScript(authenticationFailedText)}
       };
       
       if (!window.PublicKeyCredential) {
@@ -477,7 +482,7 @@ export interface AuthorizationPageResult {
 }
 
 const FORGOT_PASSWORD_SECTION_FRAGMENT = (url: string, text: string) => `
-      <a href="${url}" class="forgot-password-link">${text}</a>
+      <a href="${escapeHtmlAttribute(url)}" class="forgot-password-link">${escapeHtml(text)}</a>
 `;
 
 // Default English messages for backward compatibility
@@ -521,7 +526,9 @@ export function getAuthorizationPageHTML(authUrl: string, options?: Authorizatio
   const processedLogo = processCustomLogo(options?.customLogo);
 
   const html = defaultAuthorizationPageTemplate({
-    [authorizeUrl]: authUrl,
+    // The authorize URL echoes request-derived data — escape for the
+    // form action attribute (matches totp-verification-page.ts).
+    [authorizeUrl]: escapeHtmlAttribute(authUrl),
     [passkeyStyles]: options?.passkeyEnabled ? PASSKEY_STYLES_FRAGMENT : '',
     [passkeySection]: passkeySectionContent,
     [passkeyScript]: passkeyScriptContent,
