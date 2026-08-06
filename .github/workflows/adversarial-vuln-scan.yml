@@ -1,0 +1,65 @@
+name: Adversarial vuln scan
+
+# On every push to develop or main, run Claude Code (Fable 5) which drives the
+# `adversarial-vuln-scan` Claude Workflow. That workflow reviews ONLY the diff
+# of this push and the code that depends on what changed — it assumes the
+# committed codebase is already safe and hunts for vulnerabilities the change
+# introduces, including regressions at dependent call sites (a change at X
+# breaking a security assumption at Y). It does not audit the whole repo.
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+# Serialize per branch; a newer push supersedes an in-flight scan.
+concurrency:
+  group: vuln-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read # read the code and the diff
+  id-token: write # required by claude-code-action's default auth
+
+jobs:
+  scan:
+    name: Scan push diff
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Full history so the workflow can diff the pushed range and trace
+          # dependents across the repo.
+          fetch-depth: 0
+
+      - name: Adversarial vulnerability scan
+        uses: anthropics/claude-code-action@v1
+        env:
+          # The scout stage of the workflow resolves the diff range from these.
+          BASE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Run the adversarial vulnerability scan for this push.
+
+            Use the Workflow tool with:
+              scriptPath: ".claude/workflows/adversarial-vuln-scan.js"
+
+            This is an explicit request to run a Claude Workflow — the script
+            orchestrates the whole scan. Do not review the code yourself first.
+
+            The workflow returns a `confirmed` array of change-introduced
+            vulnerabilities (empty if the change is clean). When it finishes:
+              - Write a concise report to the GitHub Actions step summary
+                ($GITHUB_STEP_SUMMARY): the diffed range, how many files were
+                scanned, and each confirmed finding with its severity, the
+                changed symbol (X), where it manifests (Y), the mechanism, and
+                the attack scenario. If `confirmed` is empty, state that no
+                change-introduced vulnerabilities were found.
+              - If any confirmed finding is `critical` or `high` severity,
+                exit non-zero at the end so the job fails and the push is
+                flagged. Otherwise exit 0.
+          claude_args: |
+            --model claude-fable-5
+            --allowedTools "Bash,Read,Grep,Glob,Workflow"
