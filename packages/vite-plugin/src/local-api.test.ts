@@ -4,8 +4,6 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import { Readable } from 'node:stream';
 
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createFsStorage, createRepositories } from './backend.js';
@@ -45,14 +43,26 @@ function fakeServer(opts: { host?: string | boolean } = {}) {
   return { server, routes, warnings };
 }
 
-/** Drive a captured Connect middleware as a `fetch(Request) => Response` handler. */
-function callMiddleware(handler: ConnectMiddleware, request: Request): Promise<Response> {
+/**
+ * Drive a captured Connect middleware as a `fetch(Request) => Response` handler.
+ *
+ * Mimics Connect's dispatch: the matched mount route is stripped from
+ * `req.url` and the full path is preserved on `req.originalUrl` — the
+ * middleware must not assume `req.url` still carries the mount prefix.
+ */
+function callMiddleware(handler: ConnectMiddleware, request: Request, mountRoute = ''): Promise<Response> {
   const nodeReadable = request.body
     ? Readable.fromWeb(request.body as never)
     : Readable.from([]);
+  const url = new URL(request.url);
+  const fullPath = url.pathname + url.search;
+  const strippedPath = mountRoute && fullPath.startsWith(mountRoute)
+    ? fullPath.slice(mountRoute.length) || '/'
+    : fullPath;
   const req = Object.assign(nodeReadable, {
     headers: Object.fromEntries(request.headers.entries()),
-    url: new URL(request.url).pathname + new URL(request.url).search,
+    url: strippedPath,
+    originalUrl: fullPath,
     method: request.method,
   }) as unknown as IncomingMessage;
 
@@ -95,21 +105,15 @@ function makeRepos() {
   return createRepositories(createFsStorage({ dir: path.join(tmpDir, 'content') }));
 }
 
-/** Build an in-memory-backed assets repository, mirroring how {@link makeRepos} sets up storage/documents. */
-function makeAssetsRepo() {
-  const storage = createFsStorage({ dir: path.join(tmpDir, 'assets-content') });
-  const settings = new DefaultContentBaseSettingsProvider({ storage });
-  return new ContentBaseAssetsRepository(storage, settings);
-}
-
 describe('mountLocalApi', () => {
-  it('mounts storage, documents, and session JSON:API under the default base path', async () => {
+  it('mounts storage, documents, assets, and session JSON:API under the default base path', async () => {
     const repos = makeRepos();
     const { server, routes } = fakeServer();
 
     mountLocalApi(server, repos, true);
 
     expect([...routes.keys()].sort()).toEqual([
+      `${DEFAULT_LOCAL_API_BASE_PATH}/assets`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/session`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
@@ -123,6 +127,7 @@ describe('mountLocalApi', () => {
     mountLocalApi(server, repos, { basePath: '/api/local' });
 
     expect([...routes.keys()].sort()).toEqual([
+      '/api/local/assets',
       '/api/local/documents',
       '/api/local/session',
       '/api/local/storage',
@@ -138,6 +143,7 @@ describe('mountLocalApi', () => {
     const res = await callMiddleware(
       sessionHandler,
       new Request(`http://localhost${DEFAULT_LOCAL_API_BASE_PATH}/session`),
+      `${DEFAULT_LOCAL_API_BASE_PATH}/session`,
     );
 
     expect(res.status).toBe(200);
@@ -160,6 +166,7 @@ describe('mountLocalApi', () => {
         headers: { 'Content-Type': 'application/vnd.api+json' },
         body: JSON.stringify({ data: { type: 'object', id: 'notes/hello', attributes: { content: { title: 'Hi' } } } }),
       }),
+      `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
     );
     expect(createRes.status).toBe(201);
     // Writes flow through the plugin's own repository, landing on disk.
@@ -170,6 +177,7 @@ describe('mountLocalApi', () => {
     const getRes = await callMiddleware(
       storageHandler,
       new Request(`http://localhost${DEFAULT_LOCAL_API_BASE_PATH}/storage/objects/notes%2Fhello`),
+      `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
     );
     expect(getRes.status).toBe(200);
     const getBody = await getRes.json() as { data: { attributes: { content: { title: string } } } };
@@ -185,6 +193,7 @@ describe('mountLocalApi', () => {
           data: { type: 'object', id: 'notes/hello', attributes: { content: { title: 'Updated' } } },
         }),
       }),
+      `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
     );
     expect(patchRes.status).toBe(200);
     const updatedOnDisk = JSON.parse(await fs.readFile(path.join(tmpDir, 'content', 'notes', 'hello.json'), 'utf8'));
@@ -196,6 +205,7 @@ describe('mountLocalApi', () => {
       new Request(`http://localhost${DEFAULT_LOCAL_API_BASE_PATH}/storage/objects/notes%2Fhello`, {
         method: 'DELETE',
       }),
+      `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
     );
     expect(deleteRes.status).toBe(200);
     await expect(fs.access(path.join(tmpDir, 'content', 'notes', 'hello.json'))).rejects.toThrow();
@@ -220,12 +230,14 @@ describe('mountLocalApi', () => {
           },
         }),
       }),
+      `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
     );
     expect(createRes.status).toBe(201);
 
     const getRes = await callMiddleware(
       documentsHandler,
       new Request(`http://localhost${DEFAULT_LOCAL_API_BASE_PATH}/documents/published/posts%2Fnew`),
+      `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
     );
     expect(getRes.status).toBe(200);
     const getBody = await getRes.json() as { data: { attributes: { content: { title: string } } } };
@@ -240,7 +252,7 @@ describe('mountLocalApi', () => {
 
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toMatch(/non-loopback|--host/);
-    expect(routes.size).toBe(3);
+    expect(routes.size).toBe(4);
   });
 
   it.each([undefined, 'localhost', '127.0.0.1', '::1'] as const)(
@@ -255,47 +267,10 @@ describe('mountLocalApi', () => {
 });
 
 describe('mountLocalApi — assets', () => {
-  it('does not register the assets route when no assets repository is supplied', () => {
-    const repos = makeRepos();
-    const { server, routes } = fakeServer();
-
-    mountLocalApi(server, repos, true);
-
-    expect(routes.has(`${DEFAULT_LOCAL_API_BASE_PATH}/assets`)).toBe(false);
-    expect([...routes.keys()].sort()).toEqual([
-      `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
-      `${DEFAULT_LOCAL_API_BASE_PATH}/session`,
-      `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
-    ]);
-  });
-
-  it('registers the assets route at the default base path when an assets repository is supplied', () => {
-    const repos = makeRepos();
-    const { server, routes } = fakeServer();
-
-    mountLocalApi(server, repos, { assets: makeAssetsRepo() });
-
-    expect([...routes.keys()].sort()).toEqual([
-      `${DEFAULT_LOCAL_API_BASE_PATH}/assets`,
-      `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
-      `${DEFAULT_LOCAL_API_BASE_PATH}/session`,
-      `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,
-    ]);
-  });
-
-  it('relocates the assets route under a custom basePath', () => {
-    const repos = makeRepos();
-    const { server, routes } = fakeServer();
-
-    mountLocalApi(server, repos, { basePath: '/api/local', assets: makeAssetsRepo() });
-
-    expect(routes.has('/api/local/assets')).toBe(true);
-  });
-
   it('reads and writes assets with no authorization required', async () => {
     const repos = makeRepos();
     const { server, routes } = fakeServer();
-    mountLocalApi(server, repos, { assets: makeAssetsRepo() });
+    mountLocalApi(server, repos, true);
     const assetsHandler = routes.get(`${DEFAULT_LOCAL_API_BASE_PATH}/assets`)!;
 
     const base64Content = Buffer.from('hello world').toString('base64');
@@ -312,12 +287,14 @@ describe('mountLocalApi — assets', () => {
           },
         }),
       }),
+      `${DEFAULT_LOCAL_API_BASE_PATH}/assets`,
     );
     expect(createRes.status).toBe(201);
 
     const getRes = await callMiddleware(
       assetsHandler,
       new Request(`http://localhost${DEFAULT_LOCAL_API_BASE_PATH}/assets/resources/images%2Fhello.txt`),
+      `${DEFAULT_LOCAL_API_BASE_PATH}/assets`,
     );
     expect(getRes.status).toBe(200);
     const getBody = await getRes.json() as { data: { attributes: { content: { contentType: string } } } };
@@ -353,6 +330,7 @@ describe('laikacms() plugin — localApi wiring', () => {
     (plugin.configureServer as (s: LocalApiServer) => void)(server);
 
     expect([...routes.keys()].sort()).toEqual([
+      `${DEFAULT_LOCAL_API_BASE_PATH}/assets`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/documents`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/session`,
       `${DEFAULT_LOCAL_API_BASE_PATH}/storage`,

@@ -82,25 +82,27 @@ export default defineConfig({
 
 - `/__laika/storage` — the storage repository's JSON:API (`storage-api`'s `buildJsonApi`)
 - `/__laika/documents` — the documents repository's JSON:API (`documents-api`'s `buildJsonApi`)
+- `/__laika/assets` — the assets repository's JSON:API (`assets-api`'s `buildAssetsApi`), so Decap
+  media uploads in dev land locally
 - `/__laika/session` — a trivial stub-identity responder; local mode does no real auth, so every
   request gets the same fixed identity. It exists because `LaikaBackend.authenticate()`
   (`@laikacms/decap`) always pings `${apiUrl}/session` to resolve a display identity, even when the
   local backend authenticates with a dummy token.
 
-Pass an options object instead of `true` to override the base path or mount an assets API:
+All three repository-backed sub-APIs serve the same repositories the `laika:` loader reads: by
+default a filesystem storage repository built from `dir`, with the documents and assets repositories
+derived from it via ContentBase. To serve different ones, pass them through the plugin's
+`repositories` option.
+
+Pass an options object instead of `true` to override the base path:
 
 ```ts
 laikacms({
   dir: 'content',
   localApi: {
-    // Base path both storage and documents sub-routes mount under.
+    // Base path the storage/documents/assets sub-routes mount under.
     // Default: '/__laika'.
     basePath: '/__laika',
-    // A user-provided assets repository. When supplied, `/__laika/assets` is
-    // mounted so Decap media uploads land locally. Omitted by default — no
-    // assets repository means no `/__laika/assets` route at all (a request
-    // to it 404s as if it never existed).
-    assets: myAssetsRepository,
   },
 });
 ```

@@ -1,3 +1,5 @@
+import type { AssetsRepository } from 'laikacms/assets';
+import { ContentBaseAssetsRepository } from 'laikacms/assets/contentbase';
 import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
 import { LaikaStream, LaikaTask } from 'laikacms/core';
 import type { DocumentsRepository } from 'laikacms/documents';
@@ -48,16 +50,24 @@ export function createFsStorage(options: FsStorageOptions): StorageRepository {
   );
 }
 
-/** The storage + documents repositories the loader reads content through. */
+/**
+ * The repositories the plugin works through: `storage`/`documents` back the
+ * `laika:` loader, and `assets` backs local mode's media API.
+ */
 export interface LaikaRepositories {
   storage: StorageRepository;
   documents: DocumentsRepository;
+  assets: AssetsRepository;
 }
 
-/** Derive a documents repository from a storage repository via ContentBase. */
+/** Derive documents and assets repositories from a storage repository via ContentBase. */
 export function createRepositories(storage: StorageRepository): LaikaRepositories {
   const settings = new DefaultContentBaseSettingsProvider({ storage });
-  return { storage, documents: new ContentBaseDocumentsRepository(storage, settings) };
+  return {
+    storage,
+    documents: new ContentBaseDocumentsRepository(storage, settings),
+    assets: new ContentBaseAssetsRepository(storage, settings),
+  };
 }
 
 /** The content payload plus repository metadata for one item. */

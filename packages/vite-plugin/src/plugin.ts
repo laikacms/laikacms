@@ -23,13 +23,14 @@ export interface LaikaTypegenPluginOptions {
 export interface LaikaVitePluginOptions {
   /**
    * Bring your own repositories. When omitted, a filesystem storage repository
-   * (and a ContentBase documents repository derived from it) is created from
-   * {@link LaikaVitePluginOptions.dir}.
+   * (and ContentBase documents and assets repositories derived from it) is
+   * created from {@link LaikaVitePluginOptions.dir}.
    */
   repositories?: LaikaRepositories;
   /**
-   * Provide only the storage repository; the documents repository is derived
-   * from it via ContentBase. Ignored when {@link repositories} is given.
+   * Provide only the storage repository; the documents and assets repositories
+   * are derived from it via ContentBase. Ignored when {@link repositories} is
+   * given.
    */
   storage?: StorageRepository;
   /**

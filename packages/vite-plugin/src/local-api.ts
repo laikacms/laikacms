@@ -2,7 +2,7 @@
  * Local mode — mount LaikaCMS's own JSON:API over the dev server.
  *
  * While `vite dev` is running, {@link mountLocalApi} exposes the plugin's own
- * `storage`/`documents` repositories through the same JSON:API contract the
+ * `storage`/`documents`/`assets` repositories through the same JSON:API contract the
  * Decap laika-backend already speaks, so a JSON:API client (the Decap admin,
  * or any other) can read and write content locally instead of a remote
  * backend. Unauthenticated by design — see the module-level warning below —
@@ -17,17 +17,11 @@
  * when `resolveLaikaBackend`'s local backend authenticates with a dummy
  * token, so it must exist for the local backend to complete login (LCMS-449
  * slice 2, issue #848).
- *
- * The assets endpoint (`${basePath}/assets`) mounts only when a caller
- * supplies {@link LaikaLocalApiOptions.assets} — with no assets repository
- * the route is never registered, so a request to it 404s as if it never
- * existed rather than being stubbed out.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 
-import type { AssetsRepository } from 'laikacms/assets';
 import { buildAssetsApi } from 'laikacms/assets-api';
 import { buildJsonApi as buildDocumentsJsonApi } from 'laikacms/documents-api';
 import { buildJsonApi as buildStorageJsonApi } from 'laikacms/storage-api';
@@ -39,17 +33,10 @@ export const DEFAULT_LOCAL_API_BASE_PATH = '/__laika';
 
 export interface LaikaLocalApiOptions {
   /**
-   * Base path both `storage` and `documents` sub-routes mount under.
+   * Base path the `storage`/`documents`/`assets` sub-routes mount under.
    * Defaults to {@link DEFAULT_LOCAL_API_BASE_PATH}.
    */
   basePath?: string;
-  /**
-   * A user-provided assets repository. When supplied, LaikaCMS's own
-   * `buildAssetsApi` is mounted at `${basePath}/assets` so Decap media
-   * uploads in dev land locally. When omitted, `${basePath}/assets` is not
-   * registered at all — no phantom endpoint.
-   */
-  assets?: AssetsRepository;
 }
 
 /** A Node HTTP request handler compatible with Connect/Vite's `middlewares.use`. */
@@ -87,7 +74,11 @@ function isLoopbackHost(host: string | boolean | undefined): boolean {
 /** Convert a Node request into a Fetch `Request` against the dev server's own origin. */
 function toFetchRequest(req: IncomingMessage): Request {
   const host = req.headers.host ?? 'localhost';
-  const url = new URL(req.url ?? '/', `http://${host}`);
+  // Connect strips the matched mount route from `req.url` before dispatching,
+  // but the sub-APIs route on the full path (they are built with a basePath).
+  // `originalUrl` is Connect's unstripped copy; plain Node servers don't set it.
+  const originalUrl = (req as IncomingMessage & { originalUrl?: string }).originalUrl;
+  const url = new URL(originalUrl ?? req.url ?? '/', `http://${host}`);
   const headers = new Headers();
   for (const [key, value] of Object.entries(req.headers)) {
     if (value === undefined) continue;
@@ -171,9 +162,8 @@ function toConnectMiddleware(fetchHandler: (request: Request) => Promise<Respons
 }
 
 /**
- * Mount LaikaCMS's own JSON:API over `repos` at `${basePath}/storage` and
- * `${basePath}/documents`, plus `${basePath}/assets` when
- * {@link LaikaLocalApiOptions.assets} is supplied. No auth, no CORS — call
+ * Mount LaikaCMS's own JSON:API over `repos` at `${basePath}/storage`,
+ * `${basePath}/documents`, and `${basePath}/assets`. No auth, no CORS — call
  * this only from `configureServer`.
  */
 export function mountLocalApi(
@@ -195,13 +185,10 @@ export function mountLocalApi(
 
   const storageApi = buildStorageJsonApi({ repo: repos.storage, basePath: `${basePath}/storage` });
   const documentsApi = buildDocumentsJsonApi({ repo: repos.documents, basePath: `${basePath}/documents` });
+  const assetsApi = buildAssetsApi({ repository: repos.assets, basePath: `${basePath}/assets` });
 
   server.middlewares.use(`${basePath}/storage`, toConnectMiddleware(storageApi.fetch));
   server.middlewares.use(`${basePath}/documents`, toConnectMiddleware(documentsApi.fetch));
+  server.middlewares.use(`${basePath}/assets`, toConnectMiddleware(assetsApi.fetch));
   server.middlewares.use(`${basePath}/session`, toConnectMiddleware(sessionHandler));
-
-  if (resolved.assets) {
-    const assetsApi = buildAssetsApi({ repository: resolved.assets, basePath: `${basePath}/assets` });
-    server.middlewares.use(`${basePath}/assets`, toConnectMiddleware(assetsApi.fetch));
-  }
 }
