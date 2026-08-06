@@ -1,5 +1,20 @@
 # @laikacms/vite-plugin
 
+## 3.1.0
+
+### Minor Changes
+
+- Complete the local-mode content API: the opt-in JSON:API served over the Vite dev server now
+  covers the full content surface, including mounting the assets JSON:API when one is supplied.
+
+### Patch Changes
+
+- Await generated type writes in the plugin so type generation completes before the dev server
+  continues.
+- Updated dependencies
+- Updated dependencies
+  - laikacms@3.1.0
+
 ## 3.0.1
 
 ### Patch Changes

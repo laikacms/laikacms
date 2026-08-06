@@ -1,5 +1,32 @@
 # @laikacms/decap
 
+## 3.1.0
+
+### Minor Changes
+
+- Add the `laikacms/auth` core subpath and an opt-in scope authorization policy in decap-api.
+
+  `laikacms/auth` consolidates the PAT + scope mechanism as the lowest auth layer: an open
+  `resource:action` scope vocabulary with wildcards (`hasScope`, `normalizeScopes`), PAT
+  mint/hash/verify (`lk_pat_` prefix, sha256 at rest, timing-safe compare), and `resolveBearer` —
+  one seam turning a bearer token into `{ user, scopes }` — plus `requireScope` enforcement.
+
+  decap-api consumes it and adds `createScopePolicy()`, a drop-in `authorize()` that grants a
+  request iff the principal's `user.scopes` satisfy the scope required for its domain+operation.
+  Fails closed. `User.scopes` is optional and the PAT/bearer helpers are re-exported so consumers
+  can wire scoped bearers into `authenticateAccessToken` from one import.
+
+- Harden the decap-oauth2 authentication flows: add a runtime safety gate with unique reason codes
+  (opt-out via `ignoreUnsafeReasons`), strengthen the passkey and TOTP flows, and tighten the OAuth2
+  handlers and HTML templates.
+
+### Patch Changes
+
+- decap-cms-backend-laika: stop the dev authentication page from repeatedly re-attempting login.
+- Updated dependencies
+- Updated dependencies
+  - laikacms@3.1.0
+
 ## 3.0.1
 
 ### Patch Changes

@@ -1,5 +1,28 @@
 # laikacms
 
+## 3.1.0
+
+### Minor Changes
+
+- Add the `laikacms/auth` core subpath and an opt-in scope authorization policy in decap-api.
+
+  `laikacms/auth` consolidates the PAT + scope mechanism as the lowest auth layer: an open
+  `resource:action` scope vocabulary with wildcards (`hasScope`, `normalizeScopes`), PAT
+  mint/hash/verify (`lk_pat_` prefix, sha256 at rest, timing-safe compare), and `resolveBearer` —
+  one seam turning a bearer token into `{ user, scopes }` — plus `requireScope` enforcement.
+
+  decap-api consumes it and adds `createScopePolicy()`, a drop-in `authorize()` that grants a
+  request iff the principal's `user.scopes` satisfy the scope required for its domain+operation.
+  Fails closed. `User.scopes` is optional and the PAT/bearer helpers are re-exported so consumers
+  can wire scoped bearers into `authenticateAccessToken` from one import.
+
+### Patch Changes
+
+- storage-r2: preserve `createdAt` across object updates. R2's `uploaded` field resets on every
+  `bucket.put()`, so the creation timestamp drifted forward on each update. The repository now
+  embeds `x-laika-created-at` in custom metadata on first write and re-embeds it on every update,
+  falling back to `uploaded` for objects written before this fix.
+
 ## 3.0.1
 
 ## 3.0.0
