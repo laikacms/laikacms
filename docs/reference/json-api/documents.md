@@ -11,14 +11,15 @@ Revisions record snapshots of published documents.
 
 ### Resource Types
 
-| JSON:API type         | Domain entity        | Description                             |
-| --------------------- | -------------------- | --------------------------------------- |
-| `published`           | `Document`           | Live published document                 |
-| `published-summary`   | `DocumentSummary`    | Published document without content      |
-| `unpublished`         | `Unpublished`        | Draft or otherwise unpublished document |
-| `unpublished-summary` | `UnpublishedSummary` | Unpublished document without content    |
-| `revision`            | `Revision`           | Immutable historical snapshot           |
-| `revision-summary`    | `RevisionSummary`    | Revision without content                |
+| JSON:API type            | Domain entity           | Description                                              |
+| ------------------------ | ----------------------- | -------------------------------------------------------- |
+| `published`              | `Document`              | Live published document                                  |
+| `published-summary`      | `DocumentSummary`       | Published document without content                       |
+| `unpublished`            | `Unpublished`           | Draft or otherwise unpublished document                  |
+| `unpublished-summary`    | `UnpublishedSummary`    | Unpublished document without content                     |
+| `revision`               | `Revision`              | Immutable historical snapshot                            |
+| `revision-summary`       | `RevisionSummary`       | Revision without content                                 |
+| `documents-capabilities` | `DocumentsCapabilities` | Repository capabilities; returned by `GET /capabilities` |
 
 ### Endpoints
 
@@ -157,6 +158,70 @@ mount point so the document is usable as-is by code generators and API clients.
 Returns the same OpenAPI 3.1 specification as `GET /openapi.json`, serialized as YAML.
 
 **Response** — `200 OK`, `Content-Type: application/yaml`
+
+---
+
+#### GET /capabilities
+
+Returns the capabilities advertised by the underlying documents repository. Clients should call this
+before attempting cursor pagination — the `attributes.pagination.styles.cursor` field indicates
+whether the backend supports `page[after]` / `page[before]`. Sending cursor params to a backend that
+does not support them returns a `400 Bad Request`.
+
+**Response** — a single `documents-capabilities` resource
+
+```json
+{
+  "data": {
+    "type": "documents-capabilities",
+    "id": "self",
+    "attributes": {
+      "compatibilityDate": "2026-05-11",
+      "pagination": {
+        "supported": true,
+        "description": "Offset and page pagination are supported. Cursor pagination is not.",
+        "styles": {
+          "offset": true,
+          "page": true,
+          "cursor": false
+        }
+      },
+      "versionTracking": {
+        "supported": false,
+        "description": "This backend does not attach per-document version tokens."
+      },
+      "changes": {
+        "supported": false,
+        "description": "This backend does not support change signals."
+      }
+    },
+    "links": {
+      "self": "/api/documents/capabilities"
+    }
+  }
+}
+```
+
+A backend that supports version tracking and change signals would include:
+
+```json
+{
+  "versionTracking": {
+    "supported": true,
+    "description": "A git commit SHA or database row version is exposed as the document version token."
+  },
+  "changes": {
+    "supported": true,
+    "description": "Sync tokens and change feeds are supported.",
+    "syncToken": true,
+    "changeFeed": true
+  }
+}
+```
+
+When `pagination.supported` is `false` the `styles` field is absent. `versionTracking` and `changes`
+are always present. The `compatibilityDate` is set by each backend and changes when the repository's
+contract evolves — clients may use it to detect incompatible backend versions.
 
 ---
 
