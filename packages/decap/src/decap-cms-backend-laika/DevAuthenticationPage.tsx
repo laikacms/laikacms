@@ -8,7 +8,13 @@
  * entirely. The embedded server is expected to be configured with the
  * matching token (see `createEmbeddedLaika({ auth: { mode: 'dev' } })`).
  */
-import React, { Component } from 'react';
+import { Component } from 'react';
+
+// Decap remounts the authentication page when login fails. Without retaining
+// this state outside the component, an unavailable local API turns that
+// remount cycle into an unbounded stream of login and `/session` requests.
+// Reloading the admin page reloads this module and permits a fresh attempt.
+const attemptedDevTokens = new Set<string>();
 
 export interface DevAuthPageProps {
   onLogin: (user: unknown) => void;
@@ -27,6 +33,8 @@ class DevAuthenticationPage extends Component<DevAuthPageProps> {
       );
       return;
     }
+    if (attemptedDevTokens.has(token)) return;
+    attemptedDevTokens.add(token);
     queueMicrotask(() => this.props.onLogin({ token }));
   }
 
