@@ -148,17 +148,28 @@ class StubStorageRepository extends StorageRepository {
     _options: ListAtomsOptions,
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     const prefix = folderKey ? (folderKey.endsWith('/') ? folderKey : `${folderKey}/`) : '';
+    const seenFolders = new Set<string>();
     const summaries: AtomSummary[] = [];
+    const now = new Date().toISOString();
+
     for (const [k, v] of this.objects.entries()) {
-      if (!prefix || k.startsWith(prefix)) {
-        summaries.push({
-          type: 'object-summary',
-          key: v.key,
-          createdAt: v.createdAt,
-          updatedAt: v.updatedAt,
-        } as AtomSummary);
+      if (prefix && !k.startsWith(prefix)) continue;
+      const rest = k.slice(prefix.length);
+      const slashIdx = rest.indexOf('/');
+      if (slashIdx !== -1) {
+        // Nested object — its immediate parent is a sub-folder
+        const childFolder = prefix + rest.slice(0, slashIdx);
+        if (!seenFolders.has(childFolder)) {
+          seenFolders.add(childFolder);
+          summaries.push({ type: 'folder-summary', key: childFolder, createdAt: now, updatedAt: now } as AtomSummary);
+        }
+      } else {
+        summaries.push(
+          { type: 'object-summary', key: v.key, createdAt: v.createdAt, updatedAt: v.updatedAt } as AtomSummary,
+        );
       }
     }
+
     return summaries.length > 0
       ? LaikaStream.succeedMany<AtomSummary, ListAtomsDone>(summaries, { total: summaries.length })
       : LaikaStream.empty<ListAtomsDone>({ total: 0 });
@@ -310,5 +321,63 @@ describe('migrateStorage', () => {
     expect(destination.hasObject('alpha/x.md')).toBe(true);
     expect(destination.hasObject('beta/y.md')).toBe(false);
     expect(result.objectsCopied).toBe(1);
+  });
+
+  it('BFS folder discovery: non-empty sub-folders are created on destination', async () => {
+    source.seed('docs/a.md').seed('docs/b.md');
+    const folderEvents: string[] = [];
+
+    const result = await migrateStorage(source, destination, {
+      onEvent: e => {
+        if (e.type === 'folder-discovered' || e.type === 'folder-created') {
+          folderEvents.push(`${e.type}:${e.key}`);
+        }
+      },
+    });
+
+    expect(result.objectsCopied).toBe(2);
+    expect(result.foldersCreated).toBe(1);
+    expect(folderEvents).toContain('folder-discovered:docs');
+    expect(folderEvents).toContain('folder-created:docs');
+  });
+
+  it('dry-run with sub-folders reports correct foldersSkipped count', async () => {
+    source.seed('docs/a.md').seed('docs/b.md');
+
+    const result = await migrateStorage(source, destination, { dryRun: true });
+
+    expect(result.foldersSkipped).toBe(1);
+    expect(result.objectsSkipped).toBe(2);
+    expect(result.foldersCreated).toBe(0);
+    expect(result.objectsCopied).toBe(0);
+  });
+
+  it('dry-run emits folder-skipped events for discovered sub-folders', async () => {
+    source.seed('section/page.md');
+    const events: Array<{ type: string, key: string }> = [];
+
+    await migrateStorage(source, destination, {
+      dryRun: true,
+      onEvent: e => events.push(e as { type: string, key: string }),
+    });
+
+    const folderSkipped = events.filter(e => e.type === 'folder-skipped');
+    expect(folderSkipped).toHaveLength(1);
+    expect(folderSkipped[0]?.key).toBe('section');
+  });
+
+  it('deeply nested folders are all created on destination', async () => {
+    source.seed('a/b/c.md');
+    const folderCreated: string[] = [];
+
+    const result = await migrateStorage(source, destination, {
+      onEvent: e => {
+        if (e.type === 'folder-created') folderCreated.push(e.key);
+      },
+    });
+
+    expect(result.objectsCopied).toBe(1);
+    expect(folderCreated).toContain('a');
+    expect(folderCreated).toContain('a/b');
   });
 });

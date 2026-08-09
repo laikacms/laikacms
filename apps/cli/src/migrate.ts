@@ -135,8 +135,11 @@ export const migrateStorage = async (
     }
   };
 
+  const ensuredFolders = new Set<string>();
+
   const ensureFolder = async (key: Key) => {
-    if (key === '') return;
+    if (key === '' || ensuredFolders.has(key)) return;
+    ensuredFolders.add(key);
     if (dryRun) {
       result.foldersSkipped += 1;
       emit({ type: 'folder-skipped', key, reason: 'dry-run' });
@@ -217,6 +220,7 @@ export const migrateStorage = async (
 
     for (const child of folders) {
       emit({ type: 'folder-discovered', key: child });
+      await ensureFolder(child);
       queue.push(child);
     }
 
