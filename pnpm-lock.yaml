@@ -22,6 +22,9 @@ catalogs:
     '@effect/platform-node':
       specifier: 4.0.0-beta.66
       version: 4.0.0-beta.66
+    '@effect/platform-node-shared':
+      specifier: 4.0.0-beta.104
+      version: 4.0.0-beta.104
     '@tailwindcss/vite':
       specifier: ^4.2.2
       version: 4.3.3
@@ -219,6 +222,9 @@ importers:
       '@effect/platform-node':
         specifier: catalog:default
         version: 4.0.0-beta.66(effect@4.0.0-beta.66)(ioredis@5.11.1(supports-color@7.2.0))
+      '@effect/platform-node-shared':
+        specifier: catalog:default
+        version: 4.0.0-beta.104(effect@4.0.0-beta.66)
       '@standard-schema/spec':
         specifier: catalog:schema
         version: 1.1.0

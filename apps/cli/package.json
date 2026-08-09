@@ -1,6 +1,6 @@
 {
   "name": "laikacli",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "description": "The Laika CMS command-line interface (`laikacli`, short alias `laika`): local dev storage server, config-to-typed-TypeScript codegen, and storage repository migrations.",
   "keywords": [
     "headless-cms",
@@ -43,6 +43,7 @@
   },
   "dependencies": {
     "@effect/platform-node": "catalog:default",
+    "@effect/platform-node-shared": "catalog:default",
     "@standard-schema/spec": "catalog:schema",
     "bcryptjs": "catalog:",
     "effect": "catalog:default",
