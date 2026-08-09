@@ -15,6 +15,8 @@ import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { rawSerializer } from 'laikacms/storage-serializers-raw';
 import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
+import { bearerTokenMatches } from './auth.js';
+
 export interface LocalStorageServerOptions {
   /** Filesystem path the storage repository roots at. */
   root: string;
@@ -51,7 +53,7 @@ const checkAuth = (
   token: string | undefined,
 ): HttpServerResponse.HttpServerResponse | undefined => {
   if (!token) return undefined;
-  if (request.headers.authorization === `Bearer ${token}`) return undefined;
+  if (bearerTokenMatches(request.headers.authorization, token)) return undefined;
   return HttpServerResponse.jsonUnsafe(
     { errors: [{ status: '401', title: 'Unauthorized' }] },
     { status: 401 },
