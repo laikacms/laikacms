@@ -13,13 +13,17 @@ import '../styles.css';
    Pages are MDX documents that compose sections; Astro hands their frontmatter
    to the layout under `frontmatter`. */
 interface Props {
-  frontmatter: { title: string };
+  frontmatter: { title: string, description?: string };
 }
 
-const { title } = Astro.props.frontmatter;
+const { title, description } = Astro.props.frontmatter;
 
-const DESCRIPTION =
+const SITE_DESCRIPTION =
   'Modular, runtime-agnostic, open-source CMS. One content interface across 40+ swappable storage backends. MIT-licensed and self-hostable.';
+
+/* A page that targets a specific search intent sets its own description in
+   frontmatter; everything else gets the site-wide one. */
+const DESCRIPTION = description ?? SITE_DESCRIPTION;
 
 /* Canonical and og:url follow the page being rendered; everything else in the
    head is the same on every page. */
@@ -112,10 +116,7 @@ const STRUCTURED_DATA = {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
-    <meta
-      name="description"
-      content="Laika is a modular, runtime-agnostic, open-source CMS. One content interface across 40+ swappable storage backends. MIT-licensed and self-hostable."
-    />
+    <meta name="description" content={DESCRIPTION} />
     <link rel="canonical" href={canonical} />
     <meta name="robots" content="index, follow" />
     <meta name="author" content="Laika CMS contributors" />

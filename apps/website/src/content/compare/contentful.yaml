@@ -1,0 +1,30 @@
+# Tone rule: describe Contentful neutrally (it is a good product), then state the
+# concrete difference. No checkmark tables, no strawmen, no claims we cannot ship.
+eyebrow: Side by side
+heading: Contentful and Laika, honestly compared.
+lead: 'Contentful is a mature, polished product, and for plenty of teams it is the right call. The differences that matter are not features: they are who owns the code, where the content sits, and what happens to your bill when someone else changes their mind.'
+columns:
+  - Contentful
+  - Laika CMS
+rivals:
+  - name: Licence
+    what: 'Proprietary SaaS. You license access to the service, not the code behind it.'
+    laika: 'MIT, every line, forever. No open core, no enterprise edition, no feature held back for a paid tier.'
+  - name: Where content lives
+    what: "In Contentful's cloud, reached through their CDN and APIs."
+    laika: 'In a store you already own: the filesystem, a Git repo, an S3 or R2 bucket, or any SQL database Drizzle speaks.'
+  - name: What you pay
+    what: 'Metered. Seats, spaces, environments and API calls, on a contract that is renegotiated as you grow.'
+    laika: 'No licence fee and no metering. You pay your own hosting bill, and that is the whole cost.'
+  - name: Hosting
+    what: 'Vendor-hosted only. The runtime is not something you place.'
+    laika: 'Self-hosted by default, and genuinely portable: Node, Bun, Deno, Cloudflare Workers, or the browser.'
+  - name: The editing UI
+    what: 'A polished web app you configure through settings, but do not change.'
+    laika: 'Decap CMS as the editor, plus a component library for building admin screens of your own.'
+  - name: The API
+    what: 'Proprietary REST and GraphQL APIs, versioned on the vendor timeline.'
+    laika: 'JSON:API with a published OpenAPI document, so you can generate a typed client and pin the contract yourself.'
+  - name: Getting out
+    what: 'Export is supported, but the content model, the API shape and the editor all stay behind.'
+    laika: 'There is nothing to escape from. The content is already sitting in your own repo, bucket or tables.'

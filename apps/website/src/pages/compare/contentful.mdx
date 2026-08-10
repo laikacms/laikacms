@@ -1,0 +1,93 @@
+---
+layout: ../../layouts/Base.astro
+title: 'LaikaCMS vs Contentful: an open-source Contentful alternative'
+description: 'Comparing Laika CMS and Contentful for teams re-evaluating after the Salesforce acquisition. MIT licensed, self-hosted, content in your own store, no per-seat metering.'
+---
+
+import compareContentful from 'laika:store/compare/contentful';
+
+import { Compare } from '../../components/Compare';
+import { Features } from '../../components/Features';
+import { Pillar } from '../../components/Pillar';
+import { PillarGrid } from '../../components/PillarGrid';
+
+{/* A comparison landing page, composed from the same sections as the homepage.
+    The table itself is content under `content/compare/contentful.yaml`, served
+    through Laika's own store, exactly like the homepage's field map. */}
+
+<Features eyebrow="Contentful alternative" heading="Re-evaluating Contentful after the Salesforce deal?">
+  In June 2026 Salesforce signed a definitive agreement to acquire Contentful. Acquisitions of this
+  size tend to be followed by repackaged plans, renegotiated contracts and a product direction set
+  by the acquirer's priorities. If your team does not need what Salesforce is assembling, this is a
+  reasonable moment to ask what you would pick today.
+
+  Laika CMS is one answer, and it is a deliberately different shape: a component library for
+  building dashboards and CMSs, paired with a content API, MIT licensed and self-hosted by default.
+  Your content sits in a store you already own, and there is no seat count and no metered API.
+
+  We are not going to pretend Contentful is a bad product. It is mature, well built, and a
+  defensible choice for teams who want a vendor to run all of it. The comparison below sticks to the
+  differences that actually change your position.
+</Features>
+
+<Compare {...compareContentful} />
+
+<Features eyebrow="Moving over" heading="What a migration actually involves.">
+  There is no one-click importer, and we would rather say so than sell you one. A move from
+  Contentful is three concrete steps, and the second one is where the real work sits.
+
+  <PillarGrid>
+    <Pillar icon="book" title="1. Export your content">
+      Contentful's management API and CLI export entries, assets and content types as JSON. That
+      export is the input to everything else, and it is yours to take at any time.
+    </Pillar>
+
+    <Pillar icon="layers" title="2. Map the content model">
+      Contentful content types become Laika collections, each with a JSON Schema. This is the step
+      that needs judgement rather than tooling: references, localisation and rich text all have to
+      land somewhere deliberate.
+    </Pillar>
+
+    <Pillar icon="swap" title="3. Pick where it lives">
+      Write the mapped content into whichever backend you want to own: plain files in a Git repo, an
+      S3 or R2 bucket, or a SQL database through the Drizzle adapter. Changing your mind later is a
+      one line config change.
+    </Pillar>
+  </PillarGrid>
+</Features>
+
+<Features eyebrow="Cost" heading="Pricing, stated plainly.">
+  Laika CMS has no licence fee, no seat count, no per-environment charge and no metered API calls.
+  It is MIT licensed, so there is no commercial tier to graduate into and nothing to renegotiate at
+  renewal. The only bill is the infrastructure you were already paying for.
+
+  That is the whole pricing page. If it ever stops being true, the MIT licence means the version
+  that was true is still there, and still yours.
+
+  <PillarGrid>
+    <Pillar icon="scales" title="MIT licensed, forever" badge="MIT">
+      No open core, no enterprise edition, no feature withheld to create an upgrade path. Read the
+      source before you adopt it, and fork it if we ever let you down.
+    </Pillar>
+
+    <Pillar icon="globe" title="Runs where you already run">
+      Node, Bun, Deno, Cloudflare Workers, or entirely in the browser. The content API is a fetch
+      handler, so it deploys anywhere a request can reach it.
+    </Pillar>
+
+    <Pillar icon="plug" title="A contract you can pin">
+      Content is served as JSON:API with a published OpenAPI document. Generate a typed client from
+      it and you are holding the contract, not waiting on a vendor SDK.
+    </Pillar>
+  </PillarGrid>
+</Features>
+
+<Features eyebrow="Next" heading="Try it before you commit to anything.">
+  The fastest honest test is to put a small slice of real content through it: one content type, one
+  backend, one page rendered from the API. That is a short afternoon, and it tells you more than any
+  comparison table can.
+
+  Start with the [getting started guide](/docs/getting-started), or read the
+  [source on GitHub](https://github.com/laikacms/laikacms) first. Both are the same MIT project, and
+  there is nothing behind a sales call.
+</Features>
