@@ -228,12 +228,24 @@ laikacms({
   mdx: false,
 
   // TypeScript declaration generation. Default: true.
-  // Pass { literals: true } to keep literal types (`'draft'`) instead of widening to `string`.
+  // Pass an options object for finer control:
+  //   { literals: true }    — keep literal types (`'draft'`) instead of widening to `string`.
+  //   { debounceMs: 30 }    — coalesce rapid incremental writes (default: 30 ms).
   typegen: true,
 
   // Dev-server hot reload on content change. Default: true.
   // Pass { coarse: true } to invalidate every laika: module on any change.
   hmr: true,
+  // Serializer registry for the default filesystem repository. Overrides the
+  // built-in registry (.json / .yaml / .md / .raw). Ignored when `storage` or
+  // `repositories` is given (supply serializers to those directly instead).
+  // Default: built-in registry.
+  // serializers: myRegistry,
+
+  // Mount LaikaCMS's JSON:API while `vite dev` runs so a JSON:API client (e.g.
+  // Decap admin) can read and write content locally. Off by default.
+  // See "Local mode" above for full options.
+  // localApi: true,
 });
 ```
 
@@ -247,6 +259,20 @@ import type { StorageRepository } from 'laikacms/storage';
 
 const storage: StorageRepository = /* r2, s3, webdav, drizzle, … */;
 laikacms({ storage });
+```
+
+To override the serializer registry for the **default filesystem repository**, pass `serializers`.
+This is only relevant when you let the plugin build the FS repository from `dir` — if you supply
+`storage` or `repositories`, configure serializers on those objects directly:
+
+```ts
+import { jsonSerializer } from 'laikacms/serializers/json';
+import { markdownSerializer } from 'laikacms/serializers/markdown';
+
+laikacms({
+  dir: 'content',
+  serializers: { md: markdownSerializer, json: jsonSerializer },
+});
 ```
 
 …or supply both repositories yourself:

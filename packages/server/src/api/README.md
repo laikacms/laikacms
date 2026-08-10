@@ -84,9 +84,9 @@ export interface AuthorizeContext {
 
 ## Scope-based authorization
 
-For the common pattern of granting access based on fine-grained scopes, `@laikacms/server/api`
-ships `createScopePolicy()` — a drop-in `authorize` factory. The scope vocabulary (`hasScope`,
-`isScope`, `normalizeScopes`, `GRANULAR_SCOPES`, etc.) is re-exported from `laikacms/auth`.
+For the common pattern of granting access based on fine-grained scopes, `@laikacms/server/api` ships
+`createScopePolicy()` — a drop-in `authorize` factory. The scope vocabulary (`hasScope`, `isScope`,
+`normalizeScopes`, `GRANULAR_SCOPES`, etc.) is re-exported from `laikacms/auth`.
 
 ```typescript
 import { createScopePolicy, laikaApi } from '@laikacms/server/api';

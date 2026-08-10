@@ -1,5 +1,4 @@
-import * as DateTime from 'effect/DateTime';
-import * as Result from 'effect/Result';
+import { DateTime, Result } from 'effect';
 import { errorCode, LaikaTask, Url } from 'laikacms/core';
 import type { DocumentsRepository } from 'laikacms/documents';
 import type { Lock, LockOwner, OwnedLock } from 'laikacms/storage';

@@ -73,6 +73,7 @@
     "prepack": "node ../../scripts/check-no-catalog-deps.mjs"
   },
   "dependencies": {
+    "effect": "catalog:",
     "laikacms": "workspace:*"
   },
   "devDependencies": {
