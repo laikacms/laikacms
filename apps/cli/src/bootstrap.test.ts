@@ -34,11 +34,13 @@ describe('bootstrapApplication', () => {
     expect(admin).toContain('load_config_file: false');
     expect(admin).toContain("import { init } from '../../cms.js'");
     expect(admin).not.toContain('unpkg.com/decap-cms');
-    expect(admin).not.toContain('laika-app');
+    // The admin entry must route through ../../cms.js, never import a Decap app
+    // bundle directly (bare or styled) — the wizard-generated cms.ts owns that.
+    expect(admin).not.toContain("from '@laikacms/decap-cms/");
     // src/cms.ts is regenerated from the (default) selection: the bare,
     // non-laika app plus explicit registrations.
     const cms = await readFile(path.join(destination, 'src/cms.ts'), 'utf8');
-    expect(cms).toContain("from '@laikacms/decap-cms/app/bare'");
+    expect(cms).toContain("from '@laikacms/decap-cms/laika-app/bare'");
     expect(cms).toContain(`CMS.registerLocale('en', en);`);
     expect(cms).toContain(`CMS.registerBackend('laika', createLaikaBackend());`);
     // Without these approvals a pnpm install silently skips the build scripts.

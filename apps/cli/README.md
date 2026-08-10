@@ -52,9 +52,9 @@ Run `laika local <command> --help` for the full flag reference.
 `laika create` is the supported way to start a LaikaCMS app — always go through it rather than
 copying a starter folder. On a terminal it walks through every choice: the starter template, target
 directory, site title, package manager, and — because every starter boots the **bare, non-laika
-Decap app** (`@laikacms/decap-cms/app/bare`) with nothing pre-registered — which CMS **backends**,
-**widgets**, and extra admin UI **locales** to install. The selection is written to the generated
-app's `src/cms.ts`; re-run the wizard or edit that file to change it later.
+Decap app** (`@laikacms/decap-cms/laika-app/bare`) with nothing pre-registered — which CMS
+**backends**, **widgets**, and extra admin UI **locales** to install. The selection is written to
+the generated app's `src/cms.ts`; re-run the wizard or edit that file to change it later.
 
 Each prompt can be pre-answered with a flag, which also makes the command scriptable:
 

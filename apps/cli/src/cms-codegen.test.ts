@@ -12,7 +12,7 @@ import {
 describe('generateCmsModule', () => {
   it('generates the default selection against the bare, non-laika app', () => {
     const source = generateCmsModule(DEFAULT_CMS_SELECTION);
-    expect(source).toContain(`import { DecapCmsApp as CMS, init } from '@laikacms/decap-cms/app/bare';`);
+    expect(source).toContain(`import { CMS, init } from '@laikacms/decap-cms/laika-app/bare';`);
     expect(source).toContain(`import en from '@laikacms/decap-cms/locales/en';`);
     expect(source).toContain(`CMS.registerLocale('en', en);`);
     expect(source).toContain(`import createLaikaBackend from '@laikacms/decap-cms/backends/laika';`);
@@ -23,8 +23,10 @@ describe('generateCmsModule', () => {
     expect(source).toContain(`CMS.registerWidget({ ...richtextWidget, name: 'markdown' });`);
     expect(source).toContain(`CMS.registerRichtextFormat(markdownFormat);`);
     expect(source).toContain(`export { CMS, init };`);
-    // never the laika-styled app or the batteries-included classic bundle
-    expect(source).not.toContain('laika-app');
+    // never the laika-styled app (…/laika-app, no /bare) or the batteries-included
+    // classic root bundle (…/decap-cms, no subpath) — only the bare entry is allowed
+    expect(source).not.toContain(`/laika-app';`);
+    expect(source).not.toContain(`decap-cms';`);
     expect(source).not.toContain(`CMS.registerLocale('nl'`);
   });
 
