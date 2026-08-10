@@ -496,9 +496,9 @@ backend:
 
 ## `laikacli`
 
-The Laika CMS command-line interface for local development workflows. Provides a short `laika` bin
-alias once installed; the canonical package name is `laikacli` (the `laika` npm name is taken by an
-unrelated package).
+The Laika CMS command-line interface for scaffolding new projects and local development workflows.
+Provides a short `laika` bin alias once installed; the canonical package name is `laikacli` (the
+`laika` npm name is taken by an unrelated package).
 
 > Supersedes the deprecated `@laikacms/local` package.
 
@@ -511,21 +511,21 @@ pnpm add -D laikacli
 Or run without installing:
 
 ```sh
-npx laikacli local serve
+npx laikacli create
 pnpm dlx laikacli local serve
 ```
 
 ### Commands
 
-All local-file dev tooling lives under the `local` namespace.
+| Command               | What it does                                                                                                                                                                                                                                                                                                                                       |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `create`              | Wizard that bootstraps a starter app and generates its `src/cms.ts` from your backend/widget/locale selection (`--starter`, `--name`, `--directory`, `--package-manager`, `--backends`, `--widgets`, `--locales`, `--yes`, `--skip-install`)                                                                                                       |
+| `local serve`         | Start a local-file JSON:API storage server for dev workflows (`--root`, `--port`, `--host`, `--default-extension` (default: `md`), `--auth-token`)                                                                                                                                                                                                 |
+| `local generate`      | Generate a typed TypeScript module from the CMS config file (`--input/-i`, `--output/-o`, `--watch/-w`, `--cms`)                                                                                                                                                                                                                                   |
+| `local migrate`       | Copy every atom between any two backends. Use `--source-backend`/`--destination-backend` for cross-backend migration (e.g. FS → R2, FS → SurrealDB); `-s`/`-d` are FS shortcuts for the common FS-to-FS case. Additional flags: `--dry-run` (preview without writing), `--overwrite`, `--concurrency` (default: 4), `--page-size` (default: 1000). |
+| `local list-backends` | List every registered storage backend and its pinned package version.                                                                                                                                                                                                                                                                              |
 
-| Command          | What it does                                                                                                                                                                                                                                                                                                                                       |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `local serve`    | Start a local-file JSON:API storage server for dev workflows (`--root`, `--port`, `--host`, `--default-extension` (default: `md`), `--auth-token`)                                                                                                                                                                                                 |
-| `local generate` | Generate a typed TypeScript module from a Decap CMS `config.yaml` (add `--watch` to keep it fresh)                                                                                                                                                                                                                                                 |
-| `local migrate`  | Copy every atom between any two backends. Use `--source-backend`/`--destination-backend` for cross-backend migration (e.g. FS → R2, FS → SurrealDB); `-s`/`-d` are FS shortcuts for the common FS-to-FS case. Additional flags: `--dry-run` (preview without writing), `--overwrite`, `--concurrency` (default: 4), `--page-size` (default: 1000). |
-
-Run `laika local <command> --help` for the full flag reference.
+Run `laika <command> --help` for the full flag reference.
 
 ### Programmatic API
 
@@ -533,5 +533,5 @@ All CLI commands are also exported from the package root for embedding in your o
 CLI applications:
 
 ```ts
-import { generateConfig, layerStorageServer, runMigrate } from 'laikacli';
+import { bootstrapApplication, generateConfig, layerStorageServer, runMigrate } from 'laikacli';
 ```
