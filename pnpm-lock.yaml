@@ -58,6 +58,12 @@ catalogs:
     trash:
       specifier: ^10.1.1
       version: 10.1.1
+    undici:
+      specifier: ^8.7.0
+      version: 8.10.0
+    ws:
+      specifier: ^8.21.0
+      version: 8.21.1
   lint:
     '@eslint/js':
       specifier: ^10.0.1
@@ -249,6 +255,12 @@ importers:
       trash:
         specifier: 'catalog:'
         version: 10.1.1
+      undici:
+        specifier: catalog:default
+        version: 8.10.0
+      ws:
+        specifier: catalog:default
+        version: 8.21.1
     devDependencies:
       '@hono/node-server':
         specifier: ^2.0.2
