@@ -82,6 +82,49 @@ export interface AuthorizeContext {
 | `cors`                 | `CorsOptions`                                           | —         | See [CORS](#cors) below. Omitted, no CORS headers are emitted and `OPTIONS` preflights 404.                                                                                                |
 | `logger`               | `Pick<Console, 'error' \| 'warn' \| 'info' \| 'debug'>` | —         | Structured logger for internal diagnostics — `console` or any subset-compatible logger.                                                                                                    |
 
+## Scope-based authorization
+
+For the common pattern of granting access based on fine-grained scopes, `@laikacms/decap/decap-api`
+ships `createScopePolicy()` — a drop-in `authorize` factory. The scope vocabulary (`hasScope`,
+`isScope`, `normalizeScopes`, `GRANULAR_SCOPES`, etc.) is re-exported from `laikacms/auth`.
+
+```typescript
+import { createScopePolicy, decapApi } from '@laikacms/decap/decap-api';
+
+const api = decapApi({
+  documents,
+  storage,
+  authenticateAccessToken: async token => {
+    const session = await db.sessions.findByAccessToken(token);
+    if (!session) throw new Error('Invalid session');
+    // Attach scopes to the User so createScopePolicy() can read them.
+    return { id: session.userId, email: session.email, scopes: session.scopes };
+  },
+  // Grants: content:read/write → storage+documents, media:read/write → assets.
+  // admin/* satisfies every scope; resource:* satisfies every action on that resource.
+  authorize: createScopePolicy(),
+});
+```
+
+`createScopePolicy(options?)` accepts:
+
+| Option             | Type                                          | Description                                                                            |
+| ------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `requiredScopeFor` | `(ctx: AuthorizeContext) => Scope \| null`    | Override the request → required-scope mapping. Return `null` to allow unconditionally. |
+| `scopesOf`         | `(ctx: AuthorizeContext) => readonly Scope[]` | How to read the principal's granted scopes. Defaults to `ctx.user.scopes ?? []`.       |
+
+### Role-based authorization
+
+For simpler flat-role policies (not using the `laikacms/auth` scope vocabulary), implement
+`authorize` directly:
+
+```typescript
+authorize: ctx => {
+  if (ctx.operation === 'read') return true;
+  return ctx.user.roles?.includes('editor') ?? false;
+},
+```
+
 ## CORS
 
 Required when the Decap admin is served from a different origin than the API (e.g. `npx serve
