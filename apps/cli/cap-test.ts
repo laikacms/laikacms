@@ -3,7 +3,7 @@
 //   2. resource-level links.self
 //   3. pagination via links (not meta)
 //   4. meta.page.total from LaikaDone
-//   5. capability sharing: FS storage caps bubble up through contentbase
+//   5. capability sharing: FS storage caps bubble up through catalog
 //      repos and out via documents-api + assets-api /capabilities.
 //
 // Run: `node cap-test.mjs` from this dir. Spins up a Hono server on 4400,
@@ -14,10 +14,11 @@ import { Hono } from 'hono';
 import { mkdir, rm, writeFile } from 'node:fs/promises';
 
 import { buildAssetsApi } from 'laikacms/assets-api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
+import { ConventionCatalogProvider } from 'laikacms/catalog-convention';
 import { buildJsonApi as buildDocumentsApi } from 'laikacms/documents-api';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
+import { allowAll } from 'laikacms/json-api';
 import { buildJsonApi as buildStorageApi } from 'laikacms/storage-api';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
@@ -30,9 +31,9 @@ const ROOT = '/tmp/cap-test-content';
 await rm(ROOT, { recursive: true, force: true });
 await mkdir(`${ROOT}/posts`, { recursive: true });
 await mkdir(`${ROOT}/uploads`, { recursive: true });
-await mkdir(`${ROOT}/.contentbase`, { recursive: true });
-// Pre-seed contentbase settings so the lazy bootstrap doesn't run during the test.
-await writeFile(`${ROOT}/.contentbase/settings.json`, JSON.stringify({ collections: {} }));
+await mkdir(`${ROOT}/.catalog`, { recursive: true });
+// Pre-seed catalog settings so the lazy bootstrap doesn't run during the test.
+await writeFile(`${ROOT}/.laika/catalog.json`, JSON.stringify({ collections: {} }));
 const frontmatter = n => `---\ntitle: Post ${n}\nbody: hello ${n}\n---\n`;
 for (const n of ['001', '002', '003']) {
   await writeFile(`${ROOT}/posts/${n}.md`, frontmatter(n));
@@ -51,13 +52,14 @@ const storage = new FileSystemStorageRepository(
   },
   'md',
 );
-const settings = new DefaultContentBaseSettingsProvider({ storage });
-const documents = new ContentBaseDocumentsRepository(storage, settings);
-const assets = new ContentBaseAssetsRepository(storage, settings);
+const settings = new ConventionCatalogProvider({ storage });
+const documents = new CatalogDocumentsRepository(storage, settings);
+const assets = new CatalogAssetsRepository(storage, settings);
 
-const storageApi = buildStorageApi({ repo: storage, basePath: '/storage' });
-const documentsApi = buildDocumentsApi({ repo: documents, basePath: '/documents' });
-const assetsApi = buildAssetsApi({ repository: assets, basePath: '/assets' });
+// Throwaway capability harness bound to 127.0.0.1 — no policy to enforce.
+const storageApi = buildStorageApi({ repo: storage, basePath: '/storage', authorize: allowAll });
+const documentsApi = buildDocumentsApi({ repo: documents, basePath: '/documents', authorize: allowAll });
+const assetsApi = buildAssetsApi({ repository: assets, basePath: '/assets', authorize: allowAll });
 
 const app = new Hono();
 app.all('/storage/*', c => storageApi.fetch(c.req.raw));
@@ -102,7 +104,7 @@ assert('storage  /capabilities returns 200', sCaps.status === 200, `got ${sCaps.
 assert('docs     /capabilities returns 200', dCaps.status === 200, `got ${dCaps.status}`);
 assert('assets   /capabilities returns 200', aCaps.status === 200, `got ${aCaps.status}`);
 
-console.log('\n[2] capability sharing: storage caps bubble through contentbase repos');
+console.log('\n[2] capability sharing: storage caps bubble through catalog repos');
 const sPag = sCaps.body?.data?.attributes?.pagination;
 const dPag = dCaps.body?.data?.attributes?.pagination;
 const aPag = aCaps.body?.data?.attributes?.pagination;
@@ -150,10 +152,10 @@ assert(
 
 console.log('\n[5] documents list: links.self per item + pagination via links');
 // Diagnostic: probe storage layer (works) → docs layer (hangs?) to bisect.
-console.log('  (probing storage.getObject for missing .contentbase/settings…)');
+console.log('  (probing storage.getObject for missing .laika/catalog…)');
 const sGet = await Promise.race([
   (async () => {
-    const it = storage.getObject('.contentbase/settings')[Symbol.asyncIterator]();
+    const it = storage.getObject('.laika/catalog')[Symbol.asyncIterator]();
     while (true) {
       const step = await it.next();
       if (step.done) return `value=${JSON.stringify(step.value)?.slice(0, 80)}`;
@@ -161,14 +163,14 @@ const sGet = await Promise.race([
   })(),
   new Promise((_, rej) => setTimeout(() => rej(new Error('getObject timed out')), 3000)),
 ]).catch(e => `ERR: ${(e as Error).message}`);
-console.log(`  storage.getObject('.contentbase/settings') → ${sGet}`);
+console.log(`  storage.getObject('.laika/catalog') → ${sGet}`);
 
-console.log('  (probing settings.getSettings…)');
+console.log('  (probing settings.getCatalog…)');
 const sSet = await Promise.race([
-  settings.getSettings().then(r => `Result.${r._tag}`),
-  new Promise((_, rej) => setTimeout(() => rej(new Error('getSettings timed out')), 5000)),
+  settings.getCatalog().then(r => `Result.${r._tag}`),
+  new Promise((_, rej) => setTimeout(() => rej(new Error('getCatalog timed out')), 5000)),
 ]).catch(e => `ERR: ${(e as Error).message}`);
-console.log(`  settings.getSettings() → ${sSet}`);
+console.log(`  settings.getCatalog() → ${sSet}`);
 
 console.log('  (probing storage repo directly…)');
 const sProbe = await Promise.race([

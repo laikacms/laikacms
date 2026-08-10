@@ -296,27 +296,27 @@ describe('FileSystemDataSource.getFileSystemEntry', () => {
 });
 
 describe('FileSystemDataSource dot-prefix key handling (LCMS-132)', () => {
-  it('createOrUpdate preserves .contentbase/ prefix — path returned is unchanged for extension-less key', async () => {
+  it('createOrUpdate preserves .laika/ prefix — path returned is unchanged for extension-less key', async () => {
     const ds = new FileSystemDataSource(['md'], 'md');
-    const result = await ds.createOrUpdate(tmpDir, '.contentbase/published/my-slug', 'content', 'md');
+    const result = await ds.createOrUpdate(tmpDir, '.laika/published/my-slug', 'content', 'md');
 
     expect(Result.isSuccess(result)).toBe(true);
     if (Result.isSuccess(result)) {
-      expect(result.success.path).toBe('.contentbase/published/my-slug');
+      expect(result.success.path).toBe('.laika/published/my-slug');
     }
     // File must exist at the correct on-disk path
-    const written = await fs.readFile(path.join(tmpDir, '.contentbase/published/my-slug.md'), 'utf8');
+    const written = await fs.readFile(path.join(tmpDir, '.laika/published/my-slug.md'), 'utf8');
     expect(written).toBe('content');
   });
 
-  it('getFileContents returns correct path for .contentbase/ key with .md extension', async () => {
+  it('getFileContents returns correct path for .laika/ key with .md extension', async () => {
     const ds = new FileSystemDataSource(['md'], 'md');
-    await ds.createOrUpdate(tmpDir, '.contentbase/published/my-slug', 'body', 'md');
+    await ds.createOrUpdate(tmpDir, '.laika/published/my-slug', 'body', 'md');
 
-    const result = await ds.getFileContents(tmpDir, '.contentbase/published/my-slug');
+    const result = await ds.getFileContents(tmpDir, '.laika/published/my-slug');
     expect(Result.isSuccess(result)).toBe(true);
     if (Result.isSuccess(result)) {
-      expect(result.success.path).toBe('.contentbase/published/my-slug');
+      expect(result.success.path).toBe('.laika/published/my-slug');
       expect(result.success.extension).toBe('md');
     }
   });
@@ -324,26 +324,26 @@ describe('FileSystemDataSource dot-prefix key handling (LCMS-132)', () => {
   it('stripExtension via createOrUpdate does not truncate key with no extension under dot-dir', async () => {
     // Passing a key that has NO extension — the leading dot must not trigger slicing
     const ds = new FileSystemDataSource(['md'], 'md');
-    const result = await ds.createOrUpdate(tmpDir, '.contentbase/published/my-slug', 'data', 'md');
+    const result = await ds.createOrUpdate(tmpDir, '.laika/published/my-slug', 'data', 'md');
 
     expect(Result.isSuccess(result)).toBe(true);
     if (Result.isSuccess(result)) {
-      // Must NOT be '' or '.contentbase/published'
-      expect(result.success.path).toBe('.contentbase/published/my-slug');
+      // Must NOT be '' or '.laika/published'
+      expect(result.success.path).toBe('.laika/published/my-slug');
     }
   });
 
   it('stripExtension still removes a real extension under a dot-prefix dir', async () => {
     // Key passed WITH .md extension — should still strip it correctly
     const ds = new FileSystemDataSource(['md'], 'md');
-    const result = await ds.createOrUpdate(tmpDir, '.contentbase/published/my-slug.md', 'data', 'md');
+    const result = await ds.createOrUpdate(tmpDir, '.laika/published/my-slug.md', 'data', 'md');
 
     expect(Result.isSuccess(result)).toBe(true);
     if (Result.isSuccess(result)) {
-      expect(result.success.path).toBe('.contentbase/published/my-slug');
+      expect(result.success.path).toBe('.laika/published/my-slug');
     }
-    // Should not create .contentbase/published/my-slug.md.md
-    await expect(fs.access(path.join(tmpDir, '.contentbase/published/my-slug.md.md'))).rejects.toThrow();
+    // Should not create .laika/published/my-slug.md.md
+    await expect(fs.access(path.join(tmpDir, '.laika/published/my-slug.md.md'))).rejects.toThrow();
   });
 
   it('notes/hello.md strips to notes/hello via createOrUpdate round-trip', async () => {

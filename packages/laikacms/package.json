@@ -41,10 +41,10 @@
       "import": "./dist/api/assets-api/index.js",
       "default": "./dist/api/assets-api/index.js"
     },
-    "./contentbase-api": {
-      "types": "./dist/api/contentbase-api/index.d.ts",
-      "import": "./dist/api/contentbase-api/index.js",
-      "default": "./dist/api/contentbase-api/index.js"
+    "./catalog-api": {
+      "types": "./dist/api/catalog-api/index.d.ts",
+      "import": "./dist/api/catalog-api/index.js",
+      "default": "./dist/api/catalog-api/index.js"
     },
     "./documents/api": {
       "types": "./dist/api/documents-api/index.d.ts",
@@ -76,10 +76,10 @@
       "import": "./dist/domain/assets/index.js",
       "default": "./dist/domain/assets/index.js"
     },
-    "./contentbase-settings": {
-      "types": "./dist/domain/contentbase-settings/index.d.ts",
-      "import": "./dist/domain/contentbase-settings/index.js",
-      "default": "./dist/domain/contentbase-settings/index.js"
+    "./catalog": {
+      "types": "./dist/domain/catalog/index.d.ts",
+      "import": "./dist/domain/catalog/index.js",
+      "default": "./dist/domain/catalog/index.js"
     },
     "./documents": {
       "types": "./dist/domain/documents/index.d.ts",
@@ -106,10 +106,10 @@
       "import": "./dist/domain/assets/testing/index.js",
       "default": "./dist/domain/assets/testing/index.js"
     },
-    "./assets/contentbase": {
-      "types": "./dist/impl/assets-contentbase/index.d.ts",
-      "import": "./dist/impl/assets-contentbase/index.js",
-      "default": "./dist/impl/assets-contentbase/index.js"
+    "./assets/catalog": {
+      "types": "./dist/impl/assets-catalog/index.d.ts",
+      "import": "./dist/impl/assets-catalog/index.js",
+      "default": "./dist/impl/assets-catalog/index.js"
     },
     "./assets/jsonapi-proxy": {
       "types": "./dist/impl/assets-jsonapi-proxy/index.d.ts",
@@ -126,20 +126,20 @@
       "import": "./dist/impl/assets-r2/index.js",
       "default": "./dist/impl/assets-r2/index.js"
     },
-    "./contentbase-settings-decap": {
-      "types": "./dist/impl/contentbase-settings-decap/index.d.ts",
-      "import": "./dist/impl/contentbase-settings-decap/index.js",
-      "default": "./dist/impl/contentbase-settings-decap/index.js"
+    "./catalog-decap": {
+      "types": "./dist/impl/catalog-decap/index.d.ts",
+      "import": "./dist/impl/catalog-decap/index.js",
+      "default": "./dist/impl/catalog-decap/index.js"
     },
-    "./contentbase-settings-default": {
-      "types": "./dist/impl/contentbase-settings-default/index.d.ts",
-      "import": "./dist/impl/contentbase-settings-default/index.js",
-      "default": "./dist/impl/contentbase-settings-default/index.js"
+    "./catalog-convention": {
+      "types": "./dist/impl/catalog-convention/index.d.ts",
+      "import": "./dist/impl/catalog-convention/index.js",
+      "default": "./dist/impl/catalog-convention/index.js"
     },
-    "./documents/contentbase": {
-      "types": "./dist/impl/documents-contentbase/index.d.ts",
-      "import": "./dist/impl/documents-contentbase/index.js",
-      "default": "./dist/impl/documents-contentbase/index.js"
+    "./documents/catalog": {
+      "types": "./dist/impl/documents-catalog/index.d.ts",
+      "import": "./dist/impl/documents-catalog/index.js",
+      "default": "./dist/impl/documents-catalog/index.js"
     },
     "./documents/drizzle": {
       "types": "./dist/impl/documents-drizzle/index.d.ts",
@@ -301,10 +301,10 @@
       "import": "./dist/api/storage-api/index.js",
       "default": "./dist/api/storage-api/index.js"
     },
-    "./assets-contentbase": {
-      "types": "./dist/impl/assets-contentbase/index.d.ts",
-      "import": "./dist/impl/assets-contentbase/index.js",
-      "default": "./dist/impl/assets-contentbase/index.js"
+    "./assets-catalog": {
+      "types": "./dist/impl/assets-catalog/index.d.ts",
+      "import": "./dist/impl/assets-catalog/index.js",
+      "default": "./dist/impl/assets-catalog/index.js"
     },
     "./assets-jsonapi-proxy": {
       "types": "./dist/impl/assets-jsonapi-proxy/index.d.ts",
@@ -321,10 +321,10 @@
       "import": "./dist/impl/assets-r2/index.js",
       "default": "./dist/impl/assets-r2/index.js"
     },
-    "./documents-contentbase": {
-      "types": "./dist/impl/documents-contentbase/index.d.ts",
-      "import": "./dist/impl/documents-contentbase/index.js",
-      "default": "./dist/impl/documents-contentbase/index.js"
+    "./documents-catalog": {
+      "types": "./dist/impl/documents-catalog/index.d.ts",
+      "import": "./dist/impl/documents-catalog/index.js",
+      "default": "./dist/impl/documents-catalog/index.js"
     },
     "./documents-drizzle": {
       "types": "./dist/impl/documents-drizzle/index.d.ts",
@@ -414,7 +414,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepack": "node ../../scripts/check-no-catalog-deps.mjs"
+    "prepack": "node ../../scripts/check-no-pnpm-catalog-deps.mjs"
   },
   "dependencies": {
     "@standard-schema/spec": "catalog:schema",
@@ -453,6 +453,6 @@
     "vitest": "catalog:tools"
   },
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=22.0.0"
   }
 }

@@ -95,3 +95,28 @@ describe('documents-api authorize hook', () => {
     expect(createUnpublished).not.toHaveBeenCalled();
   });
 });
+
+describe('documents-api authorize hook — OpenAPI routes', () => {
+  it('authorizes the OpenAPI document like any other action', async () => {
+    const { repo } = spyRepo();
+    const authorize = vi.fn(() => true);
+    const api = buildJsonApi({ repo, authorize });
+
+    const res = await api.fetch(new Request('http://localhost/openapi.json'));
+
+    expect(res.status).toBe(200);
+    expect(authorize).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'readOpenApi', format: 'json' }),
+    );
+  });
+
+  it('does not serve the spec to a caller a deny-all policy rejects', async () => {
+    const { repo } = spyRepo();
+    const api = buildJsonApi({ repo, authorize: () => false });
+
+    for (const format of ['json', 'yaml'] as const) {
+      const res = await api.fetch(new Request(`http://localhost/openapi.${format}`));
+      expect(res.status).toBe(403);
+    }
+  });
+});

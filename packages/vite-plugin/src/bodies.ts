@@ -4,7 +4,7 @@
  * A markdown-serialized item deserializes to `{ ...frontmatter, body }` — the
  * frontmatter fields become the module's named exports as usual, and `body` is
  * prose. With `mdx: true` that prose is written out as a real `.mdx` file under
- * `.laika/bodies/` and the generated module re-exports its default as `Body`.
+ * `.laika/vite-generated/bodies/` and the generated module re-exports its default as `Body`.
  *
  * This plugin never compiles MDX and never depends on it. It emits the chunk;
  * whatever the consumer put in their Vite config (`@mdx-js/rollup`, typically)
@@ -29,7 +29,7 @@ export const BODY_FIELD = 'body';
 export const BODY_EXPORT = 'Body';
 
 /** Where chunks live, relative to the Vite root. Already gitignored by the typegen. */
-export const BODIES_DIR = '.laika/bodies';
+export const BODIES_DIR = '.laika/vite-generated/bodies';
 
 /** The item's prose, or `null` when it has none. */
 export function bodyOf(content: Record<string, unknown>): string | null {

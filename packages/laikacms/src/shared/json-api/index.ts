@@ -35,3 +35,7 @@ export * from './http-transport.js';
 // packages' openapi.ts specs are built from
 export * from './openapi-components.js';
 export * from './openapi.js';
+
+// Export the shared authorization vocabulary the api/* servers' `authorize`
+// hooks are built from
+export * from './authorize.js';

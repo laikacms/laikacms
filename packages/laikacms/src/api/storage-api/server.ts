@@ -13,8 +13,13 @@ import {
   LaikaTask,
   NotFoundError,
 } from 'laikacms/core';
-import type { JsonApiError, JsonApiLogger, JsonApiResponse } from 'laikacms/json-api';
-import { errorToJsonApiMapper, openApiDocumentToYaml, recoverableErrorsToWarnings } from 'laikacms/json-api';
+import type { AuthorizeDecision, JsonApiError, JsonApiLogger, JsonApiResponse } from 'laikacms/json-api';
+import {
+  errorToJsonApiMapper,
+  openApiDocumentToYaml,
+  recoverableErrorsToWarnings,
+  resolveAuthorization,
+} from 'laikacms/json-api';
 import type {
   Atom,
   Folder,
@@ -25,7 +30,6 @@ import type {
   StorageRepository,
 } from 'laikacms/storage';
 
-import { type AuthorizeDecision, resolveAuthorization } from '../authorize.js';
 import {
   atomSummaryToJsonApi,
   atomToJsonApi,
@@ -300,6 +304,7 @@ type AtomicOperationsRequest = S.Schema.Type<typeof AtomicOperationsRequestSchem
  * `add` op with an object becomes `createObject`).
  */
 export type StorageAuthorizeAction =
+  | { action: 'readOpenApi', format: 'json' | 'yaml' }
   | { action: 'getCapabilities' }
   | { action: 'listAtoms', key: string, options: NonNullable<Parameters<StorageRepository['listAtoms']>[1]> }
   | {
@@ -335,11 +340,12 @@ export interface StorageApiOptions {
   onError?(error: unknown): void;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
   /**
-   * Optional per-action authorization hook. See {@link StorageAuthorize}. When
-   * omitted the API performs no authorization (the historical behaviour) — wrap
-   * or supply this before exposing the handler to an untrusted network.
+   * Per-action authorization hook. Required: there is no implicit default,
+   * because an API that silently defaults to open is the failure mode this
+   * option exists to prevent. Pass `allowAll` to state that a surface is
+   * intentionally unauthenticated. See {@link StorageAuthorize}.
    */
-  authorize?: StorageAuthorize | undefined;
+  authorize: StorageAuthorize;
 }
 
 /**
@@ -379,7 +385,6 @@ export function buildJsonApi(options: StorageApiOptions) {
     // Run the per-action authorization hook (if configured). Returns a ready
     // error Response when the action is denied, or `null` when it's allowed.
     const authorizeAction = async (action: StorageAuthorizeAction): Promise<Response | null> => {
-      if (!authorize) return null;
       const denial = resolveAuthorization(await authorize({ ...action, request }));
       if (!denial) return null;
       const status = ErrorCodeToStatusMap[denial.code as keyof typeof ErrorCodeToStatusMap] ?? 403;
@@ -444,6 +449,8 @@ export function buildJsonApi(options: StorageApiOptions) {
     }
 
     if (path === 'openapi.json' && request.method === 'GET') {
+      const denied = await authorizeAction({ action: 'readOpenApi', format: 'json' });
+      if (denied) return denied;
       const doc = (await loadOpenApiBuilder())({ basePath });
       return new Response(
         JSON.stringify({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] }),
@@ -458,6 +465,8 @@ export function buildJsonApi(options: StorageApiOptions) {
     }
 
     if (path === 'openapi.yaml' && request.method === 'GET') {
+      const denied = await authorizeAction({ action: 'readOpenApi', format: 'yaml' });
+      if (denied) return denied;
       const doc = (await loadOpenApiBuilder())({ basePath });
       const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
       return new Response(yaml, {

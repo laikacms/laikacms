@@ -10,8 +10,8 @@
 handler — the thinnest possible layer between a storage backend and the network. Reach for it
 directly when:
 
-- You're building your own auth/routing layer from scratch and don't want the ContentBase
-  document/asset model that `laikaApi` layers on top.
+- You're building your own auth/routing layer from scratch and don't want the Catalog document/asset
+  model that `laikaApi` layers on top.
 - You're wiring a non-Decap frontend directly against the Storage JSON:API (see
   [Storage API reference](../../reference/json-api/storage)).
 - You're prototyping locally, behind a firewall, with no untrusted network access.
@@ -24,23 +24,25 @@ default.
 ## Minimal example
 
 ```typescript
+import { allowAll } from 'laikacms/json-api';
 import { buildJsonApi } from 'laikacms/storage-api';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { rawSerializer } from 'laikacms/storage-serializers-raw';
 
 const repo = new FileSystemStorageRepository('./content', { md: rawSerializer }, 'md');
-const api = buildJsonApi({ repo });
+const api = buildJsonApi({ repo, authorize: allowAll });
 
 export default { fetch: api.fetch };
 ```
 
-> [!WARNING] **No authentication by default:** as constructed above, any client can create, read,
-> update, and delete content without a token. Do not expose it directly to an untrusted network. You
-> have two options:
+> [!WARNING] `authorize: allowAll` above means exactly what it says: any client can create, read,
+> update, and delete content without a token. It is the explicit opt-out, not a default —
+> `buildJsonApi` will not compile without an `authorize` policy. Only keep `allowAll` while this
+> handler is unreachable by untrusted callers. Otherwise:
 >
 > - For a production-ready API with built-in auth, use [`laikaApi`](../decap/) from
 >   `@laikacms/server` instead.
-> - For custom authorization, pass an `authorize` callback (below). It runs once per action —
+> - For custom authorization, pass a real `authorize` callback (below). It runs once per action —
 >   receiving the action name, its direct arguments, and the whole `Request` — and returns `true` to
 >   allow, `false` to deny with a 403, or a `LaikaError` to deny with a custom status.
 
@@ -55,18 +57,20 @@ const api = buildJsonApi({
     const token = request.headers.get('Authorization')?.replace('Bearer ', '');
     const user = token ? await lookupUser(token) : undefined;
     if (!user) return new AuthenticationError('Missing or invalid token'); // → 401
-    // Reads for everyone, writes for editors only.
-    const isWrite = action !== 'getObject' && action !== 'getFolder' && !action.startsWith('list');
+    // Reads for everyone, writes for editors only. `readOpenApi` covers the two
+    // spec routes, which are authorized like any other action.
+    const reads = ['getObject', 'getFolder', 'getAtom', 'getCapabilities', 'readOpenApi'];
+    const isWrite = !reads.includes(action) && !action.startsWith('list');
     if (isWrite && !user.canEdit) return new ForbiddenError('Editors only'); // → 403
     return true;
   },
 });
 ```
 
-The same `authorize` option is available on the documents API (`laikacms/documents/api`), the
-contentbase settings API (`laikacms/contentbase-api`), and the assets API (`laikacms/assets-api`).
-Atomic-operation requests authorize each sub-action up front, so a single denial rejects the whole
-batch before any write runs.
+The same `authorize` option is required on the documents API (`laikacms/documents/api`), the catalog
+settings API (`laikacms/catalog-api`), and the assets API (`laikacms/assets-api`). Atomic-operation
+requests authorize each sub-action up front, so a single denial rejects the whole batch before any
+write runs.
 
 > **Note:** `rawSerializer` stores only the `body` field of each content object as plain text.
 > Passing any other fields (e.g. `title`, `tags`) will throw an error at write time to prevent
@@ -86,14 +90,14 @@ import { rawSerializer } from 'laikacms/storage-serializers-raw';
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const repo = new R2StorageRepository(env.CONTENT_BUCKET, { md: rawSerializer }, 'md');
-    return buildJsonApi({ repo }).fetch(request);
+    return buildJsonApi({ repo, authorize: allowAll }).fetch(request);
   },
 };
 ```
 
 > [!WARNING]
-> Same no-auth-by-default caveat applies — pass `authorize` or put this behind your own middleware
-> before deploying.
+> Same caveat applies — replace `allowAll` with a real `authorize` policy, or put this behind your
+> own middleware before deploying.
 
 ## Next steps
 

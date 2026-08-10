@@ -2,7 +2,7 @@ import type { OpenApiDocument, OpenApiSchema } from 'laikacms/json-api';
 import { describe, expect, it } from 'vitest';
 
 import { buildAssetsOpenApi } from './assets-api/openapi.js';
-import { buildContentbaseOpenApi } from './contentbase-api/openapi.js';
+import { buildCatalogOpenApi } from './catalog-api/openapi.js';
 import { buildDocumentsOpenApi } from './documents-api/openapi.js';
 import { buildStorageOpenApi } from './storage-api/openapi.js';
 
@@ -17,7 +17,7 @@ const documents: Array<[name: string, doc: OpenApiDocument]> = [
   ['documents', buildDocumentsOpenApi()],
   ['storage', buildStorageOpenApi()],
   ['assets', buildAssetsOpenApi()],
-  ['contentbase', buildContentbaseOpenApi()],
+  ['catalog', buildCatalogOpenApi()],
 ];
 
 const refsInto = (doc: OpenApiDocument, section: string): string[] => {

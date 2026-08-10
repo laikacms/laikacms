@@ -1,16 +1,16 @@
 # Standalone Worker (BYO storage)
 
 This is the primary integration path. Wire the pieces by hand: pick a `StorageRepository`, wrap it
-in the ContentBase document/asset repos, and expose them through `laikaApi(...)`. The resulting
+in the Catalog document/asset repos, and expose them through `laikaApi(...)`. The resulting
 `api.fetch` is a Web-standard `(Request) => Promise<Response>` handler you mount on a catch-all
 route.
 
 ```ts
 import { laikaApi } from '@laikacms/server/api';
 import { Hono } from 'hono';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
+import { DecapCatalogProvider } from 'laikacms/catalog-decap';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { R2StorageRepository } from 'laikacms/storage-r2';
 // …serializers…
 
@@ -18,11 +18,11 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.all('/api/decap/*', async c => {
   const storage = new R2StorageRepository(/* … */);
-  const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+  const settings = new DecapCatalogProvider({ storage, configKey: 'config' });
   const api = laikaApi({
-    documents: new ContentBaseDocumentsRepository(storage, settings),
+    documents: new CatalogDocumentsRepository(storage, settings),
     storage,
-    assets: new ContentBaseAssetsRepository(storage, settings),
+    assets: new CatalogAssetsRepository(storage, settings),
     basePath: '/api/decap',
     authenticateAccessToken: yourValidator,
   });
@@ -52,17 +52,17 @@ constructed.
 
 ### Seeding the server-side Decap config
 
-`DecapContentBaseSettingsProvider` reads your Decap config object from storage on **every** content
-request — it uses the `collections` array to resolve collection → folder mappings, field schemas,
-and media paths. Before any document or asset operation will succeed, seed that config into storage
-once (e.g. in a setup script, a one-time migration, or a first-boot handler):
+`DecapCatalogProvider` reads your Decap config object from storage on **every** content request — it
+uses the `collections` array to resolve collection → folder mappings, field schemas, and media
+paths. Before any document or asset operation will succeed, seed that config into storage once (e.g.
+in a setup script, a one-time migration, or a first-boot handler):
 
 ```ts
 import { runTask } from 'laikacms/compat';
 
 await runTask(
   storage.createOrUpdateObject({
-    key: 'config', // must match the `configKey` option you passed to DecapContentBaseSettingsProvider
+    key: 'config', // must match the `configKey` option you passed to DecapCatalogProvider
     content: {
       collections: [
         {
@@ -92,10 +92,10 @@ request still fails.
 
 **Server config vs. browser config.** There are two separate copies of your Decap config:
 
-| Copy                 | Where                                 | Used by                                                                                        |
-| -------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| **Storage (server)** | Object stored under `configKey`       | `DecapContentBaseSettingsProvider` on every request — maps collection names to storage folders |
-| **Browser**          | Passed to `CMS.init({ config: {…} })` | Decap CMS React app — controls which collections appear and how fields render                  |
+| Copy                 | Where                                 | Used by                                                                            |
+| -------------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
+| **Storage (server)** | Object stored under `configKey`       | `DecapCatalogProvider` on every request — maps collection names to storage folders |
+| **Browser**          | Passed to `CMS.init({ config: {…} })` | Decap CMS React app — controls which collections appear and how fields render      |
 
 Both copies must describe the same collections. The recommended pattern is to keep a single
 `decapConfig` constant and share it:
@@ -149,9 +149,9 @@ other `StorageRepository` and pass it to `laikaApi(...)`:
 
 ```ts
 import { laikaApi } from '@laikacms/server/api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
+import { DecapCatalogProvider } from 'laikacms/catalog-decap';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { rawSerializer } from 'laikacms/storage-serializers-raw';
@@ -167,11 +167,11 @@ const storage = new WebDavStorageRepository(
   'md', // default extension for new documents
 );
 
-const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+const settings = new DecapCatalogProvider({ storage, configKey: 'config' });
 const api = laikaApi({
-  documents: new ContentBaseDocumentsRepository(storage, settings),
+  documents: new CatalogDocumentsRepository(storage, settings),
   storage,
-  assets: new ContentBaseAssetsRepository(storage, settings),
+  assets: new CatalogAssetsRepository(storage, settings),
   basePath: '/api/decap',
   authenticateAccessToken: yourValidator,
 });

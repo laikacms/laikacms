@@ -12,6 +12,7 @@ import type {
   Resource,
 } from 'laikacms/assets';
 import { describe, expect, it, vi } from 'vitest';
+import { allowAll } from '../../shared/json-api/authorize.js';
 
 import {
   BadRequestError,
@@ -30,7 +31,7 @@ const stubRepo = {} as AssetsRepository;
 
 describe('assets-api Cache-Control', () => {
   it('sends Cache-Control: no-store on 404 responses', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/does-not-exist'));
     expect(res.status).toBe(404);
     expect(res.headers.get('Cache-Control')).toBe('no-store');
@@ -39,7 +40,7 @@ describe('assets-api Cache-Control', () => {
 
 describe('assets-api error envelope consistency (LCMS-265)', () => {
   it('404 response uses the same JSON:API envelope shape as documents/storage (has errors[].title and top-level status)', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/does-not-exist'));
     expect(res.status).toBe(404);
     const body = await res.json() as {
@@ -53,14 +54,14 @@ describe('assets-api error envelope consistency (LCMS-265)', () => {
   });
 
   it('404 detail does not leak the raw METHOD /path of the request', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/secret-path'));
     const body = await res.json() as { errors: Array<{ detail?: string }> };
     expect(body.errors[0]?.detail).not.toContain('GET /api/assets/secret-path');
   });
 
   it('GET /api/assets root returns 200 api-info resource', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets'));
     expect(res.status).toBe(200);
     const body = await res.json() as { data: { type: string, id: string, attributes: { endpoints: unknown[] } } };
@@ -89,7 +90,7 @@ describe('assets-api meta.warnings', () => {
         ),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
     expect(res.status).toBe(200);
 
@@ -126,7 +127,7 @@ describe('assets-api meta.warnings', () => {
         ),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/pic.png', { method: 'DELETE' }),
     );
@@ -212,7 +213,7 @@ describe('assets-api meta.warnings', () => {
         ),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
 
     // Page 1 — use shared codec params: page[size] (not the old page[limit])
     const res1 = await api.fetch(new Request('http://localhost/api/assets/resources?page[size]=2'));
@@ -276,7 +277,7 @@ describe('assets-api meta.warnings', () => {
         ),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[offset]=2&page[limit]=2'));
     expect(res.status).toBe(200);
@@ -306,7 +307,7 @@ describe('assets-api meta.warnings', () => {
       deleteAsset: (_key: string) => LaikaTask.succeed(undefined),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/pic.png', { method: 'DELETE' }),
     );
@@ -359,7 +360,7 @@ describe('GET /resources — shared JSON:API pagination params', () => {
   } as unknown as AssetsRepository);
 
   it('page[size] controls items per page on first page and emits page[number] next link (LCMS-277)', async () => {
-    const api = buildAssetsApi({ repository: makeRepo() });
+    const api = buildAssetsApi({ repository: makeRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[size]=2'));
     expect(res.status).toBe(200);
     const body = await res.json() as { data: Array<{ id: string }>, links: { next?: string } };
@@ -371,7 +372,7 @@ describe('GET /resources — shared JSON:API pagination params', () => {
   });
 
   it('page[after] advances to the next cursor page', async () => {
-    const api = buildAssetsApi({ repository: makeRepo() });
+    const api = buildAssetsApi({ repository: makeRepo(), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources?page[after]=b.jpg&page[size]=2'),
     );
@@ -381,7 +382,7 @@ describe('GET /resources — shared JSON:API pagination params', () => {
   });
 
   it('links.next from standalone page[size] carries page[number]=2 (LCMS-277)', async () => {
-    const api = buildAssetsApi({ repository: makeRepo() });
+    const api = buildAssetsApi({ repository: makeRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[size]=2'));
     const body = await res.json() as { links: { next?: string } };
     expect(body.links.next).toBeDefined();
@@ -416,7 +417,7 @@ describe('GET /resources — meta.page.total', () => {
         ),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
     expect(res.status).toBe(200);
 
@@ -438,7 +439,7 @@ describe('GET /resources — meta.page.total', () => {
         ),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
     expect(res.status).toBe(200);
 
@@ -454,7 +455,7 @@ describe('GET /resources — meta.page.total', () => {
       listResources: () => LaikaStream.fail(new InternalError('storage unavailable')),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
     expect(res.status).toBe(500);
 
@@ -478,7 +479,7 @@ describe('GET /capabilities', () => {
       getCapabilities: () => LaikaTask.succeed(capabilities),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/capabilities'));
     expect(res.status).toBe(200);
 
@@ -493,7 +494,7 @@ describe('GET /capabilities', () => {
       getCapabilities: () => LaikaTask.make(() => Effect.fail(new NotFoundError('capabilities unavailable'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/capabilities'));
     expect(res.status).toBe(404);
 
@@ -507,7 +508,7 @@ describe('GET /capabilities', () => {
       getCapabilities: () => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/capabilities'));
     expect(res.status).toBe(500);
 
@@ -574,7 +575,7 @@ describe('GET /resources — cursor capability guard', () => {
   } as unknown as AssetsRepository);
 
   it('page[after] on a cursor:false backend → 400 JSON:API error', async () => {
-    const api = buildAssetsApi({ repository: makeNoCursorRepo() });
+    const api = buildAssetsApi({ repository: makeNoCursorRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[after]=photo.jpg'));
     expect(res.status).toBe(400);
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
@@ -584,7 +585,7 @@ describe('GET /resources — cursor capability guard', () => {
   });
 
   it('page[before] on a cursor:false backend → 400 JSON:API error', async () => {
-    const api = buildAssetsApi({ repository: makeNoCursorRepo() });
+    const api = buildAssetsApi({ repository: makeNoCursorRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[before]=photo.jpg'));
     expect(res.status).toBe(400);
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
@@ -594,13 +595,13 @@ describe('GET /resources — cursor capability guard', () => {
   });
 
   it('page[size] without cursor params on cursor:false backend → 200 unaffected', async () => {
-    const api = buildAssetsApi({ repository: makeNoCursorRepo() });
+    const api = buildAssetsApi({ repository: makeNoCursorRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[size]=10'));
     expect(res.status).toBe(200);
   });
 
   it('page[after] on a cursor:true backend → 200', async () => {
-    const api = buildAssetsApi({ repository: makeCursorRepo() });
+    const api = buildAssetsApi({ repository: makeCursorRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?page[after]=a.jpg&page[size]=2'));
     expect(res.status).toBe(200);
   });
@@ -623,7 +624,7 @@ describe('GET /resources/:key', () => {
       getResource: (_key: string) => LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.succeed([asset])),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources/images%2Fphoto.jpg'));
     expect(res.status).toBe(200);
 
@@ -639,7 +640,7 @@ describe('GET /resources/:key', () => {
         LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.fail(new NotFoundError('Resource not found'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources/missing.jpg'));
     expect(res.status).toBe(404);
 
@@ -653,7 +654,7 @@ describe('GET /resources/:key', () => {
         LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.fail(new InternalError('storage unavailable'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources/photo.jpg'));
     expect(res.status).toBe(500);
 
@@ -680,7 +681,7 @@ describe('POST /resources — asset via JSON:API', () => {
       createAsset: () => LaikaTask.succeed(createdAsset),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const base64Content = btoa('hello');
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
@@ -706,7 +707,7 @@ describe('POST /resources — asset via JSON:API', () => {
   });
 
   it('returns 400 when content attribute is missing', async () => {
-    const api = buildAssetsApi({ repository: {} as AssetsRepository });
+    const api = buildAssetsApi({ repository: {} as AssetsRepository, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
         method: 'POST',
@@ -731,7 +732,7 @@ describe('POST /resources — asset via JSON:API', () => {
       createAsset: () => LaikaTask.fail(new BadRequestError('storage quota exceeded')),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
         method: 'POST',
@@ -756,7 +757,7 @@ describe('POST /resources — asset via JSON:API', () => {
       createAsset: () => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
         method: 'POST',
@@ -782,7 +783,7 @@ describe('POST /resources — asset via JSON:API', () => {
         LaikaTask.make(() => Effect.fail(new EntryAlreadyExistsError('uploads/photo.png already exists'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
         method: 'POST',
@@ -819,7 +820,7 @@ describe('POST /resources — folder via JSON:API', () => {
       createFolder: () => LaikaTask.succeed(createdFolder),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
         method: 'POST',
@@ -845,7 +846,7 @@ describe('POST /resources — folder via JSON:API', () => {
       createFolder: () => LaikaTask.fail(new BadRequestError('folder already exists')),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
         method: 'POST',
@@ -870,7 +871,7 @@ describe('POST /resources — folder via JSON:API', () => {
       createFolder: () => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
         method: 'POST',
@@ -897,7 +898,7 @@ describe('POST /resources — folder via JSON:API', () => {
 
 describe('POST /resources — JSON:API invalid data.type', () => {
   it('returns 400 bad_request when data.type is not "asset" or "folder" (LCMS-362)', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
         method: 'POST',
@@ -919,7 +920,7 @@ describe('POST /resources — JSON:API invalid data.type', () => {
 
 describe('POST /resources — unsupported Content-Type', () => {
   it('returns 400 bad_request when Content-Type is text/plain (LCMS-362)', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
         method: 'POST',
@@ -961,7 +962,7 @@ describe('POST /resources — multipart form-data', () => {
       createAsset: () => LaikaTask.succeed(createdAsset),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const file = new File(['<binary data>'], 'photo.jpg', { type: 'image/jpeg' });
     const res = await api.fetch(makeMultipartRequest({ file }));
 
@@ -972,7 +973,7 @@ describe('POST /resources — multipart form-data', () => {
   });
 
   it('returns 400 bad_request when file field is absent', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(makeMultipartRequest({ key: 'uploads/no-file.jpg' }));
 
     expect(res.status).toBe(400);
@@ -982,7 +983,7 @@ describe('POST /resources — multipart form-data', () => {
   });
 
   it('returns 400 bad_request when metadata field contains invalid JSON', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const file = new File(['data'], 'test.txt', { type: 'text/plain' });
     const res = await api.fetch(makeMultipartRequest({ file, metadata: '{not-valid-json' }));
 
@@ -1006,7 +1007,7 @@ describe('POST /resources — multipart form-data', () => {
       },
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const file = new File(['data'], 'original.txt', { type: 'text/plain' });
     const metadata = JSON.stringify({ key: 'from-metadata/original.txt', mimeType: 'text/plain' });
     const res = await api.fetch(makeMultipartRequest({
@@ -1026,7 +1027,7 @@ describe('POST /resources — multipart form-data', () => {
       createAsset: () => LaikaTask.fail(new BadRequestError('storage quota exceeded')),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const file = new File(['data'], 'test.bin', { type: 'application/octet-stream' });
     const res = await api.fetch(makeMultipartRequest({ file }));
 
@@ -1053,7 +1054,7 @@ describe('PATCH /resources/:key', () => {
       updateAsset: () => LaikaTask.succeed(updatedAsset),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/photo.jpg', {
         method: 'PATCH',
@@ -1078,7 +1079,7 @@ describe('PATCH /resources/:key', () => {
       updateAsset: () => LaikaTask.make(() => Effect.fail(new NotFoundError('asset not found'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/missing.jpg', {
         method: 'PATCH',
@@ -1097,7 +1098,7 @@ describe('PATCH /resources/:key', () => {
       updateAsset: () => LaikaTask.make(() => Effect.fail(new BadRequestError('invalid update'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/photo.jpg', {
         method: 'PATCH',
@@ -1116,7 +1117,7 @@ describe('PATCH /resources/:key', () => {
       updateAsset: () => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/photo.jpg', {
         method: 'PATCH',
@@ -1137,7 +1138,7 @@ describe('PATCH /resources/:key', () => {
     } as unknown as AssetsRepository;
     const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
 
-    const api = buildAssetsApi({ repository: partialRepo, logger });
+    const api = buildAssetsApi({ repository: partialRepo, logger, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/photo.jpg', {
         method: 'PATCH',
@@ -1162,7 +1163,7 @@ describe('DELETE /resources/:key', () => {
         LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.fail(new NotFoundError('no such resource'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/ghost.png', { method: 'DELETE' }),
     );
@@ -1178,7 +1179,7 @@ describe('DELETE /resources/:key', () => {
       getResource: (_key: string) => LaikaTask.make<ReadonlyArray<Resource>>(() => Effect.succeed([])),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/ghost.png', { method: 'DELETE' }),
     );
@@ -1203,7 +1204,7 @@ describe('DELETE /resources/:key', () => {
       deleteFolder: (_key: string, _recursive: boolean) => LaikaTask.succeed(undefined),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/empty-folder/', { method: 'DELETE' }),
     );
@@ -1228,7 +1229,7 @@ describe('DELETE /resources/:key', () => {
       },
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/my-folder/?recursive=true', { method: 'DELETE' }),
     );
@@ -1254,7 +1255,7 @@ describe('DELETE /resources/:key', () => {
       },
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/my-folder/', { method: 'DELETE' }),
     );
@@ -1277,7 +1278,7 @@ describe('DELETE /resources/:key', () => {
       deleteAsset: () => LaikaTask.make(() => Effect.fail(new InternalError('storage outage'))),
     } as unknown as AssetsRepository;
 
-    const api = buildAssetsApi({ repository: partialRepo });
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/photo.jpg', { method: 'DELETE' }),
     );
@@ -1346,7 +1347,7 @@ function makeIncludeRepo(): AssetsRepository {
 
 describe('GET /resources/:key — ?include=urls sideloads asset-url', () => {
   it('?include=urls returns asset-url in included[]', async () => {
-    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const api = buildAssetsApi({ repository: makeIncludeRepo(), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?include=urls'),
     );
@@ -1361,7 +1362,7 @@ describe('GET /resources/:key — ?include=urls sideloads asset-url', () => {
   });
 
   it('?include=asset-url (long-form alias) also sideloads asset-url', async () => {
-    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const api = buildAssetsApi({ repository: makeIncludeRepo(), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?include=asset-url'),
     );
@@ -1375,7 +1376,7 @@ describe('GET /resources/:key — ?include=urls sideloads asset-url', () => {
 
 describe('GET /resources/:key — ?include=variations sideloads asset-variation', () => {
   it('?include=variations returns asset-variation in included[]', async () => {
-    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const api = buildAssetsApi({ repository: makeIncludeRepo(), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?include=variations'),
     );
@@ -1387,7 +1388,7 @@ describe('GET /resources/:key — ?include=variations sideloads asset-variation'
   });
 
   it('?include=asset-variation (long-form alias) also sideloads asset-variation', async () => {
-    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const api = buildAssetsApi({ repository: makeIncludeRepo(), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?include=asset-variation'),
     );
@@ -1401,7 +1402,7 @@ describe('GET /resources/:key — ?include=variations sideloads asset-variation'
 
 describe('GET /resources/:key — ?meta=true inlines metadata', () => {
   it('?meta=true inlines asset metadata on data.meta', async () => {
-    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const api = buildAssetsApi({ repository: makeIncludeRepo(), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?meta=true'),
     );
@@ -1416,7 +1417,7 @@ describe('GET /resources/:key — ?meta=true inlines metadata', () => {
   });
 
   it('?include=asset-metadata alone does NOT produce metadata — must use ?meta=true', async () => {
-    const api = buildAssetsApi({ repository: makeIncludeRepo() });
+    const api = buildAssetsApi({ repository: makeIncludeRepo(), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources/images%2Fhero.jpg?include=asset-metadata'),
     );
@@ -1456,7 +1457,7 @@ function makeCollectionMetaRepo(opts: { getMetadataSpy?: ReturnType<typeof vi.fn
 
 describe('GET /resources (collection) — ?meta=true inlines metadata (LCMS-343)', () => {
   it('?meta=true inlines metadata on data[0].meta for each asset in the collection', async () => {
-    const api = buildAssetsApi({ repository: makeCollectionMetaRepo() });
+    const api = buildAssetsApi({ repository: makeCollectionMetaRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?meta=true'));
     expect(res.status).toBe(200);
     const body = await res.json() as {
@@ -1476,7 +1477,7 @@ describe('GET /resources (collection) — ?meta=true inlines metadata (LCMS-343)
         })
       )
     );
-    const api = buildAssetsApi({ repository: makeCollectionMetaRepo({ getMetadataSpy }) });
+    const api = buildAssetsApi({ repository: makeCollectionMetaRepo({ getMetadataSpy }), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
     expect(res.status).toBe(200);
     const body = await res.json() as {
@@ -1522,7 +1523,7 @@ function makeCollectionIncludeRepo(opts: {
 
 describe('GET /resources (collection) — ?include=urls sideloads asset-url (LCMS-365)', () => {
   it('?include=urls returns included[] with asset-url for each asset', async () => {
-    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo() });
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=urls'));
     expect(res.status).toBe(200);
     const body = await res.json() as {
@@ -1536,7 +1537,7 @@ describe('GET /resources (collection) — ?include=urls sideloads asset-url (LCM
   });
 
   it('?include=asset-url (long-form alias) also sideloads asset-url on collection', async () => {
-    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo() });
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=asset-url'));
     expect(res.status).toBe(200);
     const body = await res.json() as { included?: Array<{ type: string }> };
@@ -1545,7 +1546,7 @@ describe('GET /resources (collection) — ?include=urls sideloads asset-url (LCM
 
   it('when getUrls fails on the collection path, response is still 200 with empty included[]', async () => {
     const getUrlsSpy = vi.fn((_assets: Asset[]) => LaikaStream.fail(new InternalError('cdn unavailable')));
-    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo({ getUrlsSpy }) });
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo({ getUrlsSpy }), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=urls'));
     expect(res.status).toBe(200);
     const body = await res.json() as { data: Array<unknown>, included?: Array<unknown> };
@@ -1556,7 +1557,7 @@ describe('GET /resources (collection) — ?include=urls sideloads asset-url (LCM
 
 describe('GET /resources (collection) — ?include=variations sideloads asset-variation (LCMS-365)', () => {
   it('?include=variations returns included[] with asset-variation for each asset', async () => {
-    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo() });
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=variations'));
     expect(res.status).toBe(200);
     const body = await res.json() as {
@@ -1566,7 +1567,7 @@ describe('GET /resources (collection) — ?include=variations sideloads asset-va
   });
 
   it('?include=asset-variation (long-form alias) also sideloads asset-variation on collection', async () => {
-    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo() });
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=asset-variation'));
     expect(res.status).toBe(200);
     const body = await res.json() as { included?: Array<{ type: string }> };
@@ -1577,7 +1578,7 @@ describe('GET /resources (collection) — ?include=variations sideloads asset-va
     const getVariationsSpy = vi.fn((_assets: Asset[]) =>
       LaikaStream.fail(new InternalError('variant service unavailable'))
     );
-    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo({ getVariationsSpy }) });
+    const api = buildAssetsApi({ repository: makeCollectionIncludeRepo({ getVariationsSpy }), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?include=variations'));
     expect(res.status).toBe(200);
     const body = await res.json() as { data: Array<unknown>, included?: Array<unknown> };
@@ -1591,7 +1592,7 @@ describe('GET /resources (collection) — ?include=variations sideloads asset-va
 // ---------------------------------------------------------------------------
 
 describe('malformed JSON body — never throws, always returns a Response', () => {
-  const api = buildAssetsApi({ repository: stubRepo });
+  const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
 
   it('POST /resources with malformed JSON returns JSON:API 400, not a throw', async () => {
     const res = await api.fetch(
@@ -1662,7 +1663,10 @@ describe('GET /resources — folder filter alias forwarding', () => {
 
   it('?folder=images forwards folderKey "images" to listResources', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?folder=images'));
     expect(res.status).toBe(200);
@@ -1672,7 +1676,10 @@ describe('GET /resources — folder filter alias forwarding', () => {
 
   it('?filter[folder]=images forwards folderKey "images" to listResources', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bfolder%5D=images'));
     expect(res.status).toBe(200);
@@ -1682,7 +1689,10 @@ describe('GET /resources — folder filter alias forwarding', () => {
 
   it('?filter[prefix]=images forwards folderKey "images" to listResources', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bprefix%5D=images'));
     expect(res.status).toBe(200);
@@ -1692,7 +1702,10 @@ describe('GET /resources — folder filter alias forwarding', () => {
 
   it('folder takes priority over filter[folder] and filter[prefix]', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(
       new Request(
@@ -1706,7 +1719,10 @@ describe('GET /resources — folder filter alias forwarding', () => {
 
   it('filter[folder] takes priority over filter[prefix]', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(
       new Request(
@@ -1720,7 +1736,10 @@ describe('GET /resources — folder filter alias forwarding', () => {
 
   it('no folder param defaults folderKey to empty string', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
     expect(res.status).toBe(200);
@@ -1741,7 +1760,10 @@ describe('GET /resources — filter[depth] forwarding', () => {
 
   it('?filter[depth]=3 forwards depth: 3 to listResources', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bdepth%5D=3'));
     expect(res.status).toBe(200);
@@ -1751,7 +1773,10 @@ describe('GET /resources — filter[depth] forwarding', () => {
 
   it('?filter[depth]=NaN falls back to depth: 1', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bdepth%5D=NaN'));
     expect(res.status).toBe(200);
@@ -1761,7 +1786,10 @@ describe('GET /resources — filter[depth] forwarding', () => {
 
   it('?depth=2 (alias) forwards depth: 2 to listResources', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?depth=2'));
     expect(res.status).toBe(200);
@@ -1771,7 +1799,10 @@ describe('GET /resources — filter[depth] forwarding', () => {
 
   it('no depth param defaults to depth: 1', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
     expect(res.status).toBe(200);
@@ -1781,7 +1812,10 @@ describe('GET /resources — filter[depth] forwarding', () => {
 
   it('?filter[depth]=0 clamps to minimum depth: 1', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListResourcesOptions) => makeResourcesStream());
-    const api = buildAssetsApi({ repository: { listResources: spy } as unknown as AssetsRepository });
+    const api = buildAssetsApi({
+      repository: { listResources: spy } as unknown as AssetsRepository,
+      authorize: allowAll,
+    });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bdepth%5D=0'));
     expect(res.status).toBe(200);
@@ -1821,6 +1855,7 @@ describe('GET /resources — generic filter forwarding', () => {
         getCapabilities: () => LaikaTask.succeed(filteringCaps),
         listResources: spy,
       } as unknown as AssetsRepository,
+      authorize: allowAll,
     });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bsearch%5D=x'));
@@ -1836,6 +1871,7 @@ describe('GET /resources — generic filter forwarding', () => {
         getCapabilities: () => LaikaTask.succeed(filteringCaps),
         listResources: spy,
       } as unknown as AssetsRepository,
+      authorize: allowAll,
     });
 
     const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter%5Bbogus%5D=1'));
@@ -1853,6 +1889,7 @@ describe('GET /resources — generic filter forwarding', () => {
         getCapabilities: () => LaikaTask.succeed(filteringCaps),
         listResources: spy,
       } as unknown as AssetsRepository,
+      authorize: allowAll,
     });
 
     const res = await api.fetch(
@@ -1902,6 +1939,7 @@ describe('GET /resources — repository done.pagination cursor links', () => {
   it('done.pagination.after becomes links.next with page[after] and page[size]', async () => {
     const api = buildAssetsApi({
       repository: makeCursorDoneRepo({ pagination: { after: 'CUR2', perPage: 2 } }),
+      authorize: allowAll,
     });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources?page%5Bafter%5D=&page%5Bsize%5D=2'),
@@ -1914,7 +1952,7 @@ describe('GET /resources — repository done.pagination cursor links', () => {
   });
 
   it('a full cursor page with done {} (exhausted) emits NO links.next', async () => {
-    const api = buildAssetsApi({ repository: makeCursorDoneRepo({}) });
+    const api = buildAssetsApi({ repository: makeCursorDoneRepo({}), authorize: allowAll });
     // The page is "full" (2 items at page[size]=2) — the old length>=pageSize
     // heuristic must not fabricate a cursor on a cursor-shaped request.
     const res = await api.fetch(
@@ -1936,6 +1974,7 @@ describe('GET /resources — repository done.pagination cursor links', () => {
         getCapabilities: () => LaikaTask.succeed(cursorCaps),
         listResources: spy,
       } as unknown as AssetsRepository,
+      authorize: allowAll,
     });
 
     const res = await api.fetch(
@@ -1960,7 +1999,7 @@ describe('assets-api onError / logger (LCMS-331)', () => {
     } as unknown as AssetsRepository;
     const onError = vi.fn();
 
-    const api = buildAssetsApi({ repository: throwingRepo, onError });
+    const api = buildAssetsApi({ repository: throwingRepo, onError, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
 
     expect(res.status).toBe(500);
@@ -1969,7 +2008,7 @@ describe('assets-api onError / logger (LCMS-331)', () => {
   });
 
   it('does not call onError for normal 404 responses', async () => {
-    const api = buildAssetsApi({ repository: stubRepo, onError: vi.fn() });
+    const api = buildAssetsApi({ repository: stubRepo, onError: vi.fn(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/does-not-exist'));
     // 404 is a normal route-not-found — the catch-all is never hit.
     expect(res.status).toBe(404);
@@ -1984,7 +2023,7 @@ describe('assets-api onError / logger (LCMS-331)', () => {
     } as unknown as AssetsRepository;
     const logger = { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() };
 
-    const api = buildAssetsApi({ repository: throwingRepo, logger });
+    const api = buildAssetsApi({ repository: throwingRepo, logger, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
 
     expect(res.status).toBe(500);
@@ -1996,7 +2035,7 @@ describe('assets-api onError / logger (LCMS-331)', () => {
     // stubRepo returns nothing useful — GET /resources with stubRepo causes a 400
     // because listResources is undefined and the catch-all wraps it.
     // Instead, use a request to a known 400 path: bad content-type POST.
-    const api = buildAssetsApi({ repository: stubRepo, logger });
+    const api = buildAssetsApi({ repository: stubRepo, logger, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/api/assets/resources', {
         method: 'POST',

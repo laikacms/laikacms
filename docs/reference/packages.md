@@ -26,45 +26,45 @@ utilities. Imported via subpath exports.
 
 ### Domain (`packages/laikacms/src/domain/`)
 
-| Subpath                         | Description                                    |
-| ------------------------------- | ---------------------------------------------- |
-| `laikacms/storage`              | Storage abstractions (objects, folders, atoms) |
-| `laikacms/documents`            | Document management with revisions             |
-| `laikacms/assets`               | Asset/media management                         |
-| `laikacms/contentbase-settings` | ContentBase configuration                      |
+| Subpath              | Description                                    |
+| -------------------- | ---------------------------------------------- |
+| `laikacms/storage`   | Storage abstractions (objects, folders, atoms) |
+| `laikacms/documents` | Document management with revisions             |
+| `laikacms/assets`    | Asset/media management                         |
+| `laikacms/catalog`   | Catalog configuration                          |
 
 ### API (`packages/laikacms/src/api/`)
 
-| Subpath                    | Description              |
-| -------------------------- | ------------------------ |
-| `laikacms/storage/api`     | JSON:API for storage     |
-| `laikacms/documents/api`   | JSON:API for documents   |
-| `laikacms/assets/api`      | JSON:API for assets      |
-| `laikacms/contentbase-api` | JSON:API for ContentBase |
+| Subpath                  | Description            |
+| ------------------------ | ---------------------- |
+| `laikacms/storage/api`   | JSON:API for storage   |
+| `laikacms/documents/api` | JSON:API for documents |
+| `laikacms/assets/api`    | JSON:API for assets    |
+| `laikacms/catalog-api`   | JSON:API for Catalog   |
 
 ### Implementations (`packages/laikacms/src/impl/`)
 
-| Subpath                                 | Description                                                                                                                                                                                                                                                           |
-| --------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `laikacms/storage/r2`                   | Cloudflare R2 storage                                                                                                                                                                                                                                                 |
-| `laikacms/storage/fs`                   | Filesystem storage                                                                                                                                                                                                                                                    |
-| `laikacms/storage/s3`                   | S3→R2Bucket adapter (`createS3Bucket()`) — pairs with `R2StorageRepository`, not a `StorageRepository` itself. See `@laikacms/aws/storage-s3` for the full S3 `StorageRepository`.                                                                                    |
-| `laikacms/storage/web`                  | Web `Storage` (`localStorage`/`sessionStorage`) — client-side, read+write, SSR-safe                                                                                                                                                                                   |
-| `laikacms/storage/web-fs`               | Browser File System API — any directory handle (origin-private or user-picked), real hierarchy (no `.keep` markers), read+write, permission-aware, SSR-safe                                                                                                           |
-| `laikacms/storage/webdav`               | WebDAV server                                                                                                                                                                                                                                                         |
-| `laikacms/storage/github-cdn`           | Read-only storage backed by a public GitHub repo, served via jsDelivr's CDN (no token, no `@octokit/*`, no `api.github.com` round-trip)                                                                                                                               |
-| `laikacms/storage/drizzle`              | Drizzle ORM storage                                                                                                                                                                                                                                                   |
-| `laikacms/storage/jsonapi-proxy`        | Storage JSON:API proxy                                                                                                                                                                                                                                                |
-| `laikacms/assets/r2`                    | R2 asset storage                                                                                                                                                                                                                                                      |
-| `laikacms/assets/contentbase`           | Assets on top of storage                                                                                                                                                                                                                                              |
-| `laikacms/assets/obsidian`              | Obsidian-vault-backed assets                                                                                                                                                                                                                                          |
-| `laikacms/assets/jsonapi-proxy`         | Assets JSON:API proxy                                                                                                                                                                                                                                                 |
-| `laikacms/documents/contentbase`        | Documents on top of storage                                                                                                                                                                                                                                           |
-| `laikacms/documents/drizzle`            | Drizzle document storage                                                                                                                                                                                                                                              |
-| `laikacms/documents/obsidian`           | Obsidian-vault-backed documents                                                                                                                                                                                                                                       |
-| `laikacms/documents/jsonapi-proxy`      | Documents JSON:API proxy                                                                                                                                                                                                                                              |
-| `laikacms/contentbase-settings-default` | Maps collection names to same-name folders by convention; auto-creates defaults on first use — no seeding required. Use for simple setups where folder names match collection names.                                                                                  |
-| `laikacms/contentbase-settings-decap`   | Derives collection/folder/media mappings from a Decap config JSON seeded into storage (the `configKey` option). Use when the server and browser Decap configs must stay in sync from one source of truth, or when you need multi-folder or nested collection support. |
+| Subpath                            | Description                                                                                                                                                                                                                                                                                                          |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laikacms/storage/r2`              | Cloudflare R2 storage                                                                                                                                                                                                                                                                                                |
+| `laikacms/storage/fs`              | Filesystem storage                                                                                                                                                                                                                                                                                                   |
+| `laikacms/storage/s3`              | S3→R2Bucket adapter (`createS3Bucket()`) — pairs with `R2StorageRepository`, not a `StorageRepository` itself. See `@laikacms/aws/storage-s3` for the full S3 `StorageRepository`.                                                                                                                                   |
+| `laikacms/storage/web`             | Web `Storage` (`localStorage`/`sessionStorage`) — client-side, read+write, SSR-safe                                                                                                                                                                                                                                  |
+| `laikacms/storage/web-fs`          | Browser File System API — any directory handle (origin-private or user-picked), real hierarchy (no `.keep` markers), read+write, permission-aware, SSR-safe                                                                                                                                                          |
+| `laikacms/storage/webdav`          | WebDAV server                                                                                                                                                                                                                                                                                                        |
+| `laikacms/storage/github-cdn`      | Read-only storage backed by a public GitHub repo, served via jsDelivr's CDN (no token, no `@octokit/*`, no `api.github.com` round-trip)                                                                                                                                                                              |
+| `laikacms/storage/drizzle`         | Drizzle ORM storage                                                                                                                                                                                                                                                                                                  |
+| `laikacms/storage/jsonapi-proxy`   | Storage JSON:API proxy                                                                                                                                                                                                                                                                                               |
+| `laikacms/assets/r2`               | R2 asset storage                                                                                                                                                                                                                                                                                                     |
+| `laikacms/assets/catalog`          | Assets on top of storage                                                                                                                                                                                                                                                                                             |
+| `laikacms/assets/obsidian`         | Obsidian-vault-backed assets                                                                                                                                                                                                                                                                                         |
+| `laikacms/assets/jsonapi-proxy`    | Assets JSON:API proxy                                                                                                                                                                                                                                                                                                |
+| `laikacms/documents/catalog`       | Documents on top of storage                                                                                                                                                                                                                                                                                          |
+| `laikacms/documents/drizzle`       | Drizzle document storage                                                                                                                                                                                                                                                                                             |
+| `laikacms/documents/obsidian`      | Obsidian-vault-backed documents                                                                                                                                                                                                                                                                                      |
+| `laikacms/documents/jsonapi-proxy` | Documents JSON:API proxy                                                                                                                                                                                                                                                                                             |
+| `laikacms/catalog-convention`      | Maps collection names to same-name folders by convention; auto-creates defaults on first use — no seeding required. Persists to `.laika/catalog` and `.laika/schemas/<collection>` in storage (extensionless, so your serializers pick the format). Use for simple setups where folder names match collection names. |
+| `laikacms/catalog-decap`           | Derives collection/folder/media mappings from a Decap config JSON seeded into storage (the `configKey` option). Use when the server and browser Decap configs must stay in sync from one source of truth, or when you need multi-folder or nested collection support.                                                |
 
 ### Testing utilities (`packages/laikacms/src/`)
 
@@ -117,12 +117,12 @@ are exported as separate `storage-serializers-*` subpaths rather than under `ser
 
 AWS service implementations.
 
-| Subpath                                  | Description                                                                            |
-| ---------------------------------------- | -------------------------------------------------------------------------------------- |
-| `@laikacms/aws/contentbase-settings-ddb` | DynamoDB-backed contentbase settings                                                   |
-| `@laikacms/aws/storage-s3`               | S3-backed StorageRepository (also works with MinIO, Backblaze B2, DigitalOcean Spaces) |
-| `@laikacms/aws/storage-ddb`              | DynamoDB single-table StorageRepository                                                |
-| `@laikacms/aws/assets-s3`                | S3-backed AssetsRepository                                                             |
+| Subpath                     | Description                                                                            |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| `@laikacms/aws/catalog-ddb` | DynamoDB-backed catalog settings                                                       |
+| `@laikacms/aws/storage-s3`  | S3-backed StorageRepository (also works with MinIO, Backblaze B2, DigitalOcean Spaces) |
+| `@laikacms/aws/storage-ddb` | DynamoDB single-table StorageRepository                                                |
+| `@laikacms/aws/assets-s3`   | S3-backed AssetsRepository                                                             |
 
 ## `@laikacms/server`
 

@@ -30,7 +30,7 @@ beforeEach(async () => {
 afterEach(async () => {
   // `load()` fires the typegen's `ingest()` without awaiting it (by design — it
   // must not block module resolution), which schedules a debounced write of
-  // `.laika/types.d.ts` a tick later. Left unflushed, that write can land after
+  // `.laika/vite-generated/types.d.ts` a tick later. Left unflushed, that write can land after
   // (or mid-) the `rm` below and recreate an entry the recursive delete already
   // listed, failing with ENOTEMPTY under load. `closeBundle` — the same hook a
   // real Vite build calls — awaits the typegen's `dispose()`, which flushes (or
@@ -66,9 +66,9 @@ describe('renderModule', () => {
     const code = renderModule({
       content: { title: 'Hello', body: 'Prose.' },
       meta: { key: 'platform' },
-      mdxSpecifier: '/.laika/bodies/store/platform.mdx',
+      mdxSpecifier: '/.laika/vite-generated/bodies/store/platform.mdx',
     });
-    expect(code).toContain('export { default as Body } from "/.laika/bodies/store/platform.mdx";');
+    expect(code).toContain('export { default as Body } from "/.laika/vite-generated/bodies/store/platform.mdx";');
     expect(code).toMatch(/export default \{[^}]*"body"/);
     expect(code).not.toMatch(/export default \{[^}]*Body:/);
   });
@@ -78,7 +78,7 @@ describe('renderModule', () => {
       renderModule({
         content: { Body: 'mine', body: 'Prose.' },
         meta: { key: 'platform' },
-        mdxSpecifier: '/.laika/bodies/store/platform.mdx',
+        mdxSpecifier: '/.laika/vite-generated/bodies/store/platform.mdx',
       })
     ).toThrow(/"Body" field/);
   });
@@ -149,7 +149,7 @@ describe('plugin hooks', () => {
     const load = plugin.load as (id: string) => Promise<{ code: string } | null>;
     const result = await load(toVirtualId({ namespace: 'store', key: 'posts/hello' }));
     expect(result?.code).not.toContain('Body');
-    await expect(fs.access(path.join(tmpDir, '.laika', 'bodies'))).rejects.toThrow();
+    await expect(fs.access(path.join(tmpDir, '.laika', 'vite-generated', 'bodies'))).rejects.toThrow();
   });
 
   it('writes the body chunk before handing back the module that imports it', async () => {
@@ -160,10 +160,10 @@ describe('plugin hooks', () => {
     const load = plugin.load as (id: string) => Promise<{ code: string } | null>;
     const result = await load(toVirtualId({ namespace: 'store', key: 'pages/platform' }));
 
-    const chunk = path.join(tmpDir, '.laika', 'bodies', 'store', 'pages', 'platform.mdx');
+    const chunk = path.join(tmpDir, '.laika', 'vite-generated', 'bodies', 'store', 'pages', 'platform.mdx');
     expect(await fs.readFile(chunk, 'utf8')).toBe('Self-install `laika-gateway`.\n');
     expect(result?.code).toContain(
-      'export { default as Body } from "/.laika/bodies/store/pages/platform.mdx";',
+      'export { default as Body } from "/.laika/vite-generated/bodies/store/pages/platform.mdx";',
     );
     // The raw string stays exported too, for anything that wants the source.
     expect(result?.code).toMatch(/export const body = __f1;/);
@@ -337,7 +337,7 @@ describe('vite build (end-to-end typegen)', () => {
 
     // buildStart → regenerateAll wrote the declaration file, and the TS compiler
     // (not us) inferred the field types from the real data.
-    const dts = await fs.readFile(path.join(tmpDir, '.laika', 'types.d.ts'), 'utf8');
+    const dts = await fs.readFile(path.join(tmpDir, '.laika', 'vite-generated', 'types.d.ts'), 'utf8');
     expect(dts).toContain(`declare module 'laika:store/posts/hello'`);
     expect(dts).toMatch(/title:\s*string/);
     expect(dts).toMatch(/tags:\s*(string\[\]|Array<string>)/);
@@ -345,6 +345,6 @@ describe('vite build (end-to-end typegen)', () => {
 
     // The committed one-line reference file is scaffolded at the project root.
     const env = await fs.readFile(path.join(tmpDir, 'laika-env.d.ts'), 'utf8');
-    expect(env).toContain('.laika/types.d.ts');
+    expect(env).toContain('.laika/vite-generated/types.d.ts');
   }, 60_000);
 });

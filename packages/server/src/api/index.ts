@@ -4,7 +4,7 @@ import { AuthenticationError, ForbiddenError, Header, NotFoundError, TemplateLit
 import { addTimingJitter } from 'laikacms/crypto';
 import type { DocumentsRepository } from 'laikacms/documents';
 import { buildJsonApi as buildDocumentsApi } from 'laikacms/documents/api';
-import { errorToJsonApiMapper, isLaikaError } from 'laikacms/json-api';
+import { allowAll, errorToJsonApiMapper, isLaikaError } from 'laikacms/json-api';
 import type { StorageRepository } from 'laikacms/storage';
 import { buildJsonApi as buildStorageApi } from 'laikacms/storage/api';
 import { buildLocksApi } from './locks.js';
@@ -562,17 +562,40 @@ export const laikaApi = (options: LaikaApiOptions): LaikaApi => {
           ),
         );
       } else if (domain === 'storage') {
-        const storageApi = buildStorageApi({ repo: storage, basePath: `${base}/storage`, logger: options.logger });
+        // The inner JSON:APIs run `allowAll`: this request already cleared
+        // authentication and the `authorize(ctx)` gate above, which is this
+        // server's single access decision. Re-deciding it per action here
+        // would split the policy across two places.
+        const storageApi = buildStorageApi({
+          repo: storage,
+          basePath: `${base}/storage`,
+          logger: options.logger,
+          authorize: allowAll,
+        });
         return await respond(await storageApi.fetch(request));
       } else if (domain === 'documents') {
+        // The inner JSON:APIs run `allowAll`: this request already cleared
+        // authentication and the `authorize(ctx)` gate above, which is this
+        // server's single access decision. Re-deciding it per action here
+        // would split the policy across two places.
         const documentsApi = buildDocumentsApi({
           repo: documents,
           basePath: `${base}/documents`,
           logger: options.logger,
+          authorize: allowAll,
         });
         return await respond(await documentsApi.fetch(request));
       } else if (domain === 'assets' && assets) {
-        const assetsApi = buildAssetsApi({ repository: assets, basePath: `${base}/assets`, logger: options.logger });
+        // The inner JSON:APIs run `allowAll`: this request already cleared
+        // authentication and the `authorize(ctx)` gate above, which is this
+        // server's single access decision. Re-deciding it per action here
+        // would split the policy across two places.
+        const assetsApi = buildAssetsApi({
+          repository: assets,
+          basePath: `${base}/assets`,
+          logger: options.logger,
+          authorize: allowAll,
+        });
         return await respond(await assetsApi.fetch(request));
       } else if (domain === 'locks') {
         const locksApi = buildLocksApi({

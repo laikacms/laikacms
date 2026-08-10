@@ -7,7 +7,7 @@ import { DocumentLanguage } from '../record/record-language.js';
  *
  * This is a unified type that replaces the separate draft, archive, and trash types.
  * The status field determines the current state of the unpublished document.
- * Documents are stored in .contentbase/[collection]/[status]/ directories.
+ * Documents are stored in .laika/[collection]/[status]/ directories.
  */
 export const UnpublishedSchema = S.toStandardSchemaV1(S.Struct({
   ...AtomBaseSchema.fields,

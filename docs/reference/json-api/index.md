@@ -6,7 +6,7 @@ section documents every endpoint, grouped by API server.
 - [Storage API](./storage) — low-level key/value atom and folder storage
 - [Documents API](./documents) — versioned content with a publish/unpublish lifecycle
 - [Assets API](./assets) — binary file and folder management
-- [ContentBase API](./contentbase) — collection settings
+- [Catalog API](./catalog) — collection settings
 - [Error Responses](./errors) — shared error format and codes
 
 ## Overview
@@ -14,12 +14,12 @@ section documents every endpoint, grouped by API server.
 LaikaCMS exposes three HTTP API servers, each following the [JSON:API v1.1](https://jsonapi.org/)
 specification. All responses use the `application/vnd.api+json` content type.
 
-| Server          | Default Base Path | Purpose                                            |
-| --------------- | ----------------- | -------------------------------------------------- |
-| Storage API     | configurable      | Low-level key/value atom and folder storage        |
-| Documents API   | configurable      | Versioned content with publish/unpublish lifecycle |
-| Assets API      | `/api/assets`     | Binary file and folder management                  |
-| ContentBase API | configurable      | Collection settings (document and media folders)   |
+| Server        | Default Base Path | Purpose                                            |
+| ------------- | ----------------- | -------------------------------------------------- |
+| Storage API   | configurable      | Low-level key/value atom and folder storage        |
+| Documents API | configurable      | Versioned content with publish/unpublish lifecycle |
+| Assets API    | `/api/assets`     | Binary file and folder management                  |
+| Catalog API   | configurable      | Collection settings (document and media folders)   |
 
 ### JSON:API Conventions
 

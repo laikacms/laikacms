@@ -51,7 +51,7 @@ const DEFAULT_IGNORE_LIST = [
   '**/.DS_Store',
   '**/Thumbs.db',
   '**/desktop.ini',
-  '**/.contentbase',
+  '**/.catalog',
   '**/.laikacms',
 ];
 

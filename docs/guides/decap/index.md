@@ -19,7 +19,7 @@ Two integration shapes are supported, in increasing order of complexity:
 | **[Standalone Worker](./standalone-worker)**             | You want full control of storage, auth, and routing    | Your own Hono/Worker app                                                               | JWT (or your scheme)             |
 
 The primary documented integration path is the **Standalone Worker (BYO storage)** wiring: you
-construct a `StorageRepository`, wrap it in the ContentBase document/asset repos, and expose them
+construct a `StorageRepository`, wrap it in the Catalog document/asset repos, and expose them
 through `laikaApi(...)`. Everything else (admin shell, OAuth2, framework bridges) builds on top of
 that handler.
 

@@ -14,13 +14,13 @@
  *     (`PermissionPromptRequiredError` / `StaleHandleError`) and this module
  *     helps recover from.
  *
- * On top of the storage repository sit the same ContentBase adapters the
+ * On top of the storage repository sit the same Catalog adapters the
  * server-side stack uses (`@laikacms/vite-plugin` wires them identically):
  * documents for entries, assets for media.
  */
-import { ContentBaseAssetsRepository } from 'laikacms/assets/contentbase';
-import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents/contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets/catalog';
+import { ConventionCatalogProvider } from 'laikacms/catalog-convention';
+import { CatalogDocumentsRepository } from 'laikacms/documents/catalog';
 import { jsonSerializer } from 'laikacms/serializers/json';
 import { markdownSerializer } from 'laikacms/serializers/markdown';
 import { rawSerializer } from 'laikacms/serializers/raw';
@@ -133,8 +133,8 @@ export async function requestLocalAccess(): Promise<PermissionState> {
 
 export interface Repositories {
   storage: StorageRepository,
-  documents: ContentBaseDocumentsRepository,
-  assets: ContentBaseAssetsRepository,
+  documents: CatalogDocumentsRepository,
+  assets: CatalogAssetsRepository,
 }
 
 /**
@@ -179,11 +179,11 @@ export function getRepositories(): Repositories {
       },
       defaultExtension: 'json',
     });
-    const settings = new DefaultContentBaseSettingsProvider({ storage });
+    const settings = new ConventionCatalogProvider({ storage });
     repositories = {
       storage,
-      documents: new ContentBaseDocumentsRepository(storage, settings),
-      assets: new ContentBaseAssetsRepository(storage, settings),
+      documents: new CatalogDocumentsRepository(storage, settings),
+      assets: new CatalogAssetsRepository(storage, settings),
     };
   }
   return repositories;

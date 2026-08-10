@@ -1,5 +1,6 @@
 import type { AssetsRepository, Resource } from 'laikacms/assets';
 import { describe, expect, it, vi } from 'vitest';
+import { allowAll } from '../../shared/json-api/authorize.js';
 
 import { AuthenticationError, ForbiddenError, LaikaTask, NotFoundError } from 'laikacms/core';
 
@@ -34,19 +35,13 @@ const readonlyRepo: Partial<AssetsRepository> = {
 };
 
 // ---------------------------------------------------------------------------
-// No authorize option → all requests pass through
+// allowAll → the explicit opt-out for a deliberately open surface
 // ---------------------------------------------------------------------------
 
-describe('assets-api authorize — no callback (LCMS-519)', () => {
-  it('passes GET /capabilities when authorize is not set', async () => {
-    const api = buildAssetsApi({ repository: readonlyRepo as AssetsRepository });
+describe('assets-api authorize — allowAll (LCMS-519)', () => {
+  it('serves every action when the policy is the allowAll sentinel', async () => {
+    const api = buildAssetsApi({ repository: readonlyRepo as AssetsRepository, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/capabilities'));
-    expect(res.status).toBe(200);
-  });
-
-  it('passes GET /resources when authorize is not set', async () => {
-    const api = buildAssetsApi({ repository: readonlyRepo as AssetsRepository });
-    const res = await api.fetch(new Request('http://localhost/api/assets/resources'));
     expect(res.status).toBe(200);
   });
 });
@@ -232,5 +227,28 @@ describe('assets-api authorize — create actions (LCMS-519)', () => {
     );
     expect(res.status).toBe(201);
     expect(authorize).toHaveBeenCalledWith(expect.objectContaining({ action: 'createAsset' }));
+  });
+});
+
+describe('assets-api authorize — OpenAPI routes (LCMS-519)', () => {
+  it('authorizes the OpenAPI document like any other action', async () => {
+    const authorize = vi.fn(async (_input: AssetsAuthorizeInput) => true as const);
+    const api = buildAssetsApi({ repository: readonlyRepo as AssetsRepository, authorize });
+
+    const res = await api.fetch(new Request('http://localhost/api/assets/openapi.json'));
+
+    expect(res.status).toBe(200);
+    expect(authorize).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'readOpenApi', format: 'json' }),
+    );
+  });
+
+  it('does not serve the spec to a caller a deny-all policy rejects', async () => {
+    const api = buildAssetsApi({ repository: readonlyRepo as AssetsRepository, authorize: () => false });
+
+    for (const format of ['json', 'yaml'] as const) {
+      const res = await api.fetch(new Request(`http://localhost/api/assets/openapi.${format}`));
+      expect(res.status).toBe(403);
+    }
   });
 });

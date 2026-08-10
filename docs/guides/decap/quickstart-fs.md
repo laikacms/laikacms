@@ -58,10 +58,10 @@ pnpm add --allow-build=esbuild --allow-build=msgpackr-extract \
 | `hono`              | Peer dependency of `@hono/node-server@2`. §4a's `--legacy-peer-deps` prunes npm's auto-installed copy; also needed to typecheck a `server.ts`. |
 
 > **Subpath exports:** the snippet below imports from `laikacms/storage-fs`,
-> `laikacms/documents-contentbase`, `laikacms/assets-contentbase`,
-> `laikacms/contentbase-settings-default`, and `laikacms/storage-serializers-json`. These are
-> subpath exports of the single `laikacms` package — there is no separate `@laikacms/storage-fs`
-> package on npm. See [packages.md](../../reference/packages) for the full list of subpaths.
+> `laikacms/documents-catalog`, `laikacms/assets-catalog`, `laikacms/catalog-convention`, and
+> `laikacms/storage-serializers-json`. These are subpath exports of the single `laikacms` package —
+> there is no separate `@laikacms/storage-fs` package on npm. See
+> [packages.md](../../reference/packages) for the full list of subpaths.
 
 > **Other formats:** swap `laikacms/storage-serializers-json` for
 > `laikacms/storage-serializers-yaml` if you prefer YAML files, and change `'json'` to `'yaml'` in
@@ -85,9 +85,9 @@ Create `server.mjs` (or `server.ts` if you have a TypeScript build step):
 // server.mjs
 import { serve } from '@hono/node-server';
 import { laikaApi } from '@laikacms/server/api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
+import { ConventionCatalogProvider } from 'laikacms/catalog-convention';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
@@ -112,10 +112,10 @@ const storage = new FileSystemStorageRepository(
   'json', // new objects are stored as <key>.json
 );
 
-// 3. Wrap storage in document/asset repos (ContentBase layer).
-const settings = new DefaultContentBaseSettingsProvider({ storage });
-const documents = new ContentBaseDocumentsRepository(storage, settings);
-const assets = new ContentBaseAssetsRepository(storage, settings);
+// 3. Wrap storage in document/asset repos (Catalog layer).
+const settings = new ConventionCatalogProvider({ storage });
+const documents = new CatalogDocumentsRepository(storage, settings);
+const assets = new CatalogAssetsRepository(storage, settings);
 
 // 4. Build the Decap-compatible API.
 //    basePath '/api' matches the `api_root` in admin/config.yml below.
@@ -152,13 +152,12 @@ serve({ fetch: api.fetch, port: 3000 }, () => {
 });
 ```
 
-> **Which settings provider?** `DefaultContentBaseSettingsProvider` maps collection names to
-> same-name storage folders and auto-creates its settings object on first use — no seeding required.
-> It is the right choice for this quickstart and for most simple setups. Switch to
-> `DecapContentBaseSettingsProvider` (`laikacms/contentbase-settings-decap`) when you need the
-> server and browser Decap configs to stay in sync from one source of truth (it derives
-> collection/folder/media mappings from a Decap config JSON you seed into storage), or when you need
-> multi-folder or nested collection support.
+> **Which settings provider?** `ConventionCatalogProvider` maps collection names to same-name
+> storage folders and auto-creates its settings object on first use — no seeding required. It is the
+> right choice for this quickstart and for most simple setups. Switch to `DecapCatalogProvider`
+> (`laikacms/catalog-decap`) when you need the server and browser Decap configs to stay in sync from
+> one source of truth (it derives collection/folder/media mappings from a Decap config JSON you seed
+> into storage), or when you need multi-folder or nested collection support.
 
 > **Production auth:** the `authenticateAccessToken` callback above accepts a hard-coded dev token.
 > For production, replace it with a real validator (JWT verification, database session lookup, etc.)
@@ -306,7 +305,7 @@ collections:
 > ``Laika backend currently only supports JSON-format collections; set
 > `format: json` on collection `<name>`.``
 
-> **`language` field in stored content:** `ContentBaseDocumentsRepository` co-locates the document
+> **`language` field in stored content:** `CatalogDocumentsRepository` co-locates the document
 > language with its content in storage. When Decap saves an entry that has no i18n configuration, it
 > sends `language: "und"` (undetermined per BCP 47). As a result, every stored `.json` file includes
 > a `language: "und"` key alongside your declared fields:

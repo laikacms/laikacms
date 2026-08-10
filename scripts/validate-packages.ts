@@ -191,7 +191,7 @@ const SUBDIR_PATTERNS: Record<ValidSubdir, RegExp[]> = {
   // Domain packages - core interfaces and entities
   domain: [
     /^(storage|documents|assets)$/,
-    /^contentbase-settings$/,
+    /^catalog$/,
   ],
 
   // Infrastructure implementations
@@ -199,13 +199,13 @@ const SUBDIR_PATTERNS: Record<ValidSubdir, RegExp[]> = {
     /^(storage|documents|assets)-drizzle$/,
     /^(storage|documents|assets)-jsonapi-proxy$/,
     /^storage-(fs|r2)$/,
-    /^documents-contentbase$/,
+    /^documents-catalog$/,
     /^assets-r2$/,
   ],
 
   // API servers
   api: [
-    /^(storage|documents|assets|contentbase)-api$/,
+    /^(storage|documents|assets|catalog)-api$/,
   ],
 
   // Serializers

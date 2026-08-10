@@ -435,9 +435,9 @@ level, not per-request:
 ```ts
 // src/lib/laika.ts
 import { laikaApi } from '@laikacms/server/api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
+import { DecapCatalogProvider } from 'laikacms/catalog-decap';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { resolve } from 'node:path';
@@ -448,12 +448,12 @@ const storage = new FileSystemStorageRepository(
   { md: markdownSerializer },
   'md',
 );
-const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+const settings = new DecapCatalogProvider({ storage, configKey: 'config' });
 
 export const laika = laikaApi({
-  documents: new ContentBaseDocumentsRepository(storage, settings),
+  documents: new CatalogDocumentsRepository(storage, settings),
   storage,
-  assets: new ContentBaseAssetsRepository(storage, settings),
+  assets: new CatalogAssetsRepository(storage, settings),
   basePath: '/api/decap',
   authenticateAccessToken: yourValidator,
 });

@@ -18,7 +18,7 @@ import { applyPagination, CompatibilityDate, StorageRepository, unsupportedChang
 /**
  * A `StorageRepository` backed by an in-memory `Map`. Intended for use as the
  * stub provider behind impls that compose a `StorageRepository` (e.g.
- * `documents-contentbase`, `assets-contentbase`) when running their contract
+ * `documents-catalog`, `assets-catalog`) when running their contract
  * tests — those impls' "third-party" is the storage layer itself, so this
  * gives the contract a fast, leak-free backing without depending on the FS
  * impl's filename/extension semantics.

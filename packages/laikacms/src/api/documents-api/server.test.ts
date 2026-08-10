@@ -10,6 +10,7 @@ import type {
   RevisionSummary,
 } from 'laikacms/documents';
 import { describe, expect, it, vi } from 'vitest';
+import { allowAll } from '../../shared/json-api/authorize.js';
 
 import {
   BadRequestError,
@@ -72,14 +73,14 @@ const makeCapabilities = (): DocumentsCapabilities => ({
 
 describe('documents-api Cache-Control', () => {
   it('sends Cache-Control: no-store on the root API info response', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/'));
     expect(res.status).toBe(200);
     expect(res.headers.get('Cache-Control')).toBe('no-store');
   });
 
   it('sends Cache-Control: no-store on 404 responses', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/does-not-exist'));
     expect(res.status).toBe(404);
     expect(res.headers.get('Cache-Control')).toBe('no-store');
@@ -109,7 +110,7 @@ describe('documents-api meta.warnings', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/records'));
     expect(res.status).toBe(200);
 
@@ -137,7 +138,7 @@ describe('documents-api meta.warnings', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fhello', { method: 'DELETE' }),
     );
@@ -159,7 +160,7 @@ describe('documents-api meta.warnings', () => {
       getDocument: (_key: string) => LaikaTask.make(() => Effect.fail(new NotFoundError('document not found'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo, onError });
+    const api = buildJsonApi({ repo: partialRepo, onError, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/published/missing%2Fdoc'));
     expect(res.status).toBe(404);
     expect(onError).toHaveBeenCalledOnce();
@@ -175,7 +176,7 @@ describe('documents-api meta.warnings', () => {
       },
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo, onError });
+    const api = buildJsonApi({ repo: partialRepo, onError, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/published/boom'));
     expect(res.status).toBe(500);
     expect(onError).toHaveBeenCalledOnce();
@@ -203,7 +204,7 @@ describe('documents-api meta.warnings', () => {
         },
       } as unknown as DocumentsRepository;
 
-      const api = buildJsonApi({ repo: partialRepo, onError });
+      const api = buildJsonApi({ repo: partialRepo, onError, authorize: allowAll });
       const res = await api.fetch(new Request('http://localhost/published/boom'));
       expect(res.status).toBe(400);
       expect(onError).toHaveBeenCalledOnce();
@@ -228,7 +229,7 @@ describe('documents-api meta.warnings', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/operations', {
         method: 'POST',
@@ -267,7 +268,7 @@ describe('documents-api meta.warnings', () => {
 
 describe('GET /', () => {
   it('returns 200 with api-info resource', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/'));
     expect(res.status).toBe(200);
 
@@ -288,7 +289,7 @@ describe('GET /capabilities', () => {
       getCapabilities: () => LaikaTask.make(() => Effect.succeed(makeCapabilities())),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/capabilities'));
     expect(res.status).toBe(200);
 
@@ -305,7 +306,7 @@ describe('GET /capabilities', () => {
       getCapabilities: () => LaikaTask.make(() => Effect.fail(new NotFoundError('capabilities unavailable'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/capabilities'));
     expect(res.status).toBe(404);
 
@@ -319,7 +320,7 @@ describe('GET /capabilities', () => {
       getCapabilities: () => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/capabilities'));
     expect(res.status).toBe(500);
 
@@ -340,7 +341,7 @@ describe('GET /published/:key', () => {
       getDocument: (_key: string) => LaikaTask.make(() => Effect.succeed(doc)),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/published/posts%2Fhello'));
     expect(res.status).toBe(200);
 
@@ -354,7 +355,7 @@ describe('GET /published/:key', () => {
       getDocument: (_key: string) => LaikaTask.make(() => Effect.fail(new NotFoundError('document not found'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/published/posts%2Fmissing'));
     expect(res.status).toBe(404);
 
@@ -368,7 +369,7 @@ describe('GET /published/:key', () => {
       getDocument: (_key: string) => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/published/posts%2Fhello'));
     expect(res.status).toBe(500);
 
@@ -389,7 +390,7 @@ describe('POST /published', () => {
       createDocument: vi.fn(() => LaikaTask.make(() => Effect.succeed(doc))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published', {
         method: 'POST',
@@ -411,7 +412,7 @@ describe('POST /published', () => {
   });
 
   it('returns 400 invalid_data on wrong data.type', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published', {
         method: 'POST',
@@ -426,7 +427,7 @@ describe('POST /published', () => {
   });
 
   it('returns 400 invalid_data on malformed JSON body', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published', {
         method: 'POST',
@@ -447,7 +448,7 @@ describe('POST /published', () => {
       ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published', {
         method: 'POST',
@@ -473,7 +474,7 @@ describe('POST /published', () => {
       createDocument: vi.fn(() => LaikaTask.make(() => Effect.fail(new InternalError('db write failed')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published', {
         method: 'POST',
@@ -495,7 +496,7 @@ describe('POST /published', () => {
   });
 
   it('returns 400 bad_request when data.id is omitted (LCMS-397)', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published', {
         method: 'POST',
@@ -525,7 +526,7 @@ describe('POST /published', () => {
       }),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     await api.fetch(
       new Request('http://localhost/published', {
         method: 'POST',
@@ -550,7 +551,7 @@ describe('PATCH /published/:key', () => {
       updateDocument: vi.fn(() => LaikaTask.make(() => Effect.succeed(doc))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fhello', {
         method: 'PATCH',
@@ -572,7 +573,7 @@ describe('PATCH /published/:key', () => {
   });
 
   it('returns 400 invalid_data on malformed JSON body', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fhello', {
         method: 'PATCH',
@@ -591,7 +592,7 @@ describe('PATCH /published/:key', () => {
       updateDocument: vi.fn(() => LaikaTask.make(() => Effect.fail(new NotFoundError('document not found')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fmissing', {
         method: 'PATCH',
@@ -616,7 +617,7 @@ describe('PATCH /published/:key', () => {
       updateDocument: vi.fn(() => LaikaTask.make(() => Effect.fail(new InternalError('storage failure')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fhello', {
         method: 'PATCH',
@@ -642,7 +643,7 @@ describe('PATCH /published/:key', () => {
       updateDocument: vi.fn(() => LaikaTask.make(() => Effect.succeed(makeDocument('posts/hello')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fhello', {
         method: 'PATCH',
@@ -666,7 +667,7 @@ describe('PATCH /published/:key', () => {
       updateDocument: vi.fn(() => LaikaTask.make(() => Effect.succeed(makeDocument('posts/hello')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fhello', {
         method: 'PATCH',
@@ -697,7 +698,7 @@ describe('DELETE /published/:key', () => {
       deleteDocument: vi.fn((_key: string) => LaikaTask.make(() => Effect.succeed(undefined))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fhello', { method: 'DELETE' }),
     );
@@ -714,7 +715,7 @@ describe('DELETE /published/:key', () => {
       ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fmissing', { method: 'DELETE' }),
     );
@@ -732,7 +733,7 @@ describe('DELETE /published/:key', () => {
       ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fhello', { method: 'DELETE' }),
     );
@@ -755,7 +756,7 @@ describe('POST /unpublished/:key/publish', () => {
       publish: vi.fn((_key: string) => LaikaTask.make(() => Effect.succeed(doc))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fhello/publish', { method: 'POST' }),
     );
@@ -771,7 +772,7 @@ describe('POST /unpublished/:key/publish', () => {
       publish: vi.fn((_key: string) => LaikaTask.make(() => Effect.fail(new NotFoundError('unpublished not found')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fmissing/publish', { method: 'POST' }),
     );
@@ -787,7 +788,7 @@ describe('POST /unpublished/:key/publish', () => {
       publish: vi.fn((_key: string) => LaikaTask.make(() => Effect.fail(new InternalError('storage failure')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fhello/publish', { method: 'POST' }),
     );
@@ -810,7 +811,7 @@ describe('POST /unpublished', () => {
       createUnpublished: vi.fn(() => LaikaTask.make(() => Effect.succeed(draft))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished', {
         method: 'POST',
@@ -832,7 +833,7 @@ describe('POST /unpublished', () => {
   });
 
   it('returns 400 invalid_data on wrong data.type', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished', {
         method: 'POST',
@@ -847,7 +848,7 @@ describe('POST /unpublished', () => {
   });
 
   it('returns 400 invalid_data on malformed JSON body', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished', {
         method: 'POST',
@@ -862,7 +863,7 @@ describe('POST /unpublished', () => {
   });
 
   it('returns 400 bad_request when data.id is omitted (LCMS-397)', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished', {
         method: 'POST',
@@ -887,7 +888,7 @@ describe('POST /unpublished', () => {
       createUnpublished: vi.fn(() => LaikaTask.make(() => Effect.fail(new InternalError('storage failure')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished', {
         method: 'POST',
@@ -918,7 +919,7 @@ describe('POST /unpublished', () => {
       }),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     await api.fetch(
       new Request('http://localhost/unpublished', {
         method: 'POST',
@@ -947,7 +948,7 @@ describe('POST /revisions', () => {
       createRevision: vi.fn(() => LaikaTask.make(() => Effect.succeed(rev))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/revisions', {
         method: 'POST',
@@ -969,7 +970,7 @@ describe('POST /revisions', () => {
   });
 
   it('returns 400 invalid_data on wrong data.type', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/revisions', {
         method: 'POST',
@@ -984,7 +985,7 @@ describe('POST /revisions', () => {
   });
 
   it('returns 400 invalid_data on malformed JSON body', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/revisions', {
         method: 'POST',
@@ -999,7 +1000,7 @@ describe('POST /revisions', () => {
   });
 
   it('returns 400 bad_request when data.id is omitted (LCMS-393)', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/revisions', {
         method: 'POST',
@@ -1020,7 +1021,7 @@ describe('POST /revisions', () => {
   });
 
   it('returns 400 bad_request when attributes.revision is omitted (LCMS-284)', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/revisions', {
         method: 'POST',
@@ -1051,7 +1052,7 @@ describe('POST /revisions', () => {
       }),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     await api.fetch(
       new Request('http://localhost/revisions', {
         method: 'POST',
@@ -1080,7 +1081,7 @@ describe('POST /revisions — repo failure', () => {
       createRevision: vi.fn(() => LaikaTask.make(() => Effect.fail(new NotFoundError('document not found')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions', { method: 'POST', headers, body }));
     expect(res.status).toBe(404);
     const json = await res.json() as { errors: Array<{ status: string, code: string }> };
@@ -1093,7 +1094,7 @@ describe('POST /revisions — repo failure', () => {
       createRevision: vi.fn(() => LaikaTask.make(() => Effect.fail(new InternalError('storage unavailable')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions', { method: 'POST', headers, body }));
     expect(res.status).toBe(500);
     const json = await res.json() as { errors: Array<{ status: string }> };
@@ -1105,7 +1106,7 @@ describe('POST /revisions — repo failure', () => {
       createRevision: vi.fn(() => LaikaTask.make(() => Effect.fail(new BadRequestError('invalid revision data')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions', { method: 'POST', headers, body }));
     expect(res.status).toBe(400);
     const json = await res.json() as { errors: Array<{ status: string, code: string }> };
@@ -1157,7 +1158,7 @@ describe('GET /record-summaries', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/record-summaries'));
     expect(res.status).toBe(200);
 
@@ -1205,7 +1206,7 @@ describe('GET /record-summaries', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/record-summaries'));
     expect(res.status).toBe(200);
 
@@ -1220,7 +1221,7 @@ describe('GET /record-summaries', () => {
   it(
     'returns 200 (not 500 "Unknown entry type") once a real repo has >=1 entry (LCMS-267)',
     async () => {
-      // Regression for LCMS-267: a real repo (like ContentBaseDocumentsRepository)
+      // Regression for LCMS-267: a real repo (like CatalogDocumentsRepository)
       // emits already-suffixed `published-summary` / `unpublished-summary` entry
       // types from listRecordSummaries. Wiring a real repo through buildJsonApi
       // end-to-end reproduces the original 500 "Unknown entry type:
@@ -1236,7 +1237,7 @@ describe('GET /record-summaries', () => {
         }),
       );
 
-      const api = buildJsonApi({ repo });
+      const api = buildJsonApi({ repo, authorize: allowAll });
       const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Bfolder%5D=posts'));
       expect(res.status).toBe(200);
 
@@ -1258,7 +1259,7 @@ describe('GET /records — error HTTP status', () => {
       listRecords: () => LaikaStream.make(() => Effect.fail(new NotFoundError('config not found'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/records'));
     expect(res.status).toBe(404);
 
@@ -1272,7 +1273,7 @@ describe('GET /records — error HTTP status', () => {
       listRecords: () => LaikaStream.make(() => Effect.fail(new InternalError('unexpected failure'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/records'));
     expect(res.status).toBe(500);
 
@@ -1299,7 +1300,7 @@ describe('GET /records — missing filter[folder]', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/records'));
     expect(res.status).toBe(400);
 
@@ -1318,7 +1319,7 @@ describe('GET /records — missing filter[folder]', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/records?filter%5Bfolder%5D='));
     expect(res.status).toBe(400);
 
@@ -1343,7 +1344,7 @@ describe('GET /record-summaries — missing filter[folder]', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/record-summaries'));
     expect(res.status).toBe(400);
 
@@ -1363,7 +1364,7 @@ describe('GET /record-summaries — error HTTP status', () => {
       listRecordSummaries: () => LaikaStream.make(() => Effect.fail(new NotFoundError('config not found'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/record-summaries'));
     expect(res.status).toBe(404);
 
@@ -1377,7 +1378,7 @@ describe('GET /record-summaries — error HTTP status', () => {
       listRecordSummaries: () => LaikaStream.make(() => Effect.fail(new InternalError('unexpected failure'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/record-summaries'));
     expect(res.status).toBe(500);
 
@@ -1398,7 +1399,7 @@ describe('GET /unpublished/:key', () => {
       getUnpublished: (_key: string) => LaikaTask.make(() => Effect.succeed(draft)),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/unpublished/posts%2Fdraft'));
     expect(res.status).toBe(200);
 
@@ -1412,7 +1413,7 @@ describe('GET /unpublished/:key', () => {
       getUnpublished: (_key: string) => LaikaTask.make(() => Effect.fail(new NotFoundError('draft not found'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/unpublished/posts%2Fmissing'));
     expect(res.status).toBe(404);
 
@@ -1426,7 +1427,7 @@ describe('GET /unpublished/:key', () => {
       getUnpublished: (_key: string) => LaikaTask.make(() => Effect.fail(new InternalError('storage failure'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/unpublished/posts%2Fdraft'));
     expect(res.status).toBe(500);
 
@@ -1447,7 +1448,7 @@ describe('PATCH /unpublished/:key', () => {
       updateUnpublished: vi.fn(() => LaikaTask.make(() => Effect.succeed(draft))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fdraft', {
         method: 'PATCH',
@@ -1473,7 +1474,7 @@ describe('PATCH /unpublished/:key', () => {
       updateUnpublished: vi.fn(() => LaikaTask.make(() => Effect.fail(new NotFoundError('draft not found')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fmissing', {
         method: 'PATCH',
@@ -1498,7 +1499,7 @@ describe('PATCH /unpublished/:key', () => {
       updateUnpublished: vi.fn(() => LaikaTask.make(() => Effect.fail(new InternalError('storage failure')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fdraft', {
         method: 'PATCH',
@@ -1520,7 +1521,7 @@ describe('PATCH /unpublished/:key', () => {
   });
 
   it('returns 400 invalid_data on malformed JSON body', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fdraft', {
         method: 'PATCH',
@@ -1539,7 +1540,7 @@ describe('PATCH /unpublished/:key', () => {
       updateUnpublished: vi.fn(() => LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/draft')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fdraft', {
         method: 'PATCH',
@@ -1563,7 +1564,7 @@ describe('PATCH /unpublished/:key', () => {
       updateUnpublished: vi.fn(() => LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/draft')))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fdraft', {
         method: 'PATCH',
@@ -1594,7 +1595,7 @@ describe('DELETE /unpublished/:key', () => {
       deleteUnpublished: vi.fn((_key: string) => LaikaTask.make(() => Effect.succeed(undefined))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fdraft', { method: 'DELETE' }),
     );
@@ -1611,7 +1612,7 @@ describe('DELETE /unpublished/:key', () => {
       ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fmissing', { method: 'DELETE' }),
     );
@@ -1629,7 +1630,7 @@ describe('DELETE /unpublished/:key', () => {
       ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/unpublished/posts%2Fdraft', { method: 'DELETE' }),
     );
@@ -1652,7 +1653,7 @@ describe('POST /published/:key/unpublish', () => {
       unpublish: vi.fn((_key: string, _status: string) => LaikaTask.make(() => Effect.succeed(draft))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fhello/unpublish', {
         method: 'POST',
@@ -1676,7 +1677,7 @@ describe('POST /published/:key/unpublish', () => {
       ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fmissing/unpublish', {
         method: 'POST',
@@ -1700,7 +1701,7 @@ describe('POST /published/:key/unpublish', () => {
       ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/published/posts%2Fhello/unpublish', {
         method: 'POST',
@@ -1744,7 +1745,7 @@ describe('GET /revisions/:key', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello'));
     expect(res.status).toBe(200);
 
@@ -1765,7 +1766,7 @@ describe('GET /revisions/:key', () => {
         LaikaStream.make<RevisionSummary, ListRevisionsDone>(_emit => Effect.succeed({ total: 0 })),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fempty'));
     expect(res.status).toBe(200);
 
@@ -1782,7 +1783,7 @@ describe('GET /revisions/:key', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fmissing'));
     expect(res.status).toBe(404);
 
@@ -1797,7 +1798,7 @@ describe('GET /revisions/:key', () => {
         LaikaStream.make<RevisionSummary, ListRevisionsDone>(() => Effect.fail(new InternalError('storage failure'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello'));
     expect(res.status).toBe(500);
 
@@ -1828,7 +1829,7 @@ describe('LCMS-286 — revision collection ids and self-links are unique', () =>
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello'));
     expect(res.status).toBe(200);
 
@@ -1857,7 +1858,7 @@ describe('LCMS-286 — revision collection ids and self-links are unique', () =>
       getRevision: (_key: string, _revisionId: string) => LaikaTask.make(() => Effect.succeed(rev)),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello/rev-a'));
     expect(res.status).toBe(200);
 
@@ -1892,7 +1893,7 @@ describe('GET /revisions/:key — cursor capability guard', () => {
           },
         }),
     } as unknown as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello?page%5Bafter%5D=cursor-abc'));
     expect(res.status).toBe(200);
@@ -1916,7 +1917,7 @@ describe('GET /revisions/:key — cursor capability guard', () => {
           },
         }),
     } as unknown as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello?page%5Bafter%5D=cursor-abc'));
     expect(res.status).toBe(400);
@@ -1941,7 +1942,7 @@ describe('GET /revisions/:key — cursor capability guard', () => {
           },
         }),
     } as unknown as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello?page%5Bbefore%5D=cursor-abc'));
     expect(res.status).toBe(400);
@@ -1966,7 +1967,7 @@ describe('GET /revisions/:key — pagination links.next shape (LCMS-279)', () =>
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello?page%5Bsize%5D=2'));
     expect(res.status).toBe(200);
 
@@ -1989,7 +1990,7 @@ describe('GET /revisions/:key — pagination links.next shape (LCMS-279)', () =>
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/revisions/posts%2Fhello?page%5Bnumber%5D=1&page%5Bsize%5D=2'),
     );
@@ -2014,7 +2015,7 @@ describe('GET /revisions/:key/:revisionId', () => {
       getRevision: (_key: string, _revisionId: string) => LaikaTask.make(() => Effect.succeed(rev)),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello/rev-1'));
     expect(res.status).toBe(200);
 
@@ -2033,7 +2034,7 @@ describe('GET /revisions/:key/:revisionId', () => {
         LaikaTask.make(() => Effect.fail(new NotFoundError('revision not found'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello/missing-rev'));
     expect(res.status).toBe(404);
 
@@ -2049,7 +2050,7 @@ describe('GET /revisions/:key/:revisionId', () => {
         LaikaTask.make(() => Effect.fail(new InternalError('storage failure'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/revisions/posts%2Fhello/rev-1'));
     expect(res.status).toBe(500);
 
@@ -2090,7 +2091,7 @@ describe('GET /records — filter param forwarding', () => {
 
   it('forwards filter[type]=unpublished to the repo and returns unpublished entries', async () => {
     const spy = vi.fn((_opts: ListRecordsOptions) => makeRecordsStream([makeUnpublished('posts/draft')]));
-    const api = buildJsonApi({ repo: makeListRecordsRepo(spy) });
+    const api = buildJsonApi({ repo: makeListRecordsRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/records?filter%5Btype%5D=unpublished'));
     expect(res.status).toBe(200);
@@ -2108,7 +2109,7 @@ describe('GET /records — filter param forwarding', () => {
     const spy = vi.fn((_opts: ListRecordsOptions) =>
       makeRecordsStream([makeDocument('posts/hello'), makeUnpublished('posts/draft')])
     );
-    const api = buildJsonApi({ repo: makeListRecordsRepo(spy) });
+    const api = buildJsonApi({ repo: makeListRecordsRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/records?filter%5Btype%5D=all'));
     expect(res.status).toBe(200);
@@ -2122,7 +2123,7 @@ describe('GET /records — filter param forwarding', () => {
 
   it('forwards filter[folder]=posts to the repo', async () => {
     const spy = vi.fn((_opts: ListRecordsOptions) => makeRecordsStream([makeDocument('posts/hello')]));
-    const api = buildJsonApi({ repo: makeListRecordsRepo(spy) });
+    const api = buildJsonApi({ repo: makeListRecordsRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/records?filter%5Bfolder%5D=posts'));
     expect(res.status).toBe(200);
@@ -2133,7 +2134,7 @@ describe('GET /records — filter param forwarding', () => {
 
   it('parses filter[depth]=2 as a number and forwards it to the repo', async () => {
     const spy = vi.fn((_opts: ListRecordsOptions) => makeRecordsStream([]));
-    const api = buildJsonApi({ repo: makeListRecordsRepo(spy) });
+    const api = buildJsonApi({ repo: makeListRecordsRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/records?filter%5Bdepth%5D=2'));
     expect(res.status).toBe(200);
@@ -2145,7 +2146,7 @@ describe('GET /records — filter param forwarding', () => {
 
   it('returns correct JSON:API shape for an unpublished entry in /records', async () => {
     const spy = vi.fn((_opts: ListRecordsOptions) => makeRecordsStream([makeUnpublished('posts/draft')]));
-    const api = buildJsonApi({ repo: makeListRecordsRepo(spy) });
+    const api = buildJsonApi({ repo: makeListRecordsRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/records?filter%5Btype%5D=unpublished'));
     expect(res.status).toBe(200);
@@ -2187,7 +2188,7 @@ describe('GET /records — meta.page.total', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/records'));
     expect(res.status).toBe(200);
 
@@ -2202,7 +2203,7 @@ describe('GET /records — meta.page.total', () => {
         LaikaStream.make<never, ListRecordsDone>(_emit => Effect.succeed({ total: 0 })),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/records'));
     expect(res.status).toBe(200);
 
@@ -2217,7 +2218,7 @@ describe('GET /records — meta.page.total', () => {
         LaikaStream.make<never, ListRecordsDone>(_emit => Effect.succeed({ total: undefined })),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/records'));
     expect(res.status).toBe(200);
 
@@ -2250,7 +2251,7 @@ describe('GET /records — pagination forwarding', () => {
         })
       )
     );
-    const api = buildJsonApi({ repo: makeRepo(spy) });
+    const api = buildJsonApi({ repo: makeRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/records?page%5Bsize%5D=5'));
     expect(res.status).toBe(200);
@@ -2276,7 +2277,7 @@ describe('GET /records — pagination forwarding', () => {
           },
         }),
     } as unknown as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/records?page%5Bafter%5D=cursor-abc'));
     expect(res.status).toBe(200);
@@ -2300,7 +2301,7 @@ describe('GET /records — pagination forwarding', () => {
           },
         }),
     } as unknown as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/records?page%5Bafter%5D=cursor-abc'));
     expect(res.status).toBe(400);
@@ -2324,7 +2325,7 @@ describe('GET /records — pagination forwarding', () => {
           },
         }),
     } as unknown as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/records?page%5Bbefore%5D=cursor-abc'));
     expect(res.status).toBe(400);
@@ -2346,7 +2347,7 @@ describe('GET /records — pagination forwarding', () => {
           },
         }),
     } as unknown as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/records?page%5Bsize%5D=10'));
     expect(res.status).toBe(200);
@@ -2382,7 +2383,10 @@ describe('GET /records — pagination links.next shape (LCMS-279)', () => {
     }) as unknown as DocumentsRepository;
 
   it('page[size]=N emits links.next with page[number], not page[after] (LCMS-277 guard)', async () => {
-    const api = buildJsonApi({ repo: makeRecordsRepo([makeDocument('posts/a'), makeDocument('posts/b')]) });
+    const api = buildJsonApi({
+      repo: makeRecordsRepo([makeDocument('posts/a'), makeDocument('posts/b')]),
+      authorize: allowAll,
+    });
     const res = await api.fetch(new Request('http://localhost/records?page%5Bsize%5D=2'));
     expect(res.status).toBe(200);
 
@@ -2394,7 +2398,10 @@ describe('GET /records — pagination links.next shape (LCMS-279)', () => {
   });
 
   it('page[number]=1&page[size]=N with a full page emits links.next=page[number]=2&page[size]=N', async () => {
-    const api = buildJsonApi({ repo: makeRecordsRepo([makeDocument('posts/a'), makeDocument('posts/b')]) });
+    const api = buildJsonApi({
+      repo: makeRecordsRepo([makeDocument('posts/a'), makeDocument('posts/b')]),
+      authorize: allowAll,
+    });
     const res = await api.fetch(new Request('http://localhost/records?page%5Bnumber%5D=1&page%5Bsize%5D=2'));
     expect(res.status).toBe(200);
 
@@ -2451,7 +2458,7 @@ describe('GET /record-summaries — filter param forwarding', () => {
     const spy = vi.fn((_opts: ListRecordsOptions) =>
       makeSummariesStream([makeSummary('unpublished-summary', 'posts/draft')])
     );
-    const api = buildJsonApi({ repo: makeListSummariesRepo(spy) });
+    const api = buildJsonApi({ repo: makeListSummariesRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Btype%5D=unpublished'));
     expect(res.status).toBe(200);
@@ -2470,7 +2477,7 @@ describe('GET /record-summaries — filter param forwarding', () => {
         makeSummary('unpublished-summary', 'posts/draft'),
       ])
     );
-    const api = buildJsonApi({ repo: makeListSummariesRepo(spy) });
+    const api = buildJsonApi({ repo: makeListSummariesRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Btype%5D=all'));
     expect(res.status).toBe(200);
@@ -2486,7 +2493,7 @@ describe('GET /record-summaries — filter param forwarding', () => {
     const spy = vi.fn((_opts: ListRecordsOptions) =>
       makeSummariesStream([makeSummary('published-summary', 'posts/hello')])
     );
-    const api = buildJsonApi({ repo: makeListSummariesRepo(spy) });
+    const api = buildJsonApi({ repo: makeListSummariesRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Bfolder%5D=posts'));
     expect(res.status).toBe(200);
@@ -2497,7 +2504,7 @@ describe('GET /record-summaries — filter param forwarding', () => {
 
   it('parses filter[depth]=2 as a number and forwards it for /record-summaries', async () => {
     const spy = vi.fn((_opts: ListRecordsOptions) => makeSummariesStream([]));
-    const api = buildJsonApi({ repo: makeListSummariesRepo(spy) });
+    const api = buildJsonApi({ repo: makeListSummariesRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Bdepth%5D=2'));
     expect(res.status).toBe(200);
@@ -2544,7 +2551,7 @@ describe('GET /record-summaries — meta.page.total', () => {
         ),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/record-summaries'));
     expect(res.status).toBe(200);
 
@@ -2559,7 +2566,7 @@ describe('GET /record-summaries — meta.page.total', () => {
         LaikaStream.make<never, ListRecordsDone>(_emit => Effect.succeed({ total: 0 })),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/record-summaries'));
     expect(res.status).toBe(200);
 
@@ -2600,7 +2607,7 @@ describe('GET /record-summaries — pagination forwarding', () => {
         })
       )
     );
-    const api = buildJsonApi({ repo: makeRepo(spy) });
+    const api = buildJsonApi({ repo: makeRepo(spy), authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bsize%5D=5'));
     expect(res.status).toBe(200);
@@ -2626,7 +2633,7 @@ describe('GET /record-summaries — pagination forwarding', () => {
           },
         }),
     } as unknown as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bafter%5D=cursor-abc'));
     expect(res.status).toBe(200);
@@ -2650,7 +2657,7 @@ describe('GET /record-summaries — pagination forwarding', () => {
           },
         }),
     } as unknown as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bafter%5D=cursor-abc'));
     expect(res.status).toBe(400);
@@ -2674,7 +2681,7 @@ describe('GET /record-summaries — pagination forwarding', () => {
           },
         }),
     } as unknown as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bbefore%5D=cursor-abc'));
     expect(res.status).toBe(400);
@@ -2717,7 +2724,10 @@ describe('GET /record-summaries — pagination links.next shape (LCMS-279)', () 
     }) as unknown as DocumentsRepository;
 
   it('page[size]=N emits links.next with page[number], not page[after] (LCMS-277 guard)', async () => {
-    const api = buildJsonApi({ repo: makeSummariesRepo([makeSummaryDoc('posts/a'), makeSummaryDoc('posts/b')]) });
+    const api = buildJsonApi({
+      repo: makeSummariesRepo([makeSummaryDoc('posts/a'), makeSummaryDoc('posts/b')]),
+      authorize: allowAll,
+    });
     const res = await api.fetch(new Request('http://localhost/record-summaries?page%5Bsize%5D=2'));
     expect(res.status).toBe(200);
 
@@ -2756,7 +2766,7 @@ describe('POST /operations — add/unpublished', () => {
       createUnpublished: (_data: unknown) => LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/new-draft'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       {
         op: 'add',
@@ -2779,7 +2789,7 @@ describe('POST /operations — add/published', () => {
       createDocument: (_data: unknown) => LaikaTask.make(() => Effect.succeed(makeDocument('posts/hello'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       {
         op: 'add',
@@ -2798,7 +2808,7 @@ describe('POST /operations — add/published', () => {
 
 describe('POST /operations — add/unpublished missing data.id', () => {
   it('returns 400 with top-level errors (zero writes) when data.id is absent', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await postOperations(api, [
       { op: 'add', data: { type: 'unpublished', attributes: { title: 'No key', status: 'draft' } } },
     ]);
@@ -2816,7 +2826,7 @@ describe('POST /operations — add/unpublished missing data.id', () => {
       createUnpublished,
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       { op: 'add', data: { type: 'unpublished', id: 'posts/first', attributes: { title: 'Has ID', status: 'draft' } } },
       { op: 'add', data: { type: 'unpublished', attributes: { title: 'No key', status: 'draft' } } },
@@ -2832,7 +2842,7 @@ describe('POST /operations — add/unpublished missing data.id', () => {
 
 describe('POST /operations — add/published missing data.id', () => {
   it('returns 400 with top-level errors (zero writes) when data.id is absent', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await postOperations(api, [
       { op: 'add', data: { type: 'published', attributes: { title: 'No key', status: 'published' } } },
     ]);
@@ -2850,7 +2860,7 @@ describe('POST /operations — add/published missing data.id', () => {
       createDocument,
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       {
         op: 'add',
@@ -2873,7 +2883,7 @@ describe('POST /operations — update/publish', () => {
       publish: (_key: string) => LaikaTask.make(() => Effect.succeed(makeDocument('posts/now-live'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       { op: 'update', href: '/publish', ref: { type: 'unpublished', id: 'posts/now-live' } },
     ]);
@@ -2887,7 +2897,7 @@ describe('POST /operations — update/publish', () => {
   });
 
   it('returns 400 (zero writes) when ref.type is not "unpublished"', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await postOperations(api, [
       { op: 'update', href: '/publish', ref: { type: 'document', id: 'posts/x' } },
     ]);
@@ -2906,7 +2916,7 @@ describe('POST /operations — update/unpublish', () => {
         LaikaTask.make(() => Effect.succeed(makeUnpublished('posts/now-draft'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       {
         op: 'update',
@@ -2925,7 +2935,7 @@ describe('POST /operations — update/unpublish', () => {
   });
 
   it('returns 400 (zero writes) when data is missing', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await postOperations(api, [
       { op: 'update', href: '/unpublish', ref: { type: 'document', id: 'posts/x' } },
     ]);
@@ -2937,7 +2947,7 @@ describe('POST /operations — update/unpublish', () => {
   });
 
   it('returns 400 (zero writes) when ref.type is not "document"', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await postOperations(api, [
       {
         op: 'update',
@@ -2961,7 +2971,7 @@ describe('POST /operations — update/content (updateUnpublished)', () => {
       updateUnpublished: (_data: unknown) => LaikaTask.make(() => Effect.succeed(updated)),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       {
         op: 'update',
@@ -2984,7 +2994,7 @@ describe('POST /operations — remove/document', () => {
       deleteDocument: (_key: string) => LaikaTask.make<void>(() => Effect.succeed(undefined)),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       { op: 'remove', ref: { type: 'document', id: 'posts/old' } },
     ]);
@@ -3006,7 +3016,7 @@ describe('POST /operations — remove/unpublished', () => {
       deleteUnpublished: (_key: string) => LaikaTask.make<void>(() => Effect.succeed(undefined)),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       { op: 'remove', ref: { type: 'unpublished', id: 'posts/draft' } },
     ]);
@@ -3029,7 +3039,7 @@ describe('POST /operations — repo-failure status codes', () => {
         LaikaTask.make(() => Effect.fail(new EntryAlreadyExistsError('posts/existing already exists'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       {
         op: 'add',
@@ -3049,7 +3059,7 @@ describe('POST /operations — repo-failure status codes', () => {
       deleteDocument: (_key: string) => LaikaTask.make(() => Effect.fail(new NotFoundError('posts/missing not found'))),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       { op: 'remove', ref: { type: 'document', id: 'posts/missing' } },
     ]);
@@ -3066,7 +3076,7 @@ describe('POST /operations — repo-failure status codes', () => {
     const createUnpublished = vi.fn();
     const repo = { deleteDocument, createUnpublished } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       { op: 'remove', ref: { type: 'document', id: 'posts/missing' } },
       { op: 'add', data: { type: 'unpublished', id: 'posts/new', attributes: { status: 'draft' } } },
@@ -3082,7 +3092,7 @@ describe('POST /operations — repo-failure status codes', () => {
 
 describe('POST /operations — malformed body', () => {
   it('returns 400 when operations key is missing', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/operations', {
         method: 'POST',
@@ -3097,7 +3107,7 @@ describe('POST /operations — malformed body', () => {
   });
 
   it('returns 400 when body is not valid JSON', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/operations', {
         method: 'POST',
@@ -3116,7 +3126,7 @@ describe('POST /operations — multi-operation batch', () => {
       deleteDocument: (_key: string) => LaikaTask.make<void>(() => Effect.succeed(undefined)),
     } as unknown as DocumentsRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await postOperations(api, [
       {
         op: 'add',
@@ -3139,7 +3149,7 @@ describe('POST /operations — multi-operation batch', () => {
 
 describe('404 on unknown routes', () => {
   it('returns 404 JSON:API error shape on unknown path', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/unknown-resource'));
     expect(res.status).toBe(404);
 
@@ -3155,7 +3165,7 @@ describe('404 on unknown routes', () => {
 
 describe('GET /records — invalid query params return invalid_data/400, not internal_error/500', () => {
   it('returns HTTP 400 with code:"invalid_data"/status:"400" for filter[depth]=0', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/records?filter%5Bdepth%5D=0'));
     expect(res.status).toBe(400);
 
@@ -3165,7 +3175,7 @@ describe('GET /records — invalid query params return invalid_data/400, not int
   });
 
   it('returns HTTP 400 with code:"invalid_data"/status:"400" for filter[type]=invalid', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/records?filter%5Btype%5D=invalid'));
     expect(res.status).toBe(400);
 
@@ -3177,7 +3187,7 @@ describe('GET /records — invalid query params return invalid_data/400, not int
 
 describe('GET /record-summaries — invalid query params return invalid_data/400, not internal_error/500', () => {
   it('returns HTTP 400 with code:"invalid_data"/status:"400" for filter[depth]=0', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Bdepth%5D=0'));
     expect(res.status).toBe(400);
 
@@ -3187,7 +3197,7 @@ describe('GET /record-summaries — invalid query params return invalid_data/400
   });
 
   it('returns HTTP 400 with code:"invalid_data"/status:"400" for filter[type]=invalid', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/record-summaries?filter%5Btype%5D=invalid'));
     expect(res.status).toBe(400);
 
@@ -3217,7 +3227,7 @@ describe('documents-api change signals', () => {
   it('GET /sync-token returns the repository token with a self link', async () => {
     const repo = new InMemoryDocumentsRepository();
     await seed(repo);
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/sync-token'));
     expect(res.status).toBe(200);
@@ -3233,7 +3243,7 @@ describe('documents-api change signals', () => {
   it('GET /sync-token forwards filter[folder] as the scope', async () => {
     const repo = new InMemoryDocumentsRepository();
     await seed(repo);
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/sync-token?filter%5Bfolder%5D=posts'));
     expect(res.status).toBe(200);
@@ -3251,7 +3261,7 @@ describe('documents-api change signals', () => {
     const repo = Object.create(
       (await import('laikacms/documents')).DocumentsRepository.prototype,
     ) as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/sync-token'));
     expect(res.status).toBe(501);
@@ -3260,7 +3270,7 @@ describe('documents-api change signals', () => {
   });
 
   it('GET /changes without filter[since] returns 400', async () => {
-    const api = buildJsonApi({ repo: new InMemoryDocumentsRepository() });
+    const api = buildJsonApi({ repo: new InMemoryDocumentsRepository(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/changes'));
     expect(res.status).toBe(400);
     const body = await res.json() as { errors: Array<{ code: string }> };
@@ -3272,7 +3282,7 @@ describe('documents-api change signals', () => {
     const since = await LaikaTask.runPromise(repo.getSyncToken());
     await seed(repo);
     await LaikaTask.runPromise(repo.deleteDocument('posts/hello'));
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(
       new Request(`http://localhost/changes?filter%5Bsince%5D=${encodeURIComponent(since)}`),
@@ -3293,7 +3303,7 @@ describe('documents-api change signals', () => {
     const repo = Object.create(
       (await import('laikacms/documents')).DocumentsRepository.prototype,
     ) as DocumentsRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/changes?filter%5Bsince%5D=0'));
     expect(res.status).toBe(501);

@@ -3,7 +3,7 @@
 A blog where **LaikaCMS runs entirely in the browser** — no server, no database, no git remote.
 The Decap admin and the blog both talk to a
 [`WebFsStorageRepository`](https://www.npmjs.com/package/laikacms) (`laikacms/storage/web-fs`)
-backed by the browser's File System API, wrapped in the same ContentBase documents/assets adapters
+backed by the browser's File System API, wrapped in the same Catalog documents/assets adapters
 the server-side stacks use.
 
 > Requires the LaikaCMS release that ships `laikacms/storage/web-fs` (the release train keeps this
@@ -40,7 +40,7 @@ tiny same-origin fetch shim (`src/local-session.ts`) answers its `/session` and 
 
 ```
 src/storage.ts        mode selection (localStorage) + picked-handle persistence (IndexedDB)
-                      WebFsStorageRepository → ContentBase documents/assets repositories
+                      WebFsStorageRepository → Catalog documents/assets repositories
 src/cms.ts            bare Decap app registrations; laika backend with *injected* repositories
 src/prism-global.ts   Prism bootstrap the bare app needs before any widget import
 src/local-session.ts  fetch shim for the backend's /session + /health endpoints

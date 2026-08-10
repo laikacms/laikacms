@@ -3,6 +3,7 @@ import { vi } from 'vitest';
 import { buildJsonApi } from '../../api/storage-api/server.js';
 import { InMemoryStorageRepository } from '../../domain/storage/testing/in-memory-storage.js';
 import type { StorageContractCase } from '../../domain/storage/testing/index.js';
+import { allowAll } from '../../shared/json-api/authorize.js';
 
 import { StorageJsonApiProxyRepository } from './storage-jsonapi-proxy-repository.js';
 
@@ -15,7 +16,7 @@ export const jsonApiProxyStorageContractCase: StorageContractCase = {
   skip: [],
   makeRepo: async () => {
     const backing = new InMemoryStorageRepository();
-    const api = buildJsonApi({ repo: backing });
+    const api = buildJsonApi({ repo: backing, authorize: allowAll });
 
     originalFetch = globalThis.fetch;
     vi.stubGlobal(

@@ -77,7 +77,7 @@ function fsReader(): TypegenReader {
 }
 
 async function readTypes(): Promise<string> {
-  return fs.readFile(path.join(viteRoot, '.laika', 'types.d.ts'), 'utf8');
+  return fs.readFile(path.join(viteRoot, '.laika', 'vite-generated', 'types.d.ts'), 'utf8');
 }
 
 class TestChannel implements ContentChangeChannel {
@@ -124,19 +124,25 @@ describe('LaikaTypegen.regenerateAll', () => {
     expect(types).toContain("declare module 'laika:*'");
 
     // Per-collection union alias for import.meta.glob typing.
-    const postsAlias = await fs.readFile(path.join(viteRoot, '.laika', 'collections', 'posts.ts'), 'utf8');
+    const postsAlias = await fs.readFile(
+      path.join(viteRoot, '.laika', 'vite-generated', 'collections', 'posts.ts'),
+      'utf8',
+    );
     expect(postsAlias).toContain('export type Posts =');
     expect(postsAlias).toContain("| typeof import('laika:doc/posts/a')");
     expect(postsAlias).toContain("| typeof import('laika:doc/posts/b')");
-    const imagesAlias = await fs.readFile(path.join(viteRoot, '.laika', 'collections', 'images.ts'), 'utf8');
+    const imagesAlias = await fs.readFile(
+      path.join(viteRoot, '.laika', 'vite-generated', 'collections', 'images.ts'),
+      'utf8',
+    );
     expect(imagesAlias).toContain("| typeof import('laika:store/images/logo')");
 
     // Committed reference + ignore wiring.
     expect(await fs.readFile(path.join(viteRoot, 'laika-env.d.ts'), 'utf8')).toContain(
-      '/// <reference path="./.laika/types.d.ts" />',
+      '/// <reference path="./.laika/vite-generated/types.d.ts" />',
     );
-    expect(await fs.readFile(path.join(viteRoot, '.gitignore'), 'utf8')).toContain('.laika/');
-    expect(await fs.readFile(path.join(viteRoot, '.laika', '.gitignore'), 'utf8')).toBe('*\n');
+    expect(await fs.readFile(path.join(viteRoot, '.gitignore'), 'utf8')).toContain('.laika/vite-generated/');
+    expect(await fs.readFile(path.join(viteRoot, '.laika', '.gitignore'), 'utf8')).toBe('vite-generated/\n');
   });
 
   it('falls back to only the generic ambient block when typescript is unavailable', async () => {

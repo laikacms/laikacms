@@ -1,5 +1,6 @@
 import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
+import { allowAll } from '../../shared/json-api/authorize.js';
 
 import type {
   OpenApiDocument,
@@ -38,7 +39,7 @@ const operationsOf = (item: OpenApiPathItem): OpenApiOperation[] =>
 
 describe('GET /openapi.json', () => {
   it('returns 200 with an application/json OpenAPI 3.1 document', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/openapi.json'));
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('application/json');
@@ -49,7 +50,7 @@ describe('GET /openapi.json', () => {
   });
 
   it('rewrites servers[0].url to the request origin + basePath', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('https://storage.example.com/openapi.json'));
     expect(res.status).toBe(200);
 
@@ -58,7 +59,7 @@ describe('GET /openapi.json', () => {
   });
 
   it('reflects a custom basePath in the served document', async () => {
-    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/storage' });
+    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/storage', authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/storage/openapi.json'));
     expect(res.status).toBe(200);
 
@@ -69,7 +70,7 @@ describe('GET /openapi.json', () => {
 
 describe('GET /openapi.yaml', () => {
   it('returns 200 with an application/yaml OpenAPI 3.1 document', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/openapi.yaml'));
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('application/yaml');
@@ -80,7 +81,7 @@ describe('GET /openapi.yaml', () => {
   });
 
   it('rewrites servers[0].url to the request origin + basePath', async () => {
-    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/storage' });
+    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/storage', authorize: allowAll });
     const res = await api.fetch(new Request('https://storage.example.com/api/storage/openapi.yaml'));
     expect(res.status).toBe(200);
 
@@ -130,7 +131,9 @@ describe('buildStorageOpenApi', () => {
   });
 
   it('uses the basePath as the static server url', () => {
-    expect(buildStorageOpenApi({ basePath: '/api/storage' }).servers?.[0]?.url).toBe('/api/storage');
+    expect(buildStorageOpenApi({ basePath: '/api/storage', authorize: allowAll }).servers?.[0]?.url).toBe(
+      '/api/storage',
+    );
     expect(buildStorageOpenApi().servers?.[0]?.url).toBe('/');
   });
 

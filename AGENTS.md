@@ -39,7 +39,7 @@ usable result (e.g. an R2 readback fell back to a synthesised resource, a corrup
 an unreadable subfolder was passed over).
 
 When you write a higher-level repository that delegates to a lower-level one (e.g. a
-`documents-contentbase` method calling `this.storageRepository.createObject(...)`), use the
+`documents-catalog` method calling `this.storageRepository.createObject(...)`), use the
 **forwarding** drainers — not the discarding ones:
 
 ```ts

@@ -26,8 +26,8 @@
       "laikacms/assets/api": [
         "src/api/assets-api/index.ts"
       ],
-      "laikacms/contentbase-api": [
-        "src/api/contentbase-api/index.ts"
+      "laikacms/catalog-api": [
+        "src/api/catalog-api/index.ts"
       ],
       "laikacms/documents/api": [
         "src/api/documents-api/index.ts"
@@ -38,8 +38,8 @@
       "laikacms/assets": [
         "src/domain/assets/index.ts"
       ],
-      "laikacms/contentbase-settings": [
-        "src/domain/contentbase-settings/index.ts"
+      "laikacms/catalog": [
+        "src/domain/catalog/index.ts"
       ],
       "laikacms/documents": [
         "src/domain/documents/index.ts"
@@ -53,8 +53,8 @@
       "laikacms/storage/testing": [
         "src/domain/storage/testing/index.ts"
       ],
-      "laikacms/assets/contentbase": [
-        "src/impl/assets-contentbase/index.ts"
+      "laikacms/assets/catalog": [
+        "src/impl/assets-catalog/index.ts"
       ],
       "laikacms/assets/jsonapi-proxy": [
         "src/impl/assets-jsonapi-proxy/index.ts"
@@ -65,14 +65,14 @@
       "laikacms/assets/r2": [
         "src/impl/assets-r2/index.ts"
       ],
-      "laikacms/contentbase-settings-decap": [
-        "src/impl/contentbase-settings-decap/index.ts"
+      "laikacms/catalog-decap": [
+        "src/impl/catalog-decap/index.ts"
       ],
-      "laikacms/contentbase-settings-default": [
-        "src/impl/contentbase-settings-default/index.ts"
+      "laikacms/catalog-convention": [
+        "src/impl/catalog-convention/index.ts"
       ],
-      "laikacms/documents/contentbase": [
-        "src/impl/documents-contentbase/index.ts"
+      "laikacms/documents/catalog": [
+        "src/impl/documents-catalog/index.ts"
       ],
       "laikacms/documents/drizzle": [
         "src/impl/documents-drizzle/index.ts"

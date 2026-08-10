@@ -7,6 +7,7 @@ import * as HttpServerRequest from 'effect/unstable/http/HttpServerRequest';
 import * as HttpServerResponse from 'effect/unstable/http/HttpServerResponse';
 import { createServer } from 'node:http';
 
+import { allowAll } from 'laikacms/json-api';
 import type { StorageSerializerRegistry } from 'laikacms/storage';
 import { buildJsonApi } from 'laikacms/storage-api';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
@@ -72,7 +73,9 @@ const buildRoutes = (options: LocalStorageServerOptions) => {
     options.serializerRegistry ?? DEFAULT_SERIALIZERS,
     options.defaultExtension ?? 'md',
   );
-  const api = buildJsonApi({ repo: storage, logger: console });
+  // `checkAuth` below is this server's access decision — it runs on every
+  // route before the handler is reached, so the handler itself allows all.
+  const api = buildJsonApi({ repo: storage, logger: console, authorize: allowAll });
 
   return HttpRouter.add(
     '*',

@@ -15,9 +15,8 @@ import {
   LaikaTask,
   NotFoundError,
 } from 'laikacms/core';
-import type { JsonApiLogger } from 'laikacms/json-api';
-import { errorToJsonApiMapper, recoverableErrorsToWarnings } from 'laikacms/json-api';
-import { type AuthorizeDecision, resolveAuthorization } from '../authorize.js';
+import type { AuthorizeDecision, JsonApiLogger } from 'laikacms/json-api';
+import { errorToJsonApiMapper, recoverableErrorsToWarnings, resolveAuthorization } from 'laikacms/json-api';
 
 /** Convert any caught throw into a LaikaError, preserving LaikaError instances and wrapping defects in InternalError. */
 const toLaikaError = (err: unknown): LaikaError => {
@@ -133,6 +132,7 @@ export interface AssetsApi {
  * `action` and carrying that action's relevant arguments.
  */
 export type AssetsAuthorizeAction =
+  | { action: 'readOpenApi', format: 'json' | 'yaml' }
   | { action: 'listResources', folder: string }
   | { action: 'getResource', key: string }
   | { action: 'createAsset' }
@@ -163,10 +163,12 @@ export interface AssetsApiOptions {
   onError?: (error: unknown) => void;
   logger?: JsonApiLogger;
   /**
-   * Optional per-action authorization hook. See {@link AssetsAuthorize}.
-   * When omitted the API performs no authorization (the historical behaviour).
+   * Per-action authorization hook. Required: there is no implicit default,
+   * because an API that silently defaults to open is the failure mode this
+   * option exists to prevent. Pass `allowAll` to state that a surface is
+   * intentionally unauthenticated. See {@link AssetsAuthorize}.
    */
-  authorize?: AssetsAuthorize | undefined;
+  authorize: AssetsAuthorize;
 }
 
 // ============================================
@@ -335,7 +337,6 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
   const decodeFolderCreate = S.decodeUnknownSync(JsonApiFolderCreateSchema);
 
   const authorizeAction = async (request: Request, action: AssetsAuthorizeAction): Promise<Response | null> => {
-    if (!authorize) return null;
     const denial = resolveAuthorization(await authorize({ ...action, request }));
     if (!denial) return null;
     const status = ErrorCodeToStatusMap[denial.code as keyof typeof ErrorCodeToStatusMap] ?? 403;
@@ -416,6 +417,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // Serve the machine-readable API description with `servers` rewritten to
     // the absolute mount point so the document is usable as-is by clients.
     if (path === `${basePath}/openapi.json` && method === 'GET') {
+      const denied = await authorizeAction(request, { action: 'readOpenApi', format: 'json' });
+      if (denied) return denied;
       const doc = (await loadOpenApiBuilder())({ basePath });
       return new Response(
         JSON.stringify({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] }),
@@ -430,6 +433,8 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // Same document as /openapi.json, serialized as YAML for tooling that
     // prefers it (and for readable diffs).
     if (path === `${basePath}/openapi.yaml` && method === 'GET') {
+      const denied = await authorizeAction(request, { action: 'readOpenApi', format: 'yaml' });
+      if (denied) return denied;
       const doc = (await loadOpenApiBuilder())({ basePath });
       const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
       return new Response(yaml, {

@@ -17,14 +17,15 @@ items are not built yet.
   `StorageRepository` (fs via `fs.watch`, multicast + debounced), consumed by the plugin to
   invalidate `\0laika:*` modules and trigger dev reload. Reusable by remote repos later.
 - **MDX bodies (`mdx: true`)** — a markdown-serialized item's `body` is written out as a real `.mdx`
-  chunk under `.laika/bodies/` and re-exported as `Body`. The plugin does not compile MDX and takes
-  no dependency on it: the chunk is a plain file, so `@mdx-js/rollup` (or anything else keyed on the
-  extension) picks it up. A real file is required — `createFilter` from `@rollup/pluginutils`
-  rejects ids containing a NUL byte, so a `\0laika:…` virtual module can never reach those plugins.
+  chunk under `.laika/vite-generated/bodies/` and re-exported as `Body`. The plugin does not compile
+  MDX and takes no dependency on it: the chunk is a plain file, so `@mdx-js/rollup` (or anything
+  else keyed on the extension) picks it up. A real file is required — `createFilter` from
+  `@rollup/pluginutils` rejects ids containing a NUL byte, so a `\0laika:…` virtual module can never
+  reach those plugins.
 - **TypeScript IntelliSense (typegen)** — the plugin emits a value-module from the fetched data and
   runs the TypeScript compiler API to produce a per-item `declare module 'laika:…'` (compiler does
   the inference → zero drift), plus per-collection union aliases for glob typing. Written to
-  `.laika/` + a committed `laika-env.d.ts`; regenerates off the change channel.
+  `.laika/vite-generated/` + a committed `laika-env.d.ts`; regenerates off the change channel.
 
 ## Planned
 
@@ -84,8 +85,8 @@ where the file lands.
 
 **Sketch:**
 
-- Read bytes from the assets repository (`AssetsRepository` / `assets-contentbase`, built on
-  storage) — extend `createRepositories` to also build an assets repo.
+- Read bytes from the assets repository (`AssetsRepository` / `assets-catalog`, built on storage) —
+  extend `createRepositories` to also build an assets repo.
 - **Build:** `this.emitFile({ type: 'asset', name, source: bytes })` → reference id; the module
   exports `import.meta.ROLLUP_FILE_URL_<id>`, which Rollup/Rolldown rewrites to the final hashed URL
   (`/assets/logo-a1b2c3.png`). So `import logoUrl from 'laika:asset/media/logo.png'` yields the dist
@@ -99,7 +100,7 @@ where the file lands.
 - Ties into the change channel: a changed asset invalidates its module and re-emits.
 
 **Open questions:** dev URL scheme + middleware (the one server-side piece in an otherwise
-build-time plugin); how asset _variations_ (from `ContentBaseAssetsRepository.createVariations`) are
+build-time plugin); how asset _variations_ (from `CatalogAssetsRepository.createVariations`) are
 exposed — multiple named URL exports?; whether large assets should be `emitFile`d always or inlined
 under a size threshold like Vite's `assetsInlineLimit`; interaction with
 `import.meta.glob('laika:asset/*')` returning a map of URLs.

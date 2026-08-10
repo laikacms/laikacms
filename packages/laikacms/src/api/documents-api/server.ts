@@ -29,9 +29,9 @@ import {
   parsePaginationQuery,
   recoverableErrorsToWarnings,
 } from 'laikacms/json-api';
-import { openApiDocumentToYaml } from 'laikacms/json-api';
+import { openApiDocumentToYaml, resolveAuthorization } from 'laikacms/json-api';
+import type { AuthorizeDecision } from 'laikacms/json-api';
 import { LockToken, SyncToken } from 'laikacms/storage';
-import { type AuthorizeDecision, resolveAuthorization } from '../authorize.js';
 import {
   documentCreateFromJsonApi,
   type DocumentCreateJsonApi,
@@ -387,6 +387,7 @@ async function runStreamWithDone<A, D extends LaikaDone>(
  * sub-steps are surfaced individually via their granular action.
  */
 export type DocumentsAuthorizeAction =
+  | { action: 'readOpenApi', format: 'json' | 'yaml' }
   | { action: 'getCapabilities' }
   | { action: 'getSyncToken', options: Parameters<DocumentsRepository['getSyncToken']>[0] }
   | { action: 'listChanges', options: Parameters<DocumentsRepository['listChanges']>[0] }
@@ -430,10 +431,12 @@ export interface DocumentsApiOptions {
   onError?(error: unknown): void;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
   /**
-   * Optional per-action authorization hook. See {@link DocumentsAuthorize}.
-   * When omitted the API performs no authorization (the historical behaviour).
+   * Per-action authorization hook. Required: there is no implicit default,
+   * because an API that silently defaults to open is the failure mode this
+   * option exists to prevent. Pass `allowAll` to state that a surface is
+   * intentionally unauthenticated. See {@link DocumentsAuthorize}.
    */
-  authorize?: DocumentsAuthorize | undefined;
+  authorize: DocumentsAuthorize;
 }
 
 // Schema definitions using Effect Schema
@@ -690,7 +693,6 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     // Run the per-action authorization hook (if configured). Returns a ready
     // error Response when the action is denied, or `null` when it's allowed.
     const authorizeAction = async (action: DocumentsAuthorizeAction): Promise<Response | null> => {
-      if (!authorize) return null;
       const denial = resolveAuthorization(await authorize({ ...action, request }));
       if (!denial) return null;
       const status = ErrorCodeToStatusMap[denial.code as keyof typeof ErrorCodeToStatusMap] ?? 403;
@@ -705,6 +707,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     // OpenAPI document — plain JSON (not JSON:API), with the servers entry
     // resolved against the incoming request's origin.
     if (path === 'openapi.json' && request.method === 'GET') {
+      const denied = await authorizeAction({ action: 'readOpenApi', format: 'json' });
+      if (denied) return denied;
       const doc = (await loadOpenApiBuilder())({ basePath });
       return new Response(
         JSON.stringify({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] }),
@@ -719,6 +723,8 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     }
 
     if (path === 'openapi.yaml' && request.method === 'GET') {
+      const denied = await authorizeAction({ action: 'readOpenApi', format: 'yaml' });
+      if (denied) return denied;
       const doc = (await loadOpenApiBuilder())({ basePath });
       const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
       return new Response(yaml, {

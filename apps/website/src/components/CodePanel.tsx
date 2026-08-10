@@ -40,10 +40,11 @@ export function CodePanel({ file, label, repositories }: CodePanelProps) {
   }, [active]);
 
   const code = `import { buildJsonApi } from "laikacms/storage-api";
+import { allowAll } from "laikacms/json-api";
 import { ${b.cls} } from "${b.path}";
 
 const repo = ${b.ctor};
-const api = buildJsonApi({ repo });
+const api = buildJsonApi({ repo, authorize: allowAll });
 
 // a JSON:API for your content that runs anywhere fetch runs
 export default { fetch: api.fetch };`;

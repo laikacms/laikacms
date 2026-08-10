@@ -47,7 +47,7 @@ lower-priority extensions to it.
 - [x] **i18n for recoverable warning messages** — translation-key convention documented at
       `docs/concepts/recoverable-warning-translations.md` (LCMS-471); `storage-fs` is the reference
       implementation. Remaining backends (`storage-r2`, `storage-s3`, `storage-drizzle`,
-      `storage-webdav`, `documents-jsonapi-proxy`, `contentbase`, `obsidian`, …) still need the same
+      `storage-webdav`, `documents-jsonapi-proxy`, `catalog`, `obsidian`, …) still need the same
       treatment — follow-up work, not blocking.
 - [ ] **`documents-jsonapi-proxy` atomic-batch warnings** — same pattern: when the proxy starts
       sending `/operations` POSTs (rather than individual HTTP calls per op), it should forward
@@ -66,7 +66,7 @@ lower-priority extensions to it.
       value/done. Every storage / documents / assets repository interface returns them;
       Promise-shaped escape hatches (`runPromise`, `runPromiseCollect`, `runPromiseResult`) keep
       non-Effect consumers ergonomic. Every in-tree backend (R2, FS, WebDAV, Drizzle, JSON:API
-      proxy, contentbase, obsidian) emits recoverable warnings on partial-success paths instead of
+      proxy, catalog, obsidian) emits recoverable warnings on partial-success paths instead of
       bailing fatally; R2 readback fallbacks synthesize the resource + emit a warning rather than
       failing. Delegation between repositories forwards warnings via `runValueForwarding` /
       `runCollectForwarding` so warnings flow end-to-end through delegation chains. All three

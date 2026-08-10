@@ -22,7 +22,7 @@ LaikaCMS is **three things stacked**:
 │   ─ buildJsonApi / laikaApi — web-standard fetch        │
 ├─────────────────────────────────────────────────────────┤
 │   Domain      — what your server code calls             │
-│   ─ Storage / Documents / Assets / ContentBase repos    │
+│   ─ Storage / Documents / Assets / Catalog repos    │
 ├─────────────────────────────────────────────────────────┤
 │   Storage backend (you choose ONE)                      │
 │   ─ FileSystem (Node)   ─ R2 (Workers)                  │
@@ -42,8 +42,8 @@ The `@laikacms/server` package gives you the primitives for each layer:
 - **`laikaOauth2(...)`** (`@laikacms/server/oauth2`) — an optional PKCE OAuth2 server for production
   login.
 
-For most apps: construct a `StorageRepository`, wrap it in the ContentBase document/asset repos,
-pass them to `laikaApi(...)`, and mount `.fetch` on a catch-all route.
+For most apps: construct a `StorageRepository`, wrap it in the Catalog document/asset repos, pass
+them to `laikaApi(...)`, and mount `.fetch` on a catch-all route.
 
 ---
 
@@ -54,9 +54,9 @@ pass them to `laikaApi(...)`, and mount `.fetch` on a catch-all route.
 ```ts
 import { serveStatic } from '@hono/node-server/serve-static';
 import { laikaApi } from '@laikacms/server/api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
+import { DecapCatalogProvider } from 'laikacms/catalog-decap';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { resolve } from 'node:path';
@@ -66,9 +66,9 @@ const storage = new FileSystemStorageRepository(
   { md: markdownSerializer },
   'md',
 );
-const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-const documents = new ContentBaseDocumentsRepository(storage, settings);
-const assets = new ContentBaseAssetsRepository(storage, settings);
+const settings = new DecapCatalogProvider({ storage, configKey: 'config' });
+const documents = new CatalogDocumentsRepository(storage, settings);
+const assets = new CatalogAssetsRepository(storage, settings);
 
 const laika = laikaApi({
   documents,
@@ -85,9 +85,9 @@ app.use('/admin/*', serveStatic({ root: './admin' }));
 app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 ```
 
-> **Before any content operation: seed the Decap config into storage once.**
-> `DecapContentBaseSettingsProvider` reads the Decap config object from `storage[configKey]` on
-> every request. If the key is missing, every document and asset operation throws
+> **Before any content operation: seed the Decap config into storage once.** `DecapCatalogProvider`
+> reads the Decap config object from `storage[configKey]` on every request. If the key is missing,
+> every document and asset operation throws
 > `"Decap config object not found at storage key 'config'"`. Run this once (setup script, migration,
 > or first-boot handler):
 >
@@ -96,7 +96,7 @@ app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 >
 > await runTask(
 >   storage.createOrUpdateObject({
->     key: 'config', // must match the `configKey` you passed to DecapContentBaseSettingsProvider
+>     key: 'config', // must match the `configKey` you passed to DecapCatalogProvider
 >     content: {
 >       collections: [
 >         {
@@ -157,9 +157,9 @@ edge-compatible repo such as `R2StorageRepository` (`node:fs` is unavailable in 
 ```ts
 import { laikaApi } from '@laikacms/server/api';
 import { Hono } from 'hono';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
+import { DecapCatalogProvider } from 'laikacms/catalog-decap';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { R2StorageRepository } from 'laikacms/storage-r2';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 
@@ -171,11 +171,11 @@ const app = new Hono<{ Bindings: Env }>();
 
 const makeLaika = (env: Env) => {
   const storage = new R2StorageRepository(env.CONTENT, { md: markdownSerializer }, 'md');
-  const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+  const settings = new DecapCatalogProvider({ storage, configKey: 'config' });
   return laikaApi({
-    documents: new ContentBaseDocumentsRepository(storage, settings),
+    documents: new CatalogDocumentsRepository(storage, settings),
     storage,
-    assets: new ContentBaseAssetsRepository(storage, settings),
+    assets: new CatalogAssetsRepository(storage, settings),
     basePath: '/api/decap',
     authenticateAccessToken: yourValidator,
   });
@@ -258,7 +258,7 @@ PKCE server from `@laikacms/server/oauth2` — see
 | `GitlabStorageRepository`     | `@laikacms/gitlab/storage-gl`    | Runtime-agnostic (`fetch`-only); GitLab repos    |
 | `BitbucketStorageRepository`  | `@laikacms/bitbucket/storage-bb` | Runtime-agnostic (`fetch`-only); Bitbucket repos |
 
-Wrap the repo in `ContentBaseDocumentsRepository` / `ContentBaseAssetsRepository`, pass them to
+Wrap the repo in `CatalogDocumentsRepository` / `CatalogAssetsRepository`, pass them to
 `laikaApi(...)`, and mount `.fetch` from your framework's catch-all route. `laikaApi(...)` returns
 `{ fetch, authenticateRequest }`. For server-side render reads, call the `documents` / `assets` /
 `storage` repos directly to **bypass HTTP auth** — server-internal reads don't need a token.
@@ -372,10 +372,9 @@ These are the things that consistently bite first-time integrators:
     ```
 
 13. **Seed the Decap config object before the first content operation.** If you use
-    `DecapContentBaseSettingsProvider`, it reads your Decap config from `storage[configKey]` on
-    every request. On an empty storage directory the key does not exist, and every call to
-    `documents.*` or `assets.*` throws `"Decap config object not found at storage key 'config'"`.
-    Seed it once:
+    `DecapCatalogProvider`, it reads your Decap config from `storage[configKey]` on every request.
+    On an empty storage directory the key does not exist, and every call to `documents.*` or
+    `assets.*` throws `"Decap config object not found at storage key 'config'"`. Seed it once:
     ```ts
     import { runTask } from 'laikacms/compat';
     await runTask(storage.createOrUpdateObject({ key: 'config', content: yourDecapConfig }));
@@ -385,9 +384,9 @@ These are the things that consistently bite first-time integrators:
     callout in task (a) above and
     [docs/guides/decap/standalone-worker.md → "Seeding the server-side Decap config"](./docs/guides/decap/standalone-worker.md#seeding-the-server-side-decap-config).
 
-14. **`ContentBaseDocumentsRepository` injects a `language` field into every stored content
-    object.** The implementation co-locates the document language with its content in storage so
-    reads can recover it without a separate metadata file. When i18n is not configured, Decap sends
+14. **`CatalogDocumentsRepository` injects a `language` field into every stored content object.**
+    The implementation co-locates the document language with its content in storage so reads can
+    recover it without a separate metadata file. When i18n is not configured, Decap sends
     `language: "und"` (BCP 47 "undetermined"), so every saved `.json` file ends up with:
     ```json
     { "title": "My post", "body": "...", "language": "und" }

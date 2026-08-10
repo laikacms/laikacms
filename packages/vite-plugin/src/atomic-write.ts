@@ -6,7 +6,7 @@ import path from 'node:path';
  * then rename), skipping the write entirely when the file already matches.
  *
  * The skip is what keeps file watchers quiet: everything this plugin generates
- * lands under `.laika/`, inside the Vite root, so a redundant rewrite would
+ * lands under `.laika/vite-generated/`, inside the Vite root, so a redundant rewrite would
  * bounce straight back through HMR.
  *
  * @returns `true` when the file changed on disk.

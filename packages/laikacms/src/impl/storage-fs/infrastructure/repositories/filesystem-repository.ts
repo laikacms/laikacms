@@ -101,7 +101,7 @@ export class FileSystemStorageRepository extends StorageRepository {
       '**/.DS_Store',
       '**/Thumbs.db',
       '**/desktop.ini',
-      '**/.contentbase',
+      '**/.catalog',
       '**/.laikacms',
     ],
     /**

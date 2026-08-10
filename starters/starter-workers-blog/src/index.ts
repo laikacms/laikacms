@@ -7,19 +7,19 @@
  *
  * Instead we wire the lower-level `laikaApi` by hand:
  *   D1StorageRepository (Cloudflare REST API)
- *   → DecapContentBaseSettingsProvider (reads Decap config from D1)
- *   → ContentBaseDocumentsRepository
- *   → ContentBaseAssetsRepository
+ *   → DecapCatalogProvider (reads Decap config from D1)
+ *   → CatalogDocumentsRepository
+ *   → CatalogAssetsRepository
  *   → laikaApi({ documents, storage, assets, basePath, auth })
  *
  * Doc gap surfaced: there is no `createEmbeddedLaika` equivalent for edge
  * runtimes.  If you need one, open an issue at github.com/laikacms/laikacms.
  */
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
 import { collectStream, runTask } from 'laikacms/compat';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
+import { DecapCatalogProvider } from 'laikacms/catalog-decap';
 import type { RecordSummary } from 'laikacms/documents';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { rawSerializer } from 'laikacms/storage-serializers-raw';
@@ -51,7 +51,7 @@ const serializers = {
 
 interface LaikaResources {
   api: ReturnType<typeof laikaApi>;
-  documents: ContentBaseDocumentsRepository;
+  documents: CatalogDocumentsRepository;
 }
 
 // ── Per-isolate cache ─────────────────────────────────────────────────────────
@@ -72,13 +72,13 @@ async function getOrCreate(env: Env): Promise<LaikaResources> {
     defaultFileExtension: 'md',
   });
 
-  // Seed config.yml into D1 on first use so DecapContentBaseSettingsProvider
+  // Seed config.yml into D1 on first use so DecapCatalogProvider
   // can read it.  Mirrors what createEmbeddedLaika does via ensureConfigOnDisk.
   await ensureConfig(storage);
 
-  const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-  const documents = new ContentBaseDocumentsRepository(storage, settings);
-  const assets = new ContentBaseAssetsRepository(storage, settings);
+  const settings = new DecapCatalogProvider({ storage, configKey: 'config' });
+  const documents = new CatalogDocumentsRepository(storage, settings);
+  const assets = new CatalogAssetsRepository(storage, settings);
 
   const devToken = env.DEV_TOKEN ?? 'dev-local-laika-token';
 

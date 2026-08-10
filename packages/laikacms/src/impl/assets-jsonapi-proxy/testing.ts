@@ -3,8 +3,9 @@ import { vi } from 'vitest';
 import { buildAssetsApi } from '../../api/assets-api/server.js';
 import type { AssetsContractCase } from '../../domain/assets/testing/index.js';
 import { InMemoryStorageRepository } from '../../domain/storage/testing/in-memory-storage.js';
-import { ContentBaseAssetsRepository } from '../assets-contentbase/assets-repository.js';
-import { TestSettingsProvider } from '../documents-contentbase/testing.js';
+import { allowAll } from '../../shared/json-api/authorize.js';
+import { CatalogAssetsRepository } from '../assets-catalog/assets-repository.js';
+import { TestSettingsProvider } from '../documents-catalog/testing.js';
 
 import { AssetsJsonApiProxyRepository } from './assets-jsonapi-proxy-repository.js';
 
@@ -17,8 +18,8 @@ export const jsonApiProxyAssetsContractCase: AssetsContractCase = {
   makeRepo: () => {
     const storage = new InMemoryStorageRepository();
     const settings = new TestSettingsProvider();
-    const backing = new ContentBaseAssetsRepository(storage, settings);
-    const api = buildAssetsApi({ repository: backing, basePath: '' });
+    const backing = new CatalogAssetsRepository(storage, settings);
+    const api = buildAssetsApi({ repository: backing, basePath: '', authorize: allowAll });
 
     originalFetch = globalThis.fetch;
     vi.stubGlobal(

@@ -6,26 +6,42 @@
 
 JSON:API server for storage operations.
 
-## ⚠️ Authentication
+## ⚠️ Access control
 
-`buildJsonApi` ships **no authentication middleware**. The handler will gladly read, create, update,
-and delete storage objects for any caller that can reach its `fetch`. Do **not** expose it to
-untrusted networks directly.
-
-Wrap it with an authentication layer — e.g. [`@laikacms/server/api`](../../decap/decap-api), which
-validates a Bearer access token before forwarding to this handler — or provide your own middleware:
+`buildJsonApi` **requires** an `authorize` policy — there is no implicit default, because an API
+that silently defaults to open is the failure mode this option exists to prevent. The callback runs
+before every action, including the two OpenAPI routes, and receives the action descriptor plus the
+originating `Request`:
 
 ```typescript
-const api = buildJsonApi({ repo: myStorageRepo });
+import { AuthenticationError } from 'laikacms/core';
 
-export default {
-  async fetch(request: Request) {
+const api = buildJsonApi({
+  repo: myStorageRepo,
+  authorize: async ({ action, request }) => {
     const user = await myAuth(request);
-    if (!user) return new Response('Unauthorized', { status: 401 });
-    return api.fetch(request);
+    if (!user) return new AuthenticationError('Missing token'); // → 401
+    return user.isAdmin || action === 'readOpenApi'; // false → 403
   },
-};
+});
 ```
+
+`authorize` decides _what a caller may do_; it does not authenticate them for you. Either validate
+the credential inside the callback (as above), or mount the handler behind
+[`@laikacms/server/api`](../../../../server/src/api), which authenticates a Bearer token and applies
+its own `authorize` gate before forwarding.
+
+For a surface that is _deliberately_ open — a dev server on loopback, a test harness, or a handler
+already behind an authenticating proxy — say so explicitly with `allowAll`:
+
+```typescript
+import { allowAll } from 'laikacms/json-api';
+
+const api = buildJsonApi({ repo: myStorageRepo, authorize: allowAll });
+```
+
+Naming it rather than inlining `() => true` means every intentionally-open surface in a deployment
+is one `rg 'authorize: allowAll'` away during an audit.
 
 ## Installation
 
@@ -38,9 +54,7 @@ pnpm add laikacms
 ```typescript
 import { buildJsonApi } from 'laikacms/storage/api';
 
-const api = buildJsonApi({ repo: myStorageRepo });
-
-// Wrap with authentication before exposing publicly — see warning above.
+const api = buildJsonApi({ repo: myStorageRepo, authorize: myPolicy });
 export default { fetch: api.fetch };
 ```
 
@@ -71,15 +85,17 @@ interface StorageApiOptions {
   basePath?: string;
   onError?(error: unknown): void;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'>;
+  authorize: StorageAuthorize;
 }
 ```
 
-| Option     | Type                                              | Default | Description                                                                                                                 |
-| ---------- | ------------------------------------------------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
-| `repo`     | `StorageRepository`                               | —       | Required. The storage repository implementation to back the API.                                                            |
-| `basePath` | `string`                                          | `''`    | URL prefix stripped from `request.url` before routing. Set to the mount path (e.g. `/storage`) when mounting at a sub-path. |
-| `onError`  | `(error: unknown) => void`                        | —       | Called with each fatal error before the JSON:API error response is returned. Use for logging or Sentry breadcrumbs.         |
-| `logger`   | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | —       | Passed to the JSON:API error serialiser for structured error logging.                                                       |
+| Option      | Type                                              | Default | Description                                                                                                                                                                                                                                                                                                   |
+| ----------- | ------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repo`      | `StorageRepository`                               | —       | Required. The storage repository implementation to back the API.                                                                                                                                                                                                                                              |
+| `basePath`  | `string`                                          | `''`    | URL prefix stripped from `request.url` before routing. Set to the mount path (e.g. `/storage`) when mounting at a sub-path.                                                                                                                                                                                   |
+| `onError`   | `(error: unknown) => void`                        | —       | Called with each fatal error before the JSON:API error response is returned. Use for logging or Sentry breadcrumbs.                                                                                                                                                                                           |
+| `logger`    | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | —       | Passed to the JSON:API error serialiser for structured error logging.                                                                                                                                                                                                                                         |
+| `authorize` | `StorageAuthorize`                                | —       | **Required.** Per-action authorization policy. Runs before every action (including the OpenAPI routes) with the action descriptor and originating `Request`. Return `true` to allow, `false` for 403, or a `LaikaError` for a custom status/message. Pass `allowAll` to declare a surface intentionally open. |
 
 ## Partial success: `meta.warnings`
 

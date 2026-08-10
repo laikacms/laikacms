@@ -266,9 +266,9 @@ pnpm add @laikacms/server
 import { laikaApi } from '@laikacms/server/api';
 import { laikaOauth2 } from '@laikacms/server/oauth2';
 import { Hono } from 'hono';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
+import { DecapCatalogProvider } from 'laikacms/catalog-decap';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { R2StorageRepository } from 'laikacms/storage-r2';
 
 const CLIENT_ID = process.env.DECAP_CLIENT_ID!;
@@ -298,11 +298,11 @@ const oauth2 = laikaOauth2({
 
 // Build the Decap API handler — its validator checks the OAuth2 session token.
 const storage = new R2StorageRepository(/* … */);
-const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
+const settings = new DecapCatalogProvider({ storage, configKey: 'config' });
 const laika = laikaApi({
-  documents: new ContentBaseDocumentsRepository(storage, settings),
+  documents: new CatalogDocumentsRepository(storage, settings),
   storage,
-  assets: new ContentBaseAssetsRepository(storage, settings),
+  assets: new CatalogAssetsRepository(storage, settings),
   basePath: '/api/decap',
   // Reject by throwing — laikaApi turns thrown errors into a 401.
   async authenticateAccessToken(token) {

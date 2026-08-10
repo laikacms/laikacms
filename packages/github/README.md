@@ -159,7 +159,7 @@ When `ignoreList` is not supplied the following patterns are excluded:
 **/.DS_Store
 **/Thumbs.db
 **/desktop.ini
-**/.contentbase
+**/.catalog
 **/.laikacms
 ```
 

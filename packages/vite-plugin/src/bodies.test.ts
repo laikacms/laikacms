@@ -27,7 +27,7 @@ describe('chunk locations', () => {
   it('keeps a chunk inside the bodies directory whatever the key contains', () => {
     // Keys come from the repository, which is not necessarily a filesystem.
     const escaped = chunkPath(root, { namespace: 'store', key: '../../etc/pass wd' });
-    expect(escaped.startsWith(path.join(root, '.laika', 'bodies'))).toBe(true);
+    expect(escaped.startsWith(path.join(root, '.laika', 'vite-generated', 'bodies'))).toBe(true);
     expect(escaped).not.toContain('..');
   });
 });
@@ -47,7 +47,7 @@ describe('writeChunk', () => {
 describe('pruneChunks', () => {
   it('removes the chunks this build did not write, and only those', async () => {
     const live = { namespace: 'store', key: 'pillars/01-mit' } as const;
-    const types = path.join(root, '.laika', 'types.d.ts');
+    const types = path.join(root, '.laika', 'vite-generated', 'types.d.ts');
     await writeChunk(root, live, 'still here');
     await writeChunk(root, { namespace: 'store', key: 'pillars/00-renamed-away' }, 'gone');
     await fs.mkdir(path.dirname(types), { recursive: true });

@@ -6,6 +6,7 @@ import type { DocumentsCapabilities } from 'laikacms/documents';
 import { DocumentsRepository } from 'laikacms/documents';
 import type { Key, Lock, LockOwner, LockToken, OwnedLock } from 'laikacms/storage';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { allowAll } from '../../shared/json-api/authorize.js';
 
 import { buildJsonApi } from '../../api/documents-api/server.js';
 import { InMemoryDocumentsRepository } from '../../domain/documents/testing/in-memory-documents.js';
@@ -87,7 +88,7 @@ describe('advisory locks over the JSON:API boundary', () => {
   let nowMs: number;
 
   function serve(repo: DocumentsRepository) {
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     originalFetch = globalThis.fetch;
     vi.stubGlobal(
       'fetch',

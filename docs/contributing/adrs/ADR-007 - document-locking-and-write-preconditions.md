@@ -211,10 +211,10 @@ breaking capability change.
 - **Seam at the semantic operation, not a KV.** Moving from `LockStore` (get/set/delete) to
   `acquire/refresh/release/get` on the repository is the structural fix: each backend supplies its
   native atomic primitive. The KV seam made correct multi-node locking impossible.
-- **Folded into the repository, not a sibling provider.** A `ContentBaseSettingsProvider`-style
-  sibling cannot reach the datasource, so it could never bubble up a native transaction — the exact
-  requirement. Change-signals (methods _on_ the repo) are the right template; the settings provider
-  is the wrong one.
+- **Folded into the repository, not a sibling provider.** A `CatalogProvider`-style sibling cannot
+  reach the datasource, so it could never bubble up a native transaction — the exact requirement.
+  Change-signals (methods _on_ the repo) are the right template; the settings provider is the wrong
+  one.
 - **Documents-only methods, shared types.** Decap only locks documents, and `revision` lives on
   `DocumentsRepository`. Triplicating across all three repos now = 3× surface for 1 consumer; the
   change-signal triplication is a cautionary tale, not a template to copy. Shared vocabulary

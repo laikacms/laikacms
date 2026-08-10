@@ -16,10 +16,10 @@
  *
  * See .env.example and the GitHub App setup guide in docs/decap-integration.md.
  */
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
 import { runTask } from 'laikacms/compat';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { DecapCatalogProvider } from 'laikacms/catalog-decap';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { rawSerializer } from 'laikacms/storage-serializers-raw';
@@ -88,9 +88,9 @@ async function ensureConfig(): Promise<void> {
 
 await ensureConfig();
 
-const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-const documents = new ContentBaseDocumentsRepository(storage, settings);
-const assets = new ContentBaseAssetsRepository(storage, settings);
+const settings = new DecapCatalogProvider({ storage, configKey: 'config' });
+const documents = new CatalogDocumentsRepository(storage, settings);
+const assets = new CatalogAssetsRepository(storage, settings);
 
 const api = laikaApi({
   documents,

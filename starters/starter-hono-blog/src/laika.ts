@@ -10,7 +10,7 @@ import { blogCollections } from './decap-config.js';
  * createEmbeddedLaika:
  *   - Roots a FileSystemStorageRepository at `contentDir`
  *   - Writes/reads the Decap config YAML so server and editor always agree
- *   - Wires up ContentBaseDocumentsRepository + ContentBaseAssetsRepository
+ *   - Wires up CatalogDocumentsRepository + CatalogAssetsRepository
  *   - Returns a fetch handler for the Decap JSON:API + auth endpoints
  *
  * Import `laika.documents` anywhere in SSR routes to read content without

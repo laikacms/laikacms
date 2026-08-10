@@ -1,9 +1,9 @@
 import type { AssetsRepository } from 'laikacms/assets';
-import { ContentBaseAssetsRepository } from 'laikacms/assets/contentbase';
-import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
+import { CatalogAssetsRepository } from 'laikacms/assets/catalog';
+import { ConventionCatalogProvider } from 'laikacms/catalog-convention';
 import { LaikaStream, LaikaTask } from 'laikacms/core';
 import type { DocumentsRepository } from 'laikacms/documents';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents/contentbase';
+import { CatalogDocumentsRepository } from 'laikacms/documents/catalog';
 import { jsonSerializer } from 'laikacms/serializers/json';
 import { markdownSerializer } from 'laikacms/serializers/markdown';
 import { rawSerializer } from 'laikacms/serializers/raw';
@@ -16,7 +16,7 @@ import type { LaikaId, Namespace } from './protocol.js';
 /**
  * The default serializer registry for the filesystem storage repository. The
  * registry is keyed by *file extension*, so every spelling a content author is
- * likely to reach for gets its own entry: `.json` (also used by ContentBase for
+ * likely to reach for gets its own entry: `.json` (also used by Catalog for
  * its collection settings and per-object metadata), `.yaml`/`.yml`,
  * `.md`/`.mdx`/`.markdown` (frontmatter + `body`), and raw passthrough.
  */
@@ -60,13 +60,13 @@ export interface LaikaRepositories {
   assets: AssetsRepository;
 }
 
-/** Derive documents and assets repositories from a storage repository via ContentBase. */
+/** Derive documents and assets repositories from a storage repository via Catalog. */
 export function createRepositories(storage: StorageRepository): LaikaRepositories {
-  const settings = new DefaultContentBaseSettingsProvider({ storage });
+  const settings = new ConventionCatalogProvider({ storage });
   return {
     storage,
-    documents: new ContentBaseDocumentsRepository(storage, settings),
-    assets: new ContentBaseAssetsRepository(storage, settings),
+    documents: new CatalogDocumentsRepository(storage, settings),
+    assets: new CatalogAssetsRepository(storage, settings),
   };
 }
 

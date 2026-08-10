@@ -4,8 +4,9 @@ import { buildJsonApi } from '../../api/documents-api/server.js';
 import { InMemoryDocumentsRepository } from '../../domain/documents/testing/in-memory-documents.js';
 import type { DocumentsContractCase } from '../../domain/documents/testing/index.js';
 import { InMemoryStorageRepository } from '../../domain/storage/testing/in-memory-storage.js';
-import { ContentBaseDocumentsRepository } from '../documents-contentbase/documents-repository.js';
-import { TestSettingsProvider } from '../documents-contentbase/testing.js';
+import { allowAll } from '../../shared/json-api/authorize.js';
+import { CatalogDocumentsRepository } from '../documents-catalog/documents-repository.js';
+import { TestSettingsProvider } from '../documents-catalog/testing.js';
 
 import { DocumentsJsonApiProxyRepository } from './documents-jsonapi-proxy-repository.js';
 
@@ -23,8 +24,8 @@ export const jsonApiProxyDocumentsContractCase: DocumentsContractCase = {
   makeRepo: () => {
     const storage = new InMemoryStorageRepository();
     const settings = new TestSettingsProvider();
-    const backing = new ContentBaseDocumentsRepository(storage, settings);
-    const api = buildJsonApi({ repo: backing });
+    const backing = new CatalogDocumentsRepository(storage, settings);
+    const api = buildJsonApi({ repo: backing, authorize: allowAll });
 
     originalFetch = globalThis.fetch;
     vi.stubGlobal(
@@ -67,7 +68,7 @@ export const jsonApiProxyChangesContractCase: DocumentsContractCase = {
   name: 'DocumentsJsonApiProxyRepository (in-process JSON:API + in-memory documents backing)',
   makeRepo: () => {
     const backing = new InMemoryDocumentsRepository();
-    const api = buildJsonApi({ repo: backing });
+    const api = buildJsonApi({ repo: backing, authorize: allowAll });
 
     originalFetchChanges = globalThis.fetch;
     vi.stubGlobal(

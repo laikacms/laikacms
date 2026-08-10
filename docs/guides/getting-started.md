@@ -15,11 +15,11 @@ This page follows how the product is actually adopted, lowest bar first:
    build at compile time, for sites with no runtime backend at all.
 4. **[Growing into more](#growing-into-more)** — swap storage backends, add a database, keep going.
 
-Every server example below is **secure by default**: `laikaApi` requires you to state an explicit
-`authorize` policy, and there is no implicit "allow everything" fallback. If you only remember one
-thing from this page, remember that — the old insecure `buildJsonApi({ repo })` one-liner from
-earlier LaikaCMS docs is now a clearly-flagged
-[advanced/reference page](./advanced/raw-storage-api), not the lead.
+Every server example below is **secure by default**: both `laikaApi` and the raw `build*Api`
+handlers require you to state an explicit `authorize` policy, and there is no implicit "allow
+everything" fallback. If you only remember one thing from this page, remember that — the old
+`buildJsonApi({ repo })` one-liner from earlier LaikaCMS docs no longer compiles, and the raw
+handler is a clearly-flagged [advanced/reference page](./advanced/raw-storage-api), not the lead.
 
 ## Installation
 
@@ -97,16 +97,16 @@ keys) stay on the server, and you decide exactly who can read or write what.
 
 ```typescript
 import { laikaApi } from '@laikacms/server/api';
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
-import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
+import { ConventionCatalogProvider } from 'laikacms/catalog-convention';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
 const storage = new FileSystemStorageRepository('./content', { json: jsonSerializer }, 'json');
-const settings = new DefaultContentBaseSettingsProvider({ storage });
-const documents = new ContentBaseDocumentsRepository(storage, settings);
-const assets = new ContentBaseAssetsRepository(storage, settings);
+const settings = new ConventionCatalogProvider({ storage });
+const documents = new CatalogDocumentsRepository(storage, settings);
+const assets = new CatalogAssetsRepository(storage, settings);
 
 const api = laikaApi({
   documents,

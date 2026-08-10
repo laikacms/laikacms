@@ -3,10 +3,10 @@
  * options object. Not compatible with edge runtimes — use `laikaApi` directly
  * from `@laikacms/server/api` for Cloudflare Workers / Deno Deploy.
  */
-import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
+import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
+import { DecapCatalogProvider } from 'laikacms/catalog-decap';
 import { runTask } from 'laikacms/compat';
-import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
-import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
+import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
@@ -50,11 +50,11 @@ export interface EmbeddedLaikaOptions {
 
 export interface EmbeddedLaika {
   /** Documents repository — use this in SSR routes to read/write content. */
-  documents: ContentBaseDocumentsRepository;
+  documents: CatalogDocumentsRepository;
   /** Raw storage repository (FileSystem). */
   storage: FileSystemStorageRepository;
   /** Assets repository. */
-  assets: ContentBaseAssetsRepository;
+  assets: CatalogAssetsRepository;
   /** Fetch handler — route all `/basePath/*` requests here. */
   fetch: (request: Request) => Promise<Response>;
 }
@@ -97,9 +97,9 @@ export function createEmbeddedLaika(options: EmbeddedLaikaOptions): EmbeddedLaik
   } = options;
 
   const storage = new FileSystemStorageRepository(contentDir, defaultSerializers, 'md');
-  const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-  const documents = new ContentBaseDocumentsRepository(storage, settings);
-  const assets = new ContentBaseAssetsRepository(storage, settings);
+  const settings = new DecapCatalogProvider({ storage, configKey: 'config' });
+  const documents = new CatalogDocumentsRepository(storage, settings);
+  const assets = new CatalogAssetsRepository(storage, settings);
 
   const authenticateAccessToken: (token: string) => Promise<User> = auth.mode === 'dev'
     ? (async token => {

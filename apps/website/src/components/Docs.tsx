@@ -11,10 +11,11 @@ const LEAD =
 export const INSTALL_COMMAND = 'pnpm add laikacms';
 export const STARTER_FILE = 'worker.ts';
 export const STARTER_CODE = `import { buildJsonApi } from "laikacms/storage-api";
+import { allowAll } from "laikacms/json-api";
 import { FileSystemStorageRepository } from "laikacms/storage-fs";
 
 const repo = new FileSystemStorageRepository({ basePath: "./content" });
-const api = buildJsonApi({ repo });
+const api = buildJsonApi({ repo, authorize: allowAll });
 
 export default { fetch: api.fetch };`;
 

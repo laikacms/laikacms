@@ -23,13 +23,13 @@ export interface LaikaTypegenPluginOptions {
 export interface LaikaVitePluginOptions {
   /**
    * Bring your own repositories. When omitted, a filesystem storage repository
-   * (and ContentBase documents and assets repositories derived from it) is
+   * (and Catalog documents and assets repositories derived from it) is
    * created from {@link LaikaVitePluginOptions.dir}.
    */
   repositories?: LaikaRepositories;
   /**
    * Provide only the storage repository; the documents and assets repositories
-   * are derived from it via ContentBase. Ignored when {@link repositories} is
+   * are derived from it via Catalog. Ignored when {@link repositories} is
    * given.
    */
   storage?: StorageRepository;
@@ -56,7 +56,7 @@ export interface LaikaVitePluginOptions {
    */
   hmr?: boolean | { coarse?: boolean };
   /**
-   * Write each item's `body` field out as an `.mdx` chunk under `.laika/bodies/`
+   * Write each item's `body` field out as an `.mdx` chunk under `.laika/vite-generated/bodies/`
    * and re-export its default as `Body`, on top of the raw `body` string. This
    * plugin does not compile MDX — pair it with a plugin that does
    * (`@mdx-js/rollup`, ahead of your JSX plugin). Off by default.
@@ -245,7 +245,7 @@ export function laikacms(options: LaikaVitePluginOptions = {}): Plugin {
 
     async closeBundle() {
       // Every chunk the build needed has been written by now, so anything else
-      // under `.laika/bodies` belongs to a key that no longer exists. Build
+      // under `.laika/vite-generated/bodies` belongs to a key that no longer exists. Build
       // only: in dev this hook fires when the server closes.
       if (mdxEnabled && !isServe) await pruneChunks(root, writtenChunks);
       await typegen?.dispose();

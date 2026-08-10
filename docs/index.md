@@ -61,8 +61,8 @@ features:
 
 ```mermaid
 flowchart TD
-  api["API Layer<br/><small>storage-api, documents-api, assets-api, contentbase-api</small>"]
-  domain["Domain Layer<br/><small>storage, documents, assets, contentbase-settings</small>"]
+  api["API Layer<br/><small>storage-api, documents-api, assets-api, catalog-api</small>"]
+  domain["Domain Layer<br/><small>storage, documents, assets, catalog</small>"]
   implementation["Implementation Layer<br/><small>storage-r2, storage-fs, documents-drizzle, assets-r2</small>"]
   shared["Shared Layer<br/><small>core, auth, crypto, sanitizer, i18n, json-api</small>"]
 

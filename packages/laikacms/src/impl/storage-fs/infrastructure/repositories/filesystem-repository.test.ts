@@ -261,8 +261,8 @@ describe('FileSystemStorageRepository removeAtoms dotted-key (LCMS-278)', () => 
   });
 });
 
-// LCMS-269: ContentBase keys its settings/trash/drafts/revisions under a
-// top-level dot-prefixed segment (`.contentbase/...`, `.laikacms/...`). Those
+// LCMS-269: Catalog keys its settings/trash/drafts/revisions under a
+// top-level dot-prefixed segment (`.laika/...`, `.laikacms/...`). Those
 // segments are also in the default ignoreList, but getObject must still
 // settle (resolve the object or fail NotFound) for them — ignoreList only
 // governs listings, not direct key reads. Guarded with a race-against-timeout
@@ -279,7 +279,7 @@ describe('FileSystemStorageRepository getObject on top-level dot-prefixed keys (
   it('resolves NotFoundError (rather than hanging) for a top-level dot-prefixed key with no file', async () => {
     const repo = new FileSystemStorageRepository(tmpDir, { json: jsonSerializer }, 'json');
 
-    for (const key of ['.contentbase/settings', '.contentbase', '.hidden/x', '.dotfile']) {
+    for (const key of ['.laika/catalog', '.laika', '.hidden/x', '.dotfile']) {
       const result = await withTimeout(LaikaTask.runPromiseResult(repo.getObject(key)), `getObject('${key}')`);
       expect(result._tag).toBe('Failure');
       expect((result as { failure: NotFoundError }).failure).toBeInstanceOf(NotFoundError);
@@ -292,17 +292,17 @@ describe('FileSystemStorageRepository getObject on top-level dot-prefixed keys (
     await withTimeout(
       LaikaTask.runPromise(
         repo.createObject({
-          key: '.contentbase/settings',
+          key: '.laika/catalog',
           type: 'object',
           content: { collections: {} },
         }),
       ),
-      "createObject('.contentbase/settings')",
+      "createObject('.laika/catalog')",
     );
 
     const result = await withTimeout(
-      LaikaTask.runPromiseResult(repo.getObject('.contentbase/settings')),
-      "getObject('.contentbase/settings')",
+      LaikaTask.runPromiseResult(repo.getObject('.laika/catalog')),
+      "getObject('.laika/catalog')",
     );
     expect(result._tag).toBe('Success');
     expect((result as { success: { key: string, content: unknown } }).success.content).toEqual({ collections: {} });

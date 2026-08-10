@@ -2,26 +2,42 @@
 
 JSON:API server for binary asset management (files and folders).
 
-## ⚠️ Authentication
+## ⚠️ Access control
 
-`buildAssetsApi` ships **no authentication middleware**. The handler will gladly list, upload,
-update, and delete asset binaries for any caller that can reach its `fetch`. Do **not** expose it to
-untrusted networks directly.
-
-Wrap it with an authentication layer — e.g. [`@laikacms/server/api`](../../decap/decap-api), which
-validates a Bearer access token before forwarding to this handler — or provide your own middleware:
+`buildAssetsApi` **requires** an `authorize` policy — there is no implicit default, because an API
+that silently defaults to open is the failure mode this option exists to prevent. The callback runs
+before every action, including the two OpenAPI routes, and receives the action descriptor plus the
+originating `Request`:
 
 ```typescript
-const api = buildAssetsApi({ repository: myAssetsRepo });
+import { AuthenticationError } from 'laikacms/core';
 
-export default {
-  async fetch(request: Request) {
+const api = buildAssetsApi({
+  repository: myAssetsRepo,
+  authorize: async ({ action, request }) => {
     const user = await myAuth(request);
-    if (!user) return new Response('Unauthorized', { status: 401 });
-    return api.fetch(request);
+    if (!user) return new AuthenticationError('Missing token'); // → 401
+    return user.isAdmin || action === 'readOpenApi'; // false → 403
   },
-};
+});
 ```
+
+`authorize` decides _what a caller may do_; it does not authenticate them for you. Either validate
+the credential inside the callback (as above), or mount the handler behind
+[`@laikacms/server/api`](../../../../server/src/api), which authenticates a Bearer token and applies
+its own `authorize` gate before forwarding.
+
+For a surface that is _deliberately_ open — a dev server on loopback, a test harness, or a handler
+already behind an authenticating proxy — say so explicitly with `allowAll`:
+
+```typescript
+import { allowAll } from 'laikacms/json-api';
+
+const api = buildAssetsApi({ repository: myAssetsRepo, authorize: allowAll });
+```
+
+Naming it rather than inlining `() => true` means every intentionally-open surface in a deployment
+is one `rg 'authorize: allowAll'` away during an audit.
 
 ## Installation
 
@@ -35,9 +51,7 @@ pnpm add laikacms
 import { buildAssetsApi } from 'laikacms/assets-api';
 // or the alias: import { buildAssetsApi } from 'laikacms/assets/api';
 
-const api = buildAssetsApi({ repository: myAssetsRepo });
-
-// Wrap with authentication before exposing publicly — see warning above.
+const api = buildAssetsApi({ repository: myAssetsRepo, authorize: myPolicy });
 export default { fetch: api.fetch };
 ```
 
@@ -49,31 +63,17 @@ interface AssetsApiOptions {
   basePath?: string;
   onError?: (error: unknown) => void;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'>;
-  authorize?: (input: AssetsAuthorizeInput) => boolean | LaikaError | Promise<boolean | LaikaError>;
+  authorize: AssetsAuthorize;
 }
 ```
 
-| Option       | Type                                              | Default         | Description                                                                                                                                                                                                      |
-| ------------ | ------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `repository` | `AssetsRepository`                                | —               | Required. The assets repository implementation to back the API.                                                                                                                                                  |
-| `basePath`   | `string`                                          | `'/api/assets'` | URL prefix stripped from `request.url` before routing. Set to the mount path (e.g. `/assets`) when mounting at a sub-path.                                                                                       |
-| `onError`    | `(error: unknown) => void`                        | —               | Called with each fatal error before the JSON:API error response is returned. Use for logging or Sentry breadcrumbs.                                                                                              |
-| `logger`     | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | —               | Passed to the JSON:API error serialiser for structured error logging.                                                                                                                                            |
-| `authorize`  | `AssetsAuthorize`                                 | —               | Optional per-action authorization hook. Invoked before each action with the action descriptor and originating `Request`. Return `true` to allow, `false` for 403, or a `LaikaError` for a custom status/message. |
-
-```typescript
-import { type AssetsAuthorizeInput, buildAssetsApi } from 'laikacms/assets-api';
-
-const api = buildAssetsApi({
-  repository: myAssetsRepo,
-  authorize: async ({ action, request }: AssetsAuthorizeInput) => {
-    const user = await getUser(request);
-    if (!user) return new AuthenticationError('Missing token');
-    if (action === 'deleteResource' && !user.isAdmin) return false; // 403
-    return true;
-  },
-});
-```
+| Option       | Type                                              | Default         | Description                                                                                                                                                                                                                                                                                                   |
+| ------------ | ------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `repository` | `AssetsRepository`                                | —               | Required. The assets repository implementation to back the API.                                                                                                                                                                                                                                               |
+| `basePath`   | `string`                                          | `'/api/assets'` | URL prefix stripped from `request.url` before routing. Set to the mount path (e.g. `/assets`) when mounting at a sub-path.                                                                                                                                                                                    |
+| `onError`    | `(error: unknown) => void`                        | —               | Called with each fatal error before the JSON:API error response is returned. Use for logging or Sentry breadcrumbs.                                                                                                                                                                                           |
+| `logger`     | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>` | —               | Passed to the JSON:API error serialiser for structured error logging.                                                                                                                                                                                                                                         |
+| `authorize`  | `AssetsAuthorize`                                 | —               | **Required.** Per-action authorization policy. Runs before every action (including the OpenAPI routes) with the action descriptor and originating `Request`. Return `true` to allow, `false` for 403, or a `LaikaError` for a custom status/message. Pass `allowAll` to declare a surface intentionally open. |
 
 ## Endpoints
 

@@ -77,7 +77,7 @@ function toTypeName(collection: string): string {
 
 /**
  * Stateful typegen engine. Holds the per-item declaration blocks in memory and
- * (re)writes the aggregate `.laika/types.d.ts` plus per-collection union
+ * (re)writes the aggregate `.laika/vite-generated/types.d.ts` plus per-collection union
  * aliases. Safe to use one-shot (build / cold dev, no channel) or incrementally
  * (dev, driven by a {@link ContentChangeChannel}).
  */

@@ -259,7 +259,7 @@ export class InMemoryDocumentsRepository extends DocumentsRepository {
 
   listRecords(options: ListRecordsOptions): LaikaStream.LaikaStream<Record, ListRecordsDone> {
     // Root listing (no/empty folder): each collection is a folder entry,
-    // matching `ContentBaseDocumentsRepository`.
+    // matching `CatalogDocumentsRepository`.
     if (!options.folder) {
       const folders: Record[] = this.topLevelFolderNames().map(key => ({ type: 'folder', key }));
       const total = folders.length;

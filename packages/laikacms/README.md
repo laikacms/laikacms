@@ -20,7 +20,7 @@ import { buildJsonApi } from 'laikacms/storage/api';
 import { FileSystemStorageRepository } from 'laikacms/storage/fs';
 
 const repo = new FileSystemStorageRepository('./content', { md: markdownSerializer }, 'md');
-const api = buildJsonApi({ repo });
+const api = buildJsonApi({ repo, authorize: allowAll });
 
 export default { fetch: api.fetch };
 ```
@@ -35,7 +35,7 @@ import { R2StorageRepository } from 'laikacms/storage/r2';
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const repo = new R2StorageRepository(env.CONTENT_BUCKET, { md: markdownSerializer }, 'md');
-    return buildJsonApi({ repo }).fetch(request);
+    return buildJsonApi({ repo, authorize: allowAll }).fetch(request);
   },
 };
 ```
@@ -46,42 +46,42 @@ export default {
 
 ### APIs (JSON:API HTTP layer)
 
-| Export                     | Purpose                            |
-| -------------------------- | ---------------------------------- |
-| `laikacms/storage/api`     | Storage CRUD over JSON:API         |
-| `laikacms/documents/api`   | Document/record CRUD over JSON:API |
-| `laikacms/assets/api`      | Asset metadata + uploads           |
-| `laikacms/contentbase-api` | Contentbase settings management    |
+| Export                   | Purpose                            |
+| ------------------------ | ---------------------------------- |
+| `laikacms/storage/api`   | Storage CRUD over JSON:API         |
+| `laikacms/documents/api` | Document/record CRUD over JSON:API |
+| `laikacms/assets/api`    | Asset metadata + uploads           |
+| `laikacms/catalog-api`   | Catalog settings management        |
 
 ### Domain (interfaces & entities)
 
-| Export                          | Purpose                         |
-| ------------------------------- | ------------------------------- |
-| `laikacms/storage`              | `StorageRepository` interface   |
-| `laikacms/documents`            | `DocumentsRepository` interface |
-| `laikacms/assets`               | `AssetsRepository` interface    |
-| `laikacms/contentbase-settings` | `SettingsProvider` interface    |
+| Export               | Purpose                         |
+| -------------------- | ------------------------------- |
+| `laikacms/storage`   | `StorageRepository` interface   |
+| `laikacms/documents` | `DocumentsRepository` interface |
+| `laikacms/assets`    | `AssetsRepository` interface    |
+| `laikacms/catalog`   | `SettingsProvider` interface    |
 
 ### Implementations
 
-| Export                                  | Backs                                                                                                                                                                    |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `laikacms/storage/fs`                   | Filesystem                                                                                                                                                               |
-| `laikacms/storage/r2`                   | Cloudflare R2                                                                                                                                                            |
-| `laikacms/storage/s3`                   | S3→R2Bucket adapter (`createS3Bucket()`) — use with `R2StorageRepository`; **not** a `StorageRepository` itself. Full S3 `StorageRepository`: `@laikacms/aws/storage-s3` |
-| `laikacms/storage/webdav`               | WebDAV server                                                                                                                                                            |
-| `laikacms/storage/drizzle`              | SQL via Drizzle                                                                                                                                                          |
-| `laikacms/storage/jsonapi-proxy`        | Remote JSON:API server                                                                                                                                                   |
-| `laikacms/documents/contentbase`        | Documents on top of `storage`                                                                                                                                            |
-| `laikacms/documents/drizzle`            | Documents in SQL                                                                                                                                                         |
-| `laikacms/documents/jsonapi-proxy`      | Documents via JSON:API proxy                                                                                                                                             |
-| `laikacms/documents/obsidian`           | Obsidian-vault-backed documents                                                                                                                                          |
-| `laikacms/assets/contentbase`           | Assets on top of `storage`                                                                                                                                               |
-| `laikacms/assets/r2`                    | Assets in R2                                                                                                                                                             |
-| `laikacms/assets/jsonapi-proxy`         | Assets via JSON:API proxy                                                                                                                                                |
-| `laikacms/assets/obsidian`              | Obsidian-vault-backed assets — **Node.js / Bun only** (uses `node:fs` / `node:path` / `node:stream`; not available on Cloudflare Workers)                                |
-| `laikacms/contentbase-settings-default` | In-memory / file-backed settings                                                                                                                                         |
-| `laikacms/contentbase-settings-decap`   | Decap-CMS-compatible settings                                                                                                                                            |
+| Export                             | Backs                                                                                                                                                                    |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `laikacms/storage/fs`              | Filesystem                                                                                                                                                               |
+| `laikacms/storage/r2`              | Cloudflare R2                                                                                                                                                            |
+| `laikacms/storage/s3`              | S3→R2Bucket adapter (`createS3Bucket()`) — use with `R2StorageRepository`; **not** a `StorageRepository` itself. Full S3 `StorageRepository`: `@laikacms/aws/storage-s3` |
+| `laikacms/storage/webdav`          | WebDAV server                                                                                                                                                            |
+| `laikacms/storage/drizzle`         | SQL via Drizzle                                                                                                                                                          |
+| `laikacms/storage/jsonapi-proxy`   | Remote JSON:API server                                                                                                                                                   |
+| `laikacms/documents/catalog`       | Documents on top of `storage`                                                                                                                                            |
+| `laikacms/documents/drizzle`       | Documents in SQL                                                                                                                                                         |
+| `laikacms/documents/jsonapi-proxy` | Documents via JSON:API proxy                                                                                                                                             |
+| `laikacms/documents/obsidian`      | Obsidian-vault-backed documents                                                                                                                                          |
+| `laikacms/assets/catalog`          | Assets on top of `storage`                                                                                                                                               |
+| `laikacms/assets/r2`               | Assets in R2                                                                                                                                                             |
+| `laikacms/assets/jsonapi-proxy`    | Assets via JSON:API proxy                                                                                                                                                |
+| `laikacms/assets/obsidian`         | Obsidian-vault-backed assets — **Node.js / Bun only** (uses `node:fs` / `node:path` / `node:stream`; not available on Cloudflare Workers)                                |
+| `laikacms/catalog-convention`      | In-memory / file-backed settings                                                                                                                                         |
+| `laikacms/catalog-decap`           | Decap-CMS-compatible settings                                                                                                                                            |
 
 ### Testing utilities
 

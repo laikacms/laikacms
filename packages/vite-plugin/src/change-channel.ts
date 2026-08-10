@@ -53,7 +53,7 @@ export interface RepositoryChangeChannelOptions {
   /**
    * When `true`, any change invalidates every resolved `laika:` virtual module
    * rather than only the ones whose keys changed. Coarser but immune to
-   * cross-namespace coupling (e.g. a storage object backing a ContentBase
+   * cross-namespace coupling (e.g. a storage object backing a Catalog
    * document). Defaults to `false` (targeted per-key invalidation).
    */
   coarse?: boolean;

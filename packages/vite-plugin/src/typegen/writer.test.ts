@@ -15,11 +15,11 @@ afterEach(async () => {
 });
 
 describe('TypegenWriter', () => {
-  it('writes types.d.ts under .laika/', async () => {
+  it('writes types.d.ts under .laika/vite-generated/', async () => {
     const writer = new TypegenWriter(root);
     const changed = await writer.writeTypes('// types\n');
     expect(changed).toBe(true);
-    expect(await fs.readFile(path.join(root, '.laika', 'types.d.ts'), 'utf8')).toBe('// types\n');
+    expect(await fs.readFile(path.join(root, '.laika', 'vite-generated', 'types.d.ts'), 'utf8')).toBe('// types\n');
   });
 
   it('skips a no-op rewrite (identical content)', async () => {
@@ -34,7 +34,7 @@ describe('TypegenWriter', () => {
     const created = await writer.ensureEnvReference();
     expect(created).toBe(true);
     expect(await fs.readFile(path.join(root, 'laika-env.d.ts'), 'utf8')).toBe(
-      '/// <reference path="./.laika/types.d.ts" />\n',
+      '/// <reference path="./.laika/vite-generated/types.d.ts" />\n',
     );
 
     // Simulate a user edit; ensure it is preserved.
@@ -44,26 +44,32 @@ describe('TypegenWriter', () => {
     expect(await fs.readFile(path.join(root, 'laika-env.d.ts'), 'utf8')).toBe('CUSTOM CONTENT\n');
   });
 
-  it('appends .laika/ to .gitignore idempotently and writes .laika/.gitignore', async () => {
+  it('ignores only the generated subtree, never .laika/ itself', async () => {
     const writer = new TypegenWriter(root);
     await fs.writeFile(path.join(root, '.gitignore'), 'node_modules\n', 'utf8');
 
     expect(await writer.ensureRootGitignore()).toBe(true);
     const gitignore = await fs.readFile(path.join(root, '.gitignore'), 'utf8');
     expect(gitignore).toContain('node_modules');
-    expect(gitignore).toContain('.laika/');
+    expect(gitignore).toContain('.laika/vite-generated/');
+    // A bare `.laika/` rule would swallow the catalog, schemas and revisions.
+    expect(gitignore.split(/\r?\n/).map(l => l.trim())).not.toContain('.laika/');
 
     // Idempotent.
     expect(await writer.ensureRootGitignore()).toBe(false);
 
     await writer.ensureLaikaGitignore();
-    expect(await fs.readFile(path.join(root, '.laika', '.gitignore'), 'utf8')).toBe('*\n');
+    expect(await fs.readFile(path.join(root, '.laika', '.gitignore'), 'utf8')).toBe(
+      'vite-generated/\n',
+    );
   });
 
   it('creates .gitignore when absent', async () => {
     const writer = new TypegenWriter(root);
     expect(await writer.ensureRootGitignore()).toBe(true);
-    expect(await fs.readFile(path.join(root, '.gitignore'), 'utf8')).toContain('.laika/');
+    expect(await fs.readFile(path.join(root, '.gitignore'), 'utf8')).toContain(
+      '.laika/vite-generated/',
+    );
   });
 
   it('prunes stale collection files', async () => {

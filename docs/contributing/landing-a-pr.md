@@ -13,12 +13,12 @@
 referencing the issue and PR, e.g.:
 
 ```
-fix(assets-contentbase): remap EntryAlreadyExistsError detail to domain key (LCMS-283) (#871)
+fix(assets-catalog): remap EntryAlreadyExistsError detail to domain key (LCMS-283) (#871)
 docs(quickstart-fs-decap): pin @hono/node-server to ^2 in §1 install (LCMS-268) (#873)
 ```
 
 Common types: `feat`, `fix`, `docs`, `test`, `chore`, `refactor`. `scope` is usually the package or
-subpath you changed (`assets-contentbase`, `quickstart-fs-decap`, …).
+subpath you changed (`assets-catalog`, `quickstart-fs-decap`, …).
 
 ## Changesets
 

@@ -16,7 +16,25 @@ protocol".
 
 One individual contract within the protocol: documents, assets, or storage. Implementations range
 from real sources (filesystem, R2, S3, WebDAV, Drizzle, Obsidian) to compositions over other
-repositories (contentbase, JSON:API proxy).
+repositories (catalog, JSON:API proxy).
+
+## catalog
+
+The opinionated layer of the protocol: the named collections — document folders and media folders —
+that a store's content is organised into, each with a directory, an optional JSON Schema, and (for
+media) accepted content types. The contract is `CatalogProvider`; `laikacms/documents/catalog` and
+`laikacms/assets/catalog` are the repositories that project those collections onto generic
+[atoms and folders](#atom--folder). A catalog is optional: a backend can implement
+`DocumentsRepository` directly and never expose one.
+
+Where a catalog is persisted is the provider's business, not the contract's.
+`laikacms/catalog-convention` keeps it in storage under `.laika/` (`.laika/catalog`,
+`.laika/schemas/<collection>`, `.laika/revisions/<collection>`); `laikacms/catalog-decap` derives it
+from a Decap config object; a DynamoDB provider has no path at all. Those keys are deliberately
+extensionless so the storage repository's configured serializers decide the on-disk format.
+
+Not to be confused with pnpm's `catalog:` dependency protocol, which this repo also uses — that one
+is a package-manager concern and never appears in library code.
 
 ## adapter
 

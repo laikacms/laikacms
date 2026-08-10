@@ -1,5 +1,6 @@
 import * as Effect from 'effect/Effect';
 import { describe, expect, it, vi } from 'vitest';
+import { allowAll } from '../../shared/json-api/authorize.js';
 
 import { BadRequestError, InternalError, LaikaStream, LaikaTask, NotFoundError } from 'laikacms/core';
 import type {
@@ -24,14 +25,14 @@ const stubRepo = {} as StorageRepository;
 
 describe('storage-api Cache-Control', () => {
   it('sends Cache-Control: no-store on the root API info response', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/'));
     expect(res.status).toBe(200);
     expect(res.headers.get('Cache-Control')).toBe('no-store');
   });
 
   it('sends Cache-Control: no-store on 404 responses', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/does-not-exist'));
     expect(res.status).toBe(404);
     expect(res.headers.get('Cache-Control')).toBe('no-store');
@@ -57,7 +58,7 @@ describe('storage-api meta.warnings', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atoms/root'));
     expect(res.status).toBe(200);
 
@@ -96,7 +97,7 @@ describe('storage-api meta.warnings', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/notes%2Fhello', {
         method: 'POST',
@@ -143,7 +144,7 @@ describe('storage-api meta.warnings', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/objects/notes%2Fhello'));
     expect(res.status).toBe(200);
 
@@ -183,7 +184,7 @@ describe('storage-api meta.warnings', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/operations', {
         method: 'POST',
@@ -217,7 +218,7 @@ describe('storage-api meta.warnings', () => {
         LaikaTask.make<StorageObject>(() => Effect.fail(new NotFoundError('object not found'))),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo, onError });
+    const api = buildJsonApi({ repo: partialRepo, onError, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/objects/missing-key'));
     expect(res.status).toBe(404);
     expect(onError).toHaveBeenCalledOnce();
@@ -233,7 +234,7 @@ describe('storage-api meta.warnings', () => {
       },
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo, onError });
+    const api = buildJsonApi({ repo: partialRepo, onError, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/objects/boom'));
     expect(res.status).toBe(500);
     expect(onError).toHaveBeenCalledOnce();
@@ -253,7 +254,7 @@ describe('storage-api meta.warnings', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/operations', {
         method: 'POST',
@@ -309,7 +310,7 @@ describe('storage-api meta.warnings', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/operations', {
         method: 'POST',
@@ -348,7 +349,7 @@ describe('POST /atoms (create folder)', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/atoms', {
         method: 'POST',
@@ -371,7 +372,7 @@ describe('POST /atoms (create folder)', () => {
   });
 
   it('returns 400 when the request body fails validation', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/atoms', {
         method: 'POST',
@@ -401,7 +402,7 @@ describe('storage-api LCMS-245 rawSerializer extra-field error propagation', () 
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
 
     // Race with a timeout so the test fails fast if we regress to a hang
     const res = await Promise.race([
@@ -445,7 +446,7 @@ describe('storage-api LCMS-245 rawSerializer extra-field error propagation', () 
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/notes%2Fhello', {
         method: 'POST',
@@ -461,7 +462,7 @@ describe('storage-api LCMS-245 rawSerializer extra-field error propagation', () 
 
 describe('POST /objects — unknown attribute key rejection (LCMS-254)', () => {
   it('returns 400 when attributes contains top-level keys instead of a content wrapper', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects', {
         method: 'POST',
@@ -481,7 +482,7 @@ describe('POST /objects — unknown attribute key rejection (LCMS-254)', () => {
   });
 
   it("returns 400 when attributes contains a typo'd content key", async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects', {
         method: 'POST',
@@ -515,7 +516,7 @@ describe('POST /objects — unknown attribute key rejection (LCMS-254)', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects', {
         method: 'POST',
@@ -535,7 +536,7 @@ describe('POST /objects — unknown attribute key rejection (LCMS-254)', () => {
 
 describe('POST /objects — empty id validation (LCMS-173)', () => {
   it('returns 400 with a clear id-required message when data.id is empty string', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects', {
         method: 'POST',
@@ -554,7 +555,7 @@ describe('POST /objects — empty id validation (LCMS-173)', () => {
 
 describe('POST /atoms (create folder) — empty id validation (LCMS-173)', () => {
   it('returns 400 with a clear id-required message when data.id is empty string', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/atoms', {
         method: 'POST',
@@ -592,7 +593,7 @@ describe('storage-api pagination links (LCMS-170)', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/atoms/root?page[number]=1&page[size]=5'),
     );
@@ -621,7 +622,7 @@ describe('storage-api pagination links (LCMS-170)', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/atom-summaries/root?page[number]=1&page[size]=5'),
     );
@@ -634,7 +635,7 @@ describe('storage-api pagination links (LCMS-170)', () => {
 
 describe('PATCH /objects — unknown attribute key rejection (LCMS-254)', () => {
   it('returns 400 when attributes contains top-level keys instead of a content wrapper', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/p%2Ffoo', {
         method: 'PATCH',
@@ -676,7 +677,7 @@ describe('GET /capabilities (LCMS-178)', () => {
       getCapabilities: () => LaikaTask.make(() => Effect.succeed(caps)),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/capabilities'));
     expect(res.status).toBe(200);
 
@@ -694,7 +695,7 @@ describe('GET /capabilities (LCMS-178)', () => {
       getCapabilities: () => LaikaTask.make(() => Effect.fail(new NotFoundError('unavailable'))),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/capabilities'));
     expect(res.status).toBe(404);
 
@@ -707,7 +708,7 @@ describe('GET /capabilities (LCMS-178)', () => {
     const repo = {
       getCapabilities: () => LaikaTask.make<Capabilities>(() => Effect.fail(new InternalError('storage outage'))),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/capabilities'));
     expect(res.status).toBe(500);
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
@@ -753,7 +754,7 @@ describe('GET /atoms — cursor pagination rejection (LCMS-172)', () => {
     }) as unknown as StorageRepository;
 
   it('GET /atoms rejects page[after] with 400 when backend has cursor: false', async () => {
-    const api = buildJsonApi({ repo: makeCursorAwareRepo(false) });
+    const api = buildJsonApi({ repo: makeCursorAwareRepo(false), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atoms/posts?page[after]=e04&page[size]=5'));
     expect(res.status).toBe(400);
     const body = await res.json() as { errors: Array<{ detail: string }> };
@@ -762,7 +763,7 @@ describe('GET /atoms — cursor pagination rejection (LCMS-172)', () => {
   });
 
   it('GET /atoms rejects page[before] with 400 when backend has cursor: false', async () => {
-    const api = buildJsonApi({ repo: makeCursorAwareRepo(false) });
+    const api = buildJsonApi({ repo: makeCursorAwareRepo(false), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atoms/posts?page[before]=e10'));
     expect(res.status).toBe(400);
     const body = await res.json() as { errors: Array<{ detail: string }> };
@@ -771,13 +772,13 @@ describe('GET /atoms — cursor pagination rejection (LCMS-172)', () => {
   });
 
   it('GET /atoms allows page[after] when backend has cursor: true', async () => {
-    const api = buildJsonApi({ repo: makeCursorAwareRepo(true) });
+    const api = buildJsonApi({ repo: makeCursorAwareRepo(true), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atoms/posts?page[after]=e04'));
     expect(res.status).toBe(200);
   });
 
   it('GET /atom-summaries rejects page[after] with 400 when backend has cursor: false', async () => {
-    const api = buildJsonApi({ repo: makeCursorAwareRepo(false) });
+    const api = buildJsonApi({ repo: makeCursorAwareRepo(false), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atom-summaries/posts?page[after]=e04&page[size]=5'));
     expect(res.status).toBe(400);
     const body = await res.json() as { errors: Array<{ detail: string }> };
@@ -786,7 +787,7 @@ describe('GET /atoms — cursor pagination rejection (LCMS-172)', () => {
   });
 
   it('GET /atom-summaries allows page[after] when backend has cursor: true', async () => {
-    const api = buildJsonApi({ repo: makeCursorAwareRepo(true) });
+    const api = buildJsonApi({ repo: makeCursorAwareRepo(true), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atom-summaries/posts?page[after]=e04'));
     expect(res.status).toBe(200);
   });
@@ -831,7 +832,7 @@ describe('GET /atoms — standalone page[size] emits followable next link (LCMS-
     }) as unknown as StorageRepository;
 
   it('GET /atoms?page[size]=1 emits a page[number]-based next link, not page[after]', async () => {
-    const api = buildJsonApi({ repo: makeTwoItemRepo() });
+    const api = buildJsonApi({ repo: makeTwoItemRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atoms/posts?page[size]=1'));
     expect(res.status).toBe(200);
     const body = await res.json() as { links?: { next?: string } };
@@ -841,7 +842,7 @@ describe('GET /atoms — standalone page[size] emits followable next link (LCMS-
   });
 
   it('following the next link from GET /atoms?page[size]=1 returns 200, not 400', async () => {
-    const api = buildJsonApi({ repo: makeTwoItemRepo() });
+    const api = buildJsonApi({ repo: makeTwoItemRepo(), authorize: allowAll });
     // Get page 1 to obtain the next link
     const res1 = await api.fetch(new Request('http://localhost/atoms/posts?page[size]=1'));
     const body1 = await res1.json() as { links?: { next?: string } };
@@ -853,7 +854,7 @@ describe('GET /atoms — standalone page[size] emits followable next link (LCMS-
   });
 
   it('GET /atom-summaries?page[size]=1 emits a page[number]-based next link, not page[after]', async () => {
-    const api = buildJsonApi({ repo: makeTwoItemRepo() });
+    const api = buildJsonApi({ repo: makeTwoItemRepo(), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atom-summaries/posts?page[size]=1'));
     expect(res.status).toBe(200);
     const body = await res.json() as { links?: { next?: string } };
@@ -886,7 +887,7 @@ describe('DELETE /objects/:key', () => {
     }) as unknown as StorageRepository;
 
   it('returns 200 with meta.deleted=true when the key exists', async () => {
-    const api = buildJsonApi({ repo: makeDeleteRepo(['hello.md']) });
+    const api = buildJsonApi({ repo: makeDeleteRepo(['hello.md']), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/hello.md', { method: 'DELETE' }),
     );
@@ -896,7 +897,7 @@ describe('DELETE /objects/:key', () => {
   });
 
   it('returns 404 when the key does not exist', async () => {
-    const api = buildJsonApi({ repo: makeDeleteRepo([]) });
+    const api = buildJsonApi({ repo: makeDeleteRepo([]), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/missing.md', { method: 'DELETE' }),
     );
@@ -906,7 +907,7 @@ describe('DELETE /objects/:key', () => {
   });
 
   it('decodes %2F-encoded keys before passing to removeAtoms', async () => {
-    const api = buildJsonApi({ repo: makeDeleteRepo(['posts/hello-world.md']) });
+    const api = buildJsonApi({ repo: makeDeleteRepo(['posts/hello-world.md']), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/posts%2Fhello-world.md', { method: 'DELETE' }),
     );
@@ -927,7 +928,7 @@ describe('DELETE /objects/:key', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/hello.md', { method: 'DELETE' }),
     );
@@ -941,7 +942,7 @@ describe('DELETE /objects/:key', () => {
   });
 
   it('returns 400 when no key is provided (DELETE /objects)', async () => {
-    const api = buildJsonApi({ repo: makeDeleteRepo([]) });
+    const api = buildJsonApi({ repo: makeDeleteRepo([]), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects', { method: 'DELETE' }),
     );
@@ -965,7 +966,7 @@ describe('DELETE /objects/:key', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: extensionResolvingRepo });
+    const api = buildJsonApi({ repo: extensionResolvingRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/del-test', { method: 'DELETE' }),
     );
@@ -981,7 +982,7 @@ describe('DELETE /objects/:key', () => {
 
 describe('405 Method Not Allowed on /objects/{key}', () => {
   it('returns 405 with Allow header for PUT on /objects/{key}', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/hello.md', { method: 'PUT' }),
     );
@@ -993,7 +994,7 @@ describe('405 Method Not Allowed on /objects/{key}', () => {
   });
 
   it('sends Cache-Control: no-store on 405 responses', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/hello.md', { method: 'PUT' }),
     );
@@ -1024,7 +1025,7 @@ const makeUpdateObjectRepo = (resultKey: string) =>
 
 describe('PATCH /objects/:key (LCMS-218)', () => {
   it('returns 200 with updated object resource on valid matching body', async () => {
-    const api = buildJsonApi({ repo: makeUpdateObjectRepo('posts/hello') });
+    const api = buildJsonApi({ repo: makeUpdateObjectRepo('posts/hello'), authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/posts%2Fhello', {
         method: 'PATCH',
@@ -1048,7 +1049,7 @@ describe('PATCH /objects/:key (LCMS-218)', () => {
   });
 
   it('returns 400 when URL key does not match body data.id', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/posts%2Fhello', {
         method: 'PATCH',
@@ -1072,7 +1073,7 @@ describe('PATCH /objects/:key (LCMS-218)', () => {
       updateObject: () => LaikaTask.make<StorageObject>(() => Effect.fail(new NotFoundError('not found'))),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: notFoundRepo });
+    const api = buildJsonApi({ repo: notFoundRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/posts%2Fmissing', {
         method: 'PATCH',
@@ -1095,7 +1096,7 @@ describe('PATCH /objects/:key (LCMS-218)', () => {
     const repo = {
       updateObject: () => LaikaTask.make<StorageObject>(() => Effect.fail(new InternalError('storage outage'))),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo });
+    const api = buildJsonApi({ repo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/posts%2Fhello', {
         method: 'PATCH',
@@ -1155,7 +1156,7 @@ describe('storage-api meta.page.total (LCMS-214)', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atoms/root'));
     expect(res.status).toBe(200);
     const body = await res.json() as { meta?: { page?: { total?: number } } };
@@ -1179,7 +1180,7 @@ describe('storage-api meta.page.total (LCMS-214)', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atoms/root'));
     expect(res.status).toBe(200);
     const body = await res.json() as { meta?: { page?: { total?: number } } };
@@ -1203,7 +1204,7 @@ describe('storage-api meta.page.total (LCMS-214)', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atom-summaries/root'));
     expect(res.status).toBe(200);
     const body = await res.json() as { meta?: { page?: { total?: number } } };
@@ -1227,7 +1228,7 @@ describe('storage-api meta.page.total (LCMS-214)', () => {
         ),
     } as unknown as StorageRepository;
 
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atom-summaries/root'));
     expect(res.status).toBe(200);
     const body = await res.json() as { meta?: { page?: { total?: number } } };
@@ -1237,7 +1238,7 @@ describe('storage-api meta.page.total (LCMS-214)', () => {
 
 describe('GET /folders/:key (LCMS-218)', () => {
   it('returns 200 with folder resource for an existing folder key', async () => {
-    const api = buildJsonApi({ repo: makeFolderRepo(['posts']) });
+    const api = buildJsonApi({ repo: makeFolderRepo(['posts']), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/folders/posts'));
     expect(res.status).toBe(200);
     const body = await res.json() as { data: { type: string, id: string } };
@@ -1246,7 +1247,7 @@ describe('GET /folders/:key (LCMS-218)', () => {
   });
 
   it('decodes %2F-encoded folder keys', async () => {
-    const api = buildJsonApi({ repo: makeFolderRepo(['posts/2026']) });
+    const api = buildJsonApi({ repo: makeFolderRepo(['posts/2026']), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/folders/posts%2F2026'));
     expect(res.status).toBe(200);
     const body = await res.json() as { data: { id: string } };
@@ -1254,7 +1255,7 @@ describe('GET /folders/:key (LCMS-218)', () => {
   });
 
   it('returns 404 when repo.getFolder fails with NotFoundError', async () => {
-    const api = buildJsonApi({ repo: makeFolderRepo([]) });
+    const api = buildJsonApi({ repo: makeFolderRepo([]), authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/folders/missing'));
     expect(res.status).toBe(404);
     const body = await res.json() as { errors: Array<{ code: string }> };
@@ -1262,7 +1263,7 @@ describe('GET /folders/:key (LCMS-218)', () => {
   });
 
   it('returns 400 when no key segment is provided (GET /folders)', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/folders'));
     expect(res.status).toBe(400);
   });
@@ -1281,7 +1282,7 @@ describe('GET /atoms/:key — filter[depth] forwarding (LCMS-290)', () => {
   it('parses filter[depth]=2 as a number and forwards it to repo.listAtoms', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeAtomsStream());
     const partialRepo = { listAtoms: spy } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/atoms/root?filter%5Bdepth%5D=2'));
     expect(res.status).toBe(200);
@@ -1294,7 +1295,7 @@ describe('GET /atoms/:key — filter[depth] forwarding (LCMS-290)', () => {
   it('falls back to depth:1 when filter[depth]=abc is not a valid integer', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeAtomsStream());
     const partialRepo = { listAtoms: spy } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/atoms/root?filter%5Bdepth%5D=abc'));
     expect(res.status).toBe(200);
@@ -1317,7 +1318,7 @@ describe('GET /atom-summaries/:key — filter[depth] forwarding (LCMS-290)', () 
   it('parses filter[depth]=2 as a number and forwards it to repo.listAtomSummaries', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeAtomSummariesStream());
     const partialRepo = { listAtomSummaries: spy } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/atom-summaries/root?filter%5Bdepth%5D=2'));
     expect(res.status).toBe(200);
@@ -1330,7 +1331,7 @@ describe('GET /atom-summaries/:key — filter[depth] forwarding (LCMS-290)', () 
   it('falls back to depth:1 when filter[depth]=abc is not a valid integer', async () => {
     const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeAtomSummariesStream());
     const partialRepo = { listAtomSummaries: spy } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
 
     const res = await api.fetch(new Request('http://localhost/atom-summaries/root?filter%5Bdepth%5D=abc'));
     expect(res.status).toBe(200);
@@ -1346,7 +1347,7 @@ describe('GET /atom-summaries/:key — filter[depth] forwarding (LCMS-290)', () 
 
 describe('GET /atoms — filter[prefix] query param rejection (LCMS-322)', () => {
   it('returns 400 with invalid_data when filter[prefix] is used without a path key', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atoms?filter%5Bprefix%5D=posts'));
     expect(res.status).toBe(400);
     const body = await res.json() as { errors: Array<{ code: string, detail: string }> };
@@ -1362,7 +1363,7 @@ describe('GET /atoms — filter[prefix] query param rejection (LCMS-322)', () =>
           () => Effect.succeed({} as ListAtomsDone),
         ),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     // /atoms/posts has a path key ("posts"), filter[prefix] in query should not trigger 400
     const res = await api.fetch(new Request('http://localhost/atoms/posts?filter%5Bprefix%5D=ignored'));
     expect(res.status).toBe(200);
@@ -1371,7 +1372,7 @@ describe('GET /atoms — filter[prefix] query param rejection (LCMS-322)', () =>
 
 describe('GET /atom-summaries — filter[prefix] query param rejection (LCMS-322)', () => {
   it('returns 400 with invalid_data when filter[prefix] is used without a path key', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atom-summaries?filter%5Bprefix%5D=posts'));
     expect(res.status).toBe(400);
     const body = await res.json() as { errors: Array<{ code: string, detail: string }> };
@@ -1387,7 +1388,7 @@ describe('GET /atom-summaries — filter[prefix] query param rejection (LCMS-322
           () => Effect.succeed({} as ListAtomsDone),
         ),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atom-summaries/posts?filter%5Bprefix%5D=ignored'));
     expect(res.status).toBe(200);
   });
@@ -1402,7 +1403,7 @@ describe('storage-api: InternalError → 500 coverage (LCMS-432)', () => {
     const partialRepo = {
       createFolder: () => LaikaTask.make<Folder>(() => Effect.fail(new InternalError('storage outage'))),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/atoms', {
         method: 'POST',
@@ -1420,7 +1421,7 @@ describe('storage-api: InternalError → 500 coverage (LCMS-432)', () => {
     const partialRepo = {
       getObject: () => LaikaTask.make<StorageObject>(() => Effect.fail(new InternalError('storage outage'))),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/objects/notes%2Fhello'));
     expect(res.status).toBe(500);
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
@@ -1432,7 +1433,7 @@ describe('storage-api: InternalError → 500 coverage (LCMS-432)', () => {
     const partialRepo = {
       getFolder: () => LaikaTask.make<Folder>(() => Effect.fail(new InternalError('storage outage'))),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/folders/posts'));
     expect(res.status).toBe(500);
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
@@ -1444,7 +1445,7 @@ describe('storage-api: InternalError → 500 coverage (LCMS-432)', () => {
     const partialRepo = {
       createObject: () => LaikaTask.make<StorageObject>(() => Effect.fail(new InternalError('storage outage'))),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects', {
         method: 'POST',
@@ -1462,7 +1463,7 @@ describe('storage-api: InternalError → 500 coverage (LCMS-432)', () => {
     const partialRepo = {
       listAtoms: () => LaikaStream.make<never, ListAtomsDone>(() => Effect.fail(new InternalError('storage outage'))),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atoms/root'));
     expect(res.status).toBe(500);
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
@@ -1475,7 +1476,7 @@ describe('storage-api: InternalError → 500 coverage (LCMS-432)', () => {
       listAtomSummaries: () =>
         LaikaStream.make<never, ListAtomsDone>(() => Effect.fail(new InternalError('storage outage'))),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/atom-summaries/root'));
     expect(res.status).toBe(500);
     const body = await res.json() as { errors: Array<{ status: string, code: string }> };
@@ -1490,7 +1491,7 @@ describe('storage-api: InternalError → 500 coverage (LCMS-432)', () => {
           () => Effect.fail(new InternalError('storage outage')),
         ),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects/notes%2Fhello', { method: 'DELETE' }),
     );
@@ -1509,7 +1510,7 @@ describe('storage-api: unmapped error code falls back to 500, not 400 (LCMS-434)
     const partialRepo = {
       createObject: () => LaikaTask.make(() => Effect.fail(unmappedErr)),
     } as unknown as StorageRepository;
-    const api = buildJsonApi({ repo: partialRepo });
+    const api = buildJsonApi({ repo: partialRepo, authorize: allowAll });
     const res = await api.fetch(
       new Request('http://localhost/objects', {
         method: 'POST',

@@ -2,6 +2,7 @@ import { load } from 'js-yaml';
 import type { AssetsRepository } from 'laikacms/assets';
 import type { OpenApiDocument, OpenApiOperation, OpenApiPathItem } from 'laikacms/json-api';
 import { describe, expect, it } from 'vitest';
+import { allowAll } from '../../shared/json-api/authorize.js';
 
 import { buildAssetsOpenApi } from './openapi.js';
 import { buildAssetsApi } from './server.js';
@@ -15,14 +16,14 @@ const operationsOf = (item: OpenApiPathItem): OpenApiOperation[] =>
 
 describe('GET /openapi.json', () => {
   it('returns 200 with Content-Type application/json', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/openapi.json'));
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('application/json');
   });
 
   it('serves an OpenAPI 3.1.0 document', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/openapi.json'));
     const doc = await res.json() as OpenApiDocument;
     expect(doc.openapi).toBe('3.1.0');
@@ -30,14 +31,14 @@ describe('GET /openapi.json', () => {
   });
 
   it('servers[0].url reflects the request origin + basePath', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('https://cms.example.com/api/assets/openapi.json'));
     const doc = await res.json() as OpenApiDocument;
     expect(doc.servers?.[0]?.url).toBe('https://cms.example.com/api/assets');
   });
 
   it('paths are exactly the routes the server implements', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/openapi.json'));
     const doc = await res.json() as OpenApiDocument;
     expect(Object.keys(doc.paths).sort()).toEqual([
@@ -52,7 +53,7 @@ describe('GET /openapi.json', () => {
   });
 
   it('every operation has an operationId and a responses object', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/openapi.json'));
     const doc = await res.json() as OpenApiDocument;
     const operations = Object.values(doc.paths).flatMap(operationsOf);
@@ -65,7 +66,7 @@ describe('GET /openapi.json', () => {
   });
 
   it('a custom basePath passed to buildAssetsApi is reflected in the served document', async () => {
-    const api = buildAssetsApi({ repository: stubRepo, basePath: '/custom/assets' });
+    const api = buildAssetsApi({ repository: stubRepo, basePath: '/custom/assets', authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/custom/assets/openapi.json'));
     expect(res.status).toBe(200);
     const doc = await res.json() as OpenApiDocument;
@@ -75,14 +76,14 @@ describe('GET /openapi.json', () => {
 
 describe('GET /openapi.yaml', () => {
   it('returns 200 with Content-Type application/yaml', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/api/assets/openapi.yaml'));
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('application/yaml');
   });
 
   it('serves the same document as YAML with servers[0].url rewritten', async () => {
-    const api = buildAssetsApi({ repository: stubRepo });
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('https://cms.example.com/api/assets/openapi.yaml'));
     const doc = load(await res.text()) as OpenApiDocument;
     expect(doc.openapi).toBe('3.1.0');

@@ -24,6 +24,7 @@ import { Readable } from 'node:stream';
 
 import { buildAssetsApi } from 'laikacms/assets-api';
 import { buildJsonApi as buildDocumentsJsonApi } from 'laikacms/documents-api';
+import { allowAll } from 'laikacms/json-api';
 import { buildJsonApi as buildStorageJsonApi } from 'laikacms/storage-api';
 
 import type { LaikaRepositories } from './backend.js';
@@ -183,9 +184,24 @@ export function mountLocalApi(
     );
   }
 
-  const storageApi = buildStorageJsonApi({ repo: repos.storage, basePath: `${basePath}/storage` });
-  const documentsApi = buildDocumentsJsonApi({ repo: repos.documents, basePath: `${basePath}/documents` });
-  const assetsApi = buildAssetsApi({ repository: repos.assets, basePath: `${basePath}/assets` });
+  // The local dev API is deliberately unauthenticated — it exists to give the
+  // dev server direct access to the developer's own content, and the loopback
+  // check above is what keeps it off untrusted networks.
+  const storageApi = buildStorageJsonApi({
+    repo: repos.storage,
+    basePath: `${basePath}/storage`,
+    authorize: allowAll,
+  });
+  const documentsApi = buildDocumentsJsonApi({
+    repo: repos.documents,
+    basePath: `${basePath}/documents`,
+    authorize: allowAll,
+  });
+  const assetsApi = buildAssetsApi({
+    repository: repos.assets,
+    basePath: `${basePath}/assets`,
+    authorize: allowAll,
+  });
 
   server.middlewares.use(`${basePath}/storage`, toConnectMiddleware(storageApi.fetch));
   server.middlewares.use(`${basePath}/documents`, toConnectMiddleware(documentsApi.fetch));

@@ -42,7 +42,7 @@ Examples added for `storage-fs` (see `packages/laikacms/src/shared/i18n/translat
 `storage.fs.failedToGetDirectoryMetadata`, `storage.fs.failedToListDirectory`,
 `storage.fs.failedToListDrives`, `storage.fs.unexpectedFileSystemError`.
 
-Non-storage backends (`documents-jsonapi-proxy`, `contentbase`, `obsidian`, …) should use the same
+Non-storage backends (`documents-jsonapi-proxy`, `catalog`, `obsidian`, …) should use the same
 `<package>.<situation>` shape with their own package slug in place of `storage.<backend>` (e.g.
 `documentsJsonapiProxy.upstreamTimeout`) — this convention isn't storage-specific, `storage-fs` is
 just the reference implementation for LCMS-471.
@@ -110,5 +110,5 @@ is additive, not a replacement for the English fallback string.
 `storage-fs` (`packages/laikacms/src/impl/storage-fs/`) is the reference implementation: every
 `LaikaError` constructed in its datasource, repository, and `utilities.ts` error-mapping helper sets
 `translation.message` per the scheme above. Other backends (`storage-r2`, `storage-s3`,
-`storage-drizzle`, `storage-webdav`, `documents-jsonapi-proxy`, `contentbase`, `obsidian`, …) are
+`storage-drizzle`, `storage-webdav`, `documents-jsonapi-proxy`, `catalog`, `obsidian`, …) are
 follow-up work — apply the same pattern per-backend rather than in one large cross-cutting change.

@@ -46,7 +46,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepack": "node ../../scripts/check-no-catalog-deps.mjs"
+    "prepack": "node ../../scripts/check-no-pnpm-catalog-deps.mjs"
   },
   "dependencies": {
     "es-module-lexer": "catalog:",

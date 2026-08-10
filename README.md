@@ -27,19 +27,24 @@ pnpm add laikacms
 ```
 
 ```typescript
+import { allowAll } from 'laikacms/json-api';
 import { buildJsonApi } from 'laikacms/storage-api';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { rawSerializer } from 'laikacms/storage-serializers-raw';
 
 const repo = new FileSystemStorageRepository('./content', { md: rawSerializer }, 'md');
-const api = buildJsonApi({ repo });
+// `allowAll` = "this surface is intentionally open". Swap it for a real policy
+// (or use `laikaApi`) before this is reachable from an untrusted network.
+const api = buildJsonApi({ repo, authorize: allowAll });
 
 export default { fetch: api.fetch };
 ```
 
-> **⚠️ No auth by default** — `buildJsonApi` performs no authentication unless you give it one. Pass
-> an `authorize` callback (invoked per action with its args + the `Request`, returning
-> `true`/`false`/a `LaikaError`), or use `laikaApi` for built-in auth. See
+> **⚠️ You must state a policy** — `buildJsonApi` requires an `authorize` callback; there is no
+> implicit default. It is invoked per action with the action's args + the `Request`, and returns
+> `true`/`false`/a `LaikaError`. `allowAll` above is the explicit opt-out for a surface you know is
+> unreachable by untrusted callers. `authorize` decides _what_ a caller may do — it does not
+> authenticate them; use `laikaApi` for built-in Bearer auth. See
 > [Getting Started](./docs/guides/getting-started.md) for both.
 
 ## Cloudflare Workers
@@ -52,7 +57,7 @@ import { rawSerializer } from 'laikacms/storage-serializers-raw';
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const repo = new R2StorageRepository(env.CONTENT_BUCKET, { md: rawSerializer }, 'md');
-    return buildJsonApi({ repo }).fetch(request);
+    return buildJsonApi({ repo, authorize: allowAll }).fetch(request);
   },
 };
 ```

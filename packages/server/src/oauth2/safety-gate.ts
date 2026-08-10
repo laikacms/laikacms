@@ -16,12 +16,22 @@
 // defensively.
 
 /**
- * Minimum supported Node.js major version. Sourced from the `engines` field
- * of packages/server/package.json (`"node": ">=24.0.0"`); the repository root
- * package.json agrees (`"node": "24.x"`). Below this floor there is no
- * global Web Crypto and no upstream security support.
+ * Oldest Node.js major this package runs on — the oldest release line still
+ * receiving upstream security fixes. Node 22 is in maintenance until
+ * 2027-04-30; Node 20 reached end-of-life on 2026-04-30 and Node 21 on
+ * 2024-06-01. Matches the `engines` field of packages/server/package.json.
+ *
+ * This floor is ONLY about security support, never about capability. Every
+ * primitive the package needs is probed directly — CSPRNG_MISSING,
+ * WEBCRYPTO_SUBTLE_MISSING, CSPRNG_DEGENERATE, SHA256_UNAVAILABLE,
+ * HMAC_UNAVAILABLE and PASSKEY_ES256_UNAVAILABLE — which catches a deficient
+ * runtime whatever version number it reports, and clears a capable one that
+ * a version comparison would have rejected. Do not reintroduce version
+ * checks as a proxy for feature detection.
+ *
+ * Raise this when the floor line reaches end-of-life, not when a new LTS ships.
  */
-const NODE_SUPPORT_FLOOR = 24;
+const NODE_SUPPORT_FLOOR = 22;
 
 /** Hex encoding of 32 all-zero bytes; a CSPRNG must never produce this. */
 const ALL_ZERO_SAMPLE_HEX = '0'.repeat(64);
@@ -124,7 +134,7 @@ export const UNSAFE_REASONS = {
     risk:
       'Every authorization code, access token, refresh token, session id and PKCE verifier derives from crypto.getRandomValues; without it they would have to come from a predictable source and any session becomes forgeable.',
     remedy:
-      'Run on a runtime that exposes the Web Crypto API (Node >= 24, Deno, Bun, Cloudflare Workers, or a modern browser). This package will never add a Math.random() fallback.',
+      'Run on a runtime that exposes the Web Crypto API (Node >= 22, Deno, Bun, Cloudflare Workers, or a modern browser). This package will never add a Math.random() fallback.',
     when: 'construct',
     ignorable: true,
     detect: probe => !probe.hasCrypto || !probe.hasGetRandomValues,
@@ -166,10 +176,11 @@ export const UNSAFE_REASONS = {
     detect: probe => probe.isSecureContext === false,
   },
   LCMS_OAUTH2_NODE_UNSUPPORTED: {
-    title: 'Node.js is older than the supported floor (>= 24)',
+    title: 'Node.js has reached end-of-life (supported floor >= 22)',
     risk:
-      'Node releases below the supported floor lack the global Web Crypto API and no longer receive upstream security fixes, so known-exploitable holes stay open in the very layer this package depends on.',
-    remedy: 'Upgrade to a Node.js version that satisfies the "engines" field of this package (Node 24 or newer).',
+      'An end-of-life Node release receives no upstream security fixes, so a published vulnerability in its TLS, HTTP or crypto layer stays exploitable underneath this package for as long as the runtime is deployed — and nothing this package does can compensate for a hole below it.',
+    remedy:
+      "Upgrade to a Node.js release still receiving security updates (Node 22 or newer). This code is about patch support alone: it says nothing about the runtime's capabilities, which are probed separately.",
     when: 'construct',
     ignorable: true,
     detect: probe => probe.nodeMajor !== undefined && probe.nodeMajor < NODE_SUPPORT_FLOOR,

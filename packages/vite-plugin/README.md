@@ -56,10 +56,10 @@ Rollup/ Rolldown tree-shakes whatever you don't read.
 
 `laika:<namespace>/<key>` — the namespace picks the repository:
 
-| Namespace | Repository              | Read via           |
-| --------- | ----------------------- | ------------------ |
-| `doc`     | documents (ContentBase) | `getDocument(key)` |
-| `store`   | storage                 | `getObject(key)`   |
+| Namespace | Repository          | Read via           |
+| --------- | ------------------- | ------------------ |
+| `doc`     | documents (Catalog) | `getDocument(key)` |
+| `store`   | storage             | `getObject(key)`   |
 
 ## Local mode
 
@@ -91,8 +91,8 @@ export default defineConfig({
 
 All three repository-backed sub-APIs serve the same repositories the `laika:` loader reads: by
 default a filesystem storage repository built from `dir`, with the documents and assets repositories
-derived from it via ContentBase. To serve different ones, pass them through the plugin's
-`repositories` option.
+derived from it via Catalog. To serve different ones, pass them through the plugin's `repositories`
+option.
 
 Pass an options object instead of `true` to override the base path:
 
@@ -138,12 +138,12 @@ a path segment; `**` matches across segments.
 
 The plugin generates types for every `laika:` import — and it does so by handing the **real content
 data to the TypeScript compiler** and letting it infer the types (no hand-written type text, so the
-types can never drift from what you import). Output goes to `.laika/` (git-ignored automatically),
-referenced from a one-line `laika-env.d.ts` that is scaffolded at your project root:
+types can never drift from what you import). Output goes to `.laika/vite-generated/` (git-ignored
+automatically), referenced from a one-line `laika-env.d.ts` that is scaffolded at your project root:
 
 ```ts
 // laika-env.d.ts  (commit this)
-/// <reference path="./.laika/types.d.ts" />
+/// <reference path="./.laika/vite-generated/types.d.ts" />
 ```
 
 Make sure your `tsconfig.json` includes it (root `*.d.ts` are included by default). Then
@@ -159,7 +159,7 @@ const posts = import.meta.glob<Posts>('laika:doc/posts/*', { eager: true });
 
 A markdown-serialized item (`.md`, `.mdx`, `.markdown`) deserializes to its frontmatter fields plus
 `body`, the prose. With `mdx: true` that prose is also written out as a real `.mdx` chunk under
-`.laika/bodies/`, and the module re-exports the compiled component as `Body`:
+`.laika/vite-generated/bodies/`, and the module re-exports the compiled component as `Body`:
 
 ```ts
 laikacms({ dir: 'content', mdx: true });
@@ -252,7 +252,7 @@ laikacms({
 ### Bring your own repository
 
 The filesystem repository is only the default. Pass any `StorageRepository` (the documents
-repository is derived from it via ContentBase):
+repository is derived from it via Catalog):
 
 ```ts
 import type { StorageRepository } from 'laikacms/storage';

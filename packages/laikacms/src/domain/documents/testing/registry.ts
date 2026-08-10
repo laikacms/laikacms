@@ -1,4 +1,4 @@
-import { contentBaseDocumentsContractCase } from '../../../impl/documents-contentbase/testing.js';
+import { catalogDocumentsContractCase } from '../../../impl/documents-catalog/testing.js';
 import { drizzleDocumentsContractCase } from '../../../impl/documents-drizzle/testing.js';
 import {
   jsonApiProxyChangesContractCase,
@@ -8,7 +8,7 @@ import { obsidianDocumentsContractCase } from '../../../impl/documents-obsidian/
 import type { DocumentsContractCase } from './contract.js';
 
 export const documentsContractRegistry: DocumentsContractCase[] = [
-  contentBaseDocumentsContractCase,
+  catalogDocumentsContractCase,
   drizzleDocumentsContractCase,
   obsidianDocumentsContractCase,
   jsonApiProxyDocumentsContractCase,

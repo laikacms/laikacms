@@ -15,7 +15,7 @@ import { buildJsonApi } from 'laikacms/storage/api';
 import { FileSystemStorageRepository } from 'laikacms/storage/fs';
 
 const repo = new FileSystemStorageRepository('./content', { md: markdownSerializer }, 'md');
-const api = buildJsonApi({ repo });
+const api = buildJsonApi({ repo, authorize: allowAll });
 
 export default { fetch: api.fetch };
 ```
@@ -30,7 +30,7 @@ import { R2StorageRepository } from 'laikacms/storage/r2';
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const repo = new R2StorageRepository(env.CONTENT_BUCKET, { md: markdownSerializer }, 'md');
-    return buildJsonApi({ repo }).fetch(request);
+    return buildJsonApi({ repo, authorize: allowAll }).fetch(request);
   },
 };
 ```

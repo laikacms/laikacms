@@ -68,7 +68,7 @@ flowchart TB
         end
         
         subgraph DocumentImplementations["Document Repository Implementations"]
-            ContentbaseRepo[documents-contentbase]:::document
+            CatalogRepo[documents-catalog]:::document
             DrizzleRepo[documents-drizzle]:::document
             ObsidianRepo[documents-obsidian]:::document
             JsonapiProxyRepo[documents-jsonapi-proxy]:::document
@@ -76,7 +76,7 @@ flowchart TB
         
         subgraph AssetImplementations["Asset Repository Implementations"]
             AssetsR2Repo[assets-r2]:::asset
-            AssetsContentbaseRepo[assets-contentbase]:::asset
+            AssetsCatalogRepo[assets-catalog]:::asset
             AssetsObsidianRepo[assets-obsidian]:::asset
             AssetsJsonapiProxyRepo[assets-jsonapi-proxy]:::asset
         end
@@ -125,13 +125,13 @@ flowchart TB
     BackendAssetRepo --> AssetRoutingBackend
     BackendStorageRepo --> StorageRoutingBackend
     
-    DocRoutingBackend --> ContentbaseRepo
+    DocRoutingBackend --> CatalogRepo
     DocRoutingBackend --> DrizzleRepo
     DocRoutingBackend --> ObsidianRepo
     DocRoutingBackend --> JsonapiProxyRepo
     
     AssetRoutingBackend --> AssetsR2Repo
-    AssetRoutingBackend --> AssetsContentbaseRepo
+    AssetRoutingBackend --> AssetsCatalogRepo
     AssetRoutingBackend --> AssetsObsidianRepo
     AssetRoutingBackend --> AssetsJsonapiProxyRepo
     
@@ -156,12 +156,12 @@ flowchart TB
 
 1. **Document Repository**
    - Stores and retrieves structured content (pages, posts, settings)
-   - Implementations: GitHub, documents-contentbase, documents-drizzle, documents-obsidian,
+   - Implementations: GitHub, documents-catalog, documents-drizzle, documents-obsidian,
      documents-jsonapi-proxy
 
 2. **Asset Repository**
    - Manages binary files like images, PDFs, videos
-   - Implementations: assets-r2, assets-contentbase, assets-obsidian, assets-jsonapi-proxy
+   - Implementations: assets-r2, assets-catalog, assets-obsidian, assets-jsonapi-proxy
 
 3. **Storage Repository**
    - Low-level storage abstraction for raw data

@@ -2,6 +2,7 @@ import { load } from 'js-yaml';
 import type { DocumentsRepository } from 'laikacms/documents';
 import type { OpenApiDocument, OpenApiOperation, OpenApiPathItem } from 'laikacms/json-api';
 import { describe, expect, it } from 'vitest';
+import { allowAll } from '../../shared/json-api/authorize.js';
 
 import { buildDocumentsOpenApi } from './openapi.js';
 import { buildJsonApi } from './server.js';
@@ -38,14 +39,14 @@ const operationsOf = (pathItem: OpenApiPathItem): OpenApiOperation[] =>
 
 describe('GET /openapi.json', () => {
   it('returns 200 with Content-Type application/json', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/openapi.json'));
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('application/json');
   });
 
   it('serves an OpenAPI 3.1.0 document with the expected info fields', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/openapi.json'));
     const doc = await res.json() as OpenApiDocument;
 
@@ -58,7 +59,7 @@ describe('GET /openapi.json', () => {
   });
 
   it('rewrites servers[0].url to the request origin plus basePath', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/openapi.json'));
     const doc = await res.json() as OpenApiDocument;
 
@@ -67,7 +68,7 @@ describe('GET /openapi.json', () => {
   });
 
   it('documents exactly the implemented routes', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/openapi.json'));
     const doc = await res.json() as OpenApiDocument;
 
@@ -75,7 +76,7 @@ describe('GET /openapi.json', () => {
   });
 
   it('gives every operation an operationId and at least one response', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/openapi.json'));
     const doc = await res.json() as OpenApiDocument;
 
@@ -91,7 +92,7 @@ describe('GET /openapi.json', () => {
   });
 
   it('reflects a custom basePath in the served document', async () => {
-    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/documents' });
+    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/documents', authorize: allowAll });
     const res = await api.fetch(new Request('https://cms.example.com/api/documents/openapi.json'));
     expect(res.status).toBe(200);
 
@@ -104,14 +105,14 @@ describe('GET /openapi.json', () => {
 
 describe('GET /openapi.yaml', () => {
   it('returns 200 with Content-Type application/yaml', async () => {
-    const api = buildJsonApi({ repo: stubRepo });
+    const api = buildJsonApi({ repo: stubRepo, authorize: allowAll });
     const res = await api.fetch(new Request('http://localhost/openapi.yaml'));
     expect(res.status).toBe(200);
     expect(res.headers.get('Content-Type')).toBe('application/yaml');
   });
 
   it('serves the same document as YAML with servers[0].url rewritten', async () => {
-    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/documents' });
+    const api = buildJsonApi({ repo: stubRepo, basePath: '/api/documents', authorize: allowAll });
     const res = await api.fetch(new Request('https://cms.example.com/api/documents/openapi.yaml'));
     const doc = load(await res.text()) as OpenApiDocument;
 
@@ -129,7 +130,7 @@ describe('buildDocumentsOpenApi', () => {
   });
 
   it('uses the given basePath as the server url', () => {
-    const doc = buildDocumentsOpenApi({ basePath: '/api/documents' });
+    const doc = buildDocumentsOpenApi({ basePath: '/api/documents', authorize: allowAll });
     expect(doc.servers![0]!.url).toBe('/api/documents');
   });
 

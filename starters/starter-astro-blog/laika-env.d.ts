@@ -1,1 +1,1 @@
-/// <reference path="./.laika/types.d.ts" />
+/// <reference path="./.laika/vite-generated/types.d.ts" />

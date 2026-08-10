@@ -85,7 +85,7 @@ export default defineConfig({
               { text: 'Storage API', link: '/reference/json-api/storage' },
               { text: 'Documents API', link: '/reference/json-api/documents' },
               { text: 'Assets API', link: '/reference/json-api/assets' },
-              { text: 'ContentBase API', link: '/reference/json-api/contentbase' },
+              { text: 'Catalog API', link: '/reference/json-api/catalog' },
               { text: 'Error Responses', link: '/reference/json-api/errors' },
             ],
           },

@@ -161,6 +161,23 @@ describe('LCMS_OAUTH2_NODE_UNSUPPORTED', () => {
     expect(syncCodes(input(), probe({ nodeMajor: 24 }))).toEqual([]);
   });
 
+  // The floor tracks end-of-life, not capability: 22 is in maintenance until
+  // 2027-04-30, 21 and 20 are already end-of-life. A capable-but-unpatched
+  // runtime must still fire; a supported one must not.
+  it('clears Node 22 and fires for the end-of-life lines below it', () => {
+    expect(syncCodes(input(), probe({ nodeMajor: 22 }))).toEqual([]);
+    expect(syncCodes(input(), probe({ nodeMajor: 21 }))).toContain('LCMS_OAUTH2_NODE_UNSUPPORTED');
+    expect(syncCodes(input(), probe({ nodeMajor: 20 }))).toContain('LCMS_OAUTH2_NODE_UNSUPPORTED');
+  });
+
+  it('does not stand in for capability detection — a crippled Node 24 still fires the capability codes', () => {
+    const capable = probe({ nodeMajor: 22 });
+    const crippled = probe({ nodeMajor: 24, hasSubtle: false });
+    expect(syncCodes(input(), capable)).toEqual([]);
+    expect(syncCodes(input(), crippled)).toContain('LCMS_OAUTH2_WEBCRYPTO_SUBTLE_MISSING');
+    expect(syncCodes(input(), crippled)).not.toContain('LCMS_OAUTH2_NODE_UNSUPPORTED');
+  });
+
   it('does not fire when suppressed', () => {
     expect(() => assertRuntimeSafety(input({ ignoreUnsafeReasons: ['LCMS_OAUTH2_NODE_UNSUPPORTED'] }), badProbe)).not
       .toThrow();

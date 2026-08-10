@@ -9,12 +9,17 @@ import { writeAtomic } from '../atomic-write.js';
  * {@link writeAtomic}: temp-file-then-rename, and skipped entirely when the
  * existing file already matches (so file watchers / HMR don't churn).
  *
+ * Everything this class writes lives under `.laika/vite-generated/`. The rest of
+ * `.laika/` is durable state owned by the catalog (`.laika/catalog`,
+ * `.laika/schemas/`, `.laika/revisions/`) and must stay committed, so only the
+ * `vite-generated/` subtree is ever ignored.
+ *
  * Layout under `<viteRoot>`:
- *   .laika/types.d.ts                 aggregated ambient module declarations
- *   .laika/collections/<name>.ts      per-collection union aliases
- *   .laika/.gitignore                 `*` (never commit generated output)
- *   laika-env.d.ts                    committed one-line /// reference
- *   .gitignore                        `.laika/` appended idempotently
+ *   .laika/vite-generated/types.d.ts             aggregated ambient module declarations
+ *   .laika/vite-generated/collections/<name>.ts  per-collection union aliases
+ *   .laika/.gitignore                            `vite-generated/`
+ *   laika-env.d.ts                               committed one-line /// reference
+ *   .gitignore                                   `.laika/vite-generated/` appended idempotently
  */
 export class TypegenWriter {
   private readonly root: string;
@@ -27,12 +32,16 @@ export class TypegenWriter {
     return path.join(this.root, '.laika');
   }
 
+  get generatedDir(): string {
+    return path.join(this.laikaDir, 'vite-generated');
+  }
+
   get typesFile(): string {
-    return path.join(this.laikaDir, 'types.d.ts');
+    return path.join(this.generatedDir, 'types.d.ts');
   }
 
   get collectionsDir(): string {
-    return path.join(this.laikaDir, 'collections');
+    return path.join(this.generatedDir, 'collections');
   }
 
   get envFile(): string {
@@ -44,7 +53,7 @@ export class TypegenWriter {
   }
 
   async writeTypes(content: string): Promise<boolean> {
-    await fs.mkdir(this.laikaDir, { recursive: true });
+    await fs.mkdir(this.generatedDir, { recursive: true });
     return writeAtomic(this.typesFile, content);
   }
 
@@ -54,7 +63,7 @@ export class TypegenWriter {
   }
 
   /**
-   * Removes any `.laika/collections/*.ts` whose base name is not in `keep`.
+   * Removes any `.laika/vite-generated/collections/*.ts` whose base name is not in `keep`.
    * Returns the names that were removed.
    */
   async pruneCollections(keep: ReadonlySet<string>): Promise<string[]> {
@@ -88,20 +97,27 @@ export class TypegenWriter {
       await fs.access(this.envFile);
       return false;
     } catch {
-      await fs.writeFile(this.envFile, '/// <reference path="./.laika/types.d.ts" />\n', 'utf8');
+      await fs.writeFile(
+        this.envFile,
+        '/// <reference path="./.laika/vite-generated/types.d.ts" />\n',
+        'utf8',
+      );
       return true;
     }
   }
 
-  /** Writes `.laika/.gitignore` containing `*` (idempotent). */
+  /**
+   * Writes `.laika/.gitignore` containing `vite-generated/` (idempotent). Scoped
+   * to the generated subtree so the catalog alongside it stays committed.
+   */
   async ensureLaikaGitignore(): Promise<boolean> {
     await fs.mkdir(this.laikaDir, { recursive: true });
-    return writeAtomic(path.join(this.laikaDir, '.gitignore'), '*\n');
+    return writeAtomic(path.join(this.laikaDir, '.gitignore'), 'vite-generated/\n');
   }
 
   /**
-   * Idempotently appends `.laika/` to `<viteRoot>/.gitignore`, creating the
-   * file if absent. Returns `true` when the file was changed.
+   * Idempotently appends `.laika/vite-generated/` to `<viteRoot>/.gitignore`,
+   * creating the file if absent. Returns `true` when the file was changed.
    */
   async ensureRootGitignore(): Promise<boolean> {
     const gitignore = path.join(this.root, '.gitignore');
@@ -112,11 +128,11 @@ export class TypegenWriter {
       // absent
     }
     const lines = existing.split(/\r?\n/).map(l => l.trim());
-    if (lines.includes('.laika/') || lines.includes('.laika')) {
+    if (lines.includes('.laika/vite-generated/') || lines.includes('.laika/vite-generated')) {
       return false;
     }
     const needsNewline = existing.length > 0 && !existing.endsWith('\n');
-    const next = `${existing}${needsNewline ? '\n' : ''}.laika/${os.EOL === '\r\n' ? '\r\n' : '\n'}`;
+    const next = `${existing}${needsNewline ? '\n' : ''}.laika/vite-generated/${os.EOL === '\r\n' ? '\r\n' : '\n'}`;
     await fs.writeFile(gitignore, next, 'utf8');
     return true;
   }
