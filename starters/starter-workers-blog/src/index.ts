@@ -26,7 +26,7 @@ import { rawSerializer } from 'laikacms/storage-serializers-raw';
 import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
 import { D1StorageRepository } from '@laikacms/cloudflare/storage-d1';
-import { decapApi } from '@laikacms/decap-integrations/decap-api';
+import { decapApi } from '@laikacms/decap/decap-api';
 
 import { decapConfig } from './decap-config.js';
 
@@ -91,6 +91,7 @@ async function getOrCreate(env: Env): Promise<LaikaResources> {
       if (token !== devToken) throw new Error('Unauthorized');
       return { id: 'dev', email: 'dev@local.test', name: 'Dev Editor' };
     },
+    authorize: () => true,
   });
 
   cached = { api, documents };

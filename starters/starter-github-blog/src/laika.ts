@@ -25,8 +25,8 @@ import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { rawSerializer } from 'laikacms/storage-serializers-raw';
 import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
-import { decapApi } from '@laikacms/decap-integrations/decap-api';
-import { DEFAULT_DEV_TOKEN } from '@laikacms/decap-integrations/embedded';
+import { decapApi } from '@laikacms/decap/decap-api';
+import { DEFAULT_DEV_TOKEN } from '@laikacms/decap/embedded';
 import { GithubStorageRepository } from '@laikacms/github/storage-gh';
 
 import { decapConfig } from './decap-config.js';
@@ -101,6 +101,7 @@ const api = decapApi({
     if (token !== DEFAULT_DEV_TOKEN) throw new Error('Unauthorized');
     return { id: 'dev', email: 'dev@local.test', name: 'Dev Editor' };
   },
+  authorize: () => true,
 });
 
 export const laika = {
