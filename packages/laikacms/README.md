@@ -72,6 +72,9 @@ export default {
 | `laikacms/storage/webdav`          | WebDAV server                                                                                                                                                            |
 | `laikacms/storage/drizzle`         | SQL via Drizzle                                                                                                                                                          |
 | `laikacms/storage/jsonapi-proxy`   | Remote JSON:API server                                                                                                                                                   |
+| `laikacms/storage/web`             | Web Storage (`localStorage` / `sessionStorage`) — browser / SSR-safe                                                                                                     |
+| `laikacms/storage/web-fs`          | Browser File System API (`FileSystemDirectoryHandle`) — local-first, no server required                                                                                  |
+| `laikacms/storage-github-cdn`      | Read-only public GitHub repo via jsDelivr CDN — no token, no `@octokit/*` dependency                                                                                     |
 | `laikacms/documents/catalog`       | Documents on top of `storage`                                                                                                                                            |
 | `laikacms/documents/drizzle`       | Documents in SQL                                                                                                                                                         |
 | `laikacms/documents/jsonapi-proxy` | Documents via JSON:API proxy                                                                                                                                             |
