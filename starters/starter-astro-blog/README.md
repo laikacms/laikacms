@@ -4,7 +4,7 @@ Minimal static blog built with [Astro](https://astro.build) and LaikaCMS:
 
 - **`@laikacms/vite-plugin`** — imports filesystem content at build time and hot reloads it in dev.
 - **Local JSON API** — `localApi: true` mounts `/__laika` only while `astro dev` is running.
-- **Bare Decap admin, no CDN** — the non-laika bare app (`@laikacms/decap-cms/app/bare`) is bundled by
+- **Bare Decap admin, no CDN** — the non-laika bare app (`@laikacms/decap-cms/laika-app/bare`) is bundled by
   Vite; `src/cms.ts` registers exactly the backends, widgets, and locales this site uses.
 
 ## Quick start

@@ -13,7 +13,7 @@ npx laikacli create
 The wizard picks the starter, then asks which CMS **backends, widgets, and locales** to install and
 generates the app's `src/cms.ts` from that selection (flags `--backends`/`--widgets`/`--locales` or
 `--yes` skip the prompts). Every starter boots the **bare, non-laika Decap app**
-(`@laikacms/decap-cms/app/bare`) — no CDN bundle, no laika-styled chrome — and registers only what
+(`@laikacms/decap-cms/laika-app/bare`) — no CDN bundle, no laika-styled chrome — and registers only what
 `src/cms.ts` lists, so the admin bundle contains exactly what the site uses.
 
 > **Curated 5 of ~140 (LCMS-455).** In June 2026 the ~160 `starter-*` reference apps were moved out
@@ -47,7 +47,7 @@ workspace-protocol dependency.
 
 > ⚠️ These trees were migrated from the pre-restructure app set (their `package.json` files are
 > already on current published versions). The **admin UI is migrated**: every starter now bundles
-> the bare, non-laika `@laikacms/decap-cms/app/bare` with registrations in a wizard-generated
+> the bare, non-laika `@laikacms/decap-cms/laika-app/bare` with registrations in a wizard-generated
 > `src/cms.ts` — no CDN `decap-cms@3` bundle, no `@laikacms/decap-integrations` /
 > `@laikacms/decap-cms-backend-laika` admin imports. Before a starter's StackBlitz embed goes live
 > its **server side** must still:
