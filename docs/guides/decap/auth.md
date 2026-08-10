@@ -114,6 +114,91 @@ authenticateApiToken: async key => {
 },
 ```
 
+### Scope-based authorization with `createScopePolicy`
+
+For the common pattern of granting access based on fine-grained scopes (rather than flat roles),
+`@laikacms/decap/decap-api` ships `createScopePolicy()` — a drop-in `authorize` factory that maps
+every CMS request to a required scope and checks the principal's granted scopes. The scope
+vocabulary lives in `laikacms/auth`:
+
+| Scope           | Grants                                                              |
+| --------------- | ------------------------------------------------------------------- |
+| `content:read`  | GET requests to `/storage`, `/documents`                            |
+| `content:write` | Mutating requests to `/storage`, `/documents`                       |
+| `media:read`    | GET requests to `/assets`                                           |
+| `media:write`   | Mutating requests to `/assets`                                      |
+| `config:read`   | Read access to config atoms (checked at scope level, not API level) |
+| `admin` / `*`   | Implies every scope                                                 |
+| `resource:*`    | Implies every action on that resource (e.g. `content:*`)            |
+
+```ts
+import { createScopePolicy, decapApi } from '@laikacms/decap/decap-api';
+
+const api = decapApi({
+  documents,
+  storage,
+  authenticateAccessToken: async token => {
+    const session = await db.sessions.findByAccessToken(token);
+    if (!session) throw new Error('Invalid session');
+    // Return a User with scopes populated from the session record.
+    return { id: session.userId, email: session.email, scopes: session.scopes };
+  },
+  // Grant access when the principal's scopes satisfy the required scope for
+  // each domain + operation. Fails closed: no scopes → denied (except /session).
+  authorize: createScopePolicy(),
+});
+```
+
+`createScopePolicy` accepts an optional `options` object:
+
+| Option             | Type                                          | Description                                                                            |
+| ------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `requiredScopeFor` | `(ctx: AuthorizeContext) => Scope \| null`    | Override the request → required-scope mapping. Return `null` to allow unconditionally. |
+| `scopesOf`         | `(ctx: AuthorizeContext) => readonly Scope[]` | How to read the principal's granted scopes. Defaults to `ctx.user.scopes ?? []`.       |
+
+`hasScope(granted, required)` from `laikacms/auth` resolves wildcards: `admin`/`*` satisfies
+anything, and `resource:*` satisfies any `resource:action` on that resource. Use it directly if you
+need a custom policy that still honours the wildcard semantics:
+
+```ts
+import { hasScope } from 'laikacms/auth';
+
+authorize: ctx => {
+  if (ctx.operation === 'read') return true;
+  return hasScope(ctx.user.scopes ?? [], 'content:write');
+},
+```
+
+### PAT bearer verification with `resolveBearer`
+
+When you issue Personal Access Tokens (PATs) as well as session tokens, use `resolveBearer` from
+`laikacms/auth` as the single seam in `authenticateAccessToken`. It detects a `lk_pat_…` prefix,
+looks up the PAT record by hash, checks revocation/expiry, and falls back to your session verifier
+for all other bearers — returning a unified `AuthContext` with the principal and their granted
+scopes:
+
+```ts
+import { resolveBearer } from 'laikacms/auth';
+
+authenticateAccessToken: async token => {
+  const ctx = await resolveBearer(token, {
+    verifySessionToken: async bearer => {
+      const session = await db.sessions.findByAccessToken(bearer);
+      if (!session) return null;
+      return { user: { id: session.userId, email: session.email }, scopes: session.scopes };
+    },
+    lookupPatByHash: hash => db.pats.findByHash(hash),
+    onPatUsed: record => db.pats.bumpLastUsedAt(record.id), // optional
+  });
+  if (!ctx) throw new Error('Invalid or expired token');
+  // Attach the resolved scopes so createScopePolicy() (or your own authorize) can read them.
+  return { id: ctx.user.id, scopes: ctx.scopes };
+},
+```
+
+`resolveBearer` returns `null` for any invalid, revoked, or expired credential and never throws on
+bad input — throw or return the error from `authenticateAccessToken` yourself.
+
 ## SSR auth guard with `authenticateRequest`
 
 `decapApi(...)` returns a `DecapApi` object with two methods:
