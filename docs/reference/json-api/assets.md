@@ -667,10 +667,10 @@ When scoped to a folder the response includes a `folder` attribute:
 
 **Error Responses**
 
-| Status | Condition                                                              |
-| ------ | ---------------------------------------------------------------------- |
-| `501`  | Backend does not support change signals (`NotImplementedError`)        |
-| `403`  | Caller is not authorised to call `getSyncToken` (`AuthorizationError`) |
+| Status | Condition                                                          |
+| ------ | ------------------------------------------------------------------ |
+| `501`  | Backend does not support change signals (`NotImplementedError`)    |
+| `403`  | Caller is not authorised to call `getSyncToken` (`ForbiddenError`) |
 
 ---
 
@@ -724,8 +724,8 @@ token.
 
 **Error Responses**
 
-| Status | Condition                                                             |
-| ------ | --------------------------------------------------------------------- |
-| `400`  | `filter[since]` is absent                                             |
-| `501`  | Backend does not support change signals (`NotImplementedError`)       |
-| `403`  | Caller is not authorised to call `listChanges` (`AuthorizationError`) |
+| Status | Condition                                                         |
+| ------ | ----------------------------------------------------------------- |
+| `400`  | `filter[since]` is absent                                         |
+| `501`  | Backend does not support change signals (`NotImplementedError`)   |
+| `403`  | Caller is not authorised to call `listChanges` (`ForbiddenError`) |

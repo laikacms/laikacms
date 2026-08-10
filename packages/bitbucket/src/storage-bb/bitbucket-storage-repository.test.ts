@@ -1,5 +1,4 @@
 import {
-  AuthenticationError,
   ForbiddenError,
   InternalError,
   LaikaStream,
@@ -7,6 +6,7 @@ import {
   NotFoundError,
   ServiceUnavailableError,
   TooManyRequestsError,
+  UpstreamUnAuthorizedError,
 } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -399,13 +399,13 @@ describe('BitbucketStorageRepository.getAtom error propagation', () => {
     expect(atom.key).toBe('notes');
   });
 
-  it('propagates AuthenticationError (401) instead of falling through to getFolder', async () => {
+  it('propagates UpstreamUnAuthorizedError (401) instead of falling through to getFolder', async () => {
     const fetch401: typeof fetch = async () =>
       new Response(JSON.stringify({ error: { message: 'Invalid credentials' } }), { status: 401 });
     const repo = makeRepoWithFetch(fetch401);
     await expect(
       LaikaTask.runPromise(repo.getAtom('notes/article')),
-    ).rejects.toBeInstanceOf(AuthenticationError);
+    ).rejects.toBeInstanceOf(UpstreamUnAuthorizedError);
   });
 
   it('propagates ServiceUnavailableError (503) instead of falling through to getFolder', async () => {

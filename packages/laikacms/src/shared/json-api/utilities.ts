@@ -251,7 +251,7 @@ export const errorFromResponse = async (response: Response) => {
       case 400:
         return new errors.BadRequestError(detail);
       case 401:
-        return new errors.AuthorizationError(detail);
+        return new errors.UpstreamUnAuthorizedError(detail);
       case 403:
         return new errors.ForbiddenError(detail);
       case 404:

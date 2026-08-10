@@ -1,7 +1,6 @@
 import * as Result from 'effect/Result';
 import {
   AuthenticationError,
-  AuthorizationError,
   BadRequestError,
   ConflictError,
   ForbiddenError,
@@ -11,6 +10,7 @@ import {
   ServiceUnavailableError,
   TooManyRequestsError,
   UnknownError,
+  UpstreamUnAuthorizedError,
   ValidationError,
 } from 'laikacms/core';
 import { describe, expect, it, vi } from 'vitest';
@@ -55,10 +55,10 @@ describe('errorFromResponse', () => {
     expect(err).toBeInstanceOf(BadRequestError);
   });
 
-  it('401 without JSON body returns AuthorizationError', async () => {
+  it('401 without JSON body returns UpstreamUnAuthorizedError', async () => {
     const res = makeResponse(401, undefined, 'text/plain');
     const err = await errorFromResponse(res);
-    expect(err).toBeInstanceOf(AuthorizationError);
+    expect(err).toBeInstanceOf(UpstreamUnAuthorizedError);
   });
 
   it('403 without JSON body returns ForbiddenError', async () => {
@@ -203,10 +203,10 @@ describe('errorToJsonApiMapper', () => {
     expect(result.errors[0]!.code).toBe(AuthenticationError.CODE);
   });
 
-  it('maps AuthorizationError to status 401', () => {
-    const result = errorToJsonApiMapper(new AuthorizationError());
+  it('maps UpstreamUnAuthorizedError to status 401', () => {
+    const result = errorToJsonApiMapper(new UpstreamUnAuthorizedError());
     expect(result.status).toBe(401);
-    expect(result.errors[0]!.code).toBe(AuthorizationError.CODE);
+    expect(result.errors[0]!.code).toBe(UpstreamUnAuthorizedError.CODE);
   });
 
   it('maps ConflictError to status 409', () => {

@@ -2,8 +2,6 @@ import { createAppAuth } from '@octokit/auth-app';
 import { Octokit } from '@octokit/rest';
 import * as Result from 'effect/Result';
 import {
-  AuthenticationError,
-  AuthorizationError,
   ConflictError,
   DirInsteadOfFile,
   FileInsteadOfDir,
@@ -11,6 +9,7 @@ import {
   InternalError,
   NotFoundError,
   TooManyRequestsError,
+  UpstreamUnAuthorizedError,
   VersionMismatchError,
 } from 'laikacms/core';
 import type { LaikaResult } from 'laikacms/core';
@@ -373,7 +372,9 @@ export class GithubDataSource {
         return Result.fail(new NotFoundError(`The file at ${contextPath} does not exist`));
       case 401:
         return Result.fail(
-          new AuthenticationError(`Not authenticated for ${contextPath}: ${error.message ?? 'unauthorized'}`),
+          new UpstreamUnAuthorizedError(
+            `GitHub rejected this server's credential for ${contextPath}: ${error.message ?? 'unauthorized'}`,
+          ),
         );
       case 403: {
         const rateLimitRemaining = error.response?.headers?.['x-ratelimit-remaining'];
@@ -389,7 +390,7 @@ export class GithubDataSource {
           );
         }
         return Result.fail(
-          new AuthorizationError(`Insufficient permissions for ${contextPath}: ${msg || 'forbidden'}`),
+          new ForbiddenError(`Insufficient permissions for ${contextPath}: ${msg || 'forbidden'}`),
         );
       }
       case 429:

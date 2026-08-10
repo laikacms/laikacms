@@ -43,7 +43,7 @@ export const errorCode = {
   BAD_REQUEST: 'bad_request',
   FORBIDDEN: 'forbidden',
   AUTHENTICATION_ERROR: 'unauthenticated',
-  AUTHORIZATION_ERROR: 'unauthorized',
+  UPSTREAM_UNAUTHORIZED: 'unauthorized',
   DIR_INSTEAD_OF_FILE: 'dir_instead_of_file',
   INVALID_DATA: 'invalid_data',
   INTERNAL_ERROR: 'internal_error',
@@ -81,7 +81,7 @@ export const errorStatus = {
   NOT_FOUND: 404,
   BAD_REQUEST: 400,
   FORBIDDEN: 403,
-  AUTHORIZATION_ERROR: 401,
+  UPSTREAM_UNAUTHORIZED: 401,
   AUTHENTICATION_ERROR: 401,
   DIR_INSTEAD_OF_FILE: 403,
   FILE_INSTEAD_OF_DIR: 403,
@@ -150,12 +150,12 @@ export class BadRequestError extends LaikaError<typeof errorCode.BAD_REQUEST, ty
  * - {@link AuthenticationError} (401) — the caller has not proven *who* they
  *   are: absent, malformed, or rejected credentials.
  * - `ForbiddenError` (403) — the caller is authenticated but not permitted.
- * - {@link AuthorizationError} (401) — **not** "logged in but no permission".
- *   Despite the name it is the deserialization target for a 401 challenge
- *   received *from a remote server* (see `json-api/utilities.ts`). Do not reach
- *   for it on an authorization denial — that would answer 401 where the caller
- *   is in fact authenticated, telling them to re-authenticate when re-trying
- *   the credential cannot help.
+ * - {@link UpstreamUnAuthorizedError} (401) — **not** "logged in but no
+ *   permission". It is the deserialization target for a 401 challenge received
+ *   *from an upstream server* (see `json-api/utilities.ts`). Do not reach for
+ *   it on an authorization denial — that would answer 401 where the caller is
+ *   in fact authenticated, telling them to re-authenticate when re-trying the
+ *   credential cannot help.
  */
 export class ForbiddenError extends LaikaError<typeof errorCode.FORBIDDEN, typeof errorStatus.FORBIDDEN> {
   public static override TITLE = 'Forbidden';
@@ -221,20 +221,20 @@ export class EntryAlreadyExistsError
   public static override STATUS = errorStatus.ENTRY_ALREADY_EXISTS;
 }
 /**
- * A 401 challenge received from a *remote* server, decoded back into a typed
- * error — HTTP 401. Raised by the JSON:API proxy layer when an upstream rejects
+ * A 401 challenge received from an *upstream* server, decoded back into a typed
+ * error — HTTP 401. Raised by the JSON:API proxy layer when a remote rejects
  * our credential, not by this server's own auth gate.
  *
- * The name is a long-standing misnomer: this is **not** the "authenticated but
- * not permitted" error. For that use {@link ForbiddenError} (403); for a
- * credential this server itself rejected use {@link AuthenticationError} (401).
+ * Do not use this for "authenticated but not permitted" — that is
+ * {@link ForbiddenError} (403). For a credential *this* server rejected, use
+ * {@link AuthenticationError} (401).
  */
-export class AuthorizationError
-  extends LaikaError<typeof errorCode.AUTHORIZATION_ERROR, typeof errorStatus.AUTHORIZATION_ERROR>
+export class UpstreamUnAuthorizedError
+  extends LaikaError<typeof errorCode.UPSTREAM_UNAUTHORIZED, typeof errorStatus.UPSTREAM_UNAUTHORIZED>
 {
-  public static override TITLE = 'Authorization Error';
-  public static override CODE = errorCode.AUTHORIZATION_ERROR;
-  public static override STATUS = errorStatus.AUTHORIZATION_ERROR;
+  public static override TITLE = 'Upstream Unauthorized';
+  public static override CODE = errorCode.UPSTREAM_UNAUTHORIZED;
+  public static override STATUS = errorStatus.UPSTREAM_UNAUTHORIZED;
 }
 export class AuthenticationError
   extends LaikaError<typeof errorCode.AUTHENTICATION_ERROR, typeof errorStatus.AUTHENTICATION_ERROR>
