@@ -66,6 +66,24 @@ previously obtained sync token, as `{ key, version?, deleted }` change summaries
 value carries the new sync token to resume from. Capability-gated via
 `getCapabilities().changes.changeFeed`.
 
+## local mode / remote mode
+
+The two ways a Decap admin bundled by `@laikacms/vite-plugin` reaches its content. The
+differentiator is simply **whether the Vite dev server is running**.
+
+- **Local mode** — `vite dev` is running, and the plugin's opt-in `localApi` option mounts a real
+  JSON:API on the dev server (default base path `/__laika`). The admin talks to that same-origin
+  endpoint. It is unauthenticated by design and never exists outside the dev server.
+- **Remote mode** — anything else, including every production build. The admin talks to a deployed
+  LaikaCMS over its JSON:API with real authentication.
+
+Selection is fail-safe: remote is the default, and local engages only in a Vite-bundled dev context.
+An admin config that is not bundled by Vite therefore always runs in remote mode.
+
+Distinct from the `laika:` import protocol's build-time inlining, which is not a mode at all: it
+compiles content into the bundle and involves no API in either mode. Request-time reads from a
+server belong in neither mode — SSR consumers call repositories directly (ADR-008).
+
 ## atom / folder
 
 The storage domain's generic vocabulary: an atom is either a storage object or a folder. These are
