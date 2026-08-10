@@ -266,7 +266,8 @@ This is only relevant when you let the plugin build the FS repository from `dir`
 `storage` or `repositories`, configure serializers on those objects directly:
 
 ```ts
-import { jsonSerializer, markdownSerializer } from 'laikacms/storage';
+import { jsonSerializer } from 'laikacms/serializers/json';
+import { markdownSerializer } from 'laikacms/serializers/markdown';
 
 laikacms({
   dir: 'content',
