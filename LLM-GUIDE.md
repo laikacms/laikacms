@@ -194,7 +194,8 @@ export default app;
 **Don't.** Use a sidecar Node/Workers backend that exposes `/api/posts` etc. as public endpoints
 (reading the repo directly), and have the SPA `fetch('/api/posts')`. See
 [docs/contributing/starters.md](./docs/contributing/starters.md) for the canonical sidecar pattern
-(starters were moved to separate repos in the June 2026 restructure).
+(five curated starters live in [`starters/`](./starters/README.md); `npx laikacli create` is the
+entry point).
 
 Why: the LaikaCMS HTTP API requires a Bearer token on every endpoint except `/health`. SPAs can't
 safely hold one.

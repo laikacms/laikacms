@@ -1,42 +1,46 @@
 # Starter templates
 
-> **Moved out of the monorepo (June 2026).** The ~160 `starter-*` reference apps that used to live
-> under `apps/` were removed from `laikacms/laikacms` as part of the June 2026 restructure. They are
-> being relocated to their own repositories.
+Five curated starters live in [`starters/`](../../starters/README.md) in this repo. The canonical
+way to create a new project is through the wizard — **never copy a folder directly**:
 
-## What the starters were
+```bash
+npx laikacli create
+```
 
-Each starter was a small, copy-or-run reference app showing how LaikaCMS is wired into one frontend
-framework, runtime, or storage backend (Next.js, Astro, SvelteKit, Nuxt, Hono, Cloudflare Workers,
-AWS Lambda, and many more). They favored **FileSystem storage** (`laikacms/storage/fs`) so anyone
-could run them without a cloud account.
+The wizard selects the starter, then asks which CMS backends, widgets, and locales to install and
+generates `src/cms.ts` from that selection. Flags `--starter`, `--backends`, `--widgets`,
+`--locales`, and `--yes` (accept defaults) make it scriptable.
 
-## Where they are now
+## The five starters
 
-The starter repositories are still being published — locations are **TBD**. This page will be
-updated with links once they are available.
+| Starter | Demonstrates |
+| --- | --- |
+| [`starter-vite-react-blog`](../../starters/starter-vite-react-blog) | Client-side content wiring |
+| [`starter-hono-blog`](../../starters/starter-hono-blog) | Secure-by-default `decap-api` proxy (server, default) |
+| [`starter-workers-blog`](../../starters/starter-workers-blog) | Runtime-agnostic Cloudflare edge deploy |
+| [`starter-astro-blog`](../../starters/starter-astro-blog) | Build-time compilation via the vite plugin |
+| [`starter-github-blog`](../../starters/starter-github-blog) | DB-free, git-backed collections |
 
-In the meantime, the core wiring the starters demonstrated is documented directly:
+See [`starters/README.md`](../../starters/README.md) for full status notes, the version-sync
+policy, and workspace isolation details.
 
-- [Getting Started](../guides/getting-started) — install and basic usage.
-- [Decap Integration](../guides/decap/) — admin mounting, storage wiring, auth modes.
-- [Deployment](../guides/deployment) — runtime- and host-specific notes.
-- [Packages](../reference/packages) — the subpath exports each starter imported.
+## Version pinning
 
-## Building blocks the starters used
+Starters pin published `laikacms` / `@laikacms/*` caret ranges — never `workspace:` or `catalog:`
+protocols — so a developer can install them outside this repo. The root `version` script keeps them
+current automatically; CI enforces drift via `pnpm check:starters`.
 
-These still ship in the core packages and are the recommended starting point when wiring a new app
-by hand:
+## Building new apps by hand
 
-- `@laikacms/server/api` — `laikaApi(...)`, the Decap-compatible HTTP API over your storage repos.
-  Mount its `.fetch` on a catch-all route.
-- `@laikacms/decap-cms/backends/laika` — `createLaikaBackend()`, the Decap CMS backend the admin UI
-  registers to talk to that API.
+If you prefer to wire an app without the wizard, these building blocks are the right starting point:
+
+- `@laikacms/server/api` — `laikaApi(...)`, the Decap-compatible HTTP API. Mount `.fetch` on a
+  catch-all route.
+- `@laikacms/decap-cms/backends/laika` — `createLaikaBackend()`, the Decap CMS backend the admin
+  UI registers to talk to that API.
 - `@laikacms/server/oauth2` — `laikaOauth2(...)`, an optional PKCE OAuth2 login server.
 - A `StorageRepository` for your runtime — `laikacms/storage/fs` (Node), `laikacms/storage/r2`
   (Workers / R2), `laikacms/storage/drizzle`, `laikacms/storage/webdav`, etc.
 
-Construct a storage repo, wrap it in `ContentBaseDocumentsRepository` /
-`ContentBaseAssetsRepository`, pass them to `laikaApi(...)`, and mount `.fetch` from your
-framework's catch-all route. `laikaApi(...)` returns `{ fetch, authenticateRequest }`; call the
-repos directly from server-side render paths to bypass the (authenticated) HTTP API.
+See [Getting Started](../guides/getting-started.md) and the [Decap integration guides](../guides/decap/)
+for detailed wiring instructions.
