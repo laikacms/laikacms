@@ -117,9 +117,9 @@ authenticateApiToken: async key => {
 ### Scope-based authorization with `createScopePolicy`
 
 For the common pattern of granting access based on fine-grained scopes (rather than flat roles),
-`@laikacms/server/api` ships `createScopePolicy()` — a drop-in `authorize` factory that maps
-every CMS request to a required scope and checks the principal's granted scopes. The scope
-vocabulary lives in `laikacms/auth`:
+`@laikacms/server/api` ships `createScopePolicy()` — a drop-in `authorize` factory that maps every
+CMS request to a required scope and checks the principal's granted scopes. The scope vocabulary
+lives in `laikacms/auth`:
 
 | Scope           | Grants                                                              |
 | --------------- | ------------------------------------------------------------------- |

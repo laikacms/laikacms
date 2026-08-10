@@ -477,6 +477,9 @@ importers:
 
   packages/server:
     dependencies:
+      effect:
+        specifier: catalog:default
+        version: 4.0.0-beta.66
       laikacms:
         specifier: workspace:*
         version: link:../laikacms
