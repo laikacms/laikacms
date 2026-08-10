@@ -1543,7 +1543,7 @@ describe('storage-api keyless root listing (LCMS-885)', () => {
     ['http://localhost/atom-summaries/'],
   ])('GET %s passes the storage root ("") to repo.listAtomSummaries', async url => {
     const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeStream());
-    const api = buildJsonApi({ repo: { listAtomSummaries: spy } as unknown as StorageRepository });
+    const api = buildJsonApi({ repo: { listAtomSummaries: spy } as unknown as StorageRepository, authorize: allowAll });
 
     const res = await api.fetch(new Request(url));
     expect(res.status).toBe(200);
@@ -1557,7 +1557,7 @@ describe('storage-api keyless root listing (LCMS-885)', () => {
     ['http://localhost/atoms/'],
   ])('GET %s passes the storage root ("") to repo.listAtoms', async url => {
     const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeStream());
-    const api = buildJsonApi({ repo: { listAtoms: spy } as unknown as StorageRepository });
+    const api = buildJsonApi({ repo: { listAtoms: spy } as unknown as StorageRepository, authorize: allowAll });
 
     const res = await api.fetch(new Request(url));
     expect(res.status).toBe(200);
