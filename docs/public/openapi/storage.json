@@ -1,0 +1,1668 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Laika CMS Storage API",
+    "version": "1.0.1",
+    "description": "JSON:API-style HTTP interface over a Laika CMS StorageRepository: storage objects, folders, atom listings, capabilities introspection, and JSON:API atomic operations. Successful responses may carry a meta.warnings array of non-fatal recoverable errors alongside the requested data. ⚠️ The handler ships no authentication — wrap it before exposing it to an untrusted network.",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "/storage"
+    }
+  ],
+  "tags": [
+    {
+      "name": "info",
+      "description": "API metadata and discovery"
+    },
+    {
+      "name": "capabilities",
+      "description": "Backend capability introspection"
+    },
+    {
+      "name": "atoms",
+      "description": "Folder listings over objects and folders (atoms)"
+    },
+    {
+      "name": "objects",
+      "description": "Storage object CRUD"
+    },
+    {
+      "name": "folders",
+      "description": "Folder resources"
+    },
+    {
+      "name": "operations",
+      "description": "JSON:API atomic operations extension"
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "getApiInfo",
+        "summary": "API info and endpoint discovery",
+        "tags": [
+          "info"
+        ],
+        "responses": {
+          "200": {
+            "description": "API info resource listing the available endpoints.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiDocument",
+        "summary": "This OpenAPI 3.1 document",
+        "tags": [
+          "info"
+        ],
+        "responses": {
+          "200": {
+            "description": "The OpenAPI 3.1 document describing this API, with servers rewritten to the request origin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "description": "An OpenAPI 3.1 document."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.yaml": {
+      "get": {
+        "operationId": "getOpenApiDocumentYaml",
+        "summary": "This OpenAPI 3.1 document, as YAML",
+        "tags": [
+          "info"
+        ],
+        "responses": {
+          "200": {
+            "description": "The OpenAPI 3.1 document describing this API as YAML, with servers rewritten to the request origin.",
+            "content": {
+              "application/yaml": {
+                "schema": {
+                  "type": "object",
+                  "description": "An OpenAPI 3.1 document."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capabilities": {
+      "get": {
+        "operationId": "getCapabilities",
+        "summary": "Underlying storage repository capabilities",
+        "description": "Resolved from the repository on every request, so a swapped-out backend is reflected immediately.",
+        "tags": [
+          "capabilities"
+        ],
+        "responses": {
+          "200": {
+            "description": "The storage-capabilities resource.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilitiesResponse"
+                }
+              }
+            }
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      }
+    },
+    "/atoms": {
+      "get": {
+        "operationId": "listRootAtoms",
+        "summary": "List atoms in the root folder",
+        "tags": [
+          "atoms"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageNumber"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/PageOffset"
+          },
+          {
+            "$ref": "#/components/parameters/PageLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PageAfter"
+          },
+          {
+            "$ref": "#/components/parameters/PageBefore"
+          },
+          {
+            "$ref": "#/components/parameters/FilterDepth"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AtomCollectionResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Cursor pagination (page[after] / page[before]) requested but unsupported by the backend."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      },
+      "post": {
+        "operationId": "createFolder",
+        "summary": "Create a folder",
+        "tags": [
+          "atoms",
+          "folders"
+        ],
+        "requestBody": {
+          "description": "JSON:API folder resource to create.",
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/FolderCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/FolderResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Invalid request body, or data.id is empty."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      }
+    },
+    "/atoms/{key}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Key"
+        }
+      ],
+      "get": {
+        "operationId": "listAtoms",
+        "summary": "List atoms in a folder",
+        "tags": [
+          "atoms"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageNumber"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/PageOffset"
+          },
+          {
+            "$ref": "#/components/parameters/PageLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PageAfter"
+          },
+          {
+            "$ref": "#/components/parameters/PageBefore"
+          },
+          {
+            "$ref": "#/components/parameters/FilterDepth"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AtomCollectionResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Cursor pagination (page[after] / page[before]) requested but unsupported by the backend."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Folder not found."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      }
+    },
+    "/atom-summaries": {
+      "get": {
+        "operationId": "listRootAtomSummaries",
+        "summary": "List atom summaries (lightweight listing) in the root folder",
+        "tags": [
+          "atoms"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageNumber"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/PageOffset"
+          },
+          {
+            "$ref": "#/components/parameters/PageLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PageAfter"
+          },
+          {
+            "$ref": "#/components/parameters/PageBefore"
+          },
+          {
+            "$ref": "#/components/parameters/FilterDepth"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AtomSummaryCollectionResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Cursor pagination (page[after] / page[before]) requested but unsupported by the backend."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      }
+    },
+    "/atom-summaries/{key}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Key"
+        }
+      ],
+      "get": {
+        "operationId": "listAtomSummaries",
+        "summary": "List atom summaries (lightweight listing) in a folder",
+        "tags": [
+          "atoms"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageNumber"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/PageOffset"
+          },
+          {
+            "$ref": "#/components/parameters/PageLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PageAfter"
+          },
+          {
+            "$ref": "#/components/parameters/PageBefore"
+          },
+          {
+            "$ref": "#/components/parameters/FilterDepth"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/AtomSummaryCollectionResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Cursor pagination (page[after] / page[before]) requested but unsupported by the backend."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Folder not found."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      }
+    },
+    "/objects": {
+      "post": {
+        "operationId": "createStorageObject",
+        "summary": "Create a storage object",
+        "tags": [
+          "objects"
+        ],
+        "requestBody": {
+          "description": "JSON:API storage object resource to create.",
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorageObjectCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/StorageObjectResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Invalid request body, unknown attribute key, or empty data.id."
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "An object already exists at the requested key."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      }
+    },
+    "/objects/{key}": {
+      "description": "Methods other than GET, PATCH and DELETE are answered with 405 Method Not Allowed and an Allow header.",
+      "parameters": [
+        {
+          "name": "key",
+          "in": "path",
+          "required": true,
+          "description": "Key of the storage object. Keys containing slashes must be URL-encoded (`/` → `%2F`) so the key survives routing as a single path segment.",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getStorageObject",
+        "summary": "Read a storage object",
+        "tags": [
+          "objects"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StorageObjectResponse",
+            "description": "The storage object, possibly with meta.warnings."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Object not found."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateStorageObject",
+        "summary": "Update a storage object",
+        "tags": [
+          "objects"
+        ],
+        "requestBody": {
+          "description": "JSON:API storage object resource; data.id must match the key in the URL.",
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/StorageObjectUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/StorageObjectResponse",
+            "description": "The updated storage object, possibly with meta.warnings."
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Invalid request body, unknown attribute key, or URL key does not match body data.id."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Object not found."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteStorageObject",
+        "summary": "Delete a storage object",
+        "tags": [
+          "objects"
+        ],
+        "responses": {
+          "200": {
+            "description": "Deletion confirmation, possibly with meta.warnings.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObjectDeletedResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Object not found (nothing was removed)."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      }
+    },
+    "/folders/{key}": {
+      "parameters": [
+        {
+          "name": "key",
+          "in": "path",
+          "required": true,
+          "description": "Key of the folder. Keys containing slashes must be URL-encoded (`/` → `%2F`) so the key survives routing as a single path segment.",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getFolder",
+        "summary": "Read a folder",
+        "tags": [
+          "folders"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/FolderResponse",
+            "description": "The folder resource, possibly with meta.warnings."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Folder not found."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      }
+    },
+    "/operations": {
+      "post": {
+        "operationId": "runAtomicOperations",
+        "summary": "Atomic operations (add, update, remove)",
+        "description": "JSON:API atomic operations extension. Removes are batched through a single repository call; per-operation failures are omitted from atomic:results rather than failing the whole request.",
+        "tags": [
+          "operations"
+        ],
+        "requestBody": {
+          "description": "Atomic operations to apply.",
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/AtomicOperationsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Results for the successful operations.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AtomicResultsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Invalid atomic operations request, or an unknown attribute key in an add/update."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure. The status code is mapped from the underlying error code (e.g. not_found → 404, bad_request → 400, internal → 500)."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "JsonApiErrorObject": {
+        "type": "object",
+        "description": "A single JSON:API error object as produced by the error responder.",
+        "required": [
+          "code",
+          "status",
+          "title",
+          "detail"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Machine-readable Laika error code, e.g. `not_found`, `invalid_data`."
+          },
+          "status": {
+            "type": "string",
+            "description": "HTTP status code as a string."
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object",
+            "description": "Set on validation failures to point at the offending member or query parameter.",
+            "properties": {
+              "pointer": {
+                "type": "string"
+              },
+              "parameter": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "JsonApiError": {
+        "type": "object",
+        "required": [
+          "errors"
+        ],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonApiErrorObject"
+            }
+          }
+        }
+      },
+      "Warnings": {
+        "type": "array",
+        "description": "Non-fatal recoverable errors collected while producing an otherwise successful response.",
+        "items": {
+          "$ref": "#/components/schemas/JsonApiErrorObject"
+        }
+      },
+      "WarningsMeta": {
+        "type": "object",
+        "properties": {
+          "warnings": {
+            "$ref": "#/components/schemas/Warnings"
+          }
+        }
+      },
+      "ResourceLinks": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "type": "string",
+            "description": "Canonical detail URL for this resource, relative to the server origin."
+          }
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "PaginationLinks": {
+        "type": "object",
+        "required": [
+          "self"
+        ],
+        "properties": {
+          "self": {
+            "type": "string"
+          },
+          "first": {
+            "type": "string"
+          },
+          "prev": {
+            "type": "string"
+          },
+          "next": {
+            "type": "string"
+          }
+        }
+      },
+      "CollectionMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "object",
+            "description": "Aggregate counts; present when the backend reports a total.",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "description": "Total number of items across all pages, when the backend knows it."
+              }
+            }
+          },
+          "warnings": {
+            "$ref": "#/components/schemas/Warnings"
+          }
+        }
+      },
+      "UnsupportedCapability": {
+        "type": "object",
+        "description": "The unsupported branch shared by every capability.",
+        "required": [
+          "supported",
+          "description"
+        ],
+        "properties": {
+          "supported": {
+            "const": false
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "PaginationCapability": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/UnsupportedCapability"
+          },
+          {
+            "type": "object",
+            "required": [
+              "supported",
+              "description",
+              "styles"
+            ],
+            "properties": {
+              "supported": {
+                "const": true
+              },
+              "description": {
+                "type": "string"
+              },
+              "styles": {
+                "type": "object",
+                "required": [
+                  "offset",
+                  "page",
+                  "cursor"
+                ],
+                "properties": {
+                  "offset": {
+                    "type": "boolean"
+                  },
+                  "page": {
+                    "type": "boolean"
+                  },
+                  "cursor": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ChangesCapability": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/UnsupportedCapability"
+          },
+          {
+            "type": "object",
+            "required": [
+              "supported",
+              "description",
+              "syncToken",
+              "changeFeed",
+              "subscription"
+            ],
+            "properties": {
+              "supported": {
+                "const": true
+              },
+              "description": {
+                "type": "string"
+              },
+              "syncToken": {
+                "type": "boolean"
+              },
+              "changeFeed": {
+                "type": "boolean"
+              },
+              "subscription": {
+                "type": "boolean"
+              }
+            }
+          }
+        ]
+      },
+      "ApiInfoResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "api-info"
+          },
+          "id": {
+            "const": "storage"
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "name",
+              "version",
+              "endpoints"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "endpoints": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "methods",
+                    "description"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "methods": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ApiInfoResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ApiInfoResource"
+          }
+        }
+      },
+      "StorageObjectMetadata": {
+        "type": "object",
+        "description": "Capability-driven object metadata (file extension, backend revision id, backend-specific extras).",
+        "properties": {
+          "extension": {
+            "type": "string"
+          },
+          "revisionId": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      },
+      "StorageObjectAttributes": {
+        "type": "object",
+        "required": [
+          "type",
+          "content"
+        ],
+        "properties": {
+          "type": {
+            "const": "object"
+          },
+          "content": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "StorageObjectResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "object"
+          },
+          "id": {
+            "type": "string",
+            "description": "The storage key."
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/StorageObjectAttributes"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/StorageObjectMetadata"
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "FolderAttributes": {
+        "type": "object",
+        "required": [
+          "type"
+        ],
+        "properties": {
+          "type": {
+            "const": "folder"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "FolderResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "folder"
+          },
+          "id": {
+            "type": "string",
+            "description": "The folder key."
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/FolderAttributes"
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "StorageObjectSummaryResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "object-summary"
+          },
+          "id": {
+            "type": "string",
+            "description": "The storage key."
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "object-summary"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "FolderSummaryResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "folder-summary"
+          },
+          "id": {
+            "type": "string",
+            "description": "The folder key."
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "folder-summary"
+              },
+              "createdAt": {
+                "type": "string"
+              },
+              "updatedAt": {
+                "type": "string"
+              }
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "AtomResource": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StorageObjectResource"
+          },
+          {
+            "$ref": "#/components/schemas/FolderResource"
+          }
+        ]
+      },
+      "AtomSummaryResource": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/StorageObjectSummaryResource"
+          },
+          {
+            "$ref": "#/components/schemas/FolderSummaryResource"
+          }
+        ]
+      },
+      "Capabilities": {
+        "type": "object",
+        "required": [
+          "compatibilityDate",
+          "fileExtensions",
+          "pagination",
+          "changes"
+        ],
+        "properties": {
+          "compatibilityDate": {
+            "type": "string"
+          },
+          "changes": {
+            "$ref": "#/components/schemas/ChangesCapability"
+          },
+          "fileExtensions": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/UnsupportedCapability"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "supported",
+                  "description",
+                  "supportedExtensions"
+                ],
+                "properties": {
+                  "supported": {
+                    "const": true
+                  },
+                  "description": {
+                    "type": "string"
+                  },
+                  "supportedExtensions": {
+                    "type": "object",
+                    "additionalProperties": {
+                      "type": "object",
+                      "required": [
+                        "format"
+                      ],
+                      "properties": {
+                        "format": {
+                          "type": "string"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PaginationCapability"
+          }
+        }
+      },
+      "CapabilitiesResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "storage-capabilities"
+          },
+          "id": {
+            "const": "self"
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "CapabilitiesResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CapabilitiesResource"
+          }
+        }
+      },
+      "StorageObjectResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/StorageObjectResource"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "FolderResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FolderResource"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "AtomCollectionResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "links"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AtomResource"
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionMeta"
+          }
+        }
+      },
+      "AtomSummaryCollectionResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "links"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AtomSummaryResource"
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionMeta"
+          }
+        }
+      },
+      "ObjectDeletedResponse": {
+        "type": "object",
+        "required": [
+          "meta"
+        ],
+        "properties": {
+          "meta": {
+            "type": "object",
+            "required": [
+              "deleted"
+            ],
+            "properties": {
+              "deleted": {
+                "const": true
+              },
+              "warnings": {
+                "$ref": "#/components/schemas/Warnings"
+              }
+            }
+          }
+        }
+      },
+      "StorageObjectCreateData": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "object"
+          },
+          "id": {
+            "type": "string",
+            "description": "The storage key. Must be non-empty."
+          },
+          "attributes": {
+            "type": "object",
+            "description": "Only \"type\" and \"content\" are accepted; any other key is rejected with 400.",
+            "properties": {
+              "type": {
+                "const": "object"
+              },
+              "content": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": false
+          },
+          "meta": {
+            "$ref": "#/components/schemas/StorageObjectMetadata"
+          }
+        }
+      },
+      "StorageObjectUpdateData": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "object"
+          },
+          "id": {
+            "type": "string",
+            "description": "The storage key. Must match the key in the URL."
+          },
+          "attributes": {
+            "type": "object",
+            "description": "Only \"type\" and \"content\" are accepted; any other key is rejected with 400.",
+            "properties": {
+              "type": {
+                "const": "object"
+              },
+              "content": {
+                "type": "object",
+                "additionalProperties": true
+              }
+            },
+            "additionalProperties": false
+          },
+          "meta": {
+            "$ref": "#/components/schemas/StorageObjectMetadata"
+          }
+        }
+      },
+      "FolderCreateData": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "folder"
+          },
+          "id": {
+            "type": "string",
+            "description": "The folder key. Must be non-empty."
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "folder"
+              }
+            }
+          }
+        }
+      },
+      "StorageObjectCreateRequest": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/StorageObjectCreateData"
+          }
+        }
+      },
+      "StorageObjectUpdateRequest": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/StorageObjectUpdateData"
+          }
+        }
+      },
+      "FolderCreateRequest": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FolderCreateData"
+          }
+        }
+      },
+      "AtomRef": {
+        "type": "object",
+        "required": [
+          "type",
+          "id"
+        ],
+        "properties": {
+          "type": {
+            "enum": [
+              "object",
+              "folder",
+              "atom"
+            ]
+          },
+          "id": {
+            "type": "string"
+          }
+        }
+      },
+      "AtomicAddOperation": {
+        "type": "object",
+        "required": [
+          "op",
+          "data"
+        ],
+        "properties": {
+          "op": {
+            "const": "add"
+          },
+          "data": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/StorageObjectCreateData"
+              },
+              {
+                "$ref": "#/components/schemas/FolderCreateData"
+              }
+            ]
+          }
+        }
+      },
+      "AtomicUpdateOperation": {
+        "type": "object",
+        "required": [
+          "op",
+          "data"
+        ],
+        "properties": {
+          "op": {
+            "const": "update"
+          },
+          "data": {
+            "$ref": "#/components/schemas/StorageObjectUpdateData"
+          }
+        }
+      },
+      "AtomicRemoveOperation": {
+        "type": "object",
+        "required": [
+          "op",
+          "ref"
+        ],
+        "properties": {
+          "op": {
+            "const": "remove"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/AtomRef"
+          }
+        }
+      },
+      "AtomicOperationsRequest": {
+        "type": "object",
+        "required": [
+          "atomic:operations"
+        ],
+        "properties": {
+          "atomic:operations": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/AtomicAddOperation"
+                },
+                {
+                  "$ref": "#/components/schemas/AtomicUpdateOperation"
+                },
+                {
+                  "$ref": "#/components/schemas/AtomicRemoveOperation"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "AtomicChangeResult": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AtomResource"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "AtomicRemoveResult": {
+        "type": "object",
+        "required": [
+          "meta"
+        ],
+        "properties": {
+          "meta": {
+            "type": "object",
+            "required": [
+              "deleted",
+              "ref"
+            ],
+            "properties": {
+              "deleted": {
+                "const": true
+              },
+              "ref": {
+                "type": "object",
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "properties": {
+                  "type": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "AtomicErrorResult": {
+        "type": "object",
+        "required": [
+          "errors"
+        ],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonApiErrorObject"
+            }
+          }
+        }
+      },
+      "AtomicResultsResponse": {
+        "type": "object",
+        "description": "Results in operation order. A failed add or update is omitted entirely; a failed remove keeps its slot as an `errors` entry so callers can stay index-aligned with the keys they requested.",
+        "required": [
+          "atomic:results"
+        ],
+        "properties": {
+          "atomic:results": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/AtomicChangeResult"
+                },
+                {
+                  "$ref": "#/components/schemas/AtomicRemoveResult"
+                },
+                {
+                  "$ref": "#/components/schemas/AtomicErrorResult"
+                }
+              ]
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "ErrorResponse": {
+        "description": "JSON:API error document.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/JsonApiError"
+            }
+          }
+        }
+      },
+      "AtomCollectionResponse": {
+        "description": "Atoms in the folder, with pagination links and optional meta.page.total / meta.warnings.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/AtomCollectionResponse"
+            }
+          }
+        }
+      },
+      "FolderResponse": {
+        "description": "The created folder resource.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/FolderResponse"
+            }
+          }
+        }
+      },
+      "AtomSummaryCollectionResponse": {
+        "description": "Atom summaries in the folder, with pagination links and optional meta.page.total / meta.warnings.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/AtomSummaryCollectionResponse"
+            }
+          }
+        }
+      },
+      "StorageObjectResponse": {
+        "description": "The created storage object, possibly with meta.warnings.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/StorageObjectResponse"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "Key": {
+        "name": "key",
+        "in": "path",
+        "required": true,
+        "description": "Key of the folder to list. Keys containing slashes must be URL-encoded (`/` → `%2F`) so the key survives routing as a single path segment.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PageNumber": {
+        "name": "page[number]",
+        "in": "query",
+        "description": "Page number for page-based pagination (1-based). Defaults to 1 when no pagination key is present.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "PageSize": {
+        "name": "page[size]",
+        "in": "query",
+        "description": "Items per page — combines with page[number], page[after], or page[before]. Defaults to 100; values above 100 are clamped to 100 rather than rejected.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "PageOffset": {
+        "name": "page[offset]",
+        "in": "query",
+        "description": "Zero-based item offset for offset-based pagination.",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "PageLimit": {
+        "name": "page[limit]",
+        "in": "query",
+        "description": "Maximum number of items to return — combines with page[offset]. Values above 100 are clamped to 100.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "PageAfter": {
+        "name": "page[after]",
+        "in": "query",
+        "description": "Forward cursor. Pass an empty value to start a cursor iteration from the beginning, then follow links.next. Rejected with 400 when the backend does not declare cursor pagination (consult GET /capabilities, `pagination.styles.cursor`).",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PageBefore": {
+        "name": "page[before]",
+        "in": "query",
+        "description": "Backward cursor. Rejected with 400 when the backend does not declare cursor pagination (consult GET /capabilities, `pagination.styles.cursor`).",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "FilterDepth": {
+        "name": "filter[depth]",
+        "in": "query",
+        "description": "Recursion depth for the folder walk. Values that are not integers >= 1 fall back to 1.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 1
+        }
+      }
+    }
+  }
+}

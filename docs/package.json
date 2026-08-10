@@ -6,13 +6,16 @@
   "type": "module",
   "scripts": {
     "aggregate-package-docs": "node scripts/aggregate-package-docs.mjs",
-    "dev": "npm run aggregate-package-docs && vitepress dev",
-    "build": "npm run aggregate-package-docs && vitepress build",
+    "generate-openapi": "node scripts/generate-openapi.mjs",
+    "prebuild-docs": "npm run aggregate-package-docs && npm run generate-openapi",
+    "dev": "npm run prebuild-docs && vitepress dev",
+    "build": "npm run prebuild-docs && vitepress build",
     "preview": "vitepress preview",
     "test": "vitest run"
   },
   "devDependencies": {
     "gray-matter": "catalog:",
+    "laikacms": "workspace:*",
     "vitepress": "catalog:vue",
     "vitest": "catalog:tools",
     "vue": "catalog:vue"

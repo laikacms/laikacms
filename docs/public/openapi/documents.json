@@ -1,0 +1,2278 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Laika CMS Documents API",
+    "version": "1.0.1",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    },
+    "description": "JSON:API-style HTTP interface over a Laika CMS documents repository: published documents, unpublished drafts, revisions, publish/unpublish state transitions, and fail-fast operation batches. Success responses use the `application/vnd.api+json` media type. Warning: this API ships no built-in authentication — wrap it with middleware that validates credentials before exposing it to an untrusted network, otherwise anyone who can reach it can read, create, modify, publish, unpublish, and delete documents and revisions."
+  },
+  "servers": [
+    {
+      "url": "/documents"
+    }
+  ],
+  "tags": [
+    {
+      "name": "info",
+      "description": "API self-description."
+    },
+    {
+      "name": "capabilities",
+      "description": "Backend capability introspection."
+    },
+    {
+      "name": "changes",
+      "description": "Capability-gated change signals (sync tokens + change feed)."
+    },
+    {
+      "name": "records",
+      "description": "Combined published + unpublished listings."
+    },
+    {
+      "name": "published",
+      "description": "Published documents."
+    },
+    {
+      "name": "unpublished",
+      "description": "Unpublished drafts."
+    },
+    {
+      "name": "revisions",
+      "description": "Document revisions."
+    },
+    {
+      "name": "operations",
+      "description": "Fail-fast batch operations."
+    }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "operationId": "getApiInfo",
+        "summary": "List available endpoints",
+        "tags": [
+          "info"
+        ],
+        "responses": {
+          "200": {
+            "description": "API info resource enumerating the available endpoints.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiInfoResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiDocument",
+        "summary": "Get this OpenAPI 3.1 document",
+        "tags": [
+          "info"
+        ],
+        "responses": {
+          "200": {
+            "description": "The OpenAPI document, with `servers[0].url` resolved against the request origin.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/openapi.yaml": {
+      "get": {
+        "operationId": "getOpenApiDocumentYaml",
+        "summary": "Get this OpenAPI 3.1 document, as YAML",
+        "tags": [
+          "info"
+        ],
+        "responses": {
+          "200": {
+            "description": "The OpenAPI document as YAML, with `servers[0].url` resolved against the request origin.",
+            "content": {
+              "application/yaml": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/capabilities": {
+      "get": {
+        "operationId": "getCapabilities",
+        "summary": "Get the underlying documents repository capabilities",
+        "tags": [
+          "capabilities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Capabilities of the backing documents repository.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilitiesResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure mapped from its error code."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Capabilities unavailable."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Internal repository failure."
+          }
+        }
+      }
+    },
+    "/sync-token": {
+      "get": {
+        "operationId": "getSyncToken",
+        "summary": "Get an opaque change token for a scope",
+        "description": "Returns a token that changes whenever anything inside the scope (a folder, or the whole store when filter[folder] is omitted) changes. Compare tokens only by equality. Capability-gated: backends without change-signal support answer 501 (consult GET /capabilities, `changes`).",
+        "tags": [
+          "changes"
+        ],
+        "parameters": [
+          {
+            "name": "filter[folder]",
+            "in": "query",
+            "description": "Scope the token to a folder. Omit for the whole store.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The current sync token for the scope.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncTokenResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure mapped from its error code."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Internal repository failure."
+          },
+          "501": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "The backing repository does not support sync tokens."
+          }
+        }
+      }
+    },
+    "/changes": {
+      "get": {
+        "operationId": "listChanges",
+        "summary": "List changes since a sync token",
+        "description": "Enumerates what changed inside the scope since a previously obtained sync token. `meta.syncToken` on the response carries the new token to resume from. Capability-gated: backends without a change feed answer 501 (consult GET /capabilities, `changes`).",
+        "tags": [
+          "changes"
+        ],
+        "parameters": [
+          {
+            "name": "filter[since]",
+            "in": "query",
+            "required": true,
+            "description": "A sync token previously obtained from GET /sync-token or a prior GET /changes.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[folder]",
+            "in": "query",
+            "description": "Scope the feed to a folder. Omit for the whole store.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/PageNumber"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/PageOffset"
+          },
+          {
+            "$ref": "#/components/parameters/PageLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PageAfter"
+          },
+          {
+            "$ref": "#/components/parameters/PageBefore"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Change summary collection; `meta.syncToken` carries the new token.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesCollectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Missing filter[since], an unrecognized sync token, or a bad-request failure."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Internal repository failure."
+          },
+          "501": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "The backing repository does not support a change feed."
+          }
+        }
+      }
+    },
+    "/records": {
+      "get": {
+        "operationId": "listRecords",
+        "summary": "List full records (published and/or unpublished view per key)",
+        "tags": [
+          "records"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FilterType"
+          },
+          {
+            "$ref": "#/components/parameters/FilterFolder"
+          },
+          {
+            "$ref": "#/components/parameters/FilterDepth"
+          },
+          {
+            "$ref": "#/components/parameters/PageNumber"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/PageOffset"
+          },
+          {
+            "$ref": "#/components/parameters/PageLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PageAfter"
+          },
+          {
+            "$ref": "#/components/parameters/PageBefore"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Record collection with pagination links, `meta.page.total` when the backend reports a total, and `meta.warnings` for per-item recoverable errors.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordsCollectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Invalid filter/pagination parameters, cursor pagination requested but unsupported by the backend, or a bad-request repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository reported not-found (e.g. unknown collection)."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Internal repository failure."
+          }
+        }
+      }
+    },
+    "/record-summaries": {
+      "get": {
+        "operationId": "listRecordSummaries",
+        "summary": "List record summaries (lightweight listing without content)",
+        "tags": [
+          "records"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/FilterType"
+          },
+          {
+            "$ref": "#/components/parameters/FilterFolder"
+          },
+          {
+            "$ref": "#/components/parameters/FilterDepth"
+          },
+          {
+            "$ref": "#/components/parameters/PageNumber"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/PageOffset"
+          },
+          {
+            "$ref": "#/components/parameters/PageLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PageAfter"
+          },
+          {
+            "$ref": "#/components/parameters/PageBefore"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Record summary collection with pagination links and meta.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RecordSummariesCollectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Invalid filter/pagination parameters, cursor pagination requested but unsupported by the backend, or a bad-request repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository reported not-found (e.g. unknown collection)."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Internal repository failure."
+          }
+        }
+      }
+    },
+    "/published": {
+      "post": {
+        "operationId": "createPublished",
+        "summary": "Create a published document",
+        "tags": [
+          "published"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishedCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/PublishedResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Malformed JSON, schema-invalid body, or repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository reported not-found."
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "A document already exists at the requested key."
+          }
+        }
+      }
+    },
+    "/published/{key}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Key"
+        }
+      ],
+      "get": {
+        "operationId": "getPublished",
+        "summary": "Read a published document",
+        "tags": [
+          "published"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/PublishedResponse",
+            "description": "The published document."
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Document not found."
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updatePublished",
+        "summary": "Update a published document",
+        "tags": [
+          "published"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PublishedCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/PublishedResponse",
+            "description": "The updated published document."
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Malformed JSON, schema-invalid body, or repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Document not found."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deletePublished",
+        "summary": "Remove a published document",
+        "tags": [
+          "published"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/DeletedResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure (including not-found — the error object carries the underlying status)."
+          }
+        }
+      }
+    },
+    "/published/{key}/unpublish": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Key"
+        }
+      ],
+      "post": {
+        "operationId": "unpublishPublished",
+        "summary": "State transition: move a published document to unpublished",
+        "tags": [
+          "published"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnpublishRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/UnpublishedResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Malformed JSON, schema-invalid body, or repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Published document not found."
+          }
+        }
+      }
+    },
+    "/unpublished": {
+      "post": {
+        "operationId": "createUnpublished",
+        "summary": "Create an unpublished draft",
+        "tags": [
+          "unpublished"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnpublishedCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/UnpublishedResponse",
+            "description": "Created unpublished draft."
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Malformed JSON, schema-invalid body, or repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository reported not-found."
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "A draft already exists at the requested key."
+          }
+        }
+      }
+    },
+    "/unpublished/{key}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Key"
+        }
+      ],
+      "get": {
+        "operationId": "getUnpublished",
+        "summary": "Read an unpublished draft",
+        "tags": [
+          "unpublished"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/UnpublishedResponse",
+            "description": "The unpublished draft."
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Draft not found."
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateUnpublished",
+        "summary": "Update an unpublished draft",
+        "tags": [
+          "unpublished"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnpublishedUpdateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/UnpublishedResponse",
+            "description": "The updated unpublished draft."
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Malformed JSON, schema-invalid body, or repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Draft not found."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteUnpublished",
+        "summary": "Remove an unpublished draft",
+        "tags": [
+          "unpublished"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/DeletedResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Malformed JSON, schema-invalid body, or repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Draft not found."
+          }
+        }
+      }
+    },
+    "/unpublished/{key}/publish": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Key"
+        }
+      ],
+      "post": {
+        "operationId": "publishUnpublished",
+        "summary": "State transition: publish an unpublished draft",
+        "tags": [
+          "unpublished"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/PublishedResponse",
+            "description": "The resulting published document."
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Draft not found."
+          }
+        }
+      }
+    },
+    "/revisions": {
+      "post": {
+        "operationId": "createRevision",
+        "summary": "Create a revision for a document",
+        "tags": [
+          "revisions"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevisionCreateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "$ref": "#/components/responses/RevisionResponse"
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Malformed JSON, schema-invalid body, or repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository reported not-found."
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "A revision already exists at the requested key."
+          }
+        }
+      }
+    },
+    "/revisions/{key}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Key"
+        }
+      ],
+      "get": {
+        "operationId": "listRevisions",
+        "summary": "List revisions for a document",
+        "tags": [
+          "revisions"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/PageNumber"
+          },
+          {
+            "$ref": "#/components/parameters/PageSize"
+          },
+          {
+            "$ref": "#/components/parameters/PageOffset"
+          },
+          {
+            "$ref": "#/components/parameters/PageLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PageAfter"
+          },
+          {
+            "$ref": "#/components/parameters/PageBefore"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Revision summary collection with pagination links and meta.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionSummariesCollectionResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Invalid pagination parameters, cursor pagination requested but unsupported by the backend, or a bad-request repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Document not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Internal repository failure."
+          }
+        }
+      }
+    },
+    "/revisions/{key}/{revisionId}": {
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/Key"
+        },
+        {
+          "name": "revisionId",
+          "in": "path",
+          "required": true,
+          "description": "Revision identifier for the document.",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getRevision",
+        "summary": "Read a specific revision of a document",
+        "tags": [
+          "revisions"
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/RevisionResponse",
+            "description": "The revision."
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Revision not found."
+          }
+        }
+      }
+    },
+    "/operations": {
+      "post": {
+        "operationId": "postBatchOperations",
+        "summary": "Batch operations (add/update/remove and publish/unpublish transitions)",
+        "description": "Fail-fast batch: all operations are validated for request shape before any I/O. A shape-invalid op (e.g. missing `data.id` on an add) returns HTTP 400 with zero writes. Once validation passes, ops are applied sequentially; the first repository failure stops processing and no subsequent ops run. A mid-batch repository failure leaves previously-applied ops applied — this endpoint is a fail-fast batch, not a transaction.",
+        "tags": [
+          "operations"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchOperationsRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Results for all applied operations. Processing stopped if a repository failure occurred.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchOperationsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Shape-invalid batch (missing required field, wrong type) — zero writes performed; or malformed JSON / schema-invalid body."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "JsonApiErrorObject": {
+        "type": "object",
+        "description": "A single JSON:API error object as produced by the error responder.",
+        "required": [
+          "code",
+          "status",
+          "title",
+          "detail"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Machine-readable Laika error code, e.g. `not_found`, `invalid_data`."
+          },
+          "status": {
+            "type": "string",
+            "description": "HTTP status code as a string."
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object",
+            "description": "Set on validation failures to point at the offending member or query parameter.",
+            "properties": {
+              "pointer": {
+                "type": "string"
+              },
+              "parameter": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "JsonApiError": {
+        "type": "object",
+        "required": [
+          "errors"
+        ],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonApiErrorObject"
+            }
+          }
+        }
+      },
+      "Warnings": {
+        "type": "array",
+        "description": "Non-fatal recoverable errors collected while producing an otherwise successful response.",
+        "items": {
+          "$ref": "#/components/schemas/JsonApiErrorObject"
+        }
+      },
+      "WarningsMeta": {
+        "type": "object",
+        "properties": {
+          "warnings": {
+            "$ref": "#/components/schemas/Warnings"
+          }
+        }
+      },
+      "ResourceLinks": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "type": "string",
+            "description": "Canonical detail URL for this resource, relative to the server origin."
+          }
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "PaginationLinks": {
+        "type": "object",
+        "required": [
+          "self"
+        ],
+        "properties": {
+          "self": {
+            "type": "string"
+          },
+          "first": {
+            "type": "string"
+          },
+          "prev": {
+            "type": "string"
+          },
+          "next": {
+            "type": "string"
+          }
+        }
+      },
+      "CollectionMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "object",
+            "description": "Aggregate counts; present when the backend reports a total.",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "description": "Total number of items across all pages, when the backend knows it."
+              }
+            }
+          },
+          "warnings": {
+            "$ref": "#/components/schemas/Warnings"
+          }
+        }
+      },
+      "UnsupportedCapability": {
+        "type": "object",
+        "description": "The unsupported branch shared by every capability.",
+        "required": [
+          "supported",
+          "description"
+        ],
+        "properties": {
+          "supported": {
+            "const": false
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "PaginationCapability": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/UnsupportedCapability"
+          },
+          {
+            "type": "object",
+            "required": [
+              "supported",
+              "description",
+              "styles"
+            ],
+            "properties": {
+              "supported": {
+                "const": true
+              },
+              "description": {
+                "type": "string"
+              },
+              "styles": {
+                "type": "object",
+                "required": [
+                  "offset",
+                  "page",
+                  "cursor"
+                ],
+                "properties": {
+                  "offset": {
+                    "type": "boolean"
+                  },
+                  "page": {
+                    "type": "boolean"
+                  },
+                  "cursor": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ChangesCapability": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/UnsupportedCapability"
+          },
+          {
+            "type": "object",
+            "required": [
+              "supported",
+              "description",
+              "syncToken",
+              "changeFeed"
+            ],
+            "properties": {
+              "supported": {
+                "const": true
+              },
+              "description": {
+                "type": "string"
+              },
+              "syncToken": {
+                "type": "boolean"
+              },
+              "changeFeed": {
+                "type": "boolean"
+              }
+            }
+          }
+        ]
+      },
+      "VersionTrackingCapability": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/UnsupportedCapability"
+          },
+          {
+            "type": "object",
+            "required": [
+              "supported",
+              "description"
+            ],
+            "properties": {
+              "supported": {
+                "const": true
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "ApiInfoResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "api-info"
+          },
+          "id": {
+            "const": "documents"
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "name",
+              "version",
+              "endpoints"
+            ],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "version": {
+                "type": "string"
+              },
+              "endpoints": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "path",
+                    "methods",
+                    "description"
+                  ],
+                  "properties": {
+                    "path": {
+                      "type": "string"
+                    },
+                    "methods": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ApiInfoResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/ApiInfoResource"
+          }
+        }
+      },
+      "ChangesMeta": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CollectionMeta"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "syncToken": {
+                "type": "string",
+                "description": "On change-feed responses: the new sync token to resume from."
+              }
+            }
+          }
+        ]
+      },
+      "RecordTimestamps": {
+        "type": "object",
+        "properties": {
+          "language": {
+            "type": "string",
+            "description": "BCP 47 language tag. Omitted when undetermined (\"und\")."
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DocumentContent": {
+        "type": "object",
+        "description": "Arbitrary document content.",
+        "additionalProperties": true
+      },
+      "SyncTokenResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "sync-token"
+          },
+          "id": {
+            "type": "string",
+            "description": "The folder scope, or \"self\" for the whole store."
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "syncToken"
+            ],
+            "properties": {
+              "syncToken": {
+                "type": "string",
+                "description": "Opaque per-scope change token; compare only by equality."
+              },
+              "folder": {
+                "type": "string",
+                "description": "Folder scope, when the token was scoped."
+              }
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "SyncTokenResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/SyncTokenResource"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "ChangeSummaryResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "change-summary"
+          },
+          "id": {
+            "type": "string",
+            "description": "The key that changed."
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "deleted"
+            ],
+            "properties": {
+              "deleted": {
+                "type": "boolean",
+                "description": "True when the record was removed from the scope."
+              },
+              "version": {
+                "type": "string",
+                "description": "Opaque per-record version token after the change. Omitted for deletions and on backends without version tracking."
+              }
+            }
+          }
+        }
+      },
+      "ChangesCollectionResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "links"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChangeSummaryResource"
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ChangesMeta"
+          }
+        }
+      },
+      "PublishedResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "published"
+          },
+          "id": {
+            "type": "string",
+            "description": "Document key."
+          },
+          "attributes": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecordTimestamps"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type",
+                  "status",
+                  "content"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "published"
+                  },
+                  "status": {
+                    "const": "published"
+                  },
+                  "content": {
+                    "$ref": "#/components/schemas/DocumentContent"
+                  }
+                }
+              }
+            ]
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "PublishedSummaryResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "published-summary"
+          },
+          "id": {
+            "type": "string",
+            "description": "Document key."
+          },
+          "attributes": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecordTimestamps"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type",
+                  "status"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "published-summary"
+                  },
+                  "status": {
+                    "const": "published"
+                  }
+                }
+              }
+            ]
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "UnpublishedResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "unpublished"
+          },
+          "id": {
+            "type": "string",
+            "description": "Document key."
+          },
+          "attributes": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecordTimestamps"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type",
+                  "status",
+                  "content"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "unpublished"
+                  },
+                  "status": {
+                    "type": "string",
+                    "description": "Unpublished state, e.g. `draft`, `pending_review`, `archived`, `trash`."
+                  },
+                  "content": {
+                    "$ref": "#/components/schemas/DocumentContent"
+                  }
+                }
+              }
+            ]
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "UnpublishedSummaryResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "unpublished-summary"
+          },
+          "id": {
+            "type": "string",
+            "description": "Document key."
+          },
+          "attributes": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecordTimestamps"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type",
+                  "status"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "unpublished-summary"
+                  },
+                  "status": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "RevisionResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "revision"
+          },
+          "id": {
+            "type": "string",
+            "description": "Document key."
+          },
+          "attributes": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecordTimestamps"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type",
+                  "revision",
+                  "content",
+                  "createdAt"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "revision"
+                  },
+                  "revision": {
+                    "type": "string"
+                  },
+                  "content": {
+                    "$ref": "#/components/schemas/DocumentContent"
+                  }
+                }
+              }
+            ]
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "RevisionSummaryResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "revision-summary"
+          },
+          "id": {
+            "type": "string",
+            "description": "Document key."
+          },
+          "attributes": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RecordTimestamps"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "type",
+                  "revision"
+                ],
+                "properties": {
+                  "type": {
+                    "const": "revision-summary"
+                  },
+                  "revision": {
+                    "type": "string"
+                  }
+                }
+              }
+            ]
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "CapabilitiesResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "documents-capabilities"
+          },
+          "id": {
+            "const": "self"
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "compatibilityDate",
+              "pagination",
+              "versionTracking",
+              "changes"
+            ],
+            "properties": {
+              "compatibilityDate": {
+                "type": "string"
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/PaginationCapability"
+              },
+              "versionTracking": {
+                "$ref": "#/components/schemas/VersionTrackingCapability"
+              },
+              "changes": {
+                "$ref": "#/components/schemas/ChangesCapability"
+              }
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "CapabilitiesResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CapabilitiesResource"
+          }
+        }
+      },
+      "PublishedResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PublishedResource"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "UnpublishedResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UnpublishedResource"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "RevisionResponse": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RevisionResource"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "RecordsCollectionResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "links"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PublishedResource"
+                },
+                {
+                  "$ref": "#/components/schemas/UnpublishedResource"
+                }
+              ]
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionMeta"
+          }
+        }
+      },
+      "RecordSummariesCollectionResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "links"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/PublishedSummaryResource"
+                },
+                {
+                  "$ref": "#/components/schemas/UnpublishedSummaryResource"
+                }
+              ]
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionMeta"
+          }
+        }
+      },
+      "RevisionSummariesCollectionResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "links"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RevisionSummaryResource"
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionMeta"
+          }
+        }
+      },
+      "DeletedResponse": {
+        "type": "object",
+        "required": [
+          "meta"
+        ],
+        "properties": {
+          "meta": {
+            "type": "object",
+            "required": [
+              "deleted"
+            ],
+            "properties": {
+              "deleted": {
+                "const": true
+              },
+              "warnings": {
+                "$ref": "#/components/schemas/Warnings"
+              }
+            }
+          }
+        }
+      },
+      "PublishedWriteData": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "published"
+          },
+          "id": {
+            "type": "string",
+            "description": "Document key."
+          },
+          "attributes": {
+            "type": "object",
+            "description": "Document attributes — typically `status`, `language`, and `content`. Partial on update.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "UnpublishedWriteData": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "unpublished"
+          },
+          "id": {
+            "type": "string",
+            "description": "Document key."
+          },
+          "attributes": {
+            "type": "object",
+            "description": "Draft attributes — typically `status`, `language`, and `content`. Partial on update.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "RevisionWriteData": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "revision"
+          },
+          "id": {
+            "type": "string",
+            "description": "Document key."
+          },
+          "attributes": {
+            "type": "object",
+            "description": "Revision attributes — typically `revision`, `language`, and `content`.",
+            "additionalProperties": true
+          }
+        }
+      },
+      "PublishedCreateRequest": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/PublishedWriteData"
+          }
+        }
+      },
+      "UnpublishedCreateRequest": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UnpublishedWriteData"
+          }
+        }
+      },
+      "UnpublishedUpdateRequest": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UnpublishedWriteData"
+          }
+        }
+      },
+      "RevisionCreateRequest": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/RevisionWriteData"
+          }
+        }
+      },
+      "UnpublishTarget": {
+        "type": "object",
+        "required": [
+          "type",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "unpublished"
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "status"
+            ],
+            "properties": {
+              "status": {
+                "type": "string",
+                "description": "Unpublished state to transition the document into."
+              }
+            }
+          }
+        }
+      },
+      "UnpublishRequest": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/UnpublishTarget"
+          }
+        }
+      },
+      "ResourceRef": {
+        "type": "object",
+        "required": [
+          "id",
+          "type"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "Document key."
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "document",
+              "unpublished",
+              "revision"
+            ]
+          }
+        }
+      },
+      "AddPublishedOperation": {
+        "type": "object",
+        "required": [
+          "op",
+          "data"
+        ],
+        "properties": {
+          "op": {
+            "const": "add"
+          },
+          "data": {
+            "$ref": "#/components/schemas/PublishedWriteData"
+          }
+        }
+      },
+      "AddUnpublishedOperation": {
+        "type": "object",
+        "required": [
+          "op",
+          "data"
+        ],
+        "properties": {
+          "op": {
+            "const": "add"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UnpublishedWriteData"
+          }
+        }
+      },
+      "StateTransitionOperation": {
+        "type": "object",
+        "required": [
+          "op",
+          "href",
+          "ref"
+        ],
+        "properties": {
+          "op": {
+            "const": "update"
+          },
+          "href": {
+            "type": "string",
+            "enum": [
+              "/publish",
+              "/unpublish"
+            ],
+            "description": "`/publish` requires ref.type `unpublished`; `/unpublish` requires ref.type `document` plus a `data` member carrying the target status."
+          },
+          "ref": {
+            "$ref": "#/components/schemas/ResourceRef"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UnpublishTarget"
+          }
+        }
+      },
+      "UpdateUnpublishedOperation": {
+        "type": "object",
+        "required": [
+          "op",
+          "data"
+        ],
+        "properties": {
+          "op": {
+            "const": "update"
+          },
+          "data": {
+            "$ref": "#/components/schemas/UnpublishedWriteData"
+          }
+        }
+      },
+      "RemoveOperation": {
+        "type": "object",
+        "required": [
+          "op",
+          "ref"
+        ],
+        "properties": {
+          "op": {
+            "const": "remove"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/ResourceRef"
+          }
+        }
+      },
+      "BatchOperationsRequest": {
+        "type": "object",
+        "required": [
+          "operations"
+        ],
+        "properties": {
+          "operations": {
+            "type": "array",
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/AddPublishedOperation"
+                },
+                {
+                  "$ref": "#/components/schemas/AddUnpublishedOperation"
+                },
+                {
+                  "$ref": "#/components/schemas/StateTransitionOperation"
+                },
+                {
+                  "$ref": "#/components/schemas/UpdateUnpublishedOperation"
+                },
+                {
+                  "$ref": "#/components/schemas/RemoveOperation"
+                }
+              ]
+            }
+          }
+        }
+      },
+      "AtomicResultError": {
+        "type": "object",
+        "required": [
+          "status",
+          "title"
+        ],
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "AtomicResult": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": [
+              "data"
+            ],
+            "properties": {
+              "data": {
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/PublishedResource"
+                  },
+                  {
+                    "$ref": "#/components/schemas/UnpublishedResource"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "meta": {
+                "$ref": "#/components/schemas/WarningsMeta"
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "meta"
+            ],
+            "properties": {
+              "meta": {
+                "type": "object",
+                "required": [
+                  "deleted",
+                  "ref"
+                ],
+                "properties": {
+                  "deleted": {
+                    "const": true
+                  },
+                  "ref": {
+                    "$ref": "#/components/schemas/ResourceRef"
+                  },
+                  "warnings": {
+                    "$ref": "#/components/schemas/Warnings"
+                  }
+                }
+              }
+            }
+          },
+          {
+            "type": "object",
+            "required": [
+              "errors"
+            ],
+            "properties": {
+              "errors": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AtomicResultError"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "BatchOperationsResponse": {
+        "type": "object",
+        "required": [
+          "results"
+        ],
+        "properties": {
+          "results": {
+            "type": "array",
+            "description": "One entry per applied operation, in request order. Processing stops at the first repository failure — subsequent operations are not applied. A failing operation produces an `errors` entry; preceding ops that succeeded remain applied (fail-fast batch, not a transaction).",
+            "items": {
+              "$ref": "#/components/schemas/AtomicResult"
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "ErrorResponse": {
+        "description": "JSON:API error document.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/JsonApiError"
+            }
+          }
+        }
+      },
+      "PublishedResponse": {
+        "description": "Created published document; `meta.warnings` carries recoverable write warnings.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/PublishedResponse"
+            }
+          }
+        }
+      },
+      "DeletedResponse": {
+        "description": "Deletion confirmation; `meta.warnings` carries recoverable cleanup warnings.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/DeletedResponse"
+            }
+          }
+        }
+      },
+      "UnpublishedResponse": {
+        "description": "The resulting unpublished document.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/UnpublishedResponse"
+            }
+          }
+        }
+      },
+      "RevisionResponse": {
+        "description": "Created revision.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/RevisionResponse"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "Key": {
+        "name": "key",
+        "in": "path",
+        "required": true,
+        "description": "Document key (URL-encoded; keys may contain `/`, encoded as `%2F`).",
+        "schema": {
+          "type": "string",
+          "maxLength": 1023
+        }
+      },
+      "PageNumber": {
+        "name": "page[number]",
+        "in": "query",
+        "description": "Page number for page-based pagination (1-based). Defaults to 1 when no pagination key is present.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "PageSize": {
+        "name": "page[size]",
+        "in": "query",
+        "description": "Items per page — combines with page[number], page[after], or page[before]. Defaults to 10; values above 100 are clamped to 100 rather than rejected.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "PageOffset": {
+        "name": "page[offset]",
+        "in": "query",
+        "description": "Zero-based item offset for offset-based pagination.",
+        "schema": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "PageLimit": {
+        "name": "page[limit]",
+        "in": "query",
+        "description": "Maximum number of items to return — combines with page[offset]. Values above 100 are clamped to 100.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "PageAfter": {
+        "name": "page[after]",
+        "in": "query",
+        "description": "Forward cursor. Pass an empty value to start a cursor iteration from the beginning, then follow links.next. Rejected with 400 when the backend does not declare cursor pagination (consult GET /capabilities, `pagination.styles.cursor`).",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "PageBefore": {
+        "name": "page[before]",
+        "in": "query",
+        "description": "Backward cursor. Rejected with 400 when the backend does not declare cursor pagination (consult GET /capabilities, `pagination.styles.cursor`).",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "FilterType": {
+        "name": "filter[type]",
+        "in": "query",
+        "description": "Which record variants to list. `all` lists both published and unpublished. Defaults to `published`.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "published",
+            "unpublished",
+            "all"
+          ]
+        }
+      },
+      "FilterFolder": {
+        "name": "filter[folder]",
+        "in": "query",
+        "description": "Folder (collection name) to list. Defaults to the empty string; backends may require it.",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "FilterDepth": {
+        "name": "filter[depth]",
+        "in": "query",
+        "description": "Folder recursion depth. Defaults to 1.",
+        "schema": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

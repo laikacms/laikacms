@@ -1,0 +1,1558 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Laika CMS Assets API",
+    "version": "1.0.1",
+    "description": "JSON:API-style HTTP interface over a Laika CMS assets repository: list, fetch, upload, update and delete assets and folders, plus capability introspection. Success responses use the application/vnd.api+json media type. ⚠️ The handler ships no authentication — wrap it (e.g. with laikacms/decap-api or a custom middleware that validates a Bearer token) before exposing it to an untrusted network, otherwise anyone who can reach it can list, upload, modify, and delete asset binaries.",
+    "license": {
+      "name": "MIT",
+      "identifier": "MIT"
+    }
+  },
+  "servers": [
+    {
+      "url": "/assets"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Resources",
+      "description": "Assets and folders."
+    },
+    {
+      "name": "Capabilities",
+      "description": "Introspection of what the underlying assets backend supports."
+    },
+    {
+      "name": "Changes",
+      "description": "Capability-gated change signals (sync tokens + change feed)."
+    },
+    {
+      "name": "Meta",
+      "description": "API self-description."
+    }
+  ],
+  "paths": {
+    "/openapi.json": {
+      "get": {
+        "operationId": "getOpenApiDocument",
+        "summary": "Get this OpenAPI document",
+        "tags": [
+          "Meta"
+        ],
+        "responses": {
+          "200": {
+            "description": "The OpenAPI 3.1 document describing this API, with `servers` rewritten to the absolute mount point of the handler.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Unexpected error while handling the request."
+          }
+        }
+      }
+    },
+    "/openapi.yaml": {
+      "get": {
+        "operationId": "getOpenApiDocumentYaml",
+        "summary": "Get this OpenAPI document as YAML",
+        "tags": [
+          "Meta"
+        ],
+        "responses": {
+          "200": {
+            "description": "The OpenAPI 3.1 document describing this API, serialized as YAML, with `servers` rewritten to the absolute mount point of the handler.",
+            "content": {
+              "application/yaml": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Unexpected error while handling the request."
+          }
+        }
+      }
+    },
+    "/capabilities": {
+      "get": {
+        "operationId": "getCapabilities",
+        "summary": "Get backend capabilities",
+        "description": "Surfaces the underlying assets repository capabilities (compatibility date, supported pagination styles) so clients can introspect what the backend supports instead of guessing.",
+        "tags": [
+          "Capabilities"
+        ],
+        "responses": {
+          "200": {
+            "description": "The capabilities resource.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CapabilitiesDocument"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Unexpected error while handling the request."
+          },
+          "default": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Repository failure, with the HTTP status mapped from the LaikaError code (e.g. 404, 500)."
+          }
+        }
+      }
+    },
+    "/sync-token": {
+      "get": {
+        "operationId": "getSyncToken",
+        "summary": "Get an opaque change token for a scope",
+        "description": "Returns a token that changes whenever anything inside the scope (a folder, or the whole store when filter[folder] is omitted) changes. Compare tokens only by equality. Capability-gated: backends without change-signal support answer 501 (consult GET /capabilities, `changes`).",
+        "tags": [
+          "Changes"
+        ],
+        "parameters": [
+          {
+            "name": "filter[folder]",
+            "in": "query",
+            "description": "Scope the token to a folder. Omit for the whole store.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The current sync token for the scope.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncTokenDocument"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Unexpected error while handling the request."
+          },
+          "501": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "The backing repository does not support sync tokens."
+          }
+        }
+      }
+    },
+    "/changes": {
+      "get": {
+        "operationId": "listChanges",
+        "summary": "List changes since a sync token",
+        "description": "Enumerates what changed inside the scope since a previously obtained sync token. `meta.syncToken` on the response carries the new token to resume from. Capability-gated: backends without a change feed answer 501 (consult GET /capabilities, `changes`).",
+        "tags": [
+          "Changes"
+        ],
+        "parameters": [
+          {
+            "name": "filter[since]",
+            "in": "query",
+            "required": true,
+            "description": "A sync token previously obtained from GET /sync-token or a prior GET /changes.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[folder]",
+            "in": "query",
+            "description": "Scope the feed to a folder. Omit for the whole store.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Change summary collection; `meta.syncToken` carries the new token.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChangesCollectionDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Missing filter[since] or an unrecognized sync token."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Unexpected error while handling the request."
+          },
+          "501": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "The backing repository does not support a change feed."
+          }
+        }
+      }
+    },
+    "/resources": {
+      "get": {
+        "operationId": "listResources",
+        "summary": "List resources in a folder",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "name": "folder",
+            "in": "query",
+            "description": "Folder key to list. Takes precedence over filter[folder] and filter[prefix]. Defaults to the root folder.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[folder]",
+            "in": "query",
+            "description": "Alias for `folder`.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[prefix]",
+            "in": "query",
+            "description": "Alias for `folder`.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "filter[depth]",
+            "in": "query",
+            "description": "How many folder levels deep to walk. Clamped to a minimum of 1. Takes precedence over `depth`.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "depth",
+            "in": "query",
+            "description": "Alias for `filter[depth]`.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1
+            }
+          },
+          {
+            "name": "filter[search]",
+            "in": "query",
+            "description": "Listing filter (when declared by the backend): case-insensitive substring match on the resource key. Listing filters are generic — any filter[<name>] declared in GET /capabilities under `filtering.filters` is forwarded to the backend; undeclared names are rejected with 400.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page[number]",
+            "in": "query",
+            "description": "Page number for page-based pagination (1-based). Defaults to 1 when no pagination key is present.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page[size]",
+            "in": "query",
+            "description": "Items per page — combines with page[number], page[after], or page[before]. Defaults to 100; values above 100 are clamped to 100 rather than rejected.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page[offset]",
+            "in": "query",
+            "description": "Zero-based item offset for offset-based pagination.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          },
+          {
+            "name": "page[limit]",
+            "in": "query",
+            "description": "Maximum number of items to return — combines with page[offset]. Values above 100 are clamped to 100.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          {
+            "name": "page[after]",
+            "in": "query",
+            "description": "Forward cursor. Pass an empty value to start a cursor iteration from the beginning, then follow links.next. Rejected with 400 when the backend does not declare cursor pagination (consult GET /capabilities, `pagination.styles.cursor`).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "page[before]",
+            "in": "query",
+            "description": "Backward cursor. Rejected with 400 when the backend does not declare cursor pagination (consult GET /capabilities, `pagination.styles.cursor`).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "$ref": "#/components/parameters/Include"
+          },
+          {
+            "$ref": "#/components/parameters/Meta"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of resources, with pagination links and optional meta.page.total / meta.warnings.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceCollectionDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Listing failed, or a cursor parameter was used against a backend without cursor support."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Unexpected error while handling the request."
+          }
+        }
+      },
+      "post": {
+        "operationId": "createResource",
+        "summary": "Create an asset or folder",
+        "tags": [
+          "Resources"
+        ],
+        "requestBody": {
+          "required": true,
+          "description": "Either a multipart upload (binary asset) or a JSON:API document creating a folder or a base64-encoded asset. Any other Content-Type is rejected with 400.",
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "file"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "contentMediaType": "application/octet-stream",
+                    "description": "The binary file to upload. Its name/type are used as fallbacks for key, filename and mimeType."
+                  },
+                  "metadata": {
+                    "type": "string",
+                    "description": "Optional JSON-encoded object with key, mimeType, filename, customMetadata and cacheControl. Individual form fields take precedence."
+                  },
+                  "key": {
+                    "type": "string",
+                    "description": "Asset key. Falls back to metadata.key, then the file name."
+                  },
+                  "mimeType": {
+                    "type": "string",
+                    "description": "Falls back to the file's type, then 'application/octet-stream'."
+                  },
+                  "filename": {
+                    "type": "string",
+                    "description": "Falls back to the file name."
+                  },
+                  "cacheControl": {
+                    "type": "string"
+                  },
+                  "customMetadata": {
+                    "type": "string",
+                    "description": "JSON-encoded string-to-string record. Invalid JSON is ignored."
+                  }
+                }
+              }
+            },
+            "application/vnd.api+json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "data"
+                ],
+                "properties": {
+                  "data": {
+                    "oneOf": [
+                      {
+                        "$ref": "#/components/schemas/AssetCreateData"
+                      },
+                      {
+                        "$ref": "#/components/schemas/FolderCreateData"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "The created asset or folder.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "oneOf": [
+                    {
+                      "$ref": "#/components/schemas/AssetDocument"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FolderDocument"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Missing file or content, invalid body, unsupported Content-Type, invalid resource type, or repository failure."
+          },
+          "409": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "An asset or folder already exists at the requested key."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Unexpected error while handling the request."
+          }
+        }
+      }
+    },
+    "/resources/{key}": {
+      "parameters": [
+        {
+          "name": "key",
+          "in": "path",
+          "required": true,
+          "description": "URL-encoded resource key. Keys may contain slashes; encode them (e.g. images%2Fphoto.jpg).",
+          "schema": {
+            "type": "string"
+          }
+        }
+      ],
+      "get": {
+        "operationId": "getResource",
+        "summary": "Get a single resource by key",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Include"
+          },
+          {
+            "$ref": "#/components/parameters/Meta"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The resource, with optional included related resources and meta.warnings.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResourceDocument"
+                }
+              }
+            }
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Resource not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Unexpected error while handling the request."
+          }
+        }
+      },
+      "patch": {
+        "operationId": "updateAsset",
+        "summary": "Update an asset",
+        "description": "Updates asset metadata (mimeType, cacheControl, customMetadata). The key in the URL is used as the resource id; an id in the body is ignored.",
+        "tags": [
+          "Resources"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/vnd.api+json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "data"
+                ],
+                "properties": {
+                  "data": {
+                    "$ref": "#/components/schemas/AssetUpdateData"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated asset.",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssetDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Invalid request body, invalid update data, or repository failure."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Asset not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Unexpected error while handling the request."
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteResource",
+        "summary": "Delete an asset or folder",
+        "description": "Looks the resource up first to decide between asset and folder deletion.",
+        "tags": [
+          "Resources"
+        ],
+        "parameters": [
+          {
+            "name": "recursive",
+            "in": "query",
+            "description": "Set to 'true' to delete a folder and its contents recursively.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "true",
+                "false"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Deleted, but recoverable warnings were collected (HTTP 204 forbids a body).",
+            "content": {
+              "application/vnd.api+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResultDocument"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "Deleted cleanly with no warnings."
+          },
+          "400": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Deletion failed."
+          },
+          "404": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Resource not found."
+          },
+          "500": {
+            "$ref": "#/components/responses/ErrorResponse",
+            "description": "Unexpected error while handling the request."
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "JsonApiErrorObject": {
+        "type": "object",
+        "description": "A single JSON:API error object as produced by the error responder.",
+        "required": [
+          "code",
+          "status",
+          "title",
+          "detail"
+        ],
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "Machine-readable Laika error code, e.g. `not_found`, `invalid_data`."
+          },
+          "status": {
+            "type": "string",
+            "description": "HTTP status code as a string."
+          },
+          "title": {
+            "type": "string"
+          },
+          "detail": {
+            "type": "string"
+          },
+          "source": {
+            "type": "object",
+            "description": "Set on validation failures to point at the offending member or query parameter.",
+            "properties": {
+              "pointer": {
+                "type": "string"
+              },
+              "parameter": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "JsonApiError": {
+        "type": "object",
+        "required": [
+          "errors"
+        ],
+        "properties": {
+          "errors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JsonApiErrorObject"
+            }
+          }
+        }
+      },
+      "Warnings": {
+        "type": "array",
+        "description": "Non-fatal recoverable errors collected while producing an otherwise successful response.",
+        "items": {
+          "$ref": "#/components/schemas/JsonApiErrorObject"
+        }
+      },
+      "WarningsMeta": {
+        "type": "object",
+        "properties": {
+          "warnings": {
+            "$ref": "#/components/schemas/Warnings"
+          }
+        }
+      },
+      "ResourceLinks": {
+        "type": "object",
+        "properties": {
+          "self": {
+            "type": "string",
+            "description": "Canonical detail URL for this resource, relative to the server origin."
+          }
+        },
+        "additionalProperties": {
+          "type": "string"
+        }
+      },
+      "PaginationLinks": {
+        "type": "object",
+        "required": [
+          "self"
+        ],
+        "properties": {
+          "self": {
+            "type": "string"
+          },
+          "first": {
+            "type": "string"
+          },
+          "prev": {
+            "type": "string"
+          },
+          "next": {
+            "type": "string"
+          }
+        }
+      },
+      "CollectionMeta": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "object",
+            "description": "Aggregate counts; present when the backend reports a total.",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "description": "Total number of items across all pages, when the backend knows it."
+              }
+            }
+          },
+          "warnings": {
+            "$ref": "#/components/schemas/Warnings"
+          }
+        }
+      },
+      "UnsupportedCapability": {
+        "type": "object",
+        "description": "The unsupported branch shared by every capability.",
+        "required": [
+          "supported",
+          "description"
+        ],
+        "properties": {
+          "supported": {
+            "const": false
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      },
+      "PaginationCapability": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/UnsupportedCapability"
+          },
+          {
+            "type": "object",
+            "required": [
+              "supported",
+              "description",
+              "styles"
+            ],
+            "properties": {
+              "supported": {
+                "const": true
+              },
+              "description": {
+                "type": "string"
+              },
+              "styles": {
+                "type": "object",
+                "required": [
+                  "offset",
+                  "page",
+                  "cursor"
+                ],
+                "properties": {
+                  "offset": {
+                    "type": "boolean"
+                  },
+                  "page": {
+                    "type": "boolean"
+                  },
+                  "cursor": {
+                    "type": "boolean"
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ChangesCapability": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/UnsupportedCapability"
+          },
+          {
+            "type": "object",
+            "required": [
+              "supported",
+              "description",
+              "syncToken",
+              "changeFeed"
+            ],
+            "properties": {
+              "supported": {
+                "const": true
+              },
+              "description": {
+                "type": "string"
+              },
+              "syncToken": {
+                "type": "boolean"
+              },
+              "changeFeed": {
+                "type": "boolean"
+              }
+            }
+          }
+        ]
+      },
+      "VersionTrackingCapability": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/UnsupportedCapability"
+          },
+          {
+            "type": "object",
+            "required": [
+              "supported",
+              "description"
+            ],
+            "properties": {
+              "supported": {
+                "const": true
+              },
+              "description": {
+                "type": "string"
+              }
+            }
+          }
+        ]
+      },
+      "FilteringCapability": {
+        "description": "Named listing filters honored by GET /resources as filter[<name>] query parameters. Absent means unsupported. Undeclared filter names are rejected with 400.",
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/UnsupportedCapability"
+          },
+          {
+            "type": "object",
+            "required": [
+              "supported",
+              "description",
+              "filters"
+            ],
+            "properties": {
+              "supported": {
+                "const": true
+              },
+              "description": {
+                "type": "string"
+              },
+              "filters": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": [
+                    "name",
+                    "description"
+                  ],
+                  "properties": {
+                    "name": {
+                      "type": "string",
+                      "description": "Wire name, used as filter[<name>] (e.g. 'search')."
+                    },
+                    "description": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ChangesMeta": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/CollectionMeta"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "syncToken": {
+                "type": "string",
+                "description": "The new sync token to resume from."
+              }
+            }
+          }
+        ]
+      },
+      "AssetAttributes": {
+        "type": "object",
+        "required": [
+          "type",
+          "content"
+        ],
+        "properties": {
+          "type": {
+            "const": "asset"
+          },
+          "createdAt": {
+            "type": "string",
+            "description": "ISO 8601 creation timestamp."
+          },
+          "updatedAt": {
+            "type": "string",
+            "description": "ISO 8601 last-update timestamp."
+          },
+          "content": {
+            "type": "object",
+            "description": "Implementation-specific content descriptor (e.g. size, etag).",
+            "additionalProperties": true
+          }
+        }
+      },
+      "AssetMetadata": {
+        "type": "object",
+        "description": "Intrinsic asset metadata, discriminated by `kind`. Kind-specific fields (width/height, duration, pageCount, ...) appear alongside the base fields. Only present when the request opted in via `?meta=true`.",
+        "required": [
+          "kind",
+          "size",
+          "mimeType"
+        ],
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "image",
+              "video",
+              "audio",
+              "document",
+              "binary"
+            ]
+          },
+          "size": {
+            "type": "number",
+            "description": "File size in bytes."
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "filename": {
+            "type": "string"
+          },
+          "extension": {
+            "type": "string"
+          },
+          "hash": {
+            "type": "string"
+          },
+          "hashAlgorithm": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "modifiedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": true
+      },
+      "AssetResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "asset"
+          },
+          "id": {
+            "type": "string",
+            "description": "The asset key."
+          },
+          "attributes": {
+            "$ref": "#/components/schemas/AssetAttributes"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/AssetMetadata"
+          },
+          "relationships": {
+            "type": "object",
+            "description": "Advertised only when the corresponding `?include=` value was requested.",
+            "properties": {
+              "urls": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "const": "asset-url"
+                      },
+                      "id": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              },
+              "variations": {
+                "type": "object",
+                "properties": {
+                  "data": {
+                    "type": "object",
+                    "properties": {
+                      "type": {
+                        "const": "asset-variation"
+                      },
+                      "id": {
+                        "type": "string"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "FolderResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "folder"
+          },
+          "id": {
+            "type": "string",
+            "description": "The folder key."
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "const": "folder"
+              },
+              "createdAt": {
+                "type": "string",
+                "description": "ISO 8601 creation timestamp."
+              },
+              "updatedAt": {
+                "type": "string",
+                "description": "ISO 8601 last-update timestamp."
+              }
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "Resource": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AssetResource"
+          },
+          {
+            "$ref": "#/components/schemas/FolderResource"
+          }
+        ]
+      },
+      "AssetUrlResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "asset-url"
+          },
+          "id": {
+            "type": "string",
+            "description": "The asset key these URLs belong to."
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "description": "Direct download URL for the asset."
+              },
+              "expiresAt": {
+                "type": "string",
+                "format": "date-time",
+                "description": "Expiration for signed URLs."
+              }
+            }
+          }
+        }
+      },
+      "AssetVariation": {
+        "type": "object",
+        "required": [
+          "variant",
+          "url"
+        ],
+        "properties": {
+          "variant": {
+            "type": "string",
+            "description": "Variation identifier (e.g. 'thumbnail', '100x100')."
+          },
+          "url": {
+            "type": "string",
+            "description": "URL for this variation. May contain {width}/{height} template variables."
+          },
+          "width": {
+            "type": "integer"
+          },
+          "height": {
+            "type": "integer"
+          },
+          "mimeType": {
+            "type": "string"
+          },
+          "size": {
+            "type": "integer"
+          }
+        }
+      },
+      "AssetVariationResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "asset-variation"
+          },
+          "id": {
+            "type": "string",
+            "description": "The asset key these variations belong to."
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "variations"
+            ],
+            "properties": {
+              "variations": {
+                "type": "object",
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/AssetVariation"
+                }
+              }
+            }
+          }
+        }
+      },
+      "IncludedResource": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/AssetUrlResource"
+          },
+          {
+            "$ref": "#/components/schemas/AssetVariationResource"
+          }
+        ]
+      },
+      "CapabilitiesResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "assets-capabilities"
+          },
+          "id": {
+            "const": "self"
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "compatibilityDate",
+              "pagination",
+              "versionTracking",
+              "changes"
+            ],
+            "properties": {
+              "compatibilityDate": {
+                "type": "string"
+              },
+              "pagination": {
+                "$ref": "#/components/schemas/PaginationCapability"
+              },
+              "versionTracking": {
+                "$ref": "#/components/schemas/VersionTrackingCapability"
+              },
+              "changes": {
+                "$ref": "#/components/schemas/ChangesCapability"
+              },
+              "filtering": {
+                "$ref": "#/components/schemas/FilteringCapability"
+              }
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/ResourceLinks"
+          }
+        }
+      },
+      "SyncTokenDocument": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "object",
+            "required": [
+              "type",
+              "id",
+              "attributes"
+            ],
+            "properties": {
+              "type": {
+                "const": "sync-token"
+              },
+              "id": {
+                "type": "string",
+                "description": "The folder scope, or \"self\" for the whole store."
+              },
+              "attributes": {
+                "type": "object",
+                "required": [
+                  "syncToken"
+                ],
+                "properties": {
+                  "syncToken": {
+                    "type": "string",
+                    "description": "Opaque per-scope change token; compare only by equality."
+                  },
+                  "folder": {
+                    "type": "string",
+                    "description": "Folder scope, when the token was scoped."
+                  }
+                }
+              },
+              "links": {
+                "$ref": "#/components/schemas/ResourceLinks"
+              }
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "ChangeSummaryResource": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "change-summary"
+          },
+          "id": {
+            "type": "string",
+            "description": "The key that changed."
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "deleted"
+            ],
+            "properties": {
+              "deleted": {
+                "type": "boolean",
+                "description": "True when the record was removed from the scope."
+              },
+              "version": {
+                "type": "string",
+                "description": "Opaque per-record version token after the change. Omitted for deletions and on backends without version tracking."
+              }
+            }
+          }
+        }
+      },
+      "ChangesCollectionDocument": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChangeSummaryResource"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ChangesMeta"
+          }
+        }
+      },
+      "ResourceDocument": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/Resource"
+          },
+          "included": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncludedResource"
+            }
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "AssetDocument": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/AssetResource"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "FolderDocument": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/FolderResource"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/WarningsMeta"
+          }
+        }
+      },
+      "ResourceCollectionDocument": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Resource"
+            }
+          },
+          "included": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/IncludedResource"
+            }
+          },
+          "links": {
+            "$ref": "#/components/schemas/PaginationLinks"
+          },
+          "meta": {
+            "$ref": "#/components/schemas/CollectionMeta"
+          }
+        }
+      },
+      "CapabilitiesDocument": {
+        "type": "object",
+        "required": [
+          "data"
+        ],
+        "properties": {
+          "data": {
+            "$ref": "#/components/schemas/CapabilitiesResource"
+          }
+        }
+      },
+      "DeleteResultDocument": {
+        "type": "object",
+        "required": [
+          "meta"
+        ],
+        "properties": {
+          "meta": {
+            "type": "object",
+            "required": [
+              "deleted",
+              "warnings"
+            ],
+            "properties": {
+              "deleted": {
+                "const": true
+              },
+              "warnings": {
+                "$ref": "#/components/schemas/Warnings"
+              }
+            }
+          }
+        }
+      },
+      "AssetCreateData": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "asset"
+          },
+          "id": {
+            "type": "string",
+            "description": "The asset key to create."
+          },
+          "attributes": {
+            "type": "object",
+            "required": [
+              "content"
+            ],
+            "properties": {
+              "mimeType": {
+                "type": "string",
+                "description": "Defaults to 'application/octet-stream' when omitted."
+              },
+              "filename": {
+                "type": "string"
+              },
+              "cacheControl": {
+                "type": "string"
+              },
+              "customMetadata": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              },
+              "content": {
+                "type": "string",
+                "contentEncoding": "base64",
+                "description": "Base64-encoded binary content. Requests without content are rejected with 400; use multipart/form-data for large binary uploads."
+              }
+            }
+          }
+        }
+      },
+      "FolderCreateData": {
+        "type": "object",
+        "required": [
+          "type",
+          "id",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "folder"
+          },
+          "id": {
+            "type": "string",
+            "description": "The folder key to create."
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "folder"
+              }
+            }
+          }
+        }
+      },
+      "AssetUpdateData": {
+        "type": "object",
+        "required": [
+          "type",
+          "attributes"
+        ],
+        "properties": {
+          "type": {
+            "const": "asset"
+          },
+          "attributes": {
+            "type": "object",
+            "properties": {
+              "mimeType": {
+                "type": "string"
+              },
+              "cacheControl": {
+                "type": "string"
+              },
+              "customMetadata": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "responses": {
+      "ErrorResponse": {
+        "description": "JSON:API error document.",
+        "content": {
+          "application/vnd.api+json": {
+            "schema": {
+              "$ref": "#/components/schemas/JsonApiError"
+            }
+          }
+        }
+      }
+    },
+    "parameters": {
+      "Include": {
+        "name": "include",
+        "in": "query",
+        "description": "Comma-separated related resources to sideload into `included`: `urls`, `variations` (long-form aliases `asset-url`, `asset-variation` are also accepted).",
+        "schema": {
+          "type": "string"
+        }
+      },
+      "Meta": {
+        "name": "meta",
+        "in": "query",
+        "description": "Set to `true` (or `1`, `yes`) to inline intrinsic asset metadata on `data.meta`.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

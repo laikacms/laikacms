@@ -1,0 +1,26 @@
+[
+  {
+    "slug": "documents",
+    "title": "Documents API",
+    "file": "documents.json",
+    "paths": 18
+  },
+  {
+    "slug": "assets",
+    "title": "Assets API",
+    "file": "assets.json",
+    "paths": 7
+  },
+  {
+    "slug": "storage",
+    "title": "Storage API",
+    "file": "storage.json",
+    "paths": 12
+  },
+  {
+    "slug": "catalog",
+    "title": "Catalog API",
+    "file": "catalog.json",
+    "paths": 4
+  }
+]
