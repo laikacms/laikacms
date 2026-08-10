@@ -139,11 +139,25 @@ export class BadRequestError extends LaikaError<typeof errorCode.BAD_REQUEST, ty
   public static override CODE = errorCode.BAD_REQUEST;
   public static override STATUS = errorStatus.BAD_REQUEST;
 }
+/**
+ * Authenticated, but this principal may not perform this action — HTTP 403.
+ * This is the authorization denial: the caller has proven who they are and the
+ * answer is still no. Also covers refusals unrelated to identity (deleting a
+ * non-empty folder, a method the backend does not allow).
+ *
+ * Picking between the three auth errors:
+ *
+ * - {@link AuthenticationError} (401) — the caller has not proven *who* they
+ *   are: absent, malformed, or rejected credentials.
+ * - `ForbiddenError` (403) — the caller is authenticated but not permitted.
+ * - {@link AuthorizationError} (401) — **not** "logged in but no permission".
+ *   Despite the name it is the deserialization target for a 401 challenge
+ *   received *from a remote server* (see `json-api/utilities.ts`). Do not reach
+ *   for it on an authorization denial — that would answer 401 where the caller
+ *   is in fact authenticated, telling them to re-authenticate when re-trying
+ *   the credential cannot help.
+ */
 export class ForbiddenError extends LaikaError<typeof errorCode.FORBIDDEN, typeof errorStatus.FORBIDDEN> {
-  /*
-    use AuthenticationError if user is not logged in at all
-    use ForbiddenError if user is logged in but lacks permissions
-    */
   public static override TITLE = 'Forbidden';
   public static override CODE = errorCode.FORBIDDEN;
   public static override STATUS = errorStatus.FORBIDDEN;
@@ -206,6 +220,15 @@ export class EntryAlreadyExistsError
   public static override CODE = errorCode.ENTRY_ALREADY_EXISTS;
   public static override STATUS = errorStatus.ENTRY_ALREADY_EXISTS;
 }
+/**
+ * A 401 challenge received from a *remote* server, decoded back into a typed
+ * error — HTTP 401. Raised by the JSON:API proxy layer when an upstream rejects
+ * our credential, not by this server's own auth gate.
+ *
+ * The name is a long-standing misnomer: this is **not** the "authenticated but
+ * not permitted" error. For that use {@link ForbiddenError} (403); for a
+ * credential this server itself rejected use {@link AuthenticationError} (401).
+ */
 export class AuthorizationError
   extends LaikaError<typeof errorCode.AUTHORIZATION_ERROR, typeof errorStatus.AUTHORIZATION_ERROR>
 {
