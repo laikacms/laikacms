@@ -11,10 +11,10 @@ Cloudflare Workers or AWS Lambda deployments see [deployment](../deployment).
 
 ## Prerequisites
 
-| Requirement | Version                 |
-| ----------- | ----------------------- |
-| Node.js     | ≥ 22 (22 LTS or 24 LTS) |
-| npm or pnpm | any recent              |
+| Requirement | Version                   |
+| ----------- | ------------------------- |
+| Node.js     | ≥ 24 (24 LTS recommended) |
+| npm or pnpm | any recent                |
 
 ---
 
@@ -419,7 +419,7 @@ fly deploy
 ### Docker
 
 ```dockerfile
-FROM node:22-alpine
+FROM node:24-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
