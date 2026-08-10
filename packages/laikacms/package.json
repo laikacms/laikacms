@@ -166,6 +166,11 @@
       "import": "./dist/impl/storage-fs/index.js",
       "default": "./dist/impl/storage-fs/index.js"
     },
+    "./storage/github-cdn": {
+      "types": "./dist/impl/storage-github-cdn/index.d.ts",
+      "import": "./dist/impl/storage-github-cdn/index.js",
+      "default": "./dist/impl/storage-github-cdn/index.js"
+    },
     "./storage/jsonapi-proxy": {
       "types": "./dist/impl/storage-jsonapi-proxy/index.d.ts",
       "import": "./dist/impl/storage-jsonapi-proxy/index.js",
