@@ -1,6 +1,6 @@
 # Releasing
 
-Both public packages (`laikacms`, `@laikacms/decap`) are version-fixed via changesets and released
+Both public packages (`laikacms`, `@laikacms/server`) are version-fixed via changesets and released
 together with `changeset publish`. Publishing MUST go through pnpm (never `npm publish`): pnpm
 resolves `catalog:` dependency ranges into the tarball, npm does not — `prepack` guards against this
 via `scripts/check-no-catalog-deps.mjs`. `changeset publish` is safe here: it detects pnpm from the

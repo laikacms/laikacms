@@ -1,0 +1,35 @@
+{
+  "name": "@laikacms/starter-opfs-blog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Starter blog that runs LaikaCMS entirely in the browser — no server. Content lives in the origin-private file system (OPFS) by default, or in a real on-disk folder the user picks via showDirectoryPicker() (Chromium).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@laikacms/decap-cms": "^4.1.0",
+    "laikacms": "^3.1.0",
+    "prismjs": "^1.30.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.4"
+  },
+  "overrides": {
+    "laikacms": "$laikacms"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/prismjs": "^1.26.5",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.0"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}

@@ -7,10 +7,10 @@ This page is the hand-authored package map. Package-specific reference/usage doc
 with the code under `packages/<pkg>/docs/` and aggregated into the site under **Reference >
 Packages** — see [Package reference docs](../contributing/package-docs) for the convention. Two
 packages currently have co-located docs: [`laikacms`](./packages/laikacms/) and
-[`@laikacms/decap`](./packages/decap/).
+[`@laikacms/server`](./packages/server/).
 
 > **Repository layout (June 2026, updated July 2026, updated August 2026).** This monorepo carries
-> `laikacms`, `@laikacms/decap`, `@laikacms/vite-plugin`, `@laikacms/github`, `@laikacms/gitlab`,
+> `laikacms`, `@laikacms/server`, `@laikacms/vite-plugin`, `@laikacms/github`, `@laikacms/gitlab`,
 > and `@laikacms/bitbucket` as actively developed packages (`@laikacms/decap-ai` and the client-side
 > decap extras moved into the `@laikacms/decap-cms` fork in July 2026, DCMS-492). The other packages
 > documented below (`@laikacms/aws`, `@laikacms/git-gateway`, `laikacli`,
@@ -50,6 +50,7 @@ utilities. Imported via subpath exports.
 | `laikacms/storage/fs`                   | Filesystem storage                                                                                                                                                                                                                                                    |
 | `laikacms/storage/s3`                   | S3→R2Bucket adapter (`createS3Bucket()`) — pairs with `R2StorageRepository`, not a `StorageRepository` itself. See `@laikacms/aws/storage-s3` for the full S3 `StorageRepository`.                                                                                    |
 | `laikacms/storage/web`                  | Web `Storage` (`localStorage`/`sessionStorage`) — client-side, read+write, SSR-safe                                                                                                                                                                                   |
+| `laikacms/storage/web-fs`               | Browser File System API — any directory handle (origin-private or user-picked), real hierarchy (no `.keep` markers), read+write, permission-aware, SSR-safe                                                                                                           |
 | `laikacms/storage/webdav`               | WebDAV server                                                                                                                                                                                                                                                         |
 | `laikacms/storage/github-cdn`           | Read-only storage backed by a public GitHub repo, served via jsDelivr's CDN (no token, no `@octokit/*`, no `api.github.com` round-trip)                                                                                                                               |
 | `laikacms/storage/drizzle`              | Drizzle ORM storage                                                                                                                                                                                                                                                   |
@@ -123,7 +124,7 @@ AWS service implementations.
 | `@laikacms/aws/storage-ddb`              | DynamoDB single-table StorageRepository                                                |
 | `@laikacms/aws/assets-s3`                | S3-backed AssetsRepository                                                             |
 
-## `@laikacms/decap`
+## `@laikacms/server`
 
 Decap CMS server-side integrations: the Decap-compatible API and the OAuth2 server.
 
@@ -132,19 +133,19 @@ Decap CMS server-side integrations: the Decap-compatible API and the OAuth2 serv
 > moved into the `@laikacms/decap-cms` fork: `…/widgets/aichat`, `…/widgets/lucide-icon`,
 > `…/widgets/radix-icon`, `…/locales/nl`, `…/editor-component-embedded-entry`, and `…/config-types`.
 
-| Subpath                                   | Description                                                                                                      |
-| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `@laikacms/decap/decap-cms-backend-laika` | Decap CMS backend (`createLaikaBackend()`)                                                                       |
-| `@laikacms/decap/decap-api`               | [Decap-compatible API](https://github.com/laikacms/laikacms/blob/develop/packages/decap/src/decap-api/README.md) |
-| `@laikacms/decap/decap-oauth2`            | OAuth2 server with PKCE                                                                                          |
-| `@laikacms/decap/decap-oauth2/i18n`       | i18n bundle index for the OAuth2 UI                                                                              |
-| `@laikacms/decap/decap-oauth2/i18n/en`    | English translations for the OAuth2 UI                                                                           |
-| `@laikacms/decap/decap-oauth2/i18n/nl`    | Dutch translations for the OAuth2 UI                                                                             |
+| Subpath                              | Description                                                                                            |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| `@laikacms/decap-cms/backends/laika` | Decap CMS backend (`createLaikaBackend()`)                                                             |
+| `@laikacms/server/api`               | [JSON:API router](https://github.com/laikacms/laikacms/blob/develop/packages/server/src/api/README.md) |
+| `@laikacms/server/oauth2`            | OAuth2 server with PKCE                                                                                |
+| `@laikacms/server/oauth2/i18n`       | i18n bundle index for the OAuth2 UI                                                                    |
+| `@laikacms/server/oauth2/i18n/en`    | English translations for the OAuth2 UI                                                                 |
+| `@laikacms/server/oauth2/i18n/nl`    | Dutch translations for the OAuth2 UI                                                                   |
 
 ## `@laikacms/decap-cms`
 
 The scoped single-package fork of Decap CMS v4. It is a **required peer dependency of
-`@laikacms/decap`** — the admin bundle esbuild step resolves its subpaths at build time, so without
+`@laikacms/server`** — the admin bundle esbuild step resolves its subpaths at build time, so without
 it the build fails with unresolved `@laikacms/decap-cms/…` errors.
 
 See [The `@laikacms/decap-cms` fork](../guides/decap/fork) for the full package reference.

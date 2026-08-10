@@ -72,7 +72,7 @@ jobs:
         id: pack
         run: |
           mkdir -p "$RUNNER_TEMP/tgz"
-          for pkg in laikacms decap github; do
+          for pkg in laikacms server github; do
             pnpm --filter "./packages/$pkg" pack --out "$RUNNER_TEMP/tgz/$pkg.tgz"
           done
 
@@ -87,7 +87,7 @@ jobs:
           cat > pnpm-workspace.yaml <<EOF
           overrides:
             laikacms: "file:$RUNNER_TEMP/tgz/laikacms.tgz"
-            "@laikacms/decap": "file:$RUNNER_TEMP/tgz/decap.tgz"
+            "@laikacms/server": "file:$RUNNER_TEMP/tgz/server.tgz"
             "@laikacms/github": "file:$RUNNER_TEMP/tgz/github.tgz"
           EOF
           pnpm install --no-frozen-lockfile

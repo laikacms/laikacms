@@ -12,16 +12,37 @@ is the follow-through on its deferred "Option 2 — pessimistic locking"), [[ADR
 repository-effect-boundary-convention]] (LaikaTask target style), [[ADR-006 -
 cms-agnostic-protocol]] (decap is an adapter, not the owner of the mechanism)
 
+> **Implementation status (2026-08-10):** the advisory half of this ADR is built. Shipped:
+> `Lock`/`LockToken`/`LockConflictError` (423), the `locks` capability with both `scope` and
+> `transactional` axes, five methods on `DocumentsRepository`, `InProcessLockManager`
+> (`laikacms/locks/in-process`), the `/locks/{key}` sub-path on documents-api, the proxy's HTTP
+> forwarding, `@laikacms/server/api`'s `/locks` rewritten as a repository adapter, and the four
+> `CmsImplementation` methods in the decap-cms laika backend.
+>
+> Two documented deviations from the sketch below:
+>
+> - `refreshLock` takes `(key, token, owner)`, not `(key, token)`. The lenient "expired ->
+>   re-acquire" branch has to attribute the revived lock to somebody, and the caller always knows
+>   who.
+> - The JSON:API sub-path is `/locks/{key}`, not `/documents/{key}/lock`: on documents-api the
+>   `/documents` prefix is already the base path, and this shape matches the existing
+>   `revisions/{key}` resource.
+>
+> **Still deferred:** the write-precondition ladder (§2) - `precondition.ifVersion` / `ifLockHeldBy`
+> and enforcement-on-write. Locks currently inform only; nothing blocks a write. `withDocumentLock`
+> ships with the bracket default, so the combinator exists but no backend advertises
+> `transactional: true` yet.
+
 ## Context
 
-Advisory entry-locking currently lives in `packages/decap/src/decap-api/locks.ts` as a hand-rolled
-module bolted onto the Decap backend:
+Advisory entry-locking currently lives in `packages/server/src/api/locks.ts` as a hand-rolled module
+bolted onto the Decap backend:
 
 - a Promise-based **`LockStore`** KV interface (`get`/`set`/`delete` with a TTL argument),
 - a **`LockManager`** policy class (acquire / refresh / release / get, with force-override and
   owner-guarded release), and
-- **`buildLocksApi`**, an HTTP handler mounted as `/locks` on `decapApi`, wired through
-  `DecapOptions.locks?: LockStore` + `locksTtlMs`.
+- **`buildLocksApi`**, an HTTP handler mounted as `/locks` on `laikaApi`, wired through
+  `LaikaApiOptions.locks?: LockStore` + `locksTtlMs`.
 
 It works, but it is unsatisfying on four axes:
 
@@ -59,9 +80,9 @@ datasource's native transaction.
 - `LaikaError` variants exist including **`VersionMismatchError`** (code `version_mismatch`, status
   **409**). There is **no** lock error yet. `LaikaError` has no generic data slot — a subclass adds
   its own fields.
-- `decap-api` already holds a **`DocumentsRepository` directly** (`documents: DocumentsRepository`),
-  which may itself be the `documents-jsonapi-proxy`. The repository interface is the single seam;
-  decap does not care whether it is native or a proxy.
+- `@laikacms/server/api` already holds a **`DocumentsRepository` directly**
+  (`documents: DocumentsRepository`), which may itself be the `documents-jsonapi-proxy`. The
+  repository interface is the single seam; decap does not care whether it is native or a proxy.
 - Effect's concurrency primitives (`Ref`, STM `TRef`/`TMap`, `Semaphore`) are **in-process only**:
   real atomicity within one node, invisible across nodes.
 
@@ -176,8 +197,8 @@ breaking capability change.
   deferred** (Decap polls `getLock` explicitly; noted as a future optimisation for other API
   consumers, not silently dropped).
 - **decap cleanup:** delete `LockStore`, `LockManager`, `createInMemoryLockStore`,
-  `DEFAULT_ENTRY_LOCK_TTL_MS`, and the `locks` / `locksTtlMs` `DecapOptions`. The `/locks` endpoint
-  becomes a thin adapter over `documents.*` lock methods, capability-gated on
+  `DEFAULT_ENTRY_LOCK_TTL_MS`, and the `locks` / `locksTtlMs` `LaikaApiOptions`. The `/locks`
+  endpoint becomes a thin adapter over `documents.*` lock methods, capability-gated on
   `documents.getCapabilities().locks`.
 
 ## Key design forks & rationale
@@ -218,7 +239,7 @@ breaking capability change.
 - **New impl:** `InProcessLockManager` (STM). **`documents-jsonapi-proxy`** implements the lock
   methods over HTTP. Native backends opt in when a real primitive exists.
 - **documents-api server** gains the `/documents/:key/lock` sub-path + actions.
-- **`packages/decap`** deletes the entire `locks.ts` module and the `locks`/`locksTtlMs` options;
+- **`packages/server`** deletes the entire `locks.ts` module and the `locks`/`locksTtlMs` options;
   `/locks` becomes an adapter over the repository, capability-gated. Advisory locks now become
   **enforced-on-write** where the backend supports it — a behaviour change from today's
   advisory-only locks (acceptable: no production users; see the project's no-back-compat stance).

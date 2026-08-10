@@ -28,15 +28,15 @@ In the meantime, the core wiring the starters demonstrated is documented directl
 These still ship in the core packages and are the recommended starting point when wiring a new app
 by hand:
 
-- `@laikacms/decap/decap-api` — `decapApi(...)`, the Decap-compatible HTTP API over your storage
-  repos. Mount its `.fetch` on a catch-all route.
-- `@laikacms/decap/decap-cms-backend-laika` — `createLaikaBackend()`, the Decap CMS backend the
-  admin UI registers to talk to that API.
-- `@laikacms/decap/decap-oauth2` — `decapOauth2(...)`, an optional PKCE OAuth2 login server.
+- `@laikacms/server/api` — `laikaApi(...)`, the Decap-compatible HTTP API over your storage repos.
+  Mount its `.fetch` on a catch-all route.
+- `@laikacms/decap-cms/backends/laika` — `createLaikaBackend()`, the Decap CMS backend the admin UI
+  registers to talk to that API.
+- `@laikacms/server/oauth2` — `laikaOauth2(...)`, an optional PKCE OAuth2 login server.
 - A `StorageRepository` for your runtime — `laikacms/storage/fs` (Node), `laikacms/storage/r2`
   (Workers / R2), `laikacms/storage/drizzle`, `laikacms/storage/webdav`, etc.
 
 Construct a storage repo, wrap it in `ContentBaseDocumentsRepository` /
-`ContentBaseAssetsRepository`, pass them to `decapApi(...)`, and mount `.fetch` from your
-framework's catch-all route. `decapApi(...)` returns `{ fetch, authenticateRequest }`; call the
+`ContentBaseAssetsRepository`, pass them to `laikaApi(...)`, and mount `.fetch` from your
+framework's catch-all route. `laikaApi(...)` returns `{ fetch, authenticateRequest }`; call the
 repos directly from server-side render paths to bypass the (authenticated) HTTP API.

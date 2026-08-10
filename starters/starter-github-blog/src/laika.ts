@@ -25,8 +25,8 @@ import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { rawSerializer } from 'laikacms/storage-serializers-raw';
 import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
-import { decapApi } from '@laikacms/decap/decap-api';
-import { DEFAULT_DEV_TOKEN } from '@laikacms/decap/embedded';
+import { laikaApi } from '@laikacms/server/api';
+import { DEFAULT_DEV_TOKEN } from '@laikacms/server/embedded';
 import { GithubStorageRepository } from '@laikacms/github/storage-gh';
 
 import { decapConfig } from './decap-config.js';
@@ -92,7 +92,7 @@ const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'con
 const documents = new ContentBaseDocumentsRepository(storage, settings);
 const assets = new ContentBaseAssetsRepository(storage, settings);
 
-const api = decapApi({
+const api = laikaApi({
   documents,
   storage,
   assets,

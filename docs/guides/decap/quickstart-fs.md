@@ -1,7 +1,7 @@
 # Self-Hosting Quickstart: FileSystem + Decap CMS
 
 This guide walks you through running LaikaCMS on a plain Node.js server using filesystem storage
-(`laikacms/storage-fs`) and the Laika backend for Decap CMS (`@laikacms/decap`). It is the simplest
+(`laikacms/storage-fs`) and the Laika backend for Decap CMS (`@laikacms/server`). It is the simplest
 possible self-hosted setup — no cloud provider account required.
 
 For a broader overview of the system see [architecture](../../concepts/architecture), and for
@@ -22,7 +22,7 @@ Cloudflare Workers or AWS Lambda deployments see [deployment](../deployment).
 
 Install the LaikaCMS packages and a Node.js server runtime. Storage repos, document/asset repos, API
 factories, and serializers are all subpath exports of the single `laikacms` package. The Decap
-integration lives in `@laikacms/decap`:
+integration lives in `@laikacms/server`:
 
 ```bash
 # npm — add hono explicitly: §4a's --legacy-peer-deps prunes auto-installed peers, and
@@ -30,7 +30,7 @@ integration lives in `@laikacms/decap`:
 # Pin @hono/node-server to the major laikacms peer-depends on (currently ^2) — an
 # unpinned install can otherwise pull a newer major than laikacms supports and fail
 # with an ERESOLVE peer conflict before anything installs.
-npm install laikacms @laikacms/decap '@hono/node-server@^2' hono
+npm install laikacms @laikacms/server '@hono/node-server@^2' hono
 
 # pnpm — hono for the same reason: pnpm satisfies @hono/node-server's peer internally, but does
 # not expose it at your project root, so a server.ts would not typecheck without it.
@@ -38,7 +38,7 @@ npm install laikacms @laikacms/decap '@hono/node-server@^2' hono
 # and exits non-zero when it skips any — without these flags this command fails outright with
 # ERR_PNPM_IGNORED_BUILDS (msgpackr-extract, and esbuild once §4a adds it).
 pnpm add --allow-build=esbuild --allow-build=msgpackr-extract \
-  laikacms @laikacms/decap '@hono/node-server@^2' hono
+  laikacms @laikacms/server '@hono/node-server@^2' hono
 ```
 
 > **Version pin:** `laikacms` peer-depends on `@hono/node-server@^2.0.10` (see its `package.json`).
@@ -53,7 +53,7 @@ pnpm add --allow-build=esbuild --allow-build=msgpackr-extract \
 | Package             | Purpose                                                                                                                                        |
 | ------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
 | `laikacms`          | Core: storage repos, document/asset repos, API factories, serializers (subpaths).                                                              |
-| `@laikacms/decap`   | Decap-compatible API server + Laika backend for the browser-side Decap CMS admin.                                                              |
+| `@laikacms/server`  | Decap-compatible API server + Laika backend for the browser-side Decap CMS admin.                                                              |
 | `@hono/node-server` | Runs a Web-standard `fetch` handler on Node.js.                                                                                                |
 | `hono`              | Peer dependency of `@hono/node-server@2`. §4a's `--legacy-peer-deps` prunes npm's auto-installed copy; also needed to typecheck a `server.ts`. |
 
@@ -68,7 +68,7 @@ pnpm add --allow-build=esbuild --allow-build=msgpackr-extract \
 > the snippet below.
 >
 > **Supported Decap collection formats:** the storage layer above ships serializers for JSON, YAML,
-> markdown-frontmatter, and raw text — but the bundled `@laikacms/decap` Decap admin backend (§4)
+> markdown-frontmatter, and raw text — but the bundled `@laikacms/server` Decap admin backend (§4)
 > currently only sends structured `content` to the documents API for collections with
 > **`format: json`**. Decap's default when a collection omits `format:` is markdown-frontmatter,
 > which this backend does not yet support — saving such an entry fails fast with a clear client-side
@@ -84,7 +84,7 @@ Create `server.mjs` (or `server.ts` if you have a TypeScript build step):
 ```js
 // server.mjs
 import { serve } from '@hono/node-server';
-import { decapApi } from '@laikacms/decap/decap-api';
+import { laikaApi } from '@laikacms/server/api';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
@@ -124,7 +124,7 @@ const assets = new ContentBaseAssetsRepository(storage, settings);
 //      *    /api/documents/* — documents JSON:API
 //      *    /api/assets/*    — assets JSON:API
 //      *    /api/storage/*   — raw storage JSON:API
-const api = decapApi({
+const api = laikaApi({
   documents,
   storage,
   assets,
@@ -162,7 +162,7 @@ serve({ fetch: api.fetch, port: 3000 }, () => {
 
 > **Production auth:** the `authenticateAccessToken` callback above accepts a hard-coded dev token.
 > For production, replace it with a real validator (JWT verification, database session lookup, etc.)
-> or use the bundled `decapOauth2` helper — see [Decap Integration](./auth).
+> or use the bundled `laikaOauth2` helper — see [Decap Integration](./auth).
 
 > **Other base paths:** if you mount behind a reverse proxy at a different prefix, change
 > `basePath: '/api'` here and update `api_root` in `admin/config.yml` to match.
@@ -203,7 +203,7 @@ endpoint the Decap `laika` backend pings to confirm the server is reachable.
 
 ### 4a. Install the Decap CMS app
 
-`@laikacms/decap` was already installed in §1. Install the Decap CMS browser bundle — the
+`@laikacms/server` was already installed in §1. Install the Decap CMS browser bundle — the
 `@laikacms/decap-cms` fork (its root export is the classic app bootstrap; it also provides the
 `lib/util`, `lib/auth`, `ui-default`, and `core` subpaths that the Laika backend imports at bundle
 time) — its required peer dependencies, and esbuild (used to compile the TypeScript entry file into
@@ -221,8 +221,8 @@ pnpm add -D esbuild
 > recorded in `pnpm-workspace.yaml`. Without those grants `pnpm` exits with
 > `ERR_PNPM_IGNORED_BUILDS` and the install step fails.
 
-> The `laika` backend ships as `@laikacms/decap/decap-cms-backend-laika` (a subpath of the
-> `@laikacms/decap` package). Import `createLaikaBackend` from there.
+> The `laika` backend ships as `@laikacms/decap-cms/backends/laika` (a subpath of the
+> `@laikacms/server` package). Import `createLaikaBackend` from there.
 >
 > `@emotion/react` and `@emotion/styled` are required (non-optional) peer dependencies of
 > `@laikacms/decap-cms` — the admin shell is styled with Emotion. Without them the esbuild step will
@@ -259,7 +259,7 @@ The static file server needs an `index.html` to load your compiled bundle:
 ```typescript
 // admin/index.ts
 import { DecapCmsApp as CMS } from '@laikacms/decap-cms';
-import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
+import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
 
 // No explicit documentsApiBaseUrl / assetsApiBaseUrl needed: the backend
 // derives both from base_url + api_root in config.yml (→ http://localhost:3000/api).
@@ -320,7 +320,7 @@ collections:
 > will contain the active locale instead.
 
 The backend constructs its API URL as `base_url + api_root` → `http://localhost:3000/api`. All
-document, asset, storage, and health endpoints are served under that prefix by the `decapApi` server
+document, asset, storage, and health endpoints are served under that prefix by the `laikaApi` server
 started in §2.
 
 The `dev_token` value is sent as a Bearer token by the Decap admin; the server's
@@ -349,7 +349,7 @@ npx serve admin/ -l 5000
 ```
 
 esbuild bundles `admin/index.ts` together with `@laikacms/decap-cms` and
-`@laikacms/decap/decap-cms-backend-laika` into a single `admin/bundle.js` that the browser can load
+`@laikacms/decap-cms/backends/laika` into a single `admin/bundle.js` that the browser can load
 directly. The `-l 5000` flag pins `serve` to port 5000 — without it, `serve` defaults to port 3000
 and falls back to a random ephemeral port when the API already holds 3000, breaking the hardcoded
 CORS origin. The `serve` step then hosts `admin/index.html` (and `bundle.js`) at
@@ -373,7 +373,7 @@ Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS
 
 ## 6. Production deployment
 
-The `decapApi` server is a standard Node.js process and can be deployed anywhere that supports
+The `laikaApi` server is a standard Node.js process and can be deployed anywhere that supports
 Node.js 24 or later.
 
 ### Key requirement
@@ -447,7 +447,7 @@ docker run -p 3000:3000 -v $(pwd)/content:/app/content laika-api
 | `PORT`      | Port the server listens on (default: `3000` in the example above).                 |
 | `DEV_TOKEN` | Pre-shared bearer token for local dev. Remove entirely for production OAuth2 auth. |
 
-> `decapApi` does not read environment variables directly — pass values from `process.env` when
+> `laikaApi` does not read environment variables directly — pass values from `process.env` when
 > constructing the repository, the token string, and the `serve` call.
 
 ---

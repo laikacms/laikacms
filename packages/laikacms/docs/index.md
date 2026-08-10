@@ -18,7 +18,7 @@ exhaustive table of every export.
 
 ## Companion packages
 
-- [`@laikacms/decap`](/reference/packages/decap/) — Decap CMS integrations (backend, OAuth2,
+- [`@laikacms/server`](/reference/packages/server/) — Decap CMS integrations (backend, OAuth2,
   widgets)
 - [`@laikacms/github`](https://www.npmjs.com/package/@laikacms/github) — GitHub-backed storage
   repository

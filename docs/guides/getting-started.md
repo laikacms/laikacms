@@ -15,7 +15,7 @@ This page follows how the product is actually adopted, lowest bar first:
    build at compile time, for sites with no runtime backend at all.
 4. **[Growing into more](#growing-into-more)** — swap storage backends, add a database, keep going.
 
-Every server example below is **secure by default**: `decapApi` requires you to state an explicit
+Every server example below is **secure by default**: `laikaApi` requires you to state an explicit
 `authorize` policy, and there is no implicit "allow everything" fallback. If you only remember one
 thing from this page, remember that — the old insecure `buildJsonApi({ repo })` one-liner from
 earlier LaikaCMS docs is now a clearly-flagged
@@ -86,7 +86,7 @@ public content," not live editing.
 ### Writing beyond the browser
 
 `WebStorageRepository` writes stay on the visitor's device. The moment content needs to be shared,
-durable, or moderated, writes have to go through a server you control — call your own `decapApi` (or
+durable, or moderated, writes have to go through a server you control — call your own `laikaApi` (or
 `buildJsonApi`) endpoint with a `fetch` request carrying a real credential, the same way any other
 authenticated client would. See [Server setup](#server-setup-recommended-default) next.
 
@@ -96,7 +96,7 @@ This is the recommended default for anything beyond a local prototype: secrets (
 keys) stay on the server, and you decide exactly who can read or write what.
 
 ```typescript
-import { decapApi } from '@laikacms/decap/decap-api';
+import { laikaApi } from '@laikacms/server/api';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DefaultContentBaseSettingsProvider } from 'laikacms/contentbase-settings-default';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
@@ -108,7 +108,7 @@ const settings = new DefaultContentBaseSettingsProvider({ storage });
 const documents = new ContentBaseDocumentsRepository(storage, settings);
 const assets = new ContentBaseAssetsRepository(storage, settings);
 
-const api = decapApi({
+const api = laikaApi({
   documents,
   storage,
   assets,
@@ -126,7 +126,7 @@ const api = decapApi({
 export default { fetch: api.fetch };
 ```
 
-`decapApi` never falls back to an open policy: omit `authorize` and it's a type error, and a policy
+`laikaApi` never falls back to an open policy: omit `authorize` and it's a type error, and a policy
 that throws is treated as a denial rather than crashing the request open. Compare this to the
 [raw `buildJsonApi` primitive](./advanced/raw-storage-api), which ships with no auth at all — that's
 exactly why it's no longer the lead here.
@@ -136,13 +136,13 @@ exactly why it's no longer the lead here.
 Partially-public content — reads for anyone, writes for editors — is one branch in `authorize`:
 
 ```typescript
-declare module '@laikacms/decap/decap-api' {
+declare module '@laikacms/server/api' {
   interface User {
     roles: string[];
   }
 }
 
-const api = decapApi({
+const api = laikaApi({
   documents,
   storage,
   assets,
@@ -162,15 +162,15 @@ full `AuthorizeContext` shape and more role-based examples.
 
 ### A real login server
 
-Don't hand-roll session storage — `decapOauth2` (`@laikacms/decap/decap-oauth2`) is a self-contained
-PKCE OAuth2 server (email/password, optional passkey/WebAuthn, optional TOTP 2FA) you run alongside
-`decapApi` in the same app. See
+Don't hand-roll session storage — `laikaOauth2` (`@laikacms/server/oauth2`) is a self-contained PKCE
+OAuth2 server (email/password, optional passkey/WebAuthn, optional TOTP 2FA) you run alongside
+`laikaApi` in the same app. See
 [Authentication → Production auth with `decap-oauth2`](./decap/auth#production-auth-with-decap-oauth2)
 for the full Hono/Express wiring.
 
 ### Any runtime
 
-`decapApi(...)` returns `{ fetch(request: Request): Promise<Response> }` — standard Fetch API, no
+`laikaApi(...)` returns `{ fetch(request: Request): Promise<Response> }` — standard Fetch API, no
 framework lock-in. Drop it into Hono (`app.all('/api/decap/*', c => api.fetch(c.req.raw))`), a plain
 Node.js server via `@hono/node-server`, a Cloudflare Worker's `fetch` handler, or an AWS Lambda
 behind a Fetch-adapter (Lambda Function URLs, `@hono/aws-lambda`, etc.) unchanged. See
@@ -267,11 +267,11 @@ cache during the build, etc.).
 Everything above shares the same `StorageRepository` contract, so none of it is a dead end:
 
 - **Custom repositories** — implement `StorageRepository` once and every layer above it (documents,
-  assets, `decapApi`, the Vite plugin) works unchanged. See
+  assets, `laikaApi`, the Vite plugin) works unchanged. See
   [Repositories](../concepts/repositories).
 - **Mix databases and git** — `laikacms/documents-drizzle` and `laikacms/storage-drizzle` back some
   collections with a real database while others stay filesystem/git-backed, all behind the same
-  `decapApi`/documents API.
+  `laikaApi`/documents API.
 - **No lock-in** — swapping `FileSystemStorageRepository` for R2, S3, WebDAV, or a database is a
   constructor change, not a rewrite. See [Architecture](../concepts/architecture) for how the
   domain/impl/api layers fit together.

@@ -282,7 +282,7 @@ export default function AdminPage() {
 
 ### AdonisJS v6 — access the raw Node.js request via `ctx.request.request`
 
-AdonisJS v6 is **ESM-native** — it can import `laikacms` and `@laikacms/decap` directly without the
+AdonisJS v6 is **ESM-native** — it can import `laikacms` and `@laikacms/server` directly without the
 dynamic `import()` workaround required by CommonJS frameworks like NestJS.
 
 AdonisJS wraps `IncomingMessage` in its own `Request` class. The raw Node.js objects are:
@@ -434,7 +434,7 @@ level, not per-request:
 
 ```ts
 // src/lib/laika.ts
-import { decapApi } from '@laikacms/decap/decap-api';
+import { laikaApi } from '@laikacms/server/api';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
@@ -450,7 +450,7 @@ const storage = new FileSystemStorageRepository(
 );
 const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
 
-export const laika = decapApi({
+export const laika = laikaApi({
   documents: new ContentBaseDocumentsRepository(storage, settings),
   storage,
   assets: new ContentBaseAssetsRepository(storage, settings),
@@ -475,7 +475,7 @@ SvelteKit has no `c.html()` equivalent for serving a raw admin shell. The correc
     script.src = 'https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js';
     script.onload = async () => {
       const { createLaikaBackend } = await import(
-        '@laikacms/decap/decap-cms-backend-laika'
+        '@laikacms/decap-cms/backends/laika'
       );
       window.CMS.registerBackend('laika', createLaikaBackend());
       window.CMS.init({ config: { /* your decap config */ } });

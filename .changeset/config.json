@@ -5,7 +5,7 @@
   "fixed": [
     [
       "laikacms",
-      "@laikacms/decap",
+      "@laikacms/server",
       "@laikacms/vite-plugin"
     ]
   ],

@@ -19,7 +19,7 @@ LaikaCMS is **three things stacked**:
 ```
 ┌─────────────────────────────────────────────────────────┐
 │   HTTP API   (JSON:API)  — what Decap / clients call    │
-│   ─ buildJsonApi / decapApi — web-standard fetch        │
+│   ─ buildJsonApi / laikaApi — web-standard fetch        │
 ├─────────────────────────────────────────────────────────┤
 │   Domain      — what your server code calls             │
 │   ─ Storage / Documents / Assets / ContentBase repos    │
@@ -33,17 +33,17 @@ LaikaCMS is **three things stacked**:
 You pick a **storage backend**, wrap it in **repos**, expose them through the **HTTP API**, and
 mount the resulting `(Request) => Promise<Response>` handler in your framework.
 
-The `@laikacms/decap` package gives you the primitives for each layer:
+The `@laikacms/server` package gives you the primitives for each layer:
 
-- **`decapApi(...)`** (`@laikacms/decap/decap-api`) — the Decap-compatible HTTP API over your repos.
+- **`laikaApi(...)`** (`@laikacms/server/api`) — the Decap-compatible HTTP API over your repos.
   Returns `{ fetch, authenticateRequest }`; mount `.fetch` on a catch-all route.
-- **`createLaikaBackend()`** (`@laikacms/decap/decap-cms-backend-laika`) — the Decap CMS backend the
+- **`createLaikaBackend()`** (`@laikacms/decap-cms/backends/laika`) — the Decap CMS backend the
   admin UI registers to talk to that API.
-- **`decapOauth2(...)`** (`@laikacms/decap/decap-oauth2`) — an optional PKCE OAuth2 server for
-  production login.
+- **`laikaOauth2(...)`** (`@laikacms/server/oauth2`) — an optional PKCE OAuth2 server for production
+  login.
 
 For most apps: construct a `StorageRepository`, wrap it in the ContentBase document/asset repos,
-pass them to `decapApi(...)`, and mount `.fetch` on a catch-all route.
+pass them to `laikaApi(...)`, and mount `.fetch` on a catch-all route.
 
 ---
 
@@ -53,7 +53,7 @@ pass them to `decapApi(...)`, and mount `.fetch` on a catch-all route.
 
 ```ts
 import { serveStatic } from '@hono/node-server/serve-static';
-import { decapApi } from '@laikacms/decap/decap-api';
+import { laikaApi } from '@laikacms/server/api';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
@@ -70,7 +70,7 @@ const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'con
 const documents = new ContentBaseDocumentsRepository(storage, settings);
 const assets = new ContentBaseAssetsRepository(storage, settings);
 
-const laika = decapApi({
+const laika = laikaApi({
   documents,
   storage,
   assets,
@@ -124,7 +124,7 @@ app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 import { collectStream, runTask } from 'laikacms/compat';
 import { NotFoundError } from 'laikacms/core';
 // Export the `documents` repo you built in task (a) and import it directly —
-// `decapApi(...)` returns only { fetch, authenticateRequest }, so SSR reads use the repo.
+// `laikaApi(...)` returns only { fetch, authenticateRequest }, so SSR reads use the repo.
 import { documents } from '~/server/laika';
 
 // List published posts in a folder:
@@ -151,11 +151,11 @@ try {
 
 ### c) Deploy to Cloudflare Workers + R2
 
-The same `decapApi(...)` wiring works on the edge — just swap `FileSystemStorageRepository` for an
+The same `laikaApi(...)` wiring works on the edge — just swap `FileSystemStorageRepository` for an
 edge-compatible repo such as `R2StorageRepository` (`node:fs` is unavailable in V8 isolates).
 
 ```ts
-import { decapApi } from '@laikacms/decap/decap-api';
+import { laikaApi } from '@laikacms/server/api';
 import { Hono } from 'hono';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
@@ -172,7 +172,7 @@ const app = new Hono<{ Bindings: Env }>();
 const makeLaika = (env: Env) => {
   const storage = new R2StorageRepository(env.CONTENT, { md: markdownSerializer }, 'md');
   const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-  return decapApi({
+  return laikaApi({
     documents: new ContentBaseDocumentsRepository(storage, settings),
     storage,
     assets: new ContentBaseAssetsRepository(storage, settings),
@@ -201,12 +201,12 @@ safely hold one.
 
 ### e) Add real auth (production)
 
-Pass a real `authenticateAccessToken` validator to `decapApi(...)`. It receives the Bearer token on
-every request and must return a `User` (throw to reject — `decapApi` turns thrown errors into a
+Pass a real `authenticateAccessToken` validator to `laikaApi(...)`. It receives the Bearer token on
+every request and must return a `User` (throw to reject — `laikaApi` turns thrown errors into a
 401).
 
 ```ts
-import { decapApi } from '@laikacms/decap/decap-api';
+import { laikaApi } from '@laikacms/server/api';
 import { jwtVerify, SignJWT } from 'jose';
 
 // 1. Issue a JWT after your login form:
@@ -220,7 +220,7 @@ const token = await new SignJWT({ email: user.email, name: user.name })
 //    (inject it into the HTML you serve at /admin behind your login guard).
 
 // 3. Validate it on every API request:
-const laika = decapApi({
+const laika = laikaApi({
   documents,
   storage,
   assets,
@@ -236,15 +236,15 @@ const laika = decapApi({
 });
 ```
 
-For a full self-contained login server (email/password, passkey, TOTP) use the `decapOauth2(...)`
-PKCE server from `@laikacms/decap/decap-oauth2` — see
+For a full self-contained login server (email/password, passkey, TOTP) use the `laikaOauth2(...)`
+PKCE server from `@laikacms/server/oauth2` — see
 [docs/guides/decap/auth.md → "Production auth with decap-oauth2"](./docs/guides/decap/auth.md#production-auth-with-decap-oauth2).
 
 ---
 
 ## 3. Choosing a storage backend
 
-`decapApi(...)` is runtime-agnostic — the only thing that changes between Node and the edge is which
+`laikaApi(...)` is runtime-agnostic — the only thing that changes between Node and the edge is which
 `StorageRepository` you construct:
 
 | Storage repo                  | Subpath                          | Runtime                                          |
@@ -258,7 +258,7 @@ PKCE server from `@laikacms/decap/decap-oauth2` — see
 | `BitbucketStorageRepository`  | `@laikacms/bitbucket/storage-bb` | Runtime-agnostic (`fetch`-only); Bitbucket repos |
 
 Wrap the repo in `ContentBaseDocumentsRepository` / `ContentBaseAssetsRepository`, pass them to
-`decapApi(...)`, and mount `.fetch` from your framework's catch-all route. `decapApi(...)` returns
+`laikaApi(...)`, and mount `.fetch` from your framework's catch-all route. `laikaApi(...)` returns
 `{ fetch, authenticateRequest }`. For server-side render reads, call the `documents` / `assets` /
 `storage` repos directly to **bypass HTTP auth** — server-internal reads don't need a token.
 
@@ -283,13 +283,13 @@ These are the things that consistently bite first-time integrators:
      `import { FileSystemStorageRepository } from
      'laikacms/storage-fs'`. Same for
      `laikacms/storage-api`, `laikacms/documents-api`, `laikacms/storage-serializers-*`, etc.
-   - The Decap backend lives at `@laikacms/decap/decap-cms-backend-laika` — a subpath of
-     `@laikacms/decap`. Import `createLaikaBackend` from there.
+   - The Decap backend lives at `@laikacms/decap-cms/backends/laika` — a subpath of
+     `@laikacms/server`. Import `createLaikaBackend` from there.
 
 4. **`FileSystemStorageRepository` is Node-only.** It needs `node:fs` and a writable local
    filesystem, so it can't run in Workers/edge code. On the edge, construct an edge-compatible
    `StorageRepository` such as `R2StorageRepository` instead and pass it to the same
-   `decapApi(...)`.
+   `laikaApi(...)`.
 
 5. **Edge-compatible storage options: R2 and the git-backed repos.** `R2StorageRepository`,
    `GithubStorageRepository`, `GitlabStorageRepository`, and `BitbucketStorageRepository` are all
@@ -318,7 +318,7 @@ These are the things that consistently bite first-time integrators:
 8. **`api_root` (not `api_url`) in the Decap backend config.** The Laika backend constructor reads
    `config.backend.api_root` (with `api_url` accepted as a deprecated alias). Without it, all Decap
    admin API calls resolve to the site root and silently 404.
-   - In your Decap config's `backend` key, set `api_root` to the path you mounted `decapApi(...)` on
+   - In your Decap config's `backend` key, set `api_root` to the path you mounted `laikaApi(...)` on
      (e.g. `'/api/decap'`).
    - When wiring your own `CMS.init()` (next-blog / astro-blog pattern), use:
      `backend: { name: 'laika', api_root: '/api/decap' }`
@@ -357,10 +357,11 @@ These are the things that consistently bite first-time integrators:
     ```
 
 12. **Packages need a `dist/` before downstream packages can type-check.** The monorepo has two core
-    packages (`laikacms`, `@laikacms/decap`). If you run `pnpm --filter <package> exec tsc --noEmit`
-    directly and get `Cannot find module '@laikacms/...'`, build the upstream package first:
+    packages (`laikacms`, `@laikacms/server`). If you run
+    `pnpm --filter <package> exec tsc --noEmit` directly and get
+    `Cannot find module '@laikacms/...'`, build the upstream package first:
     ```
-    pnpm --filter @laikacms/decap build
+    pnpm --filter @laikacms/server build
     ```
     The correct way to typecheck in CI or as a one-shot command is the root-level turbo task, which
     builds upstream dependencies automatically:

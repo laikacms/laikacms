@@ -1,7 +1,7 @@
 # Decap CMS Integration
 
 [Decap CMS](https://decapcms.org/) is a Git-based admin UI for content. LaikaCMS ships a
-Decap-compatible backend (`@laikacms/decap`) so you can pair that admin with any LaikaCMS storage
+Decap-compatible backend (`@laikacms/server`) so you can pair that admin with any LaikaCMS storage
 repository — filesystem, R2, S3, WebDAV, and more.
 
 Laika CMS works with upstream Decap CMS and maintains a standalone
@@ -20,7 +20,7 @@ Two integration shapes are supported, in increasing order of complexity:
 
 The primary documented integration path is the **Standalone Worker (BYO storage)** wiring: you
 construct a `StorageRepository`, wrap it in the ContentBase document/asset repos, and expose them
-through `decapApi(...)`. Everything else (admin shell, OAuth2, framework bridges) builds on top of
+through `laikaApi(...)`. Everything else (admin shell, OAuth2, framework bridges) builds on top of
 that handler.
 
 ## In this section
@@ -29,7 +29,7 @@ that handler.
   documentation on GitHub (overview, skills, CSP, contributing).
 - **[Self-Hosting Quickstart (FileSystem + Decap)](./quickstart-fs)** — the end-to-end starting
   point: a plain Node.js server with filesystem storage and the Decap admin, no cloud account.
-- **[Standalone Worker (BYO storage)](./standalone-worker)** — wire `decapApi(...)` by hand over any
+- **[Standalone Worker (BYO storage)](./standalone-worker)** — wire `laikaApi(...)` by hand over any
   storage repository; seeding the server-side config; WebDAV storage.
 - **[Serving the Decap admin shell](./admin-shell)** — compile and serve the admin browser bundle.
 - **[Authentication](./auth)** — machine-to-machine API keys, SSR guards, logging, the

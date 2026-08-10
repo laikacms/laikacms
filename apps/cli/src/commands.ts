@@ -5,8 +5,8 @@ import * as Layer from 'effect/Layer';
 import { Command, Flag, Prompt } from 'effect/unstable/cli';
 
 import { bootstrapApplication, type PackageManager, STARTERS } from './bootstrap.js';
-import { CMS_BACKENDS, CMS_LOCALES, CMS_WIDGETS, type CmsSelection, DEFAULT_CMS_SELECTION } from './cms-codegen.js';
-import { discoverConfig, generateConfig } from './config-codegen.js';
+import { cmsAdapters, DEFAULT_CMS_ADAPTER, findCmsAdapter } from './cms/registry.js';
+import type { CmsAdapter, CmsConfigCodegen, CmsSelection } from './cms/types.js';
 import { storageDrivers } from './drivers/registry.js';
 import type { MigrateConfig } from './drivers/types.js';
 import { loadMigrateConfig, runMigrate } from './migrate-runner.js';
@@ -41,17 +41,32 @@ const createSkipInstall = Flag.boolean('skip-install').pipe(
   Flag.withDescription('Create the application without installing dependencies'),
   Flag.withDefault(false),
 );
+const cmsFlagDescription = (purpose: string) =>
+  `${purpose} (default: ${DEFAULT_CMS_ADAPTER.name}). One of: ${cmsAdapters.map(a => a.name).join(', ')}`;
+const createCms = Flag.string('cms').pipe(
+  Flag.withDescription(
+    cmsFlagDescription(
+      'CMS to scaffold — the admin UI the app ships with; the wizard asks once there is more than one',
+    ),
+  ),
+  Flag.optional,
+);
 const listFlag = (name: string, description: string) =>
   Flag.string(name).pipe(Flag.withDescription(description), Flag.optional);
+// Catalogs are per-CMS, so the names listed here are the default CMS's.
 const createBackends = listFlag(
   'backends',
   `Comma-separated CMS backends to register (default: ${
-    DEFAULT_CMS_SELECTION.backends.join(',')
-  }; wizard asks). One of: ${CMS_BACKENDS.map(b => b.name).join(', ')}`,
+    DEFAULT_CMS_ADAPTER.defaultSelection.backends.join(',')
+  }; wizard asks). For ${DEFAULT_CMS_ADAPTER.name}, one of: ${
+    DEFAULT_CMS_ADAPTER.backends.map(b => b.name).join(', ')
+  }`,
 );
 const createWidgets = listFlag(
   'widgets',
-  `Comma-separated widgets to register (default: ${DEFAULT_CMS_SELECTION.widgets.join(',')}; wizard asks)`,
+  `Comma-separated widgets to register (default: ${
+    DEFAULT_CMS_ADAPTER.defaultSelection.widgets.join(',')
+  }; wizard asks)`,
 );
 const createLocales = listFlag(
   'locales',
@@ -88,6 +103,7 @@ export const makeCreateCommand = (name = 'create', binName = 'laika') =>
       title: createTitle,
       packageManager: createPackageManager,
       skipInstall: createSkipInstall,
+      cms: createCms,
       backends: createBackends,
       widgets: createWidgets,
       locales: createLocales,
@@ -134,53 +150,82 @@ export const makeCreateCommand = (name = 'create', binName = 'laika') =>
           return yield* Effect.fail(new Error(`${binName} create: unsupported package manager "${packageManager}"`));
         }
 
+        // Which CMS the app ships with. The question is skipped while the
+        // registry holds a single adapter, exactly like the starter question
+        // above — `--cms` still selects one either way.
+        const cmsName = yield* resolve(
+          flags.cms,
+          interactive && cmsAdapters.length > 1,
+          Prompt.select<string>({
+            message: 'Which CMS?',
+            choices: cmsAdapters.map(a => ({ title: a.title, value: a.name, description: a.description })),
+          }),
+          DEFAULT_CMS_ADAPTER.name,
+        );
+        const adapter = findCmsAdapter(cmsName);
+        if (!adapter) {
+          return yield* Effect.fail(
+            new Error(
+              `${binName} create: unknown CMS "${cmsName}". Available: ${cmsAdapters.map(a => a.name).join(', ')}`,
+            ),
+          );
+        }
+        const defaults = adapter.defaultSelection;
+
         const resolveList = (
           flag: Optional<string>,
+          ask: boolean,
           prompt: Prompt.Prompt<Array<string>>,
           fallback: readonly string[],
         ) =>
           flag._tag === 'Some'
             ? Effect.succeed(parseList(flag.value))
-            : interactive
+            : ask
             ? prompt
             : Effect.succeed([...fallback]);
 
+        // Catalogs belong to the adapter, so a CMS without (say) selectable
+        // locales is never asked about them and keeps its own default.
         const backends = yield* resolveList(
           flags.backends,
+          interactive && adapter.backends.length > 0,
           Prompt.multiSelect<string>({
-            message: 'CMS backends to register (space toggles, enter confirms)',
-            choices: CMS_BACKENDS.map(b => ({
+            message: `${adapter.title} backends to register (space toggles, enter confirms)`,
+            choices: adapter.backends.map(b => ({
               title: b.name,
               value: b.name,
               description: b.description,
-              selected: DEFAULT_CMS_SELECTION.backends.includes(b.name),
+              selected: defaults.backends.includes(b.name),
             })),
             min: 1,
           }),
-          DEFAULT_CMS_SELECTION.backends,
+          defaults.backends,
         );
         const widgets = yield* resolveList(
           flags.widgets,
+          interactive && adapter.widgets.length > 0,
           Prompt.multiSelect<string>({
             message: 'Widgets to register',
-            choices: CMS_WIDGETS.map(w => ({
+            choices: adapter.widgets.map(w => ({
               title: w.name,
               value: w.name,
               description: w.description,
-              selected: DEFAULT_CMS_SELECTION.widgets.includes(w.name),
+              selected: defaults.widgets.includes(w.name),
             })),
           }),
-          DEFAULT_CMS_SELECTION.widgets,
+          defaults.widgets,
         );
         const locales = yield* resolveList(
           flags.locales,
+          interactive && adapter.locales.length > 0,
           Prompt.multiSelect<string>({
             message: 'Extra admin UI locales (`en` is built in)',
-            choices: CMS_LOCALES.map(l => ({ title: l, value: l })),
+            choices: adapter.locales.map(l => ({ title: l, value: l })),
           }),
-          [],
+          defaults.locales,
         );
-        const cms: CmsSelection = { backends, widgets, codecs: [], locales };
+        // Codecs have no wizard question yet; the adapter's default stands.
+        const cms: CmsSelection = { adapter: adapter.name, backends, widgets, codecs: defaults.codecs, locales };
 
         const result = yield* Effect.tryPromise({
           try: () =>
@@ -197,9 +242,9 @@ export const makeCreateCommand = (name = 'create', binName = 'laika') =>
         });
         yield* Effect.logInfo(`${binName} create: created ${result.name} in ${result.directory}`);
         yield* Effect.logInfo(
-          `${binName} create: src/cms.ts registers backends [${result.cms.backends.join(', ')}], widgets [${
-            result.cms.widgets.join(', ')
-          }]`
+          `${binName} create: src/cms.ts registers ${result.cms.adapter} backends [${
+            result.cms.backends.join(', ')
+          }], widgets [${result.cms.widgets.join(', ')}]`
             + (result.cms.locales.length > 0 ? `, locales [${result.cms.locales.join(', ')}]` : ''),
         );
         if (result.ignoredBuilds.length > 0) {
@@ -212,7 +257,7 @@ export const makeCreateCommand = (name = 'create', binName = 'laika') =>
       }),
   ).pipe(
     Command.withDescription(
-      'Bootstrap a LaikaCMS application from a starter — an interactive wizard that also picks the CMS backends, widgets, and locales (use flags or --yes to skip prompts).',
+      'Bootstrap a LaikaCMS application from a starter — an interactive wizard that also picks the CMS and its backends, widgets, and locales (use flags or --yes to skip prompts).',
     ),
   );
 
@@ -285,16 +330,22 @@ export const makeServeCommand = (name = 'serve', binName = 'laika local') =>
 export const serveCommand = makeServeCommand();
 
 // ---------------------------------------------------------------------------
-// `generate` subcommand — codegen typed TS from Decap `config.yaml`.
-// The output is both a runtime value (the parsed YAML, frozen via `as const`)
+// `generate` subcommand — codegen typed TS from the CMS's config file.
+// The output is both a runtime value (the parsed config, frozen via `as const`)
 // and the literal types TS infers from it — that's why this is `generate`
 // rather than `types` (which would imply a types-only `.d.ts`).
+// Which config format is read is the adapter's business: see `cms/registry.ts`.
 // ---------------------------------------------------------------------------
+
+const generateCms = Flag.string('cms').pipe(
+  Flag.withDescription(cmsFlagDescription('CMS whose config format to read')),
+  Flag.withDefault(DEFAULT_CMS_ADAPTER.name),
+);
 
 const generateInput = Flag.string('input').pipe(
   Flag.withAlias('i'),
   Flag.withDescription(
-    'Path to config.yaml (default: auto-discover ./config.{yml,yaml} or ./src/config.{yml,yaml})',
+    'Path to the CMS config file (default: auto-discover, e.g. ./config.{yml,yaml} or ./src/config.{yml,yaml})',
   ),
   Flag.optional,
 );
@@ -315,6 +366,7 @@ const generateWatch = Flag.boolean('watch').pipe(
 
 const resolvePaths = (
   binName: string,
+  config: CmsConfigCodegen,
   inputFlag: { _tag: 'Some', value: string } | { _tag: 'None' },
   outputFlag: { _tag: 'Some', value: string } | { _tag: 'None' },
 ): Effect.Effect<{ input: string, output: string }, Error> =>
@@ -323,7 +375,7 @@ const resolvePaths = (
     if (inputFlag._tag === 'Some') {
       input = path.resolve(inputFlag.value);
     } else {
-      const found = yield* Effect.promise(() => discoverConfig(process.cwd()));
+      const found = yield* Effect.promise(() => config.discover(process.cwd()));
       if (!found.resolved) {
         yield* Effect.fail(
           new Error(
@@ -340,19 +392,41 @@ const resolvePaths = (
     }
     const output = outputFlag._tag === 'Some'
       ? path.resolve(outputFlag.value)
-      : path.join(path.dirname(input), 'config.gen.ts');
+      : config.defaultOutput(input);
     return { input, output };
   });
+
+/** Resolve `--cms` to an adapter that actually has a config file to read. */
+const resolveConfigCodegen = (
+  binName: string,
+  cmsName: string,
+): Effect.Effect<CmsConfigCodegen, Error> => {
+  const adapter: CmsAdapter | undefined = findCmsAdapter(cmsName);
+  if (!adapter) {
+    return Effect.fail(
+      new Error(
+        `${binName} generate: unknown CMS "${cmsName}". Available: ${cmsAdapters.map(a => a.name).join(', ')}`,
+      ),
+    );
+  }
+  if (!adapter.config) {
+    return Effect.fail(
+      new Error(`${binName} generate: ${adapter.title} has no config file to generate types from.`),
+    );
+  }
+  return Effect.succeed(adapter.config);
+};
 
 export const makeGenerateCommand = (name = 'generate', binName = 'laika local') =>
   Command.make(
     name,
-    { input: generateInput, output: generateOutput, watch: generateWatch },
-    ({ input, output, watch }) =>
+    { cms: generateCms, input: generateInput, output: generateOutput, watch: generateWatch },
+    ({ cms, input, output, watch }) =>
       Effect.gen(function*() {
-        const paths = yield* resolvePaths(binName, input, output);
+        const config = yield* resolveConfigCodegen(binName, cms);
+        const paths = yield* resolvePaths(binName, config, input, output);
         const result = yield* Effect.tryPromise({
-          try: () => generateConfig({ input: paths.input, output: paths.output }),
+          try: () => config.generate({ input: paths.input, output: paths.output }),
           catch: e => e instanceof Error ? e : new Error(String(e)),
         });
         yield* Effect.logInfo(
@@ -370,7 +444,7 @@ export const makeGenerateCommand = (name = 'generate', binName = 'laika local') 
           const dispose = watchFile(paths.input, () => {
             if (busy) return;
             busy = true;
-            generateConfig({ input: paths.input, output: paths.output })
+            config.generate({ input: paths.input, output: paths.output })
               .then(({ output }) => console.log(`${binName} generate: wrote ${output}`))
               .catch((e: unknown) =>
                 console.error(
@@ -386,7 +460,7 @@ export const makeGenerateCommand = (name = 'generate', binName = 'laika local') 
       }),
   ).pipe(
     Command.withDescription(
-      'Generate a typed TypeScript module from a Decap CMS config.yaml.',
+      'Generate a typed TypeScript module from the CMS config file (Decap `config.yaml` by default).',
     ),
   );
 

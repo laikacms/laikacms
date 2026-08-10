@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 
-import { createEmbeddedLaika } from '@laikacms/decap/embedded';
+import { createEmbeddedLaika } from '@laikacms/server/embedded';
 
 import { blogCollections } from './decap-config.js';
 

@@ -4,15 +4,15 @@ The admin UI requires a compiled browser bundle — compile the Laika backend an
 with esbuild, then serve the resulting files as static assets.
 
 > **Why not esm.sh / import maps?** esm.sh re-bundles packages on the fly but does not fully resolve
-> deep `export *` barrel chains. The `@laikacms/decap/decap-cms-backend-laika` subpath depends on
-> symbols re-exported through several barrel layers (e.g. `DocumentsCompatibilityDate`) that
-> esm.sh's bundler drops, so the admin silently fails to load. esbuild resolves all transitive
-> imports at build time and produces a self-contained bundle with no runtime CDN dependency.
+> deep `export *` barrel chains. The `@laikacms/decap-cms/backends/laika` subpath depends on symbols
+> re-exported through several barrel layers (e.g. `DocumentsCompatibilityDate`) that esm.sh's
+> bundler drops, so the admin silently fails to load. esbuild resolves all transitive imports at
+> build time and produces a self-contained bundle with no runtime CDN dependency.
 
 ### Install build dependencies
 
 ```bash
-npm install @laikacms/decap @laikacms/decap-cms @emotion/react @emotion/styled esbuild --save-dev
+npm install @laikacms/server @laikacms/decap-cms @emotion/react @emotion/styled esbuild --save-dev
 ```
 
 `@laikacms/decap-cms` is the scoped Decap CMS fork that provides the `@laikacms/decap-cms/lib/util`,
@@ -26,7 +26,7 @@ shell is styled with Emotion.
 ```typescript
 // admin/index.ts
 import { DecapCmsApp as CMS } from '@laikacms/decap-cms';
-import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
+import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
 
 const LaikaBackend = createLaikaBackend();
 CMS.registerBackend('laika', LaikaBackend);
@@ -49,7 +49,7 @@ CMS.init({
 
 > **`base_url` is required.** Without it, Decap cannot locate the Laika API and the admin shows
 > "Missing required configuration: base_url and app_id are required". Set it to the origin where
-> your `decapApi` handler runs (e.g. `http://localhost:3000` locally, your public URL in
+> your `laikaApi` handler runs (e.g. `http://localhost:3000` locally, your public URL in
 > production).
 >
 > **`dev_token`** lets the Decap admin authenticate without a full OAuth2 flow during development —
@@ -94,7 +94,7 @@ npx serve admin/ -l 5000
 Open `http://localhost:5000` to access the Decap CMS admin.
 
 > **CORS:** when the admin (`npx serve -l 5000`) and the API (`:3000`) are on different origins, add
-> `cors: { origins: ['http://localhost:5000'] }` to your `decapApi(...)` call. Without it the
+> `cors: { origins: ['http://localhost:5000'] }` to your `laikaApi(...)` call. Without it the
 > browser blocks every request with a CORS error. In production, serve the admin and API from the
 > same origin to avoid the need for CORS. See [quickstart-fs-decap](./quickstart-fs) for a complete
 > working example.
@@ -120,9 +120,9 @@ For full control (custom widgets, the Decap React tree) you can instead render a
 ```ts
 // src/components/DecapAdmin.tsx (a React island)
 import { App } from '@laikacms/decap-cms/app';
+import { createLaikaBackend } from '@laikacms/decap-cms/backends/laika';
 import DecapCmsCore, { DecapCmsProvider } from '@laikacms/decap-cms/core';
 import DEFAULT_WIDGET_STRING from '@laikacms/decap-cms/widgets/string';
-import { createLaikaBackend } from '@laikacms/decap/decap-cms-backend-laika';
 // …other widgets…
 
 import { decapConfig } from '~/lib/decap-config.ts';
@@ -147,6 +147,6 @@ export default function DecapAdmin() {
 }
 ```
 
-The `authenticateAccessToken` validator you pass to `decapApi(...)` decides who may call the API.
+The `authenticateAccessToken` validator you pass to `laikaApi(...)` decides who may call the API.
 For local development you can accept a pre-shared token; for production, validate a real session/JWT
 (or front the whole thing with the `decap-oauth2` server below).

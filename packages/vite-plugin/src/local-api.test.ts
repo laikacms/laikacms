@@ -350,14 +350,14 @@ describe('laikacms() plugin — localApi wiring', () => {
 });
 
 describe('@laikacms/vite-plugin dependency boundary', () => {
-  it('does not depend on @laikacms/decap', async () => {
+  it('does not depend on @laikacms/server', async () => {
     const pkgPath = path.resolve(import.meta.dirname, '../package.json');
     const pkg = JSON.parse(await fs.readFile(pkgPath, 'utf8')) as {
       dependencies?: Record<string, string>,
       devDependencies?: Record<string, string>,
     };
-    expect(pkg.dependencies?.['@laikacms/decap']).toBeUndefined();
-    expect(pkg.devDependencies?.['@laikacms/decap']).toBeUndefined();
+    expect(pkg.dependencies?.['@laikacms/server']).toBeUndefined();
+    expect(pkg.devDependencies?.['@laikacms/server']).toBeUndefined();
     expect(pkg.dependencies?.laikacms).toBeDefined();
   });
 });

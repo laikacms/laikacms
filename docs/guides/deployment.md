@@ -35,7 +35,7 @@ Deploy: `wrangler deploy`
 
 > **⚠️ No authentication:** `buildJsonApi` ships no authentication — any client can create, read,
 > update, and delete content without a token. Do not expose it directly to an untrusted network. For
-> a production-ready API with built-in auth, use [`decapApi`](./decap/) from `@laikacms/decap`
+> a production-ready API with built-in auth, use [`laikaApi`](./decap/) from `@laikacms/server`
 > instead.
 
 ## Node.js
@@ -54,7 +54,7 @@ serve({ fetch: api.fetch, port: 3000 });
 
 > **⚠️ No authentication:** `buildJsonApi` ships no authentication — any client can create, read,
 > update, and delete content without a token. Do not expose it directly to an untrusted network. For
-> a production-ready API with built-in auth, use [`decapApi`](./decap/) from `@laikacms/decap`
+> a production-ready API with built-in auth, use [`laikaApi`](./decap/) from `@laikacms/server`
 > instead.
 
 ## Auth and CORS

@@ -98,6 +98,9 @@
       "laikacms/storage/s3": [
         "src/impl/storage-s3/index.ts"
       ],
+      "laikacms/storage/web-fs": [
+        "src/impl/storage-web-fs/index.ts"
+      ],
       "laikacms/storage/webdav": [
         "src/impl/storage-webdav/index.ts"
       ],

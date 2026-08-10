@@ -7,10 +7,10 @@ LaikaCMS, see the [Guides](../guides/) instead — this section is for changes t
 
 LaikaCMS is a monorepo carrying **two core packages**, released together:
 
-| Package           | What it is                                                                                     |
-| ----------------- | ---------------------------------------------------------------------------------------------- |
-| `laikacms`        | Core domain, HTTP APIs, storage/document/asset implementations, serializers, shared utilities. |
-| `@laikacms/decap` | Decap CMS integrations: the Decap-compatible backend, OAuth2, widgets, server adapters.        |
+| Package            | What it is                                                                                     |
+| ------------------ | ---------------------------------------------------------------------------------------------- |
+| `laikacms`         | Core domain, HTTP APIs, storage/document/asset implementations, serializers, shared utilities. |
+| `@laikacms/server` | Decap CMS integrations: the Decap-compatible backend, OAuth2, widgets, server adapters.        |
 
 Alongside them, `packages/github`, `packages/gitlab`, `packages/bitbucket`, and
 `packages/vite-plugin` hold git-host storage adapters and the dev-server plugin. `docs/` and

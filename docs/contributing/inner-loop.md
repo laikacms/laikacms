@@ -18,7 +18,7 @@ rebuilds/retests the packages affected by your change (see `turbo.json`).
 | `pnpm coverage`     | `turbo run test` with v8 coverage reporters.                                   |
 
 Per-package equivalents work too, e.g. `pnpm --filter laikacms test` or
-`pnpm --filter @laikacms/decap typecheck`.
+`pnpm --filter @laikacms/server typecheck`.
 
 Before pushing, run at minimum:
 
@@ -31,7 +31,7 @@ the hook will pass too.
 
 ## Where code lives
 
-Each core package (`laikacms`, `@laikacms/decap`) is organized by layer under `src/`:
+Each core package (`laikacms`, `@laikacms/server`) is organized by layer under `src/`:
 
 ```
 packages/laikacms/src/

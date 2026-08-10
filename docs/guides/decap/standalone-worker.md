@@ -1,12 +1,12 @@
 # Standalone Worker (BYO storage)
 
 This is the primary integration path. Wire the pieces by hand: pick a `StorageRepository`, wrap it
-in the ContentBase document/asset repos, and expose them through `decapApi(...)`. The resulting
+in the ContentBase document/asset repos, and expose them through `laikaApi(...)`. The resulting
 `api.fetch` is a Web-standard `(Request) => Promise<Response>` handler you mount on a catch-all
 route.
 
 ```ts
-import { decapApi } from '@laikacms/decap/decap-api';
+import { laikaApi } from '@laikacms/server/api';
 import { Hono } from 'hono';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
@@ -19,7 +19,7 @@ const app = new Hono<{ Bindings: Env }>();
 app.all('/api/decap/*', async c => {
   const storage = new R2StorageRepository(/* … */);
   const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-  const api = decapApi({
+  const api = laikaApi({
     documents: new ContentBaseDocumentsRepository(storage, settings),
     storage,
     assets: new ContentBaseAssetsRepository(storage, settings),
@@ -145,10 +145,10 @@ window.CMS.init({ config: decapConfig });
 
 `WebDavStorageRepository` works with Nextcloud, ownCloud, Apache `mod_dav`, nginx-dav, rclone, and
 any other RFC 4918 server. Only a URL (and optionally Basic auth) is needed. Construct it like any
-other `StorageRepository` and pass it to `decapApi(...)`:
+other `StorageRepository` and pass it to `laikaApi(...)`:
 
 ```ts
-import { decapApi } from '@laikacms/decap/decap-api';
+import { laikaApi } from '@laikacms/server/api';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
 import { ContentBaseDocumentsRepository } from 'laikacms/documents-contentbase';
@@ -168,7 +168,7 @@ const storage = new WebDavStorageRepository(
 );
 
 const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-const api = decapApi({
+const api = laikaApi({
   documents: new ContentBaseDocumentsRepository(storage, settings),
   storage,
   assets: new ContentBaseAssetsRepository(storage, settings),

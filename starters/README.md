@@ -18,20 +18,40 @@ generates the app's `src/cms.ts` from that selection (flags `--backends`/`--widg
 
 > **Curated 5 of ~140 (LCMS-455).** In June 2026 the ~160 `starter-*` reference apps were moved out
 > of the monorepo. This is the curated set of five, each mapped to a Getting Started section and
-> (eventually) embedded as a StackBlitz preview. The remaining **~135 are deferred, not dropped** —
-> they'll be migrated as demand warrants.
+> (eventually) embedded as a StackBlitz preview, plus `starter-opfs-blog` (added for
+> `laikacms/storage/web-fs`). The remaining **~135 are deferred, not dropped** — they'll be
+> migrated as demand warrants.
 
-## The five
+## The starters
 
 | Starter | Docs section | Demonstrates |
 | --- | --- | --- |
 | [`starter-vite-react-blog`](./starter-vite-react-blog) | Client | client-side content wiring |
+| [`starter-opfs-blog`](./starter-opfs-blog) | Client → local-first | serverless in-browser storage: OPFS or a picked local folder (`storage/web-fs`) |
 | [`starter-hono-blog`](./starter-hono-blog) | Server (default) | secure-by-default `decap-api` proxy |
 | [`starter-workers-blog`](./starter-workers-blog) | Server → edge | runtime-agnostic Cloudflare deploy |
 | [`starter-astro-blog`](./starter-astro-blog) | Static | build-time compilation via the vite plugin |
 | [`starter-github-blog`](./starter-github-blog) | Grows into | DB-free, git-backed collections |
 
-## Why not the workspace?
+## Working in this directory
+
+Like `examples/`, this directory is its **own pnpm workspace**
+([`pnpm-workspace.yaml`](./pnpm-workspace.yaml)): running `pnpm install` here (or inside a starter)
+never climbs up into the monorepo's root workspace, and gets its own lockfile and `node_modules`.
+Unlike `examples/`, it links nothing from the monorepo — installs resolve exactly the published
+packages a user who downloaded one starter folder would get. To validate a starter against the
+working tree instead, that's what `examples/` (workspace-linked `laikacms`) is for.
+
+```sh
+cd starters
+pnpm install          # one isolated install for all starters
+pnpm -r typecheck     # or -F @laikacms/starter-<name> for one
+```
+
+Note: `pnpm clean` at the repo root removes `node_modules` everywhere, including here — just re-run
+`pnpm install` in this directory afterwards.
+
+## Why not the (monorepo) workspace?
 
 A starter has to install for someone who cloned _just that folder_, so its `package.json` references
 **published** LaikaCMS versions as caret ranges (`"laikacms": "^3.0.1"`) — never `workspace:`,
@@ -49,12 +69,24 @@ workspace-protocol dependency.
 > already on current published versions). The **admin UI is migrated**: every starter now bundles
 > the bare, non-laika `@laikacms/decap-cms/laika-app/bare` with registrations in a wizard-generated
 > `src/cms.ts` — no CDN `decap-cms@3` bundle, no `@laikacms/decap-integrations` /
-> `@laikacms/decap-cms-backend-laika` admin imports. Before a starter's StackBlitz embed goes live
+> `@laikacms/decap-cms/backends/laika` admin imports. Before a starter's StackBlitz embed goes live
 > its **server side** must still:
 >
 > - replace `starter-workers-blog`'s `@laikacms/cloudflare` imports with `laikacms/storage/r2`;
 > - adopt the `decap-api` `authorize` callback (secure-by-default); and
 > - for `starter-vite-react-blog`, adopt `WebStorageRepository` — **blocked on LCMS-451**.
+>
+> `starter-opfs-blog` is fully client-side (no server half to migrate), but its published
+> dependency range gains `laikacms/storage/web-fs` only with the next release. Until then two
+> **temporary, revert-at-release** measures keep it runnable from this repo: a `laikacms` `link:`
+> override in [`pnpm-workspace.yaml`](./pnpm-workspace.yaml) (build the library first), and booting
+> `@laikacms/decap-cms/laika-app/bare` instead of the not-yet-published `app/bare` (TODO in its
+> `src/cms.ts`).
+>
+> `starter-github-blog` currently cannot install at all: `@laikacms/github` is pinned to the
+> workspace version (1.0.3) but the npm registry stopped at 1.0.0 — the version-sync machinery
+> compares against workspace versions, so it can't catch a missed publish. It is excluded from
+> [`pnpm-workspace.yaml`](./pnpm-workspace.yaml) until a release publishes the package.
 >
 > CI validation (build each starter against the local library build via a dependency override)
 > lands with that migration.

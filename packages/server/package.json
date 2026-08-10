@@ -1,0 +1,88 @@
+{
+  "name": "@laikacms/server",
+  "version": "4.0.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "HTTP surface for Laika CMS: a single-endpoint JSON:API router over the laikacms repositories, and a self-contained OAuth 2.0 authorization server.",
+  "keywords": [
+    "laikacms",
+    "headless-cms",
+    "json-api",
+    "oauth2"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js",
+      "default": "./dist/api/index.js"
+    },
+    "./oauth2": {
+      "types": "./dist/oauth2/index.d.ts",
+      "import": "./dist/oauth2/index.js",
+      "default": "./dist/oauth2/index.js"
+    },
+    "./oauth2/i18n": {
+      "types": "./dist/oauth2/i18n/index.d.ts",
+      "import": "./dist/oauth2/i18n/index.js",
+      "default": "./dist/oauth2/i18n/index.js"
+    },
+    "./oauth2/i18n/en": {
+      "types": "./dist/oauth2/i18n/translations/en.d.ts",
+      "import": "./dist/oauth2/i18n/translations/en.js",
+      "default": "./dist/oauth2/i18n/translations/en.js"
+    },
+    "./oauth2/i18n/nl": {
+      "types": "./dist/oauth2/i18n/translations/nl.d.ts",
+      "import": "./dist/oauth2/i18n/translations/nl.js",
+      "default": "./dist/oauth2/i18n/translations/nl.js"
+    },
+    "./embedded": {
+      "types": "./dist/embedded/index.d.ts",
+      "import": "./dist/embedded/index.js",
+      "default": "./dist/embedded/index.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepack": "node ../../scripts/check-no-catalog-deps.mjs"
+  },
+  "dependencies": {
+    "laikacms": "workspace:*"
+  },
+  "devDependencies": {
+    "@hono/node-server": "catalog:server",
+    "@types/node": "catalog:types",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

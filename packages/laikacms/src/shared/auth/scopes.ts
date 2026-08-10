@@ -3,7 +3,7 @@
  * sessions and PATs). CMS-agnostic mechanism: the granular scopes below are
  * shipped defaults, but the vocabulary is open, a consumer may grant its own
  * namespaced scopes (e.g. `shipping:read`). This is the single source of the
- * scope primitives; adapters (`@laikacms/decap`) layer their own vocabulary +
+ * scope primitives; adapters (`@laikacms/server/api`) layer their own vocabulary +
  * policy on top, and `decap-cms` keeps a types-only copy for its admin UI.
  *
  * Wildcards:

@@ -5,8 +5,8 @@ MinIO, Backblaze B2, DigitalOcean Spaces, or any other S3-API-shaped service —
 `R2Bucket`, so the existing `R2StorageRepository` can be reused unchanged as a `StorageRepository`
 on top of it.
 
-This module is a pure storage adapter with no `@laikacms/decap` dependency and no hard dependency on
-`@aws-sdk/client-s3` — the SDK client and command constructors are passed in by the caller, so
+This module is a pure storage adapter with no `@laikacms/server` dependency and no hard dependency
+on `@aws-sdk/client-s3` — the SDK client and command constructors are passed in by the caller, so
 callers who don't use S3 never pull the AWS SDK into their bundle.
 
 ## Usage
@@ -48,8 +48,8 @@ const bucket = createS3Bucket({
 const repo = new R2StorageRepository(bucket, { json: jsonSerializer }, 'json');
 ```
 
-Pair the resulting `bucket` with the lower-level `decapApi` directly, or with `createCustomLaika`
-from `@laikacms/decap/custom`.
+Pair the resulting `bucket` with the lower-level `laikaApi` directly, or with `createCustomLaika`
+from `@laikacms/server/api`.
 
 ### `createS3Bucket` options (`CreateS3BucketOptions`)
 

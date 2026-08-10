@@ -151,6 +151,11 @@
       "import": "./dist/impl/documents-jsonapi-proxy/index.js",
       "default": "./dist/impl/documents-jsonapi-proxy/index.js"
     },
+    "./locks/in-process": {
+      "types": "./dist/impl/locks-in-process/index.d.ts",
+      "import": "./dist/impl/locks-in-process/index.js",
+      "default": "./dist/impl/locks-in-process/index.js"
+    },
     "./documents/obsidian": {
       "types": "./dist/impl/documents-obsidian/index.d.ts",
       "import": "./dist/impl/documents-obsidian/index.js",
@@ -190,6 +195,11 @@
       "types": "./dist/impl/storage-web/index.d.ts",
       "import": "./dist/impl/storage-web/index.js",
       "default": "./dist/impl/storage-web/index.js"
+    },
+    "./storage/web-fs": {
+      "types": "./dist/impl/storage-web-fs/index.d.ts",
+      "import": "./dist/impl/storage-web-fs/index.js",
+      "default": "./dist/impl/storage-web-fs/index.js"
     },
     "./storage/webdav": {
       "types": "./dist/impl/storage-webdav/index.d.ts",
@@ -365,6 +375,11 @@
       "types": "./dist/impl/storage-web/index.d.ts",
       "import": "./dist/impl/storage-web/index.js",
       "default": "./dist/impl/storage-web/index.js"
+    },
+    "./storage-web-fs": {
+      "types": "./dist/impl/storage-web-fs/index.d.ts",
+      "import": "./dist/impl/storage-web-fs/index.js",
+      "default": "./dist/impl/storage-web-fs/index.js"
     },
     "./storage-webdav": {
       "types": "./dist/impl/storage-webdav/index.d.ts",

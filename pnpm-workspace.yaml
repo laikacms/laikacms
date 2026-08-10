@@ -1,6 +1,6 @@
 packages:
   - "packages/laikacms"
-  - "packages/decap"
+  - "packages/server"
   - "packages/github"
   - "packages/gitlab"
   - "packages/bitbucket"

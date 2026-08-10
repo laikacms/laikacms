@@ -1,5 +1,10 @@
 import * as S from 'effect/Schema';
-import { ChangesCapabilitySchema, PaginationCapabilitySchema, VersionTrackingCapabilitySchema } from 'laikacms/storage';
+import {
+  ChangesCapabilitySchema,
+  LocksCapabilitySchema,
+  PaginationCapabilitySchema,
+  VersionTrackingCapabilitySchema,
+} from 'laikacms/storage';
 
 /**
  * Compatibility-date brand for the Documents domain. Distinct from the Storage brand
@@ -27,6 +32,14 @@ export const DocumentsCapabilitiesSchema = S.toStandardSchemaV1(S.Struct({
 
   /** Change-signal surface (`getSyncToken` / `listChanges`). */
   changes: ChangesCapabilitySchema,
+
+  /**
+   * Advisory document locking (`acquireLock` / `refreshLock` / `releaseLock` /
+   * `getLock` / `withDocumentLock`). Carries `scope` and `transactional` rather
+   * than a bare boolean so an in-process implementation cannot claim cross-node
+   * or transactional guarantees it does not have.
+   */
+  locks: LocksCapabilitySchema,
 }));
 
 export type DocumentsCapabilities = S.Schema.Type<typeof DocumentsCapabilitiesSchema>;

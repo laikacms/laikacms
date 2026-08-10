@@ -39,7 +39,7 @@ export default { fetch: api.fetch };
 
 > **⚠️ No auth by default** — `buildJsonApi` performs no authentication unless you give it one. Pass
 > an `authorize` callback (invoked per action with its args + the `Request`, returning
-> `true`/`false`/a `LaikaError`), or use `decapApi` for built-in auth. See
+> `true`/`false`/a `LaikaError`), or use `laikaApi` for built-in auth. See
 > [Getting Started](./docs/guides/getting-started.md) for both.
 
 ## Cloudflare Workers
@@ -64,10 +64,10 @@ This repository carries the two core packages. The storage/asset adapters (`@lai
 example apps were moved out into their own repositories in June 2026 — see
 [Packages](./docs/reference/packages.md) for their current locations.
 
-| Package           | Description                                                                                                                                                                           |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `laikacms`        | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
-| `@laikacms/decap` | Decap CMS integrations: backend, OAuth2, widgets, server adapters.                                                                                                                    |
+| Package            | Description                                                                                                                                                                           |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `laikacms`         | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
+| `@laikacms/server` | Decap CMS integrations: backend, OAuth2, widgets, server adapters.                                                                                                                    |
 
 See [docs/reference/packages.md](./docs/reference/packages.md) for the full list of subpath exports,
 including the packages that now live in separate repositories.
@@ -89,7 +89,7 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
 ## Releasing
 
-The two core packages (`laikacms`, `@laikacms/decap`) are released together at the same version
+The two core packages (`laikacms`, `@laikacms/server`) are released together at the same version
 (changesets `fixed` group). Internal `workspace:*` references are pinned to the exact version on
 publish. Packages that were moved out of this repo (the adapters, `laikacli`,
 `@laikacms/git-gateway`, …) are now released from their own repositories.

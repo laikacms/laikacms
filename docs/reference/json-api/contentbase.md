@@ -4,7 +4,7 @@ The ContentBase API manages collection settings — the named document and media
 structure a content base. It is served by `buildJsonApi` from `laikacms/contentbase-api`.
 
 > ⚠️ **No authentication is included.** Wrap the handler with an auth layer (e.g.
-> `@laikacms/decap/decap-api` or a custom Bearer-token middleware) before exposing it to untrusted
+> `@laikacms/server/api` or a custom Bearer-token middleware) before exposing it to untrusted
 > networks — otherwise any caller can read, mutate, and delete collection settings.
 
 ### Resource Types

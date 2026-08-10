@@ -106,7 +106,7 @@ export default {
   repository
 - [`@laikacms/aws`](https://www.npmjs.com/package/@laikacms/aws) — AWS service implementations
   (DynamoDB)
-- [`@laikacms/decap`](https://www.npmjs.com/package/@laikacms/decap) — Decap CMS integrations
+- [`@laikacms/server`](https://www.npmjs.com/package/@laikacms/server) — Decap CMS integrations
   (backend, OAuth2, widgets)
 - [`@laikacms/decap-cms`](https://www.npmjs.com/package/@laikacms/decap-cms) — Laika-aware Decap CMS
   fork with AI chat widget (`…/widgets/aichat`), icon widgets, embedded-entry editor, and config

@@ -7,6 +7,7 @@ import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
 import {
   BadRequestError,
   ConflictError,
+  errorCode,
   ErrorCodeToStatusMap,
   InternalError,
   InvalidData,
@@ -30,7 +31,8 @@ import {
   recoverableErrorsToWarnings,
 } from 'laikacms/json-api';
 import { openApiDocumentToYaml } from 'laikacms/json-api';
-import { SyncToken } from 'laikacms/storage';
+import type { Lock, OwnedLock } from 'laikacms/storage';
+import { LockToken, SyncToken } from 'laikacms/storage';
 import { type AuthorizeDecision, resolveAuthorization } from '../authorize.js';
 import {
   documentCreateFromJsonApi,
@@ -39,6 +41,8 @@ import {
   documentToJsonApi,
   folderSummaryToJsonApi,
   folderToJsonApi,
+  lockToJsonApiAttributes,
+  ownedLockToJsonApi,
   revisionCreateFromJsonApi,
   type RevisionCreateJsonApi,
   revisionSummaryToJsonApi,
@@ -58,7 +62,11 @@ type AllJsonApiResponses =
   | JsonApiError;
 
 const json = <
-  T extends AllJsonApiResponses | { meta: Record<string, unknown> } | { results: unknown[] },
+  T extends
+    | AllJsonApiResponses
+    | { data: null }
+    | { meta: Record<string, unknown> }
+    | { results: unknown[] },
 >(
   body: T,
   status: number = 200,
@@ -394,7 +402,11 @@ export type DocumentsAuthorizeAction =
   | { action: 'publish', key: string }
   | { action: 'createRevision', data: Parameters<DocumentsRepository['createRevision']>[0] }
   | { action: 'listRevisions', key: string }
-  | { action: 'getRevision', key: string, revisionId: string };
+  | { action: 'getRevision', key: string, revisionId: string }
+  | { action: 'getLock', key: string }
+  | { action: 'acquireLock', key: string }
+  | { action: 'refreshLock', key: string }
+  | { action: 'releaseLock', key: string };
 
 /**
  * The argument passed to a documents {@link DocumentsAuthorize} callback: the
@@ -465,6 +477,42 @@ const UnpublishBodySchema = S.toStandardSchemaV1(S.Struct({
     type: S.Literal('unpublished'),
     attributes: S.Struct({
       status: S.String,
+    }),
+  }),
+}));
+
+// ===== LOCK BODIES (ADR-007) =====
+// The owner's `id`/`name` are display and attribution data only. What actually
+// authorises a refresh or release is the opaque `token`, which the server minted
+// and handed only to the acquirer.
+
+const LockAcquireBodySchema = S.toStandardSchemaV1(S.Struct({
+  data: S.Struct({
+    type: S.Literal('lock'),
+    attributes: S.Struct({
+      owner: S.Struct({ id: S.String, name: S.String }),
+      ttlMs: S.optional(S.Number),
+      force: S.optional(S.Boolean),
+    }),
+  }),
+}));
+
+const LockRefreshBodySchema = S.toStandardSchemaV1(S.Struct({
+  data: S.Struct({
+    type: S.Literal('lock'),
+    attributes: S.Struct({
+      token: S.String,
+      owner: S.Struct({ id: S.String, name: S.String }),
+      ttlMs: S.optional(S.Number),
+    }),
+  }),
+}));
+
+const LockReleaseBodySchema = S.toStandardSchemaV1(S.Struct({
+  data: S.Struct({
+    type: S.Literal('lock'),
+    attributes: S.Struct({
+      token: S.String,
     }),
   }),
 }));
@@ -550,6 +598,9 @@ const decodeUnpublishedCreateBody = S.decodeUnknownSync(UnpublishedCreateBodySch
 const decodeUnpublishedUpdateBody = S.decodeUnknownSync(UnpublishedUpdateBodySchema);
 const decodeUnpublishBody = S.decodeUnknownSync(UnpublishBodySchema);
 const decodeRevisionCreateBody = S.decodeUnknownSync(RevisionCreateBodySchema);
+const decodeLockAcquireBody = S.decodeUnknownSync(LockAcquireBodySchema);
+const decodeLockRefreshBody = S.decodeUnknownSync(LockRefreshBodySchema);
+const decodeLockReleaseBody = S.decodeUnknownSync(LockReleaseBodySchema);
 const decodeOperations = S.decodeUnknownSync(OperationsSchema);
 
 // Type aliases for decoded values
@@ -706,6 +757,16 @@ export function buildJsonApi(options: DocumentsApiOptions) {
                 path: '/sync-token',
                 methods: ['GET'],
                 description: 'Get an opaque per-scope change token (capability-gated)',
+              },
+              {
+                path: '/locks/{key}',
+                methods: ['GET', 'POST', 'DELETE'],
+                description: 'Advisory document lock: read the holder, acquire, or release (capability-gated)',
+              },
+              {
+                path: '/locks/{key}/refresh',
+                methods: ['POST'],
+                description: 'Extend a held advisory lock (capability-gated)',
               },
               {
                 path: '/changes',
@@ -977,6 +1038,89 @@ export function buildJsonApi(options: DocumentsApiOptions) {
         undefined,
         logger,
       );
+    }
+
+    // ===== ADVISORY LOCKS (ADR-007) =====
+    // Capability-gated on `getCapabilities().locks`; a repository that does not
+    // support locking fails with NotImplementedError, which maps to 501 and
+    // re-hydrates as the same typed error on the proxy side, so a client can
+    // degrade to "locking unsupported" instead of guessing.
+    //
+    // The token is minted server-side and returned ONLY on acquire/refresh. GET
+    // deliberately returns the public projection, so polling to render "being
+    // edited by X" never hands out the ability to steal or release the lock.
+    if (resource === 'locks' && key) {
+      // A lock conflict carries the current holder in `meta.lock` so the client
+      // can render the banner from the rejection itself, with no second fetch.
+      const lockFailure = async (failure: LaikaError): Promise<Response> => {
+        const status = ErrorCodeToStatusMap[failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500;
+        if (failure.code !== errorCode.LOCK_CONFLICT) return failResponse(Result.fail(failure), status);
+        const current = await firstResult(repo.getLock(key));
+        const body = errorToJsonApiMapper(Result.fail(failure), logger);
+        const holder = Result.isSuccess(current) && current.success ? current.success : undefined;
+        onError?.(failure);
+        return json(holder ? { ...body, meta: { lock: lockToJsonApiAttributes(holder) } } : body, status);
+      };
+
+      if (request.method === 'GET') {
+        const denied = await authorizeAction({ action: 'getLock', key });
+        if (denied) return denied;
+        const result = await firstResult(repo.getLock(key));
+        if (Result.isFailure(result)) return lockFailure(result.failure);
+        return json({
+          data: result.success
+            ? {
+              type: 'lock',
+              id: key,
+              attributes: lockToJsonApiAttributes(result.success),
+              links: { self: `${basePath}/locks/${encodeURIComponent(key)}` },
+            }
+            : null,
+        });
+      }
+
+      if (request.method === 'POST' && action === 'refresh') {
+        const bodyResult = await parseBody(request, decodeLockRefreshBody);
+        if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
+        const { token, owner, ttlMs } = bodyResult.success.data.attributes;
+        const denied = await authorizeAction({ action: 'refreshLock', key });
+        if (denied) return denied;
+        const result = await firstResult(
+          repo.refreshLock(key, LockToken.make(token), owner, ttlMs === undefined ? undefined : { ttlMs }),
+        );
+        if (Result.isFailure(result)) return lockFailure(result.failure);
+        return json({ data: ownedLockToJsonApi(result.success, basePath) });
+      }
+
+      if (request.method === 'POST' && !action) {
+        const bodyResult = await parseBody(request, decodeLockAcquireBody);
+        if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
+        const { owner, ttlMs, force } = bodyResult.success.data.attributes;
+        const denied = await authorizeAction({ action: 'acquireLock', key });
+        if (denied) return denied;
+        const result = await firstResult(
+          repo.acquireLock(key, owner, {
+            ...(ttlMs === undefined ? {} : { ttlMs }),
+            ...(force === undefined ? {} : { force }),
+          }),
+        );
+        if (Result.isFailure(result)) return lockFailure(result.failure);
+        return json({ data: ownedLockToJsonApi(result.success, basePath) }, 201);
+      }
+
+      if (request.method === 'DELETE') {
+        const bodyResult = await parseBody(request, decodeLockReleaseBody);
+        if (Result.isFailure(bodyResult)) return failResponse(bodyResult, 400);
+        const denied = await authorizeAction({ action: 'releaseLock', key });
+        if (denied) return denied;
+        const result = await firstResult(
+          repo.releaseLock(key, LockToken.make(bodyResult.success.data.attributes.token)),
+        );
+        if (Result.isFailure(result)) return lockFailure(result.failure);
+        // 200 + meta envelope, matching every other DELETE on this API, rather
+        // than a bodiless 204 the JSON:API client cannot parse.
+        return json({ meta: { released: true } });
+      }
     }
 
     if (resource === 'changes' && request.method === 'GET') {

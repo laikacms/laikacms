@@ -1,8 +1,11 @@
 export { layerStorageServer } from './server.js';
 export type { LocalStorageServerOptions } from './server.js';
 
-export { discoverConfig, generateConfig, loadConfig, serialize, writeGenerated } from './config-codegen.js';
-export type { DiscoverResult, SerializeOptions } from './config-codegen.js';
+export { discoverConfig, generateConfig, loadConfig, serialize, writeGenerated } from './cms/decap-config.js';
+export type { SerializeOptions } from './cms/decap-config.js';
+export { decapAdapter } from './cms/decap.js';
+export { cmsAdapters, DEFAULT_CMS_ADAPTER, findCmsAdapter, getCmsAdapter } from './cms/registry.js';
+export type { CmsAdapter, CmsConfigCodegen, CmsConfigDiscovery, CmsExtension, CmsSelection } from './cms/types.js';
 
 export { migrateStorage } from './migrate.js';
 export type { MigrateEvent, MigrateSkipReason, MigrateStorageOptions, MigrateStorageResult } from './migrate.js';

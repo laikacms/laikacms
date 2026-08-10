@@ -1,3 +1,4 @@
+import * as DateTime from 'effect/DateTime';
 import * as S from 'effect/Schema';
 import {
   type Document,
@@ -17,6 +18,8 @@ import {
   type Folder,
   type FolderCreate,
   type FolderSummary,
+  type Lock,
+  type OwnedLock,
   type StorageObject,
   type StorageObjectCreate,
   type StorageObjectSummary,
@@ -339,3 +342,56 @@ export const decodeUnpublishedJsonApi = S.decodeUnknownSync(UnpublishedJsonApiSc
 export const decodeUnpublishedSummaryJsonApi = S.decodeUnknownSync(UnpublishedSummaryJsonApiSchema);
 export const decodeRevisionJsonApi = S.decodeUnknownSync(RevisionJsonApiSchema);
 export const decodeRevisionSummaryJsonApi = S.decodeUnknownSync(RevisionSummaryJsonApiSchema);
+
+// ===== LOCKS (ADR-007) =====
+
+/**
+ * Serialise the **public** projection of a lock. Timestamps go on the wire as
+ * ISO strings; the bearer token is not part of this shape at all, so a reader
+ * polling `GET /locks/{key}` cannot end up holding one.
+ */
+export function lockToJsonApiAttributes(lock: Lock): {
+  key: string,
+  owner: { id: string, name: string },
+  acquiredAt: string,
+  expiresAt: string,
+} {
+  return {
+    key: lock.key,
+    owner: { id: lock.owner.id, name: lock.owner.name },
+    acquiredAt: DateTime.formatIso(lock.acquiredAt),
+    expiresAt: DateTime.formatIso(lock.expiresAt),
+  };
+}
+
+/**
+ * Serialise a lock for the caller that just acquired or refreshed it. This is
+ * the only response shape that carries the token.
+ */
+export function ownedLockToJsonApi(lock: OwnedLock, basePath: string): {
+  type: 'lock',
+  id: string,
+  attributes: ReturnType<typeof lockToJsonApiAttributes> & { token: string },
+  links: { self: string },
+} {
+  return {
+    type: 'lock',
+    id: lock.key,
+    attributes: { ...lockToJsonApiAttributes(lock), token: lock.token },
+    links: { self: `${basePath}/locks/${encodeURIComponent(lock.key)}` },
+  };
+}
+
+export const LockJsonApiSchema = S.toStandardSchemaV1(S.Struct({
+  type: S.Literal('lock'),
+  id: S.String,
+  attributes: S.Struct({
+    key: S.String,
+    owner: S.Struct({ id: S.String, name: S.String }),
+    acquiredAt: S.String,
+    expiresAt: S.String,
+    token: S.optional(S.String),
+  }),
+}));
+
+export const decodeLockJsonApi = S.decodeUnknownSync(LockJsonApiSchema);

@@ -8,9 +8,8 @@ JSON:API server for content-base collection settings (document and media collect
 and delete collection settings for any caller that can reach its `fetch`. Do **not** expose it to
 untrusted networks directly.
 
-Wrap it with an authentication layer — e.g. [`@laikacms/decap/decap-api`](../../decap/decap-api),
-which validates a Bearer access token before forwarding to this handler — or provide your own
-middleware:
+Wrap it with an authentication layer — e.g. [`@laikacms/server/api`](../../decap/decap-api), which
+validates a Bearer access token before forwarding to this handler — or provide your own middleware:
 
 ```typescript
 const api = buildJsonApi({ repo: mySettingsProvider });

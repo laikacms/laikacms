@@ -78,3 +78,5 @@ abstract class StorageRepository {
 - `laikacms/storage/s3` - S3→R2Bucket adapter (pairs with `R2StorageRepository`)
 - `laikacms/storage/webdav` - WebDAV server
 - `laikacms/storage/jsonapi-proxy` - Storage JSON:API proxy
+- `laikacms/storage/web-fs` - Browser File System API (any directory handle: origin-private or
+  user-picked)

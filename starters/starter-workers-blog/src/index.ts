@@ -5,12 +5,12 @@
  * `createEmbeddedLaika` — that helper hardcodes `FileSystemStorageRepository`
  * which requires `node:fs` and is incompatible with the Workers runtime.
  *
- * Instead we wire the lower-level `decapApi` by hand:
+ * Instead we wire the lower-level `laikaApi` by hand:
  *   D1StorageRepository (Cloudflare REST API)
  *   → DecapContentBaseSettingsProvider (reads Decap config from D1)
  *   → ContentBaseDocumentsRepository
  *   → ContentBaseAssetsRepository
- *   → decapApi({ documents, storage, assets, basePath, auth })
+ *   → laikaApi({ documents, storage, assets, basePath, auth })
  *
  * Doc gap surfaced: there is no `createEmbeddedLaika` equivalent for edge
  * runtimes.  If you need one, open an issue at github.com/laikacms/laikacms.
@@ -26,7 +26,7 @@ import { rawSerializer } from 'laikacms/storage-serializers-raw';
 import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
 
 import { D1StorageRepository } from '@laikacms/cloudflare/storage-d1';
-import { decapApi } from '@laikacms/decap/decap-api';
+import { laikaApi } from '@laikacms/server/api';
 
 import { decapConfig } from './decap-config.js';
 
@@ -50,7 +50,7 @@ const serializers = {
 };
 
 interface LaikaResources {
-  api: ReturnType<typeof decapApi>;
+  api: ReturnType<typeof laikaApi>;
   documents: ContentBaseDocumentsRepository;
 }
 
@@ -82,7 +82,7 @@ async function getOrCreate(env: Env): Promise<LaikaResources> {
 
   const devToken = env.DEV_TOKEN ?? 'dev-local-laika-token';
 
-  const api = decapApi({
+  const api = laikaApi({
     documents,
     storage,
     assets,

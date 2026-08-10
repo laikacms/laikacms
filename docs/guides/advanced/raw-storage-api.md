@@ -3,7 +3,7 @@
 > [!WARNING] **No auth by default.** `buildJsonApi` performs no authentication or authorization
 > unless you give it one — any client can create, read, update, and delete content without a token.
 > This is the low-level primitive: **you secure it yourself.** Most projects should start with
-> [Getting Started](../getting-started) instead, which leads with `decapApi` (secure by default) and
+> [Getting Started](../getting-started) instead, which leads with `laikaApi` (secure by default) and
 > only reaches this page for the cases below.
 
 `buildJsonApi` (from `laikacms/storage-api`) wraps any `StorageRepository` in a JSON:API HTTP
@@ -11,12 +11,12 @@ handler — the thinnest possible layer between a storage backend and the networ
 directly when:
 
 - You're building your own auth/routing layer from scratch and don't want the ContentBase
-  document/asset model that `decapApi` layers on top.
+  document/asset model that `laikaApi` layers on top.
 - You're wiring a non-Decap frontend directly against the Storage JSON:API (see
   [Storage API reference](../../reference/json-api/storage)).
 - You're prototyping locally, behind a firewall, with no untrusted network access.
 
-For a Decap CMS admin, prefer `decapApi` from `@laikacms/decap/decap-api` — see
+For a Decap CMS admin, prefer `laikaApi` from `@laikacms/server/api` — see
 [Getting Started → Server setup](../getting-started#server-setup-recommended-default) and
 [Decap Integration](../decap/) — which requires an explicit `authorize` policy and has no insecure
 default.
@@ -38,8 +38,8 @@ export default { fetch: api.fetch };
 > update, and delete content without a token. Do not expose it directly to an untrusted network. You
 > have two options:
 >
-> - For a production-ready API with built-in auth, use [`decapApi`](../decap/) from
->   `@laikacms/decap` instead.
+> - For a production-ready API with built-in auth, use [`laikaApi`](../decap/) from
+>   `@laikacms/server` instead.
 > - For custom authorization, pass an `authorize` callback (below). It runs once per action —
 >   receiving the action name, its direct arguments, and the whole `Request` — and returns `true` to
 >   allow, `false` to deny with a 403, or a `LaikaError` to deny with a custom status.
@@ -98,6 +98,6 @@ export default {
 ## Next steps
 
 - [Getting Started](../getting-started) — the recommended, secure-by-default progressive path
-- [Decap Integration](../decap/) — `decapApi`, OAuth2, and the full Decap CMS wiring
+- [Decap Integration](../decap/) — `laikaApi`, OAuth2, and the full Decap CMS wiring
 - [Storage API reference](../../reference/json-api/storage) — full JSON:API endpoint reference
 - [Deployment](../deployment) — production hosting options

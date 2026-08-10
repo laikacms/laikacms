@@ -11,11 +11,11 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@laikacms/decap": "^3.0.1",
+    "@laikacms/server": "^4.0.0",
     "@laikacms/decap-cms": "^4.1.0",
-    "@laikacms/vite-plugin": "^3.0.1",
+    "@laikacms/vite-plugin": "^3.1.0",
     "astro": "^7.1.6",
-    "laikacms": "^3.0.1",
+    "laikacms": "^3.1.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.4"
   },

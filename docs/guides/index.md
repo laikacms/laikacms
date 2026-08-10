@@ -10,7 +10,7 @@ Task-oriented walkthroughs for getting LaikaCMS running and wired into your stac
   as middleware, configure logging, and work through the production security checklist.
 - **[Security](./security)** — handling secrets, error hygiene, and production hardening.
 - **[Advanced: raw Storage API](./advanced/raw-storage-api)** — the low-level `buildJsonApi`
-  primitive with no built-in auth. You secure it yourself; most projects want `decapApi` instead.
+  primitive with no built-in auth. You secure it yourself; most projects want `laikaApi` instead.
 
 ## Decap CMS
 

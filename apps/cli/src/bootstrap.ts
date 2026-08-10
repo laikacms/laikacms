@@ -4,13 +4,9 @@ import { access, cp, mkdir, readdir, readFile, writeFile } from 'node:fs/promise
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import {
-  type CmsSelection,
-  DEFAULT_CMS_SELECTION,
-  generateCmsModule,
-  selectedCmsExtensionSubpaths,
-} from './cms-codegen.js';
 import { synchronizeOptionalPeerDependencies } from './cms-extension-dependencies.js';
+import { DEFAULT_CMS_ADAPTER, getCmsAdapter } from './cms/registry.js';
+import type { CmsSelection } from './cms/types.js';
 
 // Add starters here only after their source has passed the standalone
 // install/typecheck/build smoke test. The other curated starters are still
@@ -26,7 +22,7 @@ export interface BootstrapOptions {
   title?: string;
   packageManager?: PackageManager;
   install?: boolean;
-  /** Backends/widgets/locales to register in the generated `src/cms.ts` (default: what the starter's blog collections need). */
+  /** Which CMS, and what to register in its generated `src/cms.ts` (default: what the starter's blog collections need). */
   cms?: CmsSelection;
 }
 
@@ -167,9 +163,11 @@ export async function bootstrapApplication(options: BootstrapOptions): Promise<B
   if (!/^(?:@[a-z0-9][a-z0-9._-]*\/)?[a-z0-9][a-z0-9._-]*$/.test(name)) {
     throw new Error(`Invalid package name: ${name}`);
   }
-  // Validate the selection (throws on unknown names) before touching the disk.
-  const cms = options.cms ?? DEFAULT_CMS_SELECTION;
-  const cmsModule = generateCmsModule(cms);
+  // Validate the CMS and its selection (both throw on unknown names) before
+  // touching the disk.
+  const cms = options.cms ?? DEFAULT_CMS_ADAPTER.defaultSelection;
+  const adapter = getCmsAdapter(cms.adapter);
+  const cmsModule = adapter.generateModule(cms);
 
   await assertEmptyDestination(destination);
   await mkdir(destination, { recursive: true });
@@ -206,8 +204,8 @@ export async function bootstrapApplication(options: BootstrapOptions): Promise<B
     await installDependencies(destination, packageManager);
     const addedPeers = await synchronizeOptionalPeerDependencies({
       projectDirectory: destination,
-      packageName: '@laikacms/decap-cms',
-      extensionSubpaths: selectedCmsExtensionSubpaths(cms),
+      packageName: adapter.packageName,
+      extensionSubpaths: adapter.extensionSubpaths(cms),
     });
     if (addedPeers.length > 0) await installDependencies(destination, packageManager);
   }

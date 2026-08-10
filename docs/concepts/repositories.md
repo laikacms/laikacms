@@ -89,6 +89,7 @@ flowchart TB
             StorageDrizzleRepo[storage-drizzle]:::storage
             StorageJsonapiProxyRepo[storage-jsonapi-proxy]:::storage
             StorageWebRepo[storage-web]:::storage
+            StorageWebFsRepo[storage-web-fs]:::storage
         end
     end
 
@@ -141,6 +142,7 @@ flowchart TB
     StorageRoutingBackend --> StorageDrizzleRepo
     StorageRoutingBackend --> StorageJsonapiProxyRepo
     StorageRoutingBackend --> StorageWebRepo
+    StorageRoutingBackend --> StorageWebFsRepo
 
     %% Styling
     classDef document fill:#dae8fc,stroke:#6c8ebf,color:#000
@@ -164,7 +166,9 @@ flowchart TB
 3. **Storage Repository**
    - Low-level storage abstraction for raw data
    - Implementations: storage-fs, storage-r2, storage-s3, storage-webdav, storage-drizzle,
-     storage-jsonapi-proxy, storage-web (client-side, read+write, backed by the Web `Storage` API)
+     storage-jsonapi-proxy, storage-web (client-side, read+write, backed by the Web `Storage` API),
+     storage-web-fs (client-side, read+write, any File System API directory handle — origin-private
+     or user-picked — with per-operation permission and liveness checks)
 
 ### Routing Repository Pattern
 

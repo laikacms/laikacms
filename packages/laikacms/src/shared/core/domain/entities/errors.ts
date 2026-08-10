@@ -49,6 +49,7 @@ export const errorCode = {
   INTERNAL_ERROR: 'internal_error',
   FILE_INSTEAD_OF_DIR: 'file_instead_of_dir',
   VERSIONING_MISMATCH: 'version_mismatch',
+  LOCK_CONFLICT: 'lock_conflict',
   VALIDATION_ERROR: 'validation_error',
   ENTRY_ALREADY_EXISTS: 'entry_already_exists',
   CONFLICT: 'conflict',
@@ -65,6 +66,10 @@ export const errorCode = {
   FILE_TOO_LARGE: 'file_too_large',
   // Storage capacity errors
   QUOTA_EXCEEDED: 'quota_exceeded',
+  // Storage access errors
+  PERMISSION_DENIED: 'permission_denied',
+  PERMISSION_PROMPT_REQUIRED: 'permission_prompt_required',
+  STALE_HANDLE: 'stale_handle',
 } as const;
 
 export type ErrorCode = typeof errorCode[keyof typeof errorCode];
@@ -83,6 +88,9 @@ export const errorStatus = {
   INVALID_DATA: 400,
   INTERNAL_ERROR: 500,
   VERSIONING_MISMATCH: 409,
+  // 423 Locked, deliberately distinct from the 409 the version rung uses, so a
+  // client can branch on status alone (ADR-007).
+  LOCK_CONFLICT: 423,
   VALIDATION_ERROR: 400,
   ENTRY_ALREADY_EXISTS: 409,
   CONFLICT: 409,
@@ -99,6 +107,10 @@ export const errorStatus = {
   FILE_TOO_LARGE: 413, // Payload Too Large
   // Storage capacity errors
   QUOTA_EXCEEDED: 507, // Insufficient Storage
+  // Storage access errors
+  PERMISSION_DENIED: 403,
+  PERMISSION_PROMPT_REQUIRED: 403,
+  STALE_HANDLE: 410, // Gone — the handle's underlying resource no longer exists
 } as const satisfies Record<ErrorKey, number>;
 
 export type ErrorStatus = typeof errorStatus[keyof typeof errorStatus];
@@ -166,6 +178,19 @@ export class VersionMismatchError
   public static override TITLE = 'Version Mismatch';
   public static override CODE = errorCode.VERSIONING_MISMATCH;
   public static override STATUS = errorStatus.VERSIONING_MISMATCH;
+}
+/**
+ * A document is held by a lock the caller does not hold (ADR-007).
+ *
+ * Status is 423 Locked rather than 409, so a client distinguishes "someone else
+ * is editing this" from the version rung's "the record moved under you"
+ * ({@link VersionMismatchError}) on status alone. The API layer carries the
+ * current public `Lock` in the JSON:API error's `meta.lock`.
+ */
+export class LockConflictError extends LaikaError<typeof errorCode.LOCK_CONFLICT, typeof errorStatus.LOCK_CONFLICT> {
+  public static override TITLE = 'Lock Conflict';
+  public static override CODE = errorCode.LOCK_CONFLICT;
+  public static override STATUS = errorStatus.LOCK_CONFLICT;
 }
 export class ValidationError
   extends LaikaError<typeof errorCode.VALIDATION_ERROR, typeof errorStatus.VALIDATION_ERROR>
@@ -279,4 +304,55 @@ export class QuotaExceededError extends LaikaError<typeof errorCode.QUOTA_EXCEED
   public static override TITLE = 'Storage Quota Exceeded';
   public static override CODE = errorCode.QUOTA_EXCEEDED;
   public static override STATUS = errorStatus.QUOTA_EXCEEDED;
+}
+
+/**
+ * Access to the backing storage medium was refused, or revoked mid-session.
+ * Storage repositories backed by a permission-gated medium (e.g. a persisted
+ * `showDirectoryPicker()` handle restored in a later session) must map the
+ * platform's native permission failure (a `NotAllowedError`/`SecurityError`
+ * `DOMException`, a `queryPermission()` state of `'denied'`, or equivalent) to
+ * this typed error rather than letting the raw exception cross the
+ * `LaikaTask`/`LaikaStream` boundary. Re-requesting will not succeed; the user
+ * must grant access anew.
+ *
+ * Repositories never prompt for access themselves — permission requests need
+ * a user gesture, so the application catches, re-acquires access, and
+ * retries. See also the sibling errors {@link PermissionPromptRequiredError}
+ * (recoverable by re-prompting) and {@link StaleHandleError} (the handle
+ * itself is dead).
+ */
+export class PermissionDeniedError
+  extends LaikaError<typeof errorCode.PERMISSION_DENIED, typeof errorStatus.PERMISSION_DENIED>
+{
+  public static override TITLE = 'Permission Denied';
+  public static override CODE = errorCode.PERMISSION_DENIED;
+  public static override STATUS = errorStatus.PERMISSION_DENIED;
+}
+
+/**
+ * Access must be (re-)requested before the storage medium can be used — e.g.
+ * a persisted `FileSystemDirectoryHandle` whose permission lapsed back to
+ * `'prompt'`. Unlike {@link PermissionDeniedError} this is recoverable
+ * without re-selection: call the platform's permission request (such as
+ * `handle.requestPermission()`) inside a user gesture, then retry.
+ */
+export class PermissionPromptRequiredError
+  extends LaikaError<typeof errorCode.PERMISSION_PROMPT_REQUIRED, typeof errorStatus.PERMISSION_PROMPT_REQUIRED>
+{
+  public static override TITLE = 'Permission Prompt Required';
+  public static override CODE = errorCode.PERMISSION_PROMPT_REQUIRED;
+  public static override STATUS = errorStatus.PERMISSION_PROMPT_REQUIRED;
+}
+
+/**
+ * A stored handle no longer connects to its underlying resource — the
+ * directory was deleted or moved, or a persisted handle expired. Neither
+ * retrying nor re-prompting will succeed; ask the user to select the resource
+ * again and replace the stored handle.
+ */
+export class StaleHandleError extends LaikaError<typeof errorCode.STALE_HANDLE, typeof errorStatus.STALE_HANDLE> {
+  public static override TITLE = 'Stale Handle';
+  public static override CODE = errorCode.STALE_HANDLE;
+  public static override STATUS = errorStatus.STALE_HANDLE;
 }

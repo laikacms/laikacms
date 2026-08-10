@@ -1,0 +1,6 @@
+{
+  "name": "laikacms-starters",
+  "private": true,
+  "description": "Workspace root for the download-and-go starters. Not part of the monorepo's pnpm workspace and never published; starters resolve published LaikaCMS versions only.",
+  "type": "module"
+}

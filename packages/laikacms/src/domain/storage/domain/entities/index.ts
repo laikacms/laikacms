@@ -3,4 +3,5 @@ export * from './atom/index.js';
 export * from './capabilities.js';
 export * from './changes.js';
 export * from './folder/index.js';
+export * from './locks.js';
 export * from './object/index.js';

@@ -1,6 +1,6 @@
 # Authentication
 
-How callers prove who they are to `decapApi(...)`: browser sessions, machine-to-machine API keys,
+How callers prove who they are to `laikaApi(...)`: browser sessions, machine-to-machine API keys,
 SSR guards, structured logging, the bundled OAuth2 server, and the multi-tenant hosted gateway.
 
 ## Machine-to-machine auth with `authenticateApiToken`
@@ -19,9 +19,9 @@ this callback instead of `authenticateAccessToken`:
 > leak through server logs, CDN logs, and browser history.
 
 ```ts
-import { decapApi } from '@laikacms/decap/decap-api';
+import { laikaApi } from '@laikacms/server/api';
 
-const api = decapApi({
+const api = laikaApi({
   documents,
   storage,
   authenticateAccessToken: async token => {
@@ -82,13 +82,13 @@ attach to the `User` and check in `authorize`. Augment the `User` interface with
 policy needs:
 
 ```ts
-declare module '@laikacms/decap/decap-api' {
+declare module '@laikacms/server/api' {
   interface User {
     roles: string[];
   }
 }
 
-const api = decapApi({
+const api = laikaApi({
   documents,
   storage,
   authenticateAccessToken: yourValidator, // returns { id, email, roles, … }
@@ -117,7 +117,7 @@ authenticateApiToken: async key => {
 ### Scope-based authorization with `createScopePolicy`
 
 For the common pattern of granting access based on fine-grained scopes (rather than flat roles),
-`@laikacms/decap/decap-api` ships `createScopePolicy()` — a drop-in `authorize` factory that maps
+`@laikacms/server/api` ships `createScopePolicy()` — a drop-in `authorize` factory that maps
 every CMS request to a required scope and checks the principal's granted scopes. The scope
 vocabulary lives in `laikacms/auth`:
 
@@ -132,9 +132,9 @@ vocabulary lives in `laikacms/auth`:
 | `resource:*`    | Implies every action on that resource (e.g. `content:*`)            |
 
 ```ts
-import { createScopePolicy, decapApi } from '@laikacms/decap/decap-api';
+import { createScopePolicy, laikaApi } from '@laikacms/server/api';
 
-const api = decapApi({
+const api = laikaApi({
   documents,
   storage,
   authenticateAccessToken: async token => {
@@ -201,10 +201,10 @@ bad input — throw or return the error from `authenticateAccessToken` yourself.
 
 ## SSR auth guard with `authenticateRequest`
 
-`decapApi(...)` returns a `DecapApi` object with two methods:
+`laikaApi(...)` returns a `LaikaApi` object with two methods:
 
 ```ts
-interface DecapApi {
+interface LaikaApi {
   fetch(request: Request): Promise<Response>;
   authenticateRequest(request: Request): Promise<Response | User>;
 }
@@ -217,7 +217,7 @@ duplicating auth logic:
 
 ```ts
 // SvelteKit — src/routes/admin/+page.server.ts
-import { api } from '$lib/decap'; // your decapApi(...) instance
+import { api } from '$lib/decap'; // your laikaApi(...) instance
 import { redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
 
@@ -234,11 +234,11 @@ boundary (Next.js App Router, TanStack Start, Hono middleware, etc.).
 ## Logging with `logger`
 
 Pass any `logger` compatible with the `Console` interface (`error`, `warn`, `info`, `debug`) to
-receive structured diagnostic output from `decapApi`. The option is optional — if omitted, no output
+receive structured diagnostic output from `laikaApi`. The option is optional — if omitted, no output
 is produced.
 
 ```ts
-const api = decapApi({
+const api = laikaApi({
   documents,
   storage,
   authenticateAccessToken: yourValidator,
@@ -251,20 +251,20 @@ unified log stream from a single option.
 
 ## Production auth with `decap-oauth2`
 
-Rather than building an OAuth2 server from scratch, use the bundled `decapOauth2` helper. It is a
+Rather than building an OAuth2 server from scratch, use the bundled `laikaOauth2` helper. It is a
 self-contained PKCE authorization server with email/password login, optional passkey (WebAuthn), and
-optional TOTP 2FA. You wire it alongside the `decapApi(...)` handler in the same Express or Hono
+optional TOTP 2FA. You wire it alongside the `laikaApi(...)` handler in the same Express or Hono
 app.
 
 ```bash
-pnpm add @laikacms/decap
+pnpm add @laikacms/server
 ```
 
 **Hono example**
 
 ```ts
-import { decapApi } from '@laikacms/decap/decap-api';
-import { decapOauth2 } from '@laikacms/decap/decap-oauth2';
+import { laikaApi } from '@laikacms/server/api';
+import { laikaOauth2 } from '@laikacms/server/oauth2';
 import { Hono } from 'hono';
 import { ContentBaseAssetsRepository } from 'laikacms/assets-contentbase';
 import { DecapContentBaseSettingsProvider } from 'laikacms/contentbase-settings-decap';
@@ -274,7 +274,7 @@ import { R2StorageRepository } from 'laikacms/storage-r2';
 const CLIENT_ID = process.env.DECAP_CLIENT_ID!;
 const OAUTH_BASE = '/oauth2';
 
-const oauth2 = decapOauth2({
+const oauth2 = laikaOauth2({
   basePath: OAUTH_BASE,
   clientId: CLIENT_ID,
   callbacks: {
@@ -299,12 +299,12 @@ const oauth2 = decapOauth2({
 // Build the Decap API handler — its validator checks the OAuth2 session token.
 const storage = new R2StorageRepository(/* … */);
 const settings = new DecapContentBaseSettingsProvider({ storage, configKey: 'config' });
-const laika = decapApi({
+const laika = laikaApi({
   documents: new ContentBaseDocumentsRepository(storage, settings),
   storage,
   assets: new ContentBaseAssetsRepository(storage, settings),
   basePath: '/api/decap',
-  // Reject by throwing — decapApi turns thrown errors into a 401.
+  // Reject by throwing — laikaApi turns thrown errors into a 401.
   async authenticateAccessToken(token) {
     const session = await db.sessions.findByAccessToken(token);
     if (!session) throw new Error('Invalid session');
@@ -327,10 +327,10 @@ export default app;
 for `laika`):
 
 ```ts
-import { decapOauth2 } from '@laikacms/decap/decap-oauth2';
+import { laikaOauth2 } from '@laikacms/server/oauth2';
 import express from 'express';
 
-const oauth2 = decapOauth2({ basePath: '/oauth2', clientId: CLIENT_ID, callbacks });
+const oauth2 = laikaOauth2({ basePath: '/oauth2', clientId: CLIENT_ID, callbacks });
 
 const app = express();
 // oauth2 speaks Web API — it has its own body parsing, no express.json() needed here
@@ -379,16 +379,16 @@ Use this same `decapConfig` when building the admin shell (see
 
 **Optional extensions**
 
-| Feature        | Option key in `decapOauth2(…)`       | Notes                                            |
+| Feature        | Option key in `laikaOauth2(…)`       | Notes                                            |
 | -------------- | ------------------------------------ | ------------------------------------------------ |
 | Passkey        | `passkey: { enabled: true, … }`      | WebAuthn registration + authentication flows     |
 | TOTP 2FA       | `totp: { … }`                        | TOTP enrollment and per-login verification       |
 | CAPTCHA        | `captcha: { enabled: true, … }`      | Any provider (reCAPTCHA, hCaptcha, Turnstile, …) |
 | Password reset | `passwordReset: { … }`               | Email-based reset link flow                      |
-| i18n           | `translations: nl` (or other locale) | Import from `@laikacms/decap/decap-oauth2/i18n`  |
+| i18n           | `translations: nl` (or other locale) | Import from `@laikacms/server/oauth2/i18n`       |
 
 See
-[`packages/decap/src/decap-oauth2/README.md`](https://github.com/laikacms/laikacms/blob/develop/packages/decap/src/decap-oauth2/README.md)
+[`packages/server/src/oauth2/README.md`](https://github.com/laikacms/laikacms/blob/develop/packages/server/src/oauth2/README.md)
 for the full `OAuthConfig` option reference.
 
 ---

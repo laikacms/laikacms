@@ -1,6 +1,7 @@
 import * as Effect from 'effect/Effect';
 import type * as HttpClient from 'effect/unstable/http/HttpClient';
 
+import * as DateTime from 'effect/DateTime';
 import {
   IllegalStateException,
   InternalError,
@@ -56,7 +57,8 @@ import {
   type UnpublishedSummaryJsonApi,
   unpublishedUpdateToJsonApi,
 } from 'laikacms/documents/api';
-import { type ChangeSummary, SyncToken } from 'laikacms/storage';
+import type { Key, Lock, LockOwner, OwnedLock } from 'laikacms/storage';
+import { type ChangeSummary, LockToken, SyncToken, toPublicLock } from 'laikacms/storage';
 
 import { JsonApiHttpTransport } from '../../shared/json-api/http-transport.js';
 import { paginationCodec } from '../../shared/json-api/pagination-codec.js';
@@ -79,6 +81,55 @@ export interface DocumentsJsonApiProxyRepositoryOptions {
 /**
  * Proxies all document operations through a remote JSON:API endpoint.
  */
+
+/** The wire shape of a lock resource; `token` is present only on acquire/refresh. */
+interface LockJsonApi {
+  type?: string;
+  id?: string;
+  attributes?: {
+    key?: unknown,
+    owner?: { id?: unknown, name?: unknown },
+    acquiredAt?: unknown,
+    expiresAt?: unknown,
+    token?: unknown,
+  };
+}
+
+/**
+ * Decode a lock resource, failing loudly rather than silently producing a lock
+ * with a missing owner or an unparseable expiry: a half-decoded lock would show
+ * a wrong "being edited by" banner, which is worse than an error.
+ */
+function ownedLockFromJsonApi(raw: LockJsonApi): Effect.Effect<OwnedLock, LaikaError> {
+  return Effect.gen(function*() {
+    const attrs = raw?.attributes;
+    const key = attrs?.key;
+    const ownerId = attrs?.owner?.id;
+    const ownerName = attrs?.owner?.name;
+    const acquiredAt = attrs?.acquiredAt;
+    const expiresAt = attrs?.expiresAt;
+    if (
+      typeof key !== 'string' || typeof ownerId !== 'string' || typeof ownerName !== 'string'
+      || typeof acquiredAt !== 'string' || typeof expiresAt !== 'string'
+    ) {
+      return yield* Effect.fail(new InvalidData('Upstream /locks response is missing required lock attributes'));
+    }
+    const acquired = DateTime.make(acquiredAt);
+    const expires = DateTime.make(expiresAt);
+    if (acquired._tag === 'None' || expires._tag === 'None') {
+      return yield* Effect.fail(new InvalidData('Upstream /locks response has an unparseable timestamp'));
+    }
+    return {
+      key,
+      owner: { id: ownerId, name: ownerName },
+      acquiredAt: acquired.value,
+      expiresAt: expires.value,
+      // Absent on the public projection; callers that need it use acquire/refresh.
+      token: LockToken.make(typeof attrs?.token === 'string' ? attrs.token : ''),
+    };
+  });
+}
+
 export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
   private readonly transport: JsonApiHttpTransport;
 
@@ -184,6 +235,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
             description: 'The remote endpoint did not advertise its capabilities.',
           },
           changes: {
+            supported: false,
+            description: 'The remote endpoint did not advertise its capabilities.',
+          },
+          locks: {
             supported: false,
             description: 'The remote endpoint did not advertise its capabilities.',
           },
@@ -544,6 +599,101 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
           syncToken: SyncToken.make(token),
           total: collection.meta?.page?.total ?? emitted,
         };
+      })
+    );
+  }
+
+  // ===== ADVISORY LOCKS (ADR-007) =====
+  //
+  // This is the "communication across the JSON:API boundary" half of locking:
+  // the browser holds no lock state, it asks the server, which is the whole
+  // point of moving arbitration server-side. A repository that does not support
+  // locks answers 501, which the transport re-hydrates into the same
+  // NotImplementedError the base class would have raised, so a caller sees one
+  // behaviour whether the gap is local or remote.
+
+  override acquireLock(
+    key: Key,
+    owner: LockOwner,
+    options?: { ttlMs?: number | undefined, force?: boolean | undefined },
+  ): LaikaTask.LaikaTask<OwnedLock> {
+    return LaikaTask.make<OwnedLock>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResourceWithWarnings<LockJsonApi>(
+          `/locks/${encodeURIComponent(key)}`,
+          {
+            method: 'POST',
+            body: {
+              data: {
+                type: 'lock',
+                attributes: {
+                  owner,
+                  ...(options?.ttlMs === undefined ? {} : { ttlMs: options.ttlMs }),
+                  ...(options?.force === undefined ? {} : { force: options.force }),
+                },
+              },
+            },
+          },
+          emit,
+        );
+        return yield* ownedLockFromJsonApi(raw);
+      })
+    );
+  }
+
+  override refreshLock(
+    key: Key,
+    token: LockToken,
+    owner: LockOwner,
+    options?: { ttlMs?: number | undefined },
+  ): LaikaTask.LaikaTask<OwnedLock> {
+    return LaikaTask.make<OwnedLock>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const raw = yield* this.fetchResourceWithWarnings<LockJsonApi>(
+          `/locks/${encodeURIComponent(key)}/refresh`,
+          {
+            method: 'POST',
+            body: {
+              data: {
+                type: 'lock',
+                attributes: {
+                  token,
+                  owner,
+                  ...(options?.ttlMs === undefined ? {} : { ttlMs: options.ttlMs }),
+                },
+              },
+            },
+          },
+          emit,
+        );
+        return yield* ownedLockFromJsonApi(raw);
+      })
+    );
+  }
+
+  override releaseLock(key: Key, token: LockToken): LaikaTask.LaikaTask<void> {
+    return LaikaTask.make<void>(emit =>
+      Effect.gen({ self: this }, function*() {
+        yield* this.fetchVoidWithWarnings(
+          `/locks/${encodeURIComponent(key)}`,
+          { method: 'DELETE', body: { data: { type: 'lock', attributes: { token } } } },
+          emit,
+        );
+      })
+    );
+  }
+
+  override getLock(key: Key): LaikaTask.LaikaTask<Lock | null> {
+    return LaikaTask.make<Lock | null>(emit =>
+      Effect.gen({ self: this }, function*() {
+        const json = yield* this.fetchJson(`/locks/${encodeURIComponent(key)}`);
+        for (const w of warningsFromMeta(json['meta'] as Parameters<typeof warningsFromMeta>[0])) {
+          yield* emit.recoverableError(w);
+        }
+        // `data: null` is the documented "nobody holds this" answer, not an error.
+        if (json.data === null || json.data === undefined) return null;
+        const owned = yield* ownedLockFromJsonApi(json.data as LockJsonApi);
+        return toPublicLock(owned);
       })
     );
   }

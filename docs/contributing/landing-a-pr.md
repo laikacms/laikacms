@@ -22,7 +22,7 @@ subpath you changed (`assets-contentbase`, `quickstart-fs-decap`, …).
 
 ## Changesets
 
-If your change affects a published package's behavior (`laikacms` or `@laikacms/decap`), add a
+If your change affects a published package's behavior (`laikacms` or `@laikacms/server`), add a
 changeset:
 
 ```bash

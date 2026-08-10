@@ -4,7 +4,7 @@ description: >-
   Find and read the laikacms documentation that matches the exact version
   installed in the current project. Use whenever the user asks how to do
   something with laikacms, references a laikacms export/API/error/package
-  (buildJsonApi, decapApi, a storage repository or serializer, a LaikaError),
+  (buildJsonApi, laikaApi, a storage repository or serializer, a LaikaError),
   or needs version-accurate guides, concepts, or JSON:API reference instead of
   guessing from memory.
 license: MIT

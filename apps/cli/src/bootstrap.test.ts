@@ -53,13 +53,16 @@ describe('bootstrapApplication', () => {
     const root = await mkdtemp(path.join(tmpdir(), 'laikacli-bootstrap-'));
     const destination = path.join(root, 'my-blog');
 
-    const result = await bootstrapApplication({
-      directory: destination,
-      install: false,
-      cms: { backends: ['laika', 'github'], widgets: ['string', 'datetime'], locales: ['nl'] },
-    });
+    const selection = {
+      adapter: 'decap',
+      backends: ['laika', 'github'],
+      widgets: ['string', 'datetime'],
+      codecs: [],
+      locales: ['nl'],
+    };
+    const result = await bootstrapApplication({ directory: destination, install: false, cms: selection });
 
-    expect(result.cms).toEqual({ backends: ['laika', 'github'], widgets: ['string', 'datetime'], locales: ['nl'] });
+    expect(result.cms).toEqual(selection);
     const cms = await readFile(path.join(destination, 'src/cms.ts'), 'utf8');
     expect(cms).toContain(`CMS.registerBackend('github', GitHubBackend);`);
     expect(cms).toContain(`CMS.registerLocale('nl', nl);`);
@@ -87,7 +90,7 @@ describe('bootstrapApplication', () => {
     await bootstrapApplication({
       directory: destination,
       packageManager: 'pnpm',
-      cms: { backends: ['laika'], widgets: ['map'], codecs: [], locales: [] },
+      cms: { adapter: 'decap', backends: ['laika'], widgets: ['map'], codecs: [], locales: [] },
     });
 
     const packageJson = JSON.parse(await readFile(path.join(destination, 'package.json'), 'utf8'));
@@ -103,8 +106,20 @@ describe('bootstrapApplication', () => {
     await expect(bootstrapApplication({
       directory: destination,
       install: false,
-      cms: { backends: ['laika'], widgets: ['nope'], locales: [] },
+      cms: { adapter: 'decap', backends: ['laika'], widgets: ['nope'], codecs: [], locales: [] },
     })).rejects.toThrow(/Unknown widgets: nope/);
+    await expect(readFile(path.join(destination, 'package.json'), 'utf8')).rejects.toThrow();
+  });
+
+  it('rejects an unknown CMS before touching the destination', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'laikacli-bootstrap-'));
+    const destination = path.join(root, 'my-blog');
+
+    await expect(bootstrapApplication({
+      directory: destination,
+      install: false,
+      cms: { adapter: 'nope', backends: ['laika'], widgets: ['string'], codecs: [], locales: [] },
+    })).rejects.toThrow(/Unknown CMS "nope"/);
     await expect(readFile(path.join(destination, 'package.json'), 'utf8')).rejects.toThrow();
   });
 

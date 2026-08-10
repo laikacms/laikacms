@@ -59,8 +59,8 @@ There are **two** packages in the laika-cms ecosystem with confusingly similar n
 - **`@laikacms/decap-cms`** — fork of upstream Decap CMS itself (the React `App`,
   `DecapCmsProvider`, widgets, backends like `backend-github`, etc.). Lives in
   [`laikacms/decap-cms`](https://github.com/laikacms/decap-cms).
-- **`@laikacms/decap`** — adapters _around_ Decap: the `laika` Decap backend (`createLaikaBackend`),
-  the Decap-compatible HTTP API (`decapApi`), the `decapOauth2` server, custom widgets. Lives in
-  this repo under `packages/decap/`.
+- **`@laikacms/server`** — adapters _around_ Decap: the `laika` Decap backend
+  (`createLaikaBackend`), the Decap-compatible HTTP API (`laikaApi`), the `laikaOauth2` server,
+  custom widgets. Lives in this repo under `packages/server/`.
 
 Their subpath exports do not overlap, so you can `pnpm add` both side by side.

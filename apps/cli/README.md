@@ -18,7 +18,7 @@ pnpm add -D laikacli   # or npm i -D / yarn add -D
 Then:
 
 ```sh
-laika create                      # wizard: starter, directory, title, CMS backends/widgets/locales
+laika create                      # wizard: starter, directory, title, CMS + its backends/widgets/locales
 laika local serve                 # start the local-file JSON:API storage server
 laika local generate              # config.yaml -> typed config.gen.ts (add --watch to keep it fresh)
 laika local migrate -s ./a -d ./b # copy a storage repository to another backend
@@ -41,7 +41,7 @@ non-local commands.
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `create`              | Wizard that bootstraps a starter app and generates its `src/cms.ts` from your backend/widget/locale selection                              |
 | `local serve`         | Local-file JSON:API storage server for dev workflows (`--root`, `--port`, `--host`, `--default-extension` (default: `md`), `--auth-token`) |
-| `local generate`      | Generate a typed TypeScript module from a Decap CMS `config.yaml`                                                                          |
+| `local generate`      | Generate a typed TypeScript module from the CMS config file (`--cms`, default Decap's `config.yaml`)                                       |
 | `local migrate`       | Copy every atom from one storage repository to another (fs, webdav, s3, github, gitlab, bitbucket, …)                                      |
 | `local list-backends` | List every registered storage backend and its pinned package version                                                                       |
 
@@ -63,6 +63,18 @@ laika create --directory ./my-blog --title "My Blog" \
   --backends laika --widgets string,datetime,richtext --locales nl,de
 laika create --yes   # accept all defaults, no prompts (also the no-TTY behavior)
 ```
+
+### Which CMS
+
+The admin UI is a plug-in choice, selected with `--cms`. Decap is the only one today, so the wizard
+skips the question and uses it — the same way it skips the starter question while one starter is
+enabled. Each CMS owns its own catalogs, so `--backends`, `--widgets`, and `--locales` are always
+read against the selected CMS, and `laika local generate` reads that CMS's config format.
+
+Adding one means writing a sibling of `src/cms/decap.ts` that implements `CmsAdapter`
+(`src/cms/types.ts`) and listing it in `src/cms/registry.ts`; nothing outside that folder knows what
+a Decap import looks like. Note that a CMS **backend** (a content source the admin UI talks to) is a
+different axis from a **storage backend** (`local migrate`, `local list-backends`).
 
 ## Programmatic API
 

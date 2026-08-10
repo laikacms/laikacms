@@ -13,7 +13,7 @@
  *
  * `${basePath}/session` is a trivial, unauthenticated stub-identity responder,
  * not a repository-backed sub-API: `LaikaBackend.authenticate()`
- * (`@laikacms/decap`) always pings it to resolve a display identity, even
+ * (`@laikacms/decap-cms/backends/laika`) always pings it to resolve a display identity, even
  * when `resolveLaikaBackend`'s local backend authenticates with a dummy
  * token, so it must exist for the local backend to complete login (LCMS-449
  * slice 2, issue #848).
@@ -126,7 +126,7 @@ const LOCAL_SESSION_USER = { name: 'Local Dev', email: 'local-dev@laikacms.local
 
 /**
  * A trivial `${basePath}/session` responder. `resolveLaikaBackend`'s local
- * backend (`@laikacms/decap`) authenticates with a dummy token and never
+ * backend (`@laikacms/decap-cms/backends/laika`) authenticates with a dummy token and never
  * performs the PKCE OAuth dance, but `LaikaBackend.authenticate()` always
  * pings `${apiUrl}/session` to resolve the display identity regardless of how
  * the token was obtained — local mode has no real session to report, so this

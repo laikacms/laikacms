@@ -1,0 +1,39 @@
+# This file makes starters/ its own pnpm workspace root, so pnpm never climbs
+# up to the repo root. Installs here get their own lockfile and node_modules
+# and have zero effect on the main workspace.
+#
+# Unlike examples/ (which lists ../packages/laikacms as a member to build
+# against the working tree), this workspace deliberately links NOTHING from
+# the monorepo: starters ship as download-and-go templates pinned to
+# published LaikaCMS versions, and installing them here must resolve exactly
+# what a user who downloaded one folder would get. CI enforces this with
+# `pnpm check:starters` (no workspace:/catalog: protocols, ranges in sync
+# with the current release).
+packages:
+  - "starter-*"
+  # Excluded until @laikacms/github catches up on npm: the release train
+  # pinned it to the workspace version (1.0.3) but the registry stopped at
+  # 1.0.0, so this starter cannot install from published packages yet. Drop
+  # the exclusion once the next release publishes it.
+  - "!starter-github-blog"
+
+# TEMPORARY (remove once the release carrying `laikacms/storage/web-fs`
+# ships): link every laikacms resolution — including the one nested under
+# @laikacms/decap-cms — to the local build, so starter-opfs-blog can run
+# before that release exists. `link:` (unlike `file:` or workspace
+# membership) symlinks without installing the target's dependencies, so no
+# catalog mirroring is needed; laikacms's own deps resolve through the root
+# workspace install. Build the library first:
+#   pnpm -C .. --filter laikacms build
+overrides:
+  laikacms: "link:../packages/laikacms"
+
+# Dependencies whose install scripts are allowed to run (pnpm blocks build
+# scripts by default). esbuild ships its platform binary via postinstall.
+allowBuilds:
+  esbuild: true
+  msgpackr-extract: true
+  workerd: true
+
+minimumReleaseAgeExclude:
+  - '@esbuild/openharmony-arm64@0.28.2'
