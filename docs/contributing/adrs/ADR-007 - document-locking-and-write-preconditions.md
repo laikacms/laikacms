@@ -19,8 +19,12 @@ cms-agnostic-protocol]] (decap is an adapter, not the owner of the mechanism)
 > forwarding, `@laikacms/server/api`'s `/locks` rewritten as a repository adapter, and the four
 > `CmsImplementation` methods in the decap-cms laika backend.
 >
-> Two documented deviations from the sketch below:
+> Three documented deviations from the sketch below:
 >
+> - `capabilities.locks` is **optional**, not a required `{ supported: false }` declaration. A
+>   repository that does not lock omits the key entirely; absent means "no locking". Forcing every
+>   repository to write a line saying it does nothing was noise, and the base class already fails
+>   with `NotImplementedError`. The `supported: true` shape and both axes below are unchanged.
 > - `refreshLock` takes `(key, token, owner)`, not `(key, token)`. The lenient "expired ->
 >   re-acquire" branch has to attribute the revived lock to somebody, and the caller always knows
 >   who.
@@ -168,9 +172,10 @@ gives atomicity — the pragmatic 95% without a transaction manager.
 ### 5. `Capabilities.locks` — two honest axes, never a bare boolean
 
 ```ts
-locks: { supported: false }
-      | { supported: true; scope: 'in-process' | 'shared'; transactional: boolean }
+locks?: { supported: true; scope: 'in-process' | 'shared'; transactional: boolean }
 ```
+
+- **Absent** — the repository does not lock. This is the default and needs no declaration.
 
 - **`scope`** — `in-process` locks live in one node's memory (correct for single-node & tests,
   _silently wrong_ across nodes); `shared` locks are cross-node correct. Advertised so a multi-node
@@ -184,7 +189,7 @@ breaking capability change.
 
 ### 6. Implementations & wiring
 
-- **Base:** `NotImplementedError`, `locks: { supported: false }`.
+- **Base:** `NotImplementedError`, no `locks` capability.
 - **`InProcessLockManager`** (opt-in): STM `TMap`, TTL-aware — the "all in Effect", genuinely atomic
   default for single-node & tests → `scope: 'in-process'`, `transactional: false`.
 - **Native backends** (git-ref CAS, DB row lock) override with their native atomic primitive →

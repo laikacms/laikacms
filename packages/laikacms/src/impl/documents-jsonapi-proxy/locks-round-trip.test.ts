@@ -199,9 +199,10 @@ describe('advisory locks over the JSON:API boundary', () => {
       proxy = serve(new InMemoryDocumentsRepository());
     });
 
-    it('advertises locks as unsupported', async () => {
+    it('simply omits the locks capability rather than declaring it unsupported', async () => {
+      // A repository that does not lock says nothing; absent is the default.
       const caps = await expectOk(proxy.getCapabilities());
-      expect(caps.locks.supported).toBe(false);
+      expect(caps.locks).toBeUndefined();
     });
 
     it('fails with NotImplementedError, so a client degrades instead of guessing', async () => {

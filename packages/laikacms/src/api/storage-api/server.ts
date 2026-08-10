@@ -37,7 +37,13 @@ import {
   storageObjectToJsonApi,
   withSelfLink,
 } from './jsonapi.js';
-import { buildStorageOpenApi } from './openapi.js';
+
+// The spec is a large static object literal that only the two openapi routes
+// ever read, so it is loaded on demand rather than statically imported: a
+// deployment that never serves it keeps it out of the startup path, and
+// bundlers can split it into a chunk of its own instead of inlining it into
+// every worker that mounts this handler.
+const loadOpenApiBuilder = async () => (await import('./openapi.js')).buildStorageOpenApi;
 
 type AllJsonApiResponses = JsonApiResponse | JsonApiCollectionResponse | JsonApiError;
 
@@ -438,7 +444,7 @@ export function buildJsonApi(options: StorageApiOptions) {
     }
 
     if (path === 'openapi.json' && request.method === 'GET') {
-      const doc = buildStorageOpenApi({ basePath });
+      const doc = (await loadOpenApiBuilder())({ basePath });
       return new Response(
         JSON.stringify({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] }),
         {
@@ -452,7 +458,7 @@ export function buildJsonApi(options: StorageApiOptions) {
     }
 
     if (path === 'openapi.yaml' && request.method === 'GET') {
-      const doc = buildStorageOpenApi({ basePath });
+      const doc = (await loadOpenApiBuilder())({ basePath });
       const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
       return new Response(yaml, {
         status: 200,

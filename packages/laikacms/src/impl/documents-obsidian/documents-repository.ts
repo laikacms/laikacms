@@ -105,10 +105,6 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
             supported: false,
             description: 'The underlying storage repository does not expose a change feed.',
           },
-          locks: {
-            supported: false,
-            description: 'A local vault has no cross-process lock primitive to build on.',
-          },
         };
       })
     );

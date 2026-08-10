@@ -31,5 +31,7 @@ export * from './errors.js';
 // repositories (connection reuse via an injectable, layer-built client)
 export * from './http-transport.js';
 
-// Export OpenAPI authoring types (used by the api/* packages' openapi.ts specs)
+// Export OpenAPI authoring types and the component vocabulary the api/*
+// packages' openapi.ts specs are built from
+export * from './openapi-components.js';
 export * from './openapi.js';

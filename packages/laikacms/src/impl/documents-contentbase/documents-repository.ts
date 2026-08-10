@@ -77,10 +77,6 @@ export class ContentBaseDocumentsRepository extends DocumentsRepository {
             supported: false,
             description: 'The underlying storage repository does not expose a change feed.',
           },
-          locks: {
-            supported: false,
-            description: 'The underlying storage repository has no atomic primitive to lock on.',
-          },
         };
       })
     );

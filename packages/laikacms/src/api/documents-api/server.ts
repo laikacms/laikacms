@@ -1,7 +1,6 @@
 import * as Effect from 'effect/Effect';
 import * as Result from 'effect/Result';
 import * as S from 'effect/Schema';
-import * as SchemaIssue from 'effect/SchemaIssue';
 
 import type { ErrorStatus, LaikaDone, LaikaResult } from 'laikacms/core';
 import {
@@ -31,7 +30,6 @@ import {
   recoverableErrorsToWarnings,
 } from 'laikacms/json-api';
 import { openApiDocumentToYaml } from 'laikacms/json-api';
-import type { Lock, OwnedLock } from 'laikacms/storage';
 import { LockToken, SyncToken } from 'laikacms/storage';
 import { type AuthorizeDecision, resolveAuthorization } from '../authorize.js';
 import {
@@ -54,7 +52,13 @@ import {
   unpublishedUpdateFromJsonApi,
   type UnpublishedUpdateJsonApi,
 } from './jsonapi.js';
-import { buildDocumentsOpenApi } from './openapi.js';
+
+// The spec is a large static object literal that only the two openapi routes
+// ever read, so it is loaded on demand rather than statically imported: a
+// deployment that never serves it keeps it out of the startup path, and
+// bundlers can split it into a chunk of its own instead of inlining it into
+// every worker that mounts this handler.
+const loadOpenApiBuilder = async () => (await import('./openapi.js')).buildDocumentsOpenApi;
 
 type AllJsonApiResponses =
   | JsonApiResponse
@@ -271,17 +275,15 @@ async function respondCollection<T, R extends JsonApiResource>(
  * mapping Effect Schema decode failures to InvalidData (400), and wrapping
  * everything else (genuine defects) in InternalError (500).
  *
- * `S.decodeUnknownSync` throws a plain `Error` whose `cause` is the Effect
- * Schema `Issue` tree (see `effect/SchemaParser`'s `asSync`) — it is NOT an
- * `effect/Schema` `SchemaError`/`isSchemaError` instance, so detect it via
- * `SchemaIssue.isIssue(err.cause)` instead. This is a defense-in-depth
+ * `S.decodeUnknownSync` throws an `effect/Schema` `SchemaError` carrying the
+ * `Issue` tree, so detect it with `S.isSchemaError`. This is a defense-in-depth
  * choke point: `parseBody`/`parseQuery` already convert decode failures to
  * InvalidData at each call site, but any decoder invoked outside those
  * helpers still lands here.
  */
 function toLaikaError(err: unknown): LaikaError {
   if (err instanceof LaikaError) return err;
-  if (err instanceof Error && SchemaIssue.isIssue(err.cause)) {
+  if (S.isSchemaError(err)) {
     return new InvalidData(err.message, { cause: err });
   }
   if (err instanceof Error) return new InternalError(err.message, { cause: err });
@@ -703,7 +705,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     // OpenAPI document — plain JSON (not JSON:API), with the servers entry
     // resolved against the incoming request's origin.
     if (path === 'openapi.json' && request.method === 'GET') {
-      const doc = buildDocumentsOpenApi({ basePath });
+      const doc = (await loadOpenApiBuilder())({ basePath });
       return new Response(
         JSON.stringify({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] }),
         {
@@ -717,7 +719,7 @@ export function buildJsonApi(options: DocumentsApiOptions) {
     }
 
     if (path === 'openapi.yaml' && request.method === 'GET') {
-      const doc = buildDocumentsOpenApi({ basePath });
+      const doc = (await loadOpenApiBuilder())({ basePath });
       const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
       return new Response(yaml, {
         status: 200,

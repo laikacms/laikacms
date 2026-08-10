@@ -142,22 +142,28 @@ describe('buildDocumentsOpenApi', () => {
     }
   });
 
+  // The `data` member of a write request is a $ref to a shared `*WriteData`
+  // component, so the requirement lives one hop away from the request schema.
+  const requiredOfWriteData = (doc: OpenApiDocument, requestName: string): string[] => {
+    const schemas = doc.components!.schemas! as Record<
+      string,
+      { required?: string[], properties?: { data?: { $ref?: string, required?: string[] } } }
+    >;
+    const data = schemas[requestName]!.properties!.data!;
+    const target = data.$ref ? schemas[data.$ref.replace('#/components/schemas/', '')]! : data;
+    return target.required ?? [];
+  };
+
   it('PublishedCreateRequest requires data.id (LCMS-397)', () => {
-    const doc = buildDocumentsOpenApi();
-    const schemas = doc.components!.schemas! as Record<string, { properties?: { data?: { required?: string[] } } }>;
-    expect(schemas['PublishedCreateRequest']!.properties!.data!.required).toContain('id');
+    expect(requiredOfWriteData(buildDocumentsOpenApi(), 'PublishedCreateRequest')).toContain('id');
   });
 
   it('UnpublishedCreateRequest requires data.id (LCMS-397)', () => {
-    const doc = buildDocumentsOpenApi();
-    const schemas = doc.components!.schemas! as Record<string, { properties?: { data?: { required?: string[] } } }>;
-    expect(schemas['UnpublishedCreateRequest']!.properties!.data!.required).toContain('id');
+    expect(requiredOfWriteData(buildDocumentsOpenApi(), 'UnpublishedCreateRequest')).toContain('id');
   });
 
   it('RevisionCreateRequest requires data.id (LCMS-398)', () => {
-    const doc = buildDocumentsOpenApi();
-    const schemas = doc.components!.schemas! as Record<string, { properties?: { data?: { required?: string[] } } }>;
-    expect(schemas['RevisionCreateRequest']!.properties!.data!.required).toContain('id');
+    expect(requiredOfWriteData(buildDocumentsOpenApi(), 'RevisionCreateRequest')).toContain('id');
   });
 
   it('POST create endpoints declare 409 for duplicate-key conflict (LCMS-287)', () => {

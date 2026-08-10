@@ -14,7 +14,13 @@ import {
   collectionToJsonApi,
   decodeCollectionJsonApi,
 } from './jsonapi.js';
-import { buildContentbaseOpenApi } from './openapi.js';
+
+// The spec is a large static object literal that only the two openapi routes
+// ever read, so it is loaded on demand rather than statically imported: a
+// deployment that never serves it keeps it out of the startup path, and
+// bundlers can split it into a chunk of its own instead of inlining it into
+// every worker that mounts this handler.
+const loadOpenApiBuilder = async () => (await import('./openapi.js')).buildContentbaseOpenApi;
 
 /**
  * A single contentbase action the API is about to perform, discriminated on
@@ -166,18 +172,18 @@ export function buildJsonApi(options: ContentBaseApiOptions) {
   });
 
   // OpenAPI document
-  app.get('/openapi.json', c => {
+  app.get('/openapi.json', async c => {
     const url = new URL(c.req.url);
-    const doc = buildContentbaseOpenApi({ basePath });
+    const doc = (await loadOpenApiBuilder())({ basePath });
     return c.json({
       ...doc,
       servers: [{ url: `${url.origin}${basePath}` }],
     });
   });
 
-  app.get('/openapi.yaml', c => {
+  app.get('/openapi.yaml', async c => {
     const url = new URL(c.req.url);
-    const doc = buildContentbaseOpenApi({ basePath });
+    const doc = (await loadOpenApiBuilder())({ basePath });
     const yaml = openApiDocumentToYaml({
       ...doc,
       servers: [{ url: `${url.origin}${basePath}` }],

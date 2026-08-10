@@ -1,11 +1,22 @@
 import type { OpenApiDocument, OpenApiParameter, OpenApiResponse, OpenApiSchema } from 'laikacms/json-api';
+import {
+  apiInfoComponents,
+  capabilityComponents,
+  compactOpenApiDocument,
+  jsonApiContent,
+  jsonApiErrorComponents,
+  jsonApiErrorResponseComponents,
+  jsonApiLinkComponents,
+  paginationParameters,
+  schemaRef as ref,
+} from 'laikacms/json-api';
 
-const JSON_API_MEDIA_TYPE = 'application/vnd.api+json';
+/** `parsePaginationQuery` falls back to page 1 × 10 items for this API. */
+const DEFAULT_PAGE_SIZE = 10;
 
-const ref = (name: string): OpenApiSchema => ({ $ref: `#/components/schemas/${name}` });
-
-const jsonApiContent = (schema: OpenApiSchema) => ({ [JSON_API_MEDIA_TYPE]: { schema } });
-
+// Authored inline so every operation keeps its own wording; the document is run
+// through `compactOpenApiDocument` on the way out, which folds each occurrence
+// into a `$ref` against the `ErrorResponse` component.
 const errorResponse = (description: string): OpenApiResponse => ({
   description,
   content: jsonApiContent(ref('JsonApiError')),
@@ -26,47 +37,6 @@ const revisionIdParameter: OpenApiParameter = {
   description: 'Revision identifier for the document.',
   schema: { type: 'string' },
 };
-
-const paginationParameters: OpenApiParameter[] = [
-  {
-    name: 'page[number]',
-    in: 'query',
-    description: 'Page number for page-based pagination (1-based). Defaults to 1 when no pagination key is present.',
-    schema: { type: 'integer', minimum: 1 },
-  },
-  {
-    name: 'page[size]',
-    in: 'query',
-    description: 'Items per page — combines with page[number], page[after], or page[before]. Defaults to 10.',
-    schema: { type: 'integer', minimum: 1 },
-  },
-  {
-    name: 'page[offset]',
-    in: 'query',
-    description: 'Zero-based item offset for offset-based pagination.',
-    schema: { type: 'integer', minimum: 0 },
-  },
-  {
-    name: 'page[limit]',
-    in: 'query',
-    description: 'Maximum number of items to return — combines with page[offset].',
-    schema: { type: 'integer', minimum: 1 },
-  },
-  {
-    name: 'page[after]',
-    in: 'query',
-    description: 'Forward cursor. Rejected with 400 when the backend capabilities do not include cursor pagination '
-      + '(consult GET /capabilities).',
-    schema: { type: 'string' },
-  },
-  {
-    name: 'page[before]',
-    in: 'query',
-    description: 'Backward cursor. Rejected with 400 when the backend capabilities do not include cursor pagination '
-      + '(consult GET /capabilities).',
-    schema: { type: 'string' },
-  },
-];
 
 const recordsFilterParameters: OpenApiParameter[] = [
   {
@@ -89,23 +59,28 @@ const recordsFilterParameters: OpenApiParameter[] = [
   },
 ];
 
+const listParameters = [...recordsFilterParameters, ...paginationParameters({ defaultPageSize: DEFAULT_PAGE_SIZE })];
+
+/**
+ * Attributes for one resource variant: the timestamps and language every
+ * record carries, composed with the variant's own discriminator and fields.
+ */
 const resourceAttributes = (
   typeName: string,
   extra: Record<string, OpenApiSchema>,
   required: string[],
 ): OpenApiSchema => ({
-  type: 'object',
-  required: ['type', ...required],
-  properties: {
-    type: { const: typeName },
-    language: {
-      type: 'string',
-      description: 'BCP 47 language tag. Omitted when undetermined ("und").',
+  allOf: [
+    ref('RecordTimestamps'),
+    {
+      type: 'object',
+      required: ['type', ...required],
+      properties: {
+        type: { const: typeName },
+        ...extra,
+      },
     },
-    createdAt: { type: 'string', format: 'date-time' },
-    updatedAt: { type: 'string', format: 'date-time' },
-    ...extra,
-  },
+  ],
 });
 
 const resource = (typeName: string, attributes: OpenApiSchema): OpenApiSchema => ({
@@ -119,150 +94,88 @@ const resource = (typeName: string, attributes: OpenApiSchema): OpenApiSchema =>
   },
 });
 
+/**
+ * The `{type, id, attributes}` payload a write carries. Shared by the
+ * single-resource request bodies and by the equivalent batch operations, which
+ * accept exactly the same data member.
+ */
+const writeData = (typeName: string, attributesDescription: string): OpenApiSchema => ({
+  type: 'object',
+  required: ['type', 'id', 'attributes'],
+  properties: {
+    type: { const: typeName },
+    id: { type: 'string', description: 'Document key.' },
+    attributes: {
+      type: 'object',
+      description: attributesDescription,
+      additionalProperties: true,
+    },
+  },
+});
+
+/** A JSON:API request document wrapping one write payload. */
+const writeRequest = (dataSchemaName: string): OpenApiSchema => ({
+  type: 'object',
+  required: ['data'],
+  properties: { data: ref(dataSchemaName) },
+});
+
+/** A JSON:API response document wrapping one resource, plus warnings meta. */
+const resourceResponse = (resourceSchemaName: string): OpenApiSchema => ({
+  type: 'object',
+  required: ['data'],
+  properties: {
+    data: ref(resourceSchemaName),
+    meta: ref('WarningsMeta'),
+  },
+});
+
+/** A paginated collection of `items`, with links and collection meta. */
+const collectionResponse = (items: OpenApiSchema): OpenApiSchema => ({
+  type: 'object',
+  required: ['data', 'links'],
+  properties: {
+    data: { type: 'array', items },
+    links: ref('PaginationLinks'),
+    meta: ref('CollectionMeta'),
+  },
+});
+
 const schemas: Record<string, OpenApiSchema> = {
-  JsonApiErrorObject: {
-    type: 'object',
-    required: ['code', 'status', 'title', 'detail'],
-    properties: {
-      code: { type: 'string', description: 'Machine-readable Laika error code, e.g. `not_found`, `invalid_data`.' },
-      status: { type: 'string', description: 'HTTP status code as a string.' },
-      title: { type: 'string' },
-      detail: { type: 'string' },
-      source: {
+  ...jsonApiErrorComponents(),
+  ...jsonApiLinkComponents(),
+  ...capabilityComponents({ versionTracking: true }),
+  ...apiInfoComponents('documents'),
+
+  ChangesMeta: {
+    allOf: [
+      ref('CollectionMeta'),
+      {
         type: 'object',
         properties: {
-          pointer: { type: 'string' },
-          parameter: { type: 'string' },
+          syncToken: {
+            type: 'string',
+            description: 'On change-feed responses: the new sync token to resume from.',
+          },
         },
       },
-    },
+    ],
   },
-  JsonApiError: {
-    type: 'object',
-    required: ['errors'],
-    properties: {
-      errors: { type: 'array', items: ref('JsonApiErrorObject') },
-    },
-  },
-  Warnings: {
-    type: 'array',
-    description: 'Recoverable errors collected while producing the response, in JSON:API error-object shape.',
-    items: ref('JsonApiErrorObject'),
-  },
-  ResourceLinks: {
+  RecordTimestamps: {
     type: 'object',
     properties: {
-      self: { type: 'string', description: 'Canonical detail URL for this resource, relative to the server origin.' },
-    },
-    additionalProperties: { type: 'string' },
-  },
-  PaginationLinks: {
-    type: 'object',
-    properties: {
-      self: { type: 'string' },
-      first: { type: 'string' },
-      last: { type: 'string' },
-      prev: { type: 'string' },
-      next: { type: 'string' },
-    },
-  },
-  ResourceMeta: {
-    type: 'object',
-    properties: {
-      warnings: ref('Warnings'),
-    },
-  },
-  CollectionMeta: {
-    type: 'object',
-    properties: {
-      page: {
-        type: 'object',
-        properties: {
-          total: { type: 'integer', description: 'Total number of items across all pages, when the backend knows it.' },
-        },
-      },
-      syncToken: {
+      language: {
         type: 'string',
-        description: 'On change-feed responses: the new sync token to resume from.',
+        description: 'BCP 47 language tag. Omitted when undetermined ("und").',
       },
-      warnings: ref('Warnings'),
+      createdAt: { type: 'string', format: 'date-time' },
+      updatedAt: { type: 'string', format: 'date-time' },
     },
   },
   DocumentContent: {
     type: 'object',
     description: 'Arbitrary document content.',
     additionalProperties: true,
-  },
-  PaginationCapability: {
-    oneOf: [
-      {
-        type: 'object',
-        required: ['supported', 'description'],
-        properties: {
-          supported: { const: false },
-          description: { type: 'string' },
-        },
-      },
-      {
-        type: 'object',
-        required: ['supported', 'description', 'styles'],
-        properties: {
-          supported: { const: true },
-          description: { type: 'string' },
-          styles: {
-            type: 'object',
-            required: ['offset', 'page', 'cursor'],
-            properties: {
-              offset: { type: 'boolean' },
-              page: { type: 'boolean' },
-              cursor: { type: 'boolean' },
-            },
-          },
-        },
-      },
-    ],
-  },
-  VersionTrackingCapability: {
-    oneOf: [
-      {
-        type: 'object',
-        required: ['supported', 'description'],
-        properties: {
-          supported: { const: false },
-          description: { type: 'string' },
-        },
-      },
-      {
-        type: 'object',
-        required: ['supported', 'description'],
-        properties: {
-          supported: { const: true },
-          description: { type: 'string' },
-        },
-      },
-    ],
-  },
-  ChangesCapability: {
-    oneOf: [
-      {
-        type: 'object',
-        required: ['supported', 'description'],
-        properties: {
-          supported: { const: false },
-          description: { type: 'string' },
-        },
-      },
-      {
-        type: 'object',
-        required: ['supported', 'description', 'syncToken', 'changeFeed'],
-        properties: {
-          supported: { const: true },
-          description: { type: 'string' },
-          syncToken: { type: 'boolean' },
-          changeFeed: { type: 'boolean' },
-        },
-      },
-    ],
   },
   SyncTokenResource: {
     type: 'object',
@@ -284,14 +197,7 @@ const schemas: Record<string, OpenApiSchema> = {
       links: ref('ResourceLinks'),
     },
   },
-  SyncTokenResponse: {
-    type: 'object',
-    required: ['data'],
-    properties: {
-      data: ref('SyncTokenResource'),
-      meta: ref('ResourceMeta'),
-    },
-  },
+  SyncTokenResponse: resourceResponse('SyncTokenResource'),
   ChangeSummaryResource: {
     type: 'object',
     required: ['type', 'id', 'attributes'],
@@ -318,7 +224,7 @@ const schemas: Record<string, OpenApiSchema> = {
     properties: {
       data: { type: 'array', items: ref('ChangeSummaryResource') },
       links: ref('PaginationLinks'),
-      meta: ref('CollectionMeta'),
+      meta: ref('ChangesMeta'),
     },
   },
   PublishedResource: resource(
@@ -382,105 +288,21 @@ const schemas: Record<string, OpenApiSchema> = {
       links: ref('ResourceLinks'),
     },
   },
-  ApiInfoResource: {
-    type: 'object',
-    required: ['type', 'id', 'attributes'],
-    properties: {
-      type: { const: 'api-info' },
-      id: { const: 'documents' },
-      attributes: {
-        type: 'object',
-        required: ['name', 'version', 'endpoints'],
-        properties: {
-          name: { const: 'Documents API' },
-          version: { type: 'string' },
-          endpoints: {
-            type: 'array',
-            items: {
-              type: 'object',
-              required: ['path', 'methods', 'description'],
-              properties: {
-                path: { type: 'string' },
-                methods: { type: 'array', items: { type: 'string' } },
-                description: { type: 'string' },
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-  ApiInfoResponse: {
-    type: 'object',
-    required: ['data'],
-    properties: {
-      data: ref('ApiInfoResource'),
-    },
-  },
   CapabilitiesResponse: {
     type: 'object',
     required: ['data'],
-    properties: {
-      data: ref('CapabilitiesResource'),
-    },
+    properties: { data: ref('CapabilitiesResource') },
   },
-  PublishedResponse: {
-    type: 'object',
-    required: ['data'],
-    properties: {
-      data: ref('PublishedResource'),
-      meta: ref('ResourceMeta'),
-    },
-  },
-  UnpublishedResponse: {
-    type: 'object',
-    required: ['data'],
-    properties: {
-      data: ref('UnpublishedResource'),
-      meta: ref('ResourceMeta'),
-    },
-  },
-  RevisionResponse: {
-    type: 'object',
-    required: ['data'],
-    properties: {
-      data: ref('RevisionResource'),
-      meta: ref('ResourceMeta'),
-    },
-  },
-  RecordsCollectionResponse: {
-    type: 'object',
-    required: ['data', 'links'],
-    properties: {
-      data: {
-        type: 'array',
-        items: { oneOf: [ref('PublishedResource'), ref('UnpublishedResource')] },
-      },
-      links: ref('PaginationLinks'),
-      meta: ref('CollectionMeta'),
-    },
-  },
-  RecordSummariesCollectionResponse: {
-    type: 'object',
-    required: ['data', 'links'],
-    properties: {
-      data: {
-        type: 'array',
-        items: { oneOf: [ref('PublishedSummaryResource'), ref('UnpublishedSummaryResource')] },
-      },
-      links: ref('PaginationLinks'),
-      meta: ref('CollectionMeta'),
-    },
-  },
-  RevisionSummariesCollectionResponse: {
-    type: 'object',
-    required: ['data', 'links'],
-    properties: {
-      data: { type: 'array', items: ref('RevisionSummaryResource') },
-      links: ref('PaginationLinks'),
-      meta: ref('CollectionMeta'),
-    },
-  },
+  PublishedResponse: resourceResponse('PublishedResource'),
+  UnpublishedResponse: resourceResponse('UnpublishedResource'),
+  RevisionResponse: resourceResponse('RevisionResource'),
+  RecordsCollectionResponse: collectionResponse({
+    oneOf: [ref('PublishedResource'), ref('UnpublishedResource')],
+  }),
+  RecordSummariesCollectionResponse: collectionResponse({
+    oneOf: [ref('PublishedSummaryResource'), ref('UnpublishedSummaryResource')],
+  }),
+  RevisionSummariesCollectionResponse: collectionResponse(ref('RevisionSummaryResource')),
   DeletedResponse: {
     type: 'object',
     required: ['meta'],
@@ -495,59 +317,32 @@ const schemas: Record<string, OpenApiSchema> = {
       },
     },
   },
-  PublishedCreateRequest: {
+  PublishedWriteData: writeData(
+    'published',
+    'Document attributes — typically `status`, `language`, and `content`. Partial on update.',
+  ),
+  UnpublishedWriteData: writeData(
+    'unpublished',
+    'Draft attributes — typically `status`, `language`, and `content`. Partial on update.',
+  ),
+  RevisionWriteData: writeData(
+    'revision',
+    'Revision attributes — typically `revision`, `language`, and `content`.',
+  ),
+  PublishedCreateRequest: writeRequest('PublishedWriteData'),
+  UnpublishedCreateRequest: writeRequest('UnpublishedWriteData'),
+  UnpublishedUpdateRequest: writeRequest('UnpublishedWriteData'),
+  RevisionCreateRequest: writeRequest('RevisionWriteData'),
+  UnpublishTarget: {
     type: 'object',
-    required: ['data'],
+    required: ['type', 'attributes'],
     properties: {
-      data: {
+      type: { const: 'unpublished' },
+      attributes: {
         type: 'object',
-        required: ['type', 'id', 'attributes'],
+        required: ['status'],
         properties: {
-          type: { const: 'published' },
-          id: { type: 'string', description: 'Document key.' },
-          attributes: {
-            type: 'object',
-            description: 'Document attributes — typically `status`, `language`, and `content`.',
-            additionalProperties: true,
-          },
-        },
-      },
-    },
-  },
-  UnpublishedCreateRequest: {
-    type: 'object',
-    required: ['data'],
-    properties: {
-      data: {
-        type: 'object',
-        required: ['type', 'id', 'attributes'],
-        properties: {
-          type: { const: 'unpublished' },
-          id: { type: 'string', description: 'Document key.' },
-          attributes: {
-            type: 'object',
-            description: 'Draft attributes — typically `status`, `language`, and `content`.',
-            additionalProperties: true,
-          },
-        },
-      },
-    },
-  },
-  UnpublishedUpdateRequest: {
-    type: 'object',
-    required: ['data'],
-    properties: {
-      data: {
-        type: 'object',
-        required: ['type', 'id', 'attributes'],
-        properties: {
-          type: { const: 'unpublished' },
-          id: { type: 'string', description: 'Document key.' },
-          attributes: {
-            type: 'object',
-            description: 'Fields to update — `content`, `status`, and/or `language`.',
-            additionalProperties: true,
-          },
+          status: { type: 'string', description: 'Unpublished state to transition the document into.' },
         },
       },
     },
@@ -555,41 +350,7 @@ const schemas: Record<string, OpenApiSchema> = {
   UnpublishRequest: {
     type: 'object',
     required: ['data'],
-    properties: {
-      data: {
-        type: 'object',
-        required: ['type', 'attributes'],
-        properties: {
-          type: { const: 'unpublished' },
-          attributes: {
-            type: 'object',
-            required: ['status'],
-            properties: {
-              status: { type: 'string', description: 'Unpublished state to transition the document into.' },
-            },
-          },
-        },
-      },
-    },
-  },
-  RevisionCreateRequest: {
-    type: 'object',
-    required: ['data'],
-    properties: {
-      data: {
-        type: 'object',
-        required: ['type', 'id', 'attributes'],
-        properties: {
-          type: { const: 'revision' },
-          id: { type: 'string', description: 'Document key the revision belongs to.' },
-          attributes: {
-            type: 'object',
-            description: 'Revision attributes — typically `revision`, `language`, and `content`.',
-            additionalProperties: true,
-          },
-        },
-      },
-    },
+    properties: { data: ref('UnpublishTarget') },
   },
   ResourceRef: {
     type: 'object',
@@ -604,15 +365,7 @@ const schemas: Record<string, OpenApiSchema> = {
     required: ['op', 'data'],
     properties: {
       op: { const: 'add' },
-      data: {
-        type: 'object',
-        required: ['type', 'id', 'attributes'],
-        properties: {
-          type: { const: 'published' },
-          id: { type: 'string' },
-          attributes: { type: 'object', additionalProperties: true },
-        },
-      },
+      data: ref('PublishedWriteData'),
     },
   },
   AddUnpublishedOperation: {
@@ -620,15 +373,7 @@ const schemas: Record<string, OpenApiSchema> = {
     required: ['op', 'data'],
     properties: {
       op: { const: 'add' },
-      data: {
-        type: 'object',
-        required: ['type', 'id', 'attributes'],
-        properties: {
-          type: { const: 'unpublished' },
-          id: { type: 'string' },
-          attributes: { type: 'object', additionalProperties: true },
-        },
-      },
+      data: ref('UnpublishedWriteData'),
     },
   },
   StateTransitionOperation: {
@@ -643,20 +388,7 @@ const schemas: Record<string, OpenApiSchema> = {
           + 'plus a `data` member carrying the target status.',
       },
       ref: ref('ResourceRef'),
-      data: {
-        type: 'object',
-        required: ['type', 'attributes'],
-        properties: {
-          type: { const: 'unpublished' },
-          attributes: {
-            type: 'object',
-            required: ['status'],
-            properties: {
-              status: { type: 'string' },
-            },
-          },
-        },
-      },
+      data: ref('UnpublishTarget'),
     },
   },
   UpdateUnpublishedOperation: {
@@ -664,15 +396,7 @@ const schemas: Record<string, OpenApiSchema> = {
     required: ['op', 'data'],
     properties: {
       op: { const: 'update' },
-      data: {
-        type: 'object',
-        required: ['type', 'id', 'attributes'],
-        properties: {
-          type: { const: 'unpublished' },
-          id: { type: 'string' },
-          attributes: { type: 'object', additionalProperties: true },
-        },
-      },
+      data: ref('UnpublishedWriteData'),
     },
   },
   RemoveOperation: {
@@ -719,7 +443,7 @@ const schemas: Record<string, OpenApiSchema> = {
           data: {
             oneOf: [ref('PublishedResource'), ref('UnpublishedResource'), { type: 'null' }],
           },
-          meta: ref('ResourceMeta'),
+          meta: ref('WarningsMeta'),
         },
       },
       {
@@ -770,7 +494,7 @@ const schemas: Record<string, OpenApiSchema> = {
 export function buildDocumentsOpenApi(options: { basePath?: string } = {}): OpenApiDocument {
   const { basePath = '' } = options;
 
-  return {
+  return compactOpenApiDocument({
     openapi: '3.1.0',
     info: {
       title: 'Laika CMS Documents API',
@@ -899,7 +623,7 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
               description: 'Scope the feed to a folder. Omit for the whole store.',
               schema: { type: 'string' },
             },
-            ...paginationParameters,
+            ...paginationParameters({ defaultPageSize: DEFAULT_PAGE_SIZE }),
           ],
           responses: {
             '200': {
@@ -917,7 +641,7 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
           operationId: 'listRecords',
           summary: 'List full records (published and/or unpublished view per key)',
           tags: ['records'],
-          parameters: [...recordsFilterParameters, ...paginationParameters],
+          parameters: listParameters,
           responses: {
             '200': {
               description: 'Record collection with pagination links, `meta.page.total` when the backend reports '
@@ -938,7 +662,7 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
           operationId: 'listRecordSummaries',
           summary: 'List record summaries (lightweight listing without content)',
           tags: ['records'],
-          parameters: [...recordsFilterParameters, ...paginationParameters],
+          parameters: listParameters,
           responses: {
             '200': {
               description: 'Record summary collection with pagination links and meta.',
@@ -1148,7 +872,7 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
           operationId: 'listRevisions',
           summary: 'List revisions for a document',
           tags: ['revisions'],
-          parameters: [...paginationParameters],
+          parameters: paginationParameters({ defaultPageSize: DEFAULT_PAGE_SIZE }),
           responses: {
             '200': {
               description: 'Revision summary collection with pagination links and meta.',
@@ -1207,6 +931,9 @@ export function buildDocumentsOpenApi(options: { basePath?: string } = {}): Open
         },
       },
     },
-    components: { schemas },
-  };
+    components: {
+      schemas,
+      responses: jsonApiErrorResponseComponents(),
+    },
+  });
 }

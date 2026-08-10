@@ -104,7 +104,13 @@ import {
   parseMetaQuery,
   resourceToJsonApi,
 } from './jsonapi.js';
-import { buildAssetsOpenApi } from './openapi.js';
+
+// The spec is a large static object literal that only the two openapi routes
+// ever read, so it is loaded on demand rather than statically imported: a
+// deployment that never serves it keeps it out of the startup path, and
+// bundlers can split it into a chunk of its own instead of inlining it into
+// every worker that mounts this handler.
+const loadOpenApiBuilder = async () => (await import('./openapi.js')).buildAssetsOpenApi;
 
 // ============================================
 // Types
@@ -410,7 +416,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // Serve the machine-readable API description with `servers` rewritten to
     // the absolute mount point so the document is usable as-is by clients.
     if (path === `${basePath}/openapi.json` && method === 'GET') {
-      const doc = buildAssetsOpenApi({ basePath });
+      const doc = (await loadOpenApiBuilder())({ basePath });
       return new Response(
         JSON.stringify({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] }),
         {
@@ -424,7 +430,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
     // Same document as /openapi.json, serialized as YAML for tooling that
     // prefers it (and for readable diffs).
     if (path === `${basePath}/openapi.yaml` && method === 'GET') {
-      const doc = buildAssetsOpenApi({ basePath });
+      const doc = (await loadOpenApiBuilder())({ basePath });
       const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
       return new Response(yaml, {
         status: 200,

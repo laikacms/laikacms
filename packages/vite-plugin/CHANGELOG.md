@@ -1,5 +1,14 @@
 # @laikacms/vite-plugin
 
+## 5.0.0
+
+### Patch Changes
+
+- Updated dependencies [2f17498]
+- Updated dependencies [2f17498]
+- Updated dependencies [2f17498]
+  - laikacms@5.0.0
+
 ## 3.1.0
 
 ### Minor Changes

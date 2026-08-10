@@ -1,5 +1,127 @@
 # laikacms
 
+## 5.0.0
+
+### Minor Changes
+
+- 2f17498: Add server-arbitrated advisory document locking (ADR-007, advisory half).
+
+  Two editors opening the same entry now see the same "being edited by X" signal, arbitrated by the
+  backend. Previously the only implementation was a browser-local `EntryLockManager` that shared
+  locks between tabs of one browser, plus a `LockStore` KV in the server package whose
+  read-check-write acquire could let two callers both win.
+
+  **`laikacms`**
+
+  - `Lock`, `LockToken` (an opaque bearer capability), `LockOwner`, `OwnedLock`,
+    `DEFAULT_LOCK_TTL_MS` and `LocksCapabilitySchema` from `laikacms/storage`.
+  - `LockConflictError` (code `lock_conflict`, **423 Locked**) from `laikacms/core`. 423 rather than
+    409 so a client distinguishes "someone else holds this" from `VersionMismatchError`'s "the
+    record moved under you" on status alone.
+  - `DocumentsCapabilities.locks`, **optional**: a repository that does not lock omits it entirely
+    and needs no changes. When present it carries `scope: 'in-process' | 'shared'` and
+    `transactional` rather than a bare boolean, so an in-process implementation cannot claim
+    cross-node guarantees it does not have.
+  - Five capability-gated methods on `DocumentsRepository` (`acquireLock`, `refreshLock`,
+    `releaseLock`, `getLock`, `withDocumentLock`), each defaulting to `NotImplementedError`, so
+    existing subclasses stay source-compatible.
+  - `InProcessLockManager` at the new `laikacms/locks/in-process` subpath: an Effect-transaction
+    (`TxHashMap`) implementation whose acquire is genuinely atomic within a node. Reports
+    `scope: 'in-process'`, `transactional: false`.
+  - `documents-api` gains `GET/POST/DELETE /locks/{key}` and `POST /locks/{key}/refresh`. A conflict
+    returns 423 with the current holder in `meta.lock`.
+  - `documents-jsonapi-proxy` forwards all four over HTTP; 501 re-hydrates as `NotImplementedError`,
+    so a caller sees one behaviour whether the gap is local or remote.
+
+  **`@laikacms/server`** (breaking)
+
+  `LaikaApiOptions.locks` and `LaikaApiOptions.locksTtlMs` are **removed**, along with `LockStore`,
+  `createInMemoryLockStore` and `DEFAULT_ENTRY_LOCK_TTL_MS`. `/locks` is now a thin adapter over the
+  documents repository and needs no wiring: it is mounted always, and answers 501 when the
+  repository does not support locking.
+
+  ```ts
+  // Before
+  laikaApi({ documents, storage, locks: createInMemoryLockStore(), locksTtlMs: 300_000, ... })
+
+  // After: locking follows the repository's capability
+  laikaApi({ documents, storage, ... })
+  ```
+
+  To keep single-node locking, delegate the five methods on your documents repository to an
+  `InProcessLockManager` and report `InProcessLockManager.capability`.
+
+  The API boundary still derives the lock owner from the authenticated principal and never from the
+  request body. Below it, the repository authorises on the token alone and needs no notion of
+  identity.
+
+  **Deferred:** the write-precondition ladder (`ifVersion` / `ifLockHeldBy`, enforcement-on-write).
+  Locks inform; nothing blocks a write yet.
+
+- 2f17498: Add `laikacms/storage/web-fs` — a `WebFsStorageRepository` implementing the
+  `StorageRepository` contract against the browser's File System API: any
+  `FileSystemDirectoryHandle`, whether the origin-private file system root (the default), a
+  user-picked `showDirectoryPicker()` directory, or an injected shim. Real directory hierarchy
+  (empty folders without `.keep` markers), raw file contents, namespace subdirectory isolation, lazy
+  SSR-safe resolution of `navigator.storage.getDirectory()`, and typed error mapping for quota,
+  traversal, and non-empty-folder deletion.
+
+  Every operation re-validates the root handle before touching it — `queryPermission({ mode })` when
+  the handle exposes it, plus a liveness probe — and fails with one of three new typed errors in
+  `laikacms/core` that tell the application how to recover: `PermissionPromptRequiredError`
+  (`permission_prompt_required`, 403 — re-request in a user gesture, retry), `PermissionDeniedError`
+  (`permission_denied`, 403 — grant anew), or `StaleHandleError` (`stale_handle`, 410 — the
+  directory is gone or the persisted handle expired, pick again). The repository never calls
+  `requestPermission()` itself and does not care where a handle came from.
+
+### Patch Changes
+
+- 2f17498: Rename `@laikacms/decap` to `@laikacms/server` and drop the `decap-` prefix from its
+  modules.
+
+  Neither module was ever Decap-specific: `decap-api` is a composition router over the `laikacms`
+  JSON:API sub-APIs behind one auth boundary, and `decap-oauth2` is a self-contained OAuth 2.0
+  authorization server that does not need the CMS API to exist. Only the naming implied otherwise.
+
+  **Subpaths**
+
+  | Before                                      | After                                  |
+  | ------------------------------------------- | -------------------------------------- |
+  | `@laikacms/decap/decap-api`                 | `@laikacms/server/api`                 |
+  | `@laikacms/decap/decap-oauth2`              | `@laikacms/server/oauth2`              |
+  | `@laikacms/decap/decap-oauth2/i18n`         | `@laikacms/server/oauth2/i18n`         |
+  | `@laikacms/decap/decap-oauth2/i18n/{en,nl}` | `@laikacms/server/oauth2/i18n/{en,nl}` |
+  | `@laikacms/decap/decap-cms-backend-laika`   | `@laikacms/decap-cms/backends/laika`   |
+
+  **Symbols**: `decapApi` -> `laikaApi`, `DecapApi` -> `LaikaApi`, `DecapOptions` ->
+  `LaikaApiOptions`, `decapOauth2` -> `laikaOauth2`, `DecapOauth2` -> `LaikaOauth2`. The
+  module-augmentation targets moved with the subpaths (`declare module '@laikacms/server/api'`).
+
+  There are no compatibility aliases; `@laikacms/decap` is deprecated on npm.
+
+  **The Decap CMS backend left this package entirely.** `createLaikaBackend()` /
+  `resolveLaikaBackend()` now ship only with the fork, as `@laikacms/decap-cms/backends/laika`. The
+  copy here had drifted behind the fork's, so it was deleted rather than merged. As a result
+  `@laikacms/server` no longer has `react` or `@laikacms/decap-cms` peer dependencies, and its only
+  runtime dependency is `laikacms`.
+
+  **User-visible defaults rebranded from "Decap CMS" to "Laika CMS":** login page titles
+  (`oauth2/i18n` en + nl), the transactional-email `appName`, and the TOTP `issuer`
+  (`DEFAULT_TOTP_ISSUER`, now exported from `@laikacms/server/oauth2`).
+
+  The TOTP change needs action if you have enrolled users. The issuer is the label in the
+  authenticator app and is baked into every already-minted `otpauth://` URI, so a deployment that
+  relied on the old default must now set it explicitly to keep existing enrollments matching:
+
+  ```ts
+  laikaOauth2({
+    // …
+    totp: { enabled: true, issuer: 'Decap CMS', callbacks },
+  });
+  ```
+
+  Deployments with no enrolled users, or that already set `totp.issuer`, are unaffected.
+
 ## 3.1.0
 
 ### Minor Changes

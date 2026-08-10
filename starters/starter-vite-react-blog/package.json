@@ -12,10 +12,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@laikacms/server": "^4.0.0",
+    "@laikacms/server": "^5.0.0",
     "@laikacms/decap-cms": "^4.1.0",
     "express": "^5.1.0",
-    "laikacms": "^3.1.0",
+    "laikacms": "^5.0.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.4"
   },

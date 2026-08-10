@@ -238,10 +238,6 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
             supported: false,
             description: 'The remote endpoint did not advertise its capabilities.',
           },
-          locks: {
-            supported: false,
-            description: 'The remote endpoint did not advertise its capabilities.',
-          },
         };
         this.cachedCapabilities = fallback;
         return fallback;

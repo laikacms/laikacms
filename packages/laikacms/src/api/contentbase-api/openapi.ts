@@ -1,49 +1,33 @@
 import type { OpenApiDocument, OpenApiResponse, OpenApiSchema } from 'laikacms/json-api';
+import {
+  compactOpenApiDocument,
+  jsonApiContent,
+  jsonApiErrorComponents,
+  jsonApiErrorResponseComponents,
+  schemaRef as ref,
+} from 'laikacms/json-api';
 
 export interface ContentbaseOpenApiOptions {
   basePath?: string;
 }
 
-const JSON_API_CONTENT_TYPE = 'application/vnd.api+json';
-
+// Authored inline so every operation keeps its own wording; the document is run
+// through `compactOpenApiDocument` on the way out, which folds each occurrence
+// into a `$ref` against the `ErrorResponse` component.
 const errorResponse = (description: string): OpenApiResponse => ({
   description,
-  content: {
-    [JSON_API_CONTENT_TYPE]: {
-      schema: { $ref: '#/components/schemas/JsonApiErrorDocument' },
-    },
-  },
+  content: jsonApiContent(ref('JsonApiError')),
 });
 
 const collectionResponse = (description: string): OpenApiResponse => ({
   description,
-  content: {
-    [JSON_API_CONTENT_TYPE]: {
-      schema: { $ref: '#/components/schemas/CollectionDocument' },
-    },
-  },
+  content: jsonApiContent(ref('CollectionDocument')),
 });
 
 const schemas: Record<string, OpenApiSchema> = {
-  JsonApiError: {
-    type: 'object',
-    properties: {
-      status: { type: 'string', description: 'HTTP status code as a string.' },
-      title: { type: 'string', description: 'Error code or short title.' },
-      detail: { type: 'string', description: 'Human-readable error message.' },
-    },
-    required: ['status', 'title', 'detail'],
-  },
-  JsonApiErrorDocument: {
-    type: 'object',
-    properties: {
-      errors: {
-        type: 'array',
-        items: { $ref: '#/components/schemas/JsonApiError' },
-      },
-    },
-    required: ['errors'],
-  },
+  // This handler never attaches meta.warnings to a successful response.
+  ...jsonApiErrorComponents({ warnings: false }),
+
   UnpublishedStatusConfig: {
     type: 'object',
     properties: {
@@ -66,7 +50,7 @@ const schemas: Record<string, OpenApiSchema> = {
       unpublishedStatuses: {
         type: 'object',
         description: 'Map of unpublished status values to their configuration.',
-        additionalProperties: { $ref: '#/components/schemas/UnpublishedStatusConfig' },
+        additionalProperties: ref('UnpublishedStatusConfig'),
       },
       revisionDirectory: { type: 'string', description: 'Directory for revision snapshots.' },
       draftDirectory: {
@@ -109,7 +93,7 @@ const schemas: Record<string, OpenApiSchema> = {
     properties: {
       type: { type: 'string', const: 'document-collection' },
       id: { type: 'string', description: 'Collection key.' },
-      attributes: { $ref: '#/components/schemas/DocumentCollectionAttributes' },
+      attributes: ref('DocumentCollectionAttributes'),
     },
     required: ['type', 'id', 'attributes'],
   },
@@ -118,20 +102,20 @@ const schemas: Record<string, OpenApiSchema> = {
     properties: {
       type: { type: 'string', const: 'media-collection' },
       id: { type: 'string', description: 'Collection key.' },
-      attributes: { $ref: '#/components/schemas/MediaCollectionAttributes' },
+      attributes: ref('MediaCollectionAttributes'),
     },
     required: ['type', 'id', 'attributes'],
   },
   CollectionResource: {
     oneOf: [
-      { $ref: '#/components/schemas/DocumentCollectionResource' },
-      { $ref: '#/components/schemas/MediaCollectionResource' },
+      ref('DocumentCollectionResource'),
+      ref('MediaCollectionResource'),
     ],
   },
   CollectionDocument: {
     type: 'object',
     properties: {
-      data: { $ref: '#/components/schemas/CollectionResource' },
+      data: ref('CollectionResource'),
     },
     required: ['data'],
   },
@@ -140,7 +124,7 @@ const schemas: Record<string, OpenApiSchema> = {
     properties: {
       data: {
         type: 'array',
-        items: { $ref: '#/components/schemas/CollectionResource' },
+        items: ref('CollectionResource'),
       },
     },
     required: ['data'],
@@ -150,7 +134,7 @@ const schemas: Record<string, OpenApiSchema> = {
 export function buildContentbaseOpenApi(options: ContentbaseOpenApiOptions = {}): OpenApiDocument {
   const { basePath = '' } = options;
 
-  return {
+  return compactOpenApiDocument({
     openapi: '3.1.0',
     info: {
       title: 'Laika CMS Contentbase API',
@@ -210,11 +194,7 @@ export function buildContentbaseOpenApi(options: ContentbaseOpenApiOptions = {})
           responses: {
             '200': {
               description: 'All configured collections.',
-              content: {
-                [JSON_API_CONTENT_TYPE]: {
-                  schema: { $ref: '#/components/schemas/CollectionListDocument' },
-                },
-              },
+              content: jsonApiContent(ref('CollectionListDocument')),
             },
             '400': errorResponse('The settings provider failed to load settings.'),
             '503': errorResponse('Downstream service (e.g. DynamoDB) unreachable.'),
@@ -226,11 +206,7 @@ export function buildContentbaseOpenApi(options: ContentbaseOpenApiOptions = {})
           tags: ['collections'],
           requestBody: {
             required: true,
-            content: {
-              [JSON_API_CONTENT_TYPE]: {
-                schema: { $ref: '#/components/schemas/CollectionDocument' },
-              },
-            },
+            content: jsonApiContent(ref('CollectionDocument')),
           },
           responses: {
             '201': collectionResponse('The created collection.'),
@@ -266,11 +242,7 @@ export function buildContentbaseOpenApi(options: ContentbaseOpenApiOptions = {})
           tags: ['collections'],
           requestBody: {
             required: true,
-            content: {
-              [JSON_API_CONTENT_TYPE]: {
-                schema: { $ref: '#/components/schemas/CollectionDocument' },
-              },
-            },
+            content: jsonApiContent(ref('CollectionDocument')),
           },
           responses: {
             '200': collectionResponse('The updated collection.'),
@@ -293,6 +265,6 @@ export function buildContentbaseOpenApi(options: ContentbaseOpenApiOptions = {})
         },
       },
     },
-    components: { schemas },
-  };
+    components: { schemas, responses: jsonApiErrorResponseComponents() },
+  });
 }

@@ -158,10 +158,6 @@ export class DrizzleDocumentsRepository<CKE, CKSW, CSE, CSNE, CSI, CDLTE, CA, RK
         supported: false,
         description: 'No change log table; getSyncToken/listChanges are not implemented.',
       },
-      locks: {
-        supported: false,
-        description: 'No lock table yet. A row lock would make this a shared, transactional backend.',
-      },
     });
   }
 

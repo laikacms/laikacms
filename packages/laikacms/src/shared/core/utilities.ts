@@ -1,5 +1,5 @@
 // DEPENDENCY-FREE by design: this module is exported as `laikacms/core/utilities`
-// so bundled consumers (e.g. the superstar API worker's eager path) can use
+// so bundled consumers can use
 // `memoize`/`Url`/`Header` without pulling effect or the laika domain graph.
 // Never add an import here - helpers that need effect live in
 // `async-generator.ts` (or their own module).

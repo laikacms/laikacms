@@ -35,11 +35,19 @@ export const DocumentsCapabilitiesSchema = S.toStandardSchemaV1(S.Struct({
 
   /**
    * Advisory document locking (`acquireLock` / `refreshLock` / `releaseLock` /
-   * `getLock` / `withDocumentLock`). Carries `scope` and `transactional` rather
-   * than a bare boolean so an in-process implementation cannot claim cross-node
-   * or transactional guarantees it does not have.
+   * `getLock` / `withDocumentLock`).
+   *
+   * **Optional, and omission means "no locking".** Most repositories have no
+   * business locking anything, and should not have to write a line to say so:
+   * absent is the honest default, and the base class's methods already fail
+   * with `NotImplementedError`. Only declare this if you actually implement the
+   * lock methods.
+   *
+   * When present it carries `scope` and `transactional` rather than a bare
+   * boolean, so an in-process implementation cannot claim cross-node or
+   * transactional guarantees it does not have.
    */
-  locks: LocksCapabilitySchema,
+  locks: S.optional(LocksCapabilitySchema),
 }));
 
 export type DocumentsCapabilities = S.Schema.Type<typeof DocumentsCapabilitiesSchema>;

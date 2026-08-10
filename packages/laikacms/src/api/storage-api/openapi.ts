@@ -7,16 +7,29 @@ import type {
   OpenApiResponse,
   OpenApiSchema,
 } from 'laikacms/json-api';
+import {
+  apiInfoComponents,
+  capabilityComponents,
+  compactOpenApiDocument,
+  jsonApiContent,
+  jsonApiErrorComponents,
+  jsonApiErrorResponseComponents,
+  jsonApiLinkComponents,
+  paginationParameters,
+  schemaRef as ref,
+} from 'laikacms/json-api';
 
-const JSON_API_CONTENT_TYPE = 'application/vnd.api+json';
-
-const ref = (name: string): OpenApiSchema => ({ $ref: `#/components/schemas/${name}` });
+/** Page size the handler lists with when the request carries no `page[*]` key. */
+const DEFAULT_PAGE_SIZE = 100;
 
 const jsonApiResponse = (description: string, schemaName: string): OpenApiResponse => ({
   description,
-  content: { [JSON_API_CONTENT_TYPE]: { schema: ref(schemaName) } },
+  content: jsonApiContent(ref(schemaName)),
 });
 
+// Authored inline so every operation keeps its own wording; the document is run
+// through `compactOpenApiDocument` on the way out, which folds each occurrence
+// into a `$ref` against the `ErrorResponse` component.
 const errorResponse = (description: string): OpenApiResponse => jsonApiResponse(description, 'JsonApiError');
 
 // Repository failures are translated to HTTP statuses via ErrorCodeToStatusMap
@@ -37,45 +50,7 @@ const keyPathParameter = (description: string): OpenApiParameter => ({
 });
 
 const listQueryParameters: OpenApiParameter[] = [
-  {
-    name: 'page[number]',
-    in: 'query',
-    description: 'Page number for page-based pagination (1-based).',
-    schema: { type: 'integer', minimum: 1 },
-  },
-  {
-    name: 'page[size]',
-    in: 'query',
-    description: 'Items per page for page- and cursor-based pagination. '
-      + 'When no page[*] parameter is present at all, the server lists with a default page size of 100.',
-    schema: { type: 'integer', minimum: 1 },
-  },
-  {
-    name: 'page[offset]',
-    in: 'query',
-    description: 'Zero-based offset for offset-based pagination.',
-    schema: { type: 'integer', minimum: 0 },
-  },
-  {
-    name: 'page[limit]',
-    in: 'query',
-    description: 'Maximum number of items for offset-based pagination.',
-    schema: { type: 'integer', minimum: 1 },
-  },
-  {
-    name: 'page[after]',
-    in: 'query',
-    description: 'Forward cursor. Rejected with 400 when the backend capabilities report '
-      + '`pagination.styles.cursor: false` — consult GET /capabilities first.',
-    schema: { type: 'string' },
-  },
-  {
-    name: 'page[before]',
-    in: 'query',
-    description: 'Backward cursor. Rejected with 400 when the backend capabilities report '
-      + '`pagination.styles.cursor: false` — consult GET /capabilities first.',
-    schema: { type: 'string' },
-  },
+  ...paginationParameters({ defaultPageSize: DEFAULT_PAGE_SIZE }),
   {
     name: 'filter[depth]',
     in: 'query',
@@ -87,7 +62,7 @@ const listQueryParameters: OpenApiParameter[] = [
 const jsonApiRequestBody = (description: string, schemaName: string): OpenApiRequestBody => ({
   description,
   required: true,
-  content: { [JSON_API_CONTENT_TYPE]: { schema: ref(schemaName) } },
+  content: jsonApiContent(ref(schemaName)),
 });
 
 const listAtomsOperation = (operationId: string, summary: string, keyed: boolean): OpenApiOperation => ({
@@ -120,67 +95,62 @@ const listAtomSummariesOperation = (operationId: string, summary: string, keyed:
   };
 };
 
+/** A resource whose attributes are nothing but the type discriminator plus timestamps. */
+const timestampedResource = (typeName: string, idDescription: string): OpenApiSchema => ({
+  type: 'object',
+  required: ['type', 'id', 'attributes'],
+  properties: {
+    type: { const: typeName },
+    id: { type: 'string', description: idDescription },
+    attributes: {
+      type: 'object',
+      required: ['type'],
+      properties: {
+        type: { const: typeName },
+        createdAt: { type: 'string' },
+        updatedAt: { type: 'string' },
+      },
+    },
+    links: ref('ResourceLinks'),
+  },
+});
+
+/** A JSON:API request document wrapping one data member. */
+const dataRequest = (dataSchemaName: string): OpenApiSchema => ({
+  type: 'object',
+  required: ['data'],
+  properties: { data: ref(dataSchemaName) },
+});
+
+/**
+ * The write payload for a storage object. Create and update accept the same
+ * shape; only the meaning of `id` differs, which the caller documents.
+ */
+const storageObjectWriteData = (idDescription: string): OpenApiSchema => ({
+  type: 'object',
+  required: ['type', 'id', 'attributes'],
+  properties: {
+    type: { const: 'object' },
+    id: { type: 'string', description: idDescription },
+    attributes: {
+      type: 'object',
+      description: 'Only "type" and "content" are accepted; any other key is rejected with 400.',
+      properties: {
+        type: { const: 'object' },
+        content: { type: 'object', additionalProperties: true },
+      },
+      additionalProperties: false,
+    },
+    meta: ref('StorageObjectMetadata'),
+  },
+});
+
 const schemas: Record<string, OpenApiSchema> = {
-  JsonApiErrorObject: {
-    type: 'object',
-    description: 'A single JSON:API error object as produced by the error responder.',
-    required: ['code', 'status', 'title', 'detail'],
-    properties: {
-      code: { type: 'string', description: 'Machine-readable error code, e.g. not_found, invalid_data.' },
-      status: { type: 'string', description: 'HTTP status code as a string.' },
-      title: { type: 'string' },
-      detail: { type: 'string' },
-      source: {
-        type: 'object',
-        properties: {
-          pointer: { type: 'string' },
-          parameter: { type: 'string' },
-        },
-      },
-    },
-  },
-  JsonApiError: {
-    type: 'object',
-    required: ['errors'],
-    properties: {
-      errors: { type: 'array', items: ref('JsonApiErrorObject') },
-    },
-  },
-  Warnings: {
-    type: 'array',
-    description: 'Non-fatal recoverable errors collected while producing an otherwise successful response.',
-    items: ref('JsonApiErrorObject'),
-  },
-  WarningsMeta: {
-    type: 'object',
-    properties: { warnings: ref('Warnings') },
-  },
-  CollectionMeta: {
-    type: 'object',
-    properties: {
-      page: {
-        type: 'object',
-        description: 'Aggregate counts; present when the backend reports a total.',
-        properties: { total: { type: 'integer' } },
-      },
-      warnings: ref('Warnings'),
-    },
-  },
-  PaginationLinks: {
-    type: 'object',
-    required: ['self'],
-    properties: {
-      self: { type: 'string' },
-      first: { type: 'string' },
-      last: { type: 'string' },
-      prev: { type: 'string' },
-      next: { type: 'string' },
-    },
-  },
-  ResourceLinks: {
-    type: 'object',
-    properties: { self: { type: 'string' } },
-  },
+  ...jsonApiErrorComponents(),
+  ...jsonApiLinkComponents(),
+  ...capabilityComponents({ changeSubscription: true }),
+  ...apiInfoComponents('storage'),
+
   StorageObjectMetadata: {
     type: 'object',
     description: 'Capability-driven object metadata (file extension, backend revision id, backend-specific extras).',
@@ -230,78 +200,13 @@ const schemas: Record<string, OpenApiSchema> = {
       links: ref('ResourceLinks'),
     },
   },
-  StorageObjectSummaryResource: {
-    type: 'object',
-    required: ['type', 'id', 'attributes'],
-    properties: {
-      type: { const: 'object-summary' },
-      id: { type: 'string', description: 'The storage key.' },
-      attributes: {
-        type: 'object',
-        required: ['type'],
-        properties: {
-          type: { const: 'object-summary' },
-          createdAt: { type: 'string' },
-          updatedAt: { type: 'string' },
-        },
-      },
-      links: ref('ResourceLinks'),
-    },
-  },
-  FolderSummaryResource: {
-    type: 'object',
-    required: ['type', 'id', 'attributes'],
-    properties: {
-      type: { const: 'folder-summary' },
-      id: { type: 'string', description: 'The folder key.' },
-      attributes: {
-        type: 'object',
-        required: ['type'],
-        properties: {
-          type: { const: 'folder-summary' },
-          createdAt: { type: 'string' },
-          updatedAt: { type: 'string' },
-        },
-      },
-      links: ref('ResourceLinks'),
-    },
-  },
+  StorageObjectSummaryResource: timestampedResource('object-summary', 'The storage key.'),
+  FolderSummaryResource: timestampedResource('folder-summary', 'The folder key.'),
   AtomResource: {
     oneOf: [ref('StorageObjectResource'), ref('FolderResource')],
   },
   AtomSummaryResource: {
     oneOf: [ref('StorageObjectSummaryResource'), ref('FolderSummaryResource')],
-  },
-  UnsupportedCapability: {
-    type: 'object',
-    required: ['supported', 'description'],
-    properties: {
-      supported: { const: false },
-      description: { type: 'string' },
-    },
-  },
-  ChangesCapability: {
-    oneOf: [
-      {
-        type: 'object',
-        required: ['supported', 'description'],
-        properties: {
-          supported: { const: false },
-          description: { type: 'string' },
-        },
-      },
-      {
-        type: 'object',
-        required: ['supported', 'description', 'syncToken', 'changeFeed', 'subscription'],
-        properties: {
-          supported: { const: true },
-          description: { type: 'string' },
-          syncToken: { type: 'boolean' },
-          changeFeed: { type: 'boolean' },
-          subscription: { type: 'boolean' },
-        },
-      },
-    ],
   },
   Capabilities: {
     type: 'object',
@@ -330,28 +235,7 @@ const schemas: Record<string, OpenApiSchema> = {
           },
         ],
       },
-      pagination: {
-        oneOf: [
-          ref('UnsupportedCapability'),
-          {
-            type: 'object',
-            required: ['supported', 'description', 'styles'],
-            properties: {
-              supported: { const: true },
-              description: { type: 'string' },
-              styles: {
-                type: 'object',
-                required: ['offset', 'page', 'cursor'],
-                properties: {
-                  offset: { type: 'boolean' },
-                  page: { type: 'boolean' },
-                  cursor: { type: 'boolean' },
-                },
-              },
-            },
-          },
-        ],
-      },
+      pagination: ref('PaginationCapability'),
     },
   },
   CapabilitiesResource: {
@@ -363,39 +247,6 @@ const schemas: Record<string, OpenApiSchema> = {
       attributes: ref('Capabilities'),
       links: ref('ResourceLinks'),
     },
-  },
-  ApiInfoResource: {
-    type: 'object',
-    required: ['type', 'id', 'attributes'],
-    properties: {
-      type: { const: 'api-info' },
-      id: { const: 'storage' },
-      attributes: {
-        type: 'object',
-        required: ['name', 'version', 'endpoints'],
-        properties: {
-          name: { type: 'string' },
-          version: { type: 'string' },
-          endpoints: {
-            type: 'array',
-            items: {
-              type: 'object',
-              required: ['path', 'methods', 'description'],
-              properties: {
-                path: { type: 'string' },
-                methods: { type: 'array', items: { type: 'string' } },
-                description: { type: 'string' },
-              },
-            },
-          },
-        },
-      },
-    },
-  },
-  ApiInfoResponse: {
-    type: 'object',
-    required: ['data'],
-    properties: { data: ref('ApiInfoResource') },
   },
   CapabilitiesResponse: {
     type: 'object',
@@ -450,42 +301,8 @@ const schemas: Record<string, OpenApiSchema> = {
       },
     },
   },
-  StorageObjectCreateData: {
-    type: 'object',
-    required: ['type', 'id', 'attributes'],
-    properties: {
-      type: { const: 'object' },
-      id: { type: 'string', description: 'The storage key. Must be non-empty.' },
-      attributes: {
-        type: 'object',
-        description: 'Only "type" and "content" are accepted; any other key is rejected with 400.',
-        properties: {
-          type: { const: 'object' },
-          content: { type: 'object', additionalProperties: true },
-        },
-        additionalProperties: false,
-      },
-      meta: ref('StorageObjectMetadata'),
-    },
-  },
-  StorageObjectUpdateData: {
-    type: 'object',
-    required: ['type', 'id', 'attributes'],
-    properties: {
-      type: { const: 'object' },
-      id: { type: 'string', description: 'The storage key. Must match the key in the URL.' },
-      attributes: {
-        type: 'object',
-        description: 'Only "type" and "content" are accepted; any other key is rejected with 400.',
-        properties: {
-          type: { const: 'object' },
-          content: { type: 'object', additionalProperties: true },
-        },
-        additionalProperties: false,
-      },
-      meta: ref('StorageObjectMetadata'),
-    },
-  },
+  StorageObjectCreateData: storageObjectWriteData('The storage key. Must be non-empty.'),
+  StorageObjectUpdateData: storageObjectWriteData('The storage key. Must match the key in the URL.'),
   FolderCreateData: {
     type: 'object',
     required: ['type', 'id', 'attributes'],
@@ -498,20 +315,16 @@ const schemas: Record<string, OpenApiSchema> = {
       },
     },
   },
-  StorageObjectCreateRequest: {
+  StorageObjectCreateRequest: dataRequest('StorageObjectCreateData'),
+  StorageObjectUpdateRequest: dataRequest('StorageObjectUpdateData'),
+  FolderCreateRequest: dataRequest('FolderCreateData'),
+  AtomRef: {
     type: 'object',
-    required: ['data'],
-    properties: { data: ref('StorageObjectCreateData') },
-  },
-  StorageObjectUpdateRequest: {
-    type: 'object',
-    required: ['data'],
-    properties: { data: ref('StorageObjectUpdateData') },
-  },
-  FolderCreateRequest: {
-    type: 'object',
-    required: ['data'],
-    properties: { data: ref('FolderCreateData') },
+    required: ['type', 'id'],
+    properties: {
+      type: { enum: ['object', 'folder', 'atom'] },
+      id: { type: 'string' },
+    },
   },
   AtomicAddOperation: {
     type: 'object',
@@ -534,14 +347,7 @@ const schemas: Record<string, OpenApiSchema> = {
     required: ['op', 'ref'],
     properties: {
       op: { const: 'remove' },
-      ref: {
-        type: 'object',
-        required: ['type', 'id'],
-        properties: {
-          type: { enum: ['object', 'folder', 'atom'] },
-          id: { type: 'string' },
-        },
-      },
+      ref: ref('AtomRef'),
     },
   },
   AtomicOperationsRequest: {
@@ -573,6 +379,8 @@ const schemas: Record<string, OpenApiSchema> = {
         required: ['deleted', 'ref'],
         properties: {
           deleted: { const: true },
+          // Echoed from the repository, which reports the concrete kind it
+          // removed rather than the (possibly `atom`) kind that was requested.
           ref: {
             type: 'object',
             required: ['type', 'id'],
@@ -585,14 +393,22 @@ const schemas: Record<string, OpenApiSchema> = {
       },
     },
   },
+  AtomicErrorResult: {
+    type: 'object',
+    required: ['errors'],
+    properties: {
+      errors: { type: 'array', items: ref('JsonApiErrorObject') },
+    },
+  },
   AtomicResultsResponse: {
     type: 'object',
-    description: 'One entry per successful operation, in operation order. Failed operations are omitted.',
+    description: 'Results in operation order. A failed add or update is omitted entirely; a failed remove keeps '
+      + 'its slot as an `errors` entry so callers can stay index-aligned with the keys they requested.',
     required: ['atomic:results'],
     properties: {
       'atomic:results': {
         type: 'array',
-        items: { oneOf: [ref('AtomicChangeResult'), ref('AtomicRemoveResult')] },
+        items: { oneOf: [ref('AtomicChangeResult'), ref('AtomicRemoveResult'), ref('AtomicErrorResult')] },
       },
     },
   },
@@ -781,7 +597,7 @@ export interface StorageOpenApiOptions {
  */
 export function buildStorageOpenApi(options: StorageOpenApiOptions = {}): OpenApiDocument {
   const { basePath = '' } = options;
-  return {
+  return compactOpenApiDocument({
     openapi: '3.1.0',
     info: {
       title: 'Laika CMS Storage API',
@@ -802,6 +618,9 @@ export function buildStorageOpenApi(options: StorageOpenApiOptions = {}): OpenAp
       { name: 'operations', description: 'JSON:API atomic operations extension' },
     ],
     paths,
-    components: { schemas },
-  };
+    components: {
+      schemas,
+      responses: jsonApiErrorResponseComponents(),
+    },
+  });
 }

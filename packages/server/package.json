@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/server",
-  "version": "4.0.0",
+  "version": "5.0.0",
   "publishConfig": {
     "access": "public"
   },
@@ -73,7 +73,7 @@
     "prepack": "node ../../scripts/check-no-catalog-deps.mjs"
   },
   "dependencies": {
-    "effect": "catalog:",
+    "effect": "catalog:default",
     "laikacms": "workspace:*"
   },
   "devDependencies": {

@@ -1,7 +1,13 @@
 import { load } from 'js-yaml';
 import { describe, expect, it } from 'vitest';
 
-import type { OpenApiDocument, OpenApiOperation, OpenApiPathItem } from 'laikacms/json-api';
+import type {
+  OpenApiDocument,
+  OpenApiOperation,
+  OpenApiParameter,
+  OpenApiPathItem,
+  OpenApiRef,
+} from 'laikacms/json-api';
 import type { StorageRepository } from 'laikacms/storage';
 
 import { buildStorageOpenApi } from './openapi.js';
@@ -109,9 +115,15 @@ describe('buildStorageOpenApi', () => {
 
   it('documents every {key} path with a required path parameter', () => {
     const doc = buildStorageOpenApi();
+    // Repeated parameters are hoisted into components by compactOpenApiDocument,
+    // so resolve `$ref`s before looking for the declaration.
+    const deref = (parameter: OpenApiParameter | OpenApiRef): OpenApiParameter | undefined =>
+      '$ref' in parameter
+        ? doc.components?.parameters?.[parameter.$ref.split('/').pop() ?? '']
+        : parameter;
     for (const [path, item] of Object.entries(doc.paths)) {
       if (!path.includes('{key}')) continue;
-      const keyParam = item.parameters?.find(p => p.name === 'key' && p.in === 'path');
+      const keyParam = item.parameters?.map(deref).find(p => p?.name === 'key' && p.in === 'path');
       expect(keyParam, `missing key path parameter on ${path}`).toBeDefined();
       expect(keyParam?.required).toBe(true);
     }

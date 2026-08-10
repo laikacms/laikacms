@@ -82,10 +82,6 @@ export class InMemoryDocumentsRepository extends DocumentsRepository {
         syncToken: true,
         changeFeed: true,
       },
-      locks: {
-        supported: false,
-        description: 'The in-memory test repository does not implement advisory locking.',
-      },
     });
   }
 
