@@ -60,6 +60,11 @@
       "types": "./dist/decap-oauth2/i18n/translations/nl.d.ts",
       "import": "./dist/decap-oauth2/i18n/translations/nl.js",
       "default": "./dist/decap-oauth2/i18n/translations/nl.js"
+    },
+    "./embedded": {
+      "types": "./dist/embedded/index.d.ts",
+      "import": "./dist/embedded/index.js",
+      "default": "./dist/embedded/index.js"
     }
   },
   "scripts": {
