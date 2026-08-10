@@ -10,11 +10,14 @@
  */
 import { Component } from 'react';
 
-// Decap remounts the authentication page when login fails. Without retaining
-// this state outside the component, an unavailable local API turns that
-// remount cycle into an unbounded stream of login and `/session` requests.
-// Reloading the admin page reloads this module and permits a fresh attempt.
-const attemptedDevTokens = new Set<string>();
+// Decap remounts the authentication page when login fails. Track the last
+// attempt timestamp per token so rapid remounts (unbounded storm) are
+// debounced, but a retry is allowed once the cooldown window has elapsed
+// (handles transient failures such as the local API not yet being ready).
+// Reloading the admin page resets this module state and permits an
+// immediate fresh attempt.
+const RETRY_COOLDOWN_MS = 2000;
+const lastAttemptMs = new Map<string, number>();
 
 export interface DevAuthPageProps {
   onLogin: (user: unknown) => void;
@@ -33,8 +36,9 @@ class DevAuthenticationPage extends Component<DevAuthPageProps> {
       );
       return;
     }
-    if (attemptedDevTokens.has(token)) return;
-    attemptedDevTokens.add(token);
+    const last = lastAttemptMs.get(token) ?? 0;
+    if (Date.now() - last < RETRY_COOLDOWN_MS) return;
+    lastAttemptMs.set(token, Date.now());
     queueMicrotask(() => this.props.onLogin({ token }));
   }
 
