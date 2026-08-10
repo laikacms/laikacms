@@ -144,3 +144,7 @@ temp/
 !.claude/skills/effect-ts-errors/
 !.claude/skills/effect-ts-fundamentals/
 !.claude/skills/effect-ts-resources/
+
+# Claude Code scratch state written into the repo by tooling (e.g. the Ralph
+# loop's iteration counter). Machine-local by definition — never committed.
+.claude/*.local.md
