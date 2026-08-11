@@ -427,18 +427,10 @@
     "trash": "catalog:"
   },
   "peerDependencies": {
-    "@cloudflare/workers-types": "*",
-    "@hono/node-server": "catalog:server",
-    "hono": "catalog:server"
+    "@cloudflare/workers-types": "*"
   },
   "peerDependenciesMeta": {
     "@cloudflare/workers-types": {
-      "optional": true
-    },
-    "@hono/node-server": {
-      "optional": true
-    },
-    "hono": {
       "optional": true
     }
   },

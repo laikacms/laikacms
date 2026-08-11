@@ -1,6 +1,4 @@
 import * as Result from 'effect/Result';
-import { Hono } from 'hono';
-import type { Context } from 'hono';
 import type { CatalogProvider } from 'laikacms/catalog';
 import { type CollectionSettings } from 'laikacms/catalog';
 import type { LaikaResult } from 'laikacms/core';
@@ -55,8 +53,9 @@ export interface CatalogApiOptions {
   onError?(error: unknown): void;
   logger?: JsonApiLogger;
   /**
-   * Mount prefix advertised in the served OpenAPI document's `servers` URL.
-   * The Hono app itself is prefix-agnostic — mount it at this same path.
+   * Mount prefix advertised in the served OpenAPI document's `servers` URL,
+   * and stripped from the incoming pathname before routing. Mount the handler
+   * at this same path.
    */
   basePath?: string;
   /**
@@ -68,14 +67,39 @@ export interface CatalogApiOptions {
   authorize: CatalogAuthorize;
 }
 
+/**
+ * Every response this handler produces is uncacheable: the catalog is mutable
+ * settings, and a stale collection list is worse than a slow one. Setting the
+ * header at the single construction point is why there is no response-mutating
+ * middleware to replace.
+ */
+const json = (body: unknown, status: number = 200): Response =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+    },
+  });
+
+// decodeURIComponent throws on malformed sequences; degrade to the raw segment
+// rather than 500ing on bad input, and let the catalog layer reject it.
+const safeDecode = (segment: string): string => {
+  try {
+    return decodeURIComponent(segment);
+  } catch {
+    return segment;
+  }
+};
+
 function makeResponders(onError?: ((error: unknown) => void) | undefined, logger?: JsonApiLogger) {
-  function respondError(c: Context, result: LaikaResult<unknown>) {
+  function respondError(result: LaikaResult<unknown>): Response {
     if (Result.isFailure(result)) {
       onError?.(result.failure);
       const mapped = errorToJsonApiMapper(result.failure, logger);
-      return c.json({ errors: mapped.errors }, mapped.status);
+      return json({ errors: mapped.errors }, mapped.status);
     }
-    return c.json(
+    return json(
       {
         errors: [{ status: '500', code: 'unknown_error', title: 'Unknown Error', detail: 'An unknown error occurred' }],
       },
@@ -84,25 +108,23 @@ function makeResponders(onError?: ((error: unknown) => void) | undefined, logger
   }
 
   function respondResource<T extends CollectionSettings>(
-    c: Context,
     result: LaikaResult<T>,
     transformer: (item: T) => CollectionJsonApi,
-  ) {
+  ): Response {
     if (Result.isFailure(result)) {
-      return respondError(c, result);
+      return respondError(result);
     }
-    return c.json({ data: transformer(result.success) });
+    return json({ data: transformer(result.success) });
   }
 
   function respondCollection<T extends CollectionSettings>(
-    c: Context,
     result: LaikaResult<readonly T[]>,
     transformer: (item: T) => CollectionJsonApi,
-  ) {
+  ): Response {
     if (Result.isFailure(result)) {
-      return respondError(c, result);
+      return respondError(result);
     }
-    return c.json({ data: result.success.map(item => transformer(item)) });
+    return json({ data: result.success.map(item => transformer(item)) });
   }
 
   return { respondError, respondResource, respondCollection };
@@ -118,52 +140,50 @@ function makeResponders(onError?: ((error: unknown) => void) | undefined, logger
  * Bearer token (or delegating to `@laikacms/server/api`, which does it for you)
  * is the caller's job.
  *
- * Built on Hono rather than `@effect/platform` HttpApi: this API is meant to be
- * dropped into a consumer's *existing* router/framework, and Hono composes far
- * more cleanly there — its `Request`→`Response` `fetch` handler, `.route()`
- * mounting, and middleware model plug into arbitrary hosts without dragging the
- * Effect runtime into the caller's routing layer.
+ * The returned handler is a bare `{ fetch(Request): Promise<Response> }`, with
+ * no web framework behind it (LCMS-645). This API is meant to be dropped into a
+ * consumer's *existing* router, so the only thing it can safely assume is the
+ * platform `Request`/`Response` pair: mount it under Hono, Express, a Worker's
+ * `export default`, or call `fetch` directly in a test. It also keeps the
+ * Effect runtime out of the caller's routing layer, and matches the shape the
+ * documents, assets and storage handlers already return.
  */
 export function buildJsonApi(options: CatalogApiOptions) {
   const { repo, onError, logger, basePath = '', authorize } = options;
   const { respondError, respondResource, respondCollection } = makeResponders(onError, logger);
-  // Register every route under `basePath` so the API works when mounted at a
-  // non-root path — requests arrive at `${basePath}/openapi.json`, not `/openapi.json`.
-  const app = new Hono().basePath(basePath);
 
-  // Run the per-action authorization hook. Returns a ready error Response when
-  // the action is denied, or `null` when it's allowed.
-  const authorizeAction = async (
-    c: Context,
-    action: CatalogAuthorizeAction,
-  ): Promise<Response | null> => {
-    const denial = resolveAuthorization(await authorize({ ...action, request: c.req.raw }));
-    if (!denial) return null;
-    return respondError(c, Result.fail(denial));
+  return {
+    async fetch(request: Request): Promise<Response> {
+      try {
+        return await fetchInner(request);
+      } catch (err) {
+        return handleUnexpected(err);
+      }
+    },
   };
 
-  // Ensure all responses carry Cache-Control: no-store
-  app.use('*', async (c, next) => {
-    await next();
-    c.res.headers.set('Cache-Control', 'no-store');
-  });
-
-  // Global error handler
-  app.onError((err, c) => {
-    logger?.error('catalog-api unhandled error:', err.constructor.name, err.message, err.stack);
+  /**
+   * The one non-JSON:API failure mode carried over from the previous global
+   * error handler: an AWS SDK transport failure against DynamoDB is reported
+   * as 503 with a hint, because the usual cause is a local DynamoDB that is
+   * not running. Anything else is rethrown, unchanged, exactly as before.
+   */
+  function handleUnexpected(err: unknown): Response {
+    const error = err as { name?: string, message?: string, stack?: string, constructor?: { name?: string } };
+    logger?.error('catalog-api unhandled error:', error?.constructor?.name, error?.message, error?.stack);
 
     onError?.(err);
 
-    // Handle AWS SDK errors
-    if (err.name === 'NetworkingError' || err.name === 'TimeoutError') {
-      return c.json(
+    if (error?.name === 'NetworkingError' || error?.name === 'TimeoutError') {
+      return json(
         {
           errors: [
             {
               status: '503',
               code: 'service_unavailable',
               title: 'Service Unavailable',
-              detail: `Cannot connect to DynamoDB: ${err.message}. Check if DynamoDB Local is running and accessible.`,
+              detail:
+                `Cannot connect to DynamoDB: ${error.message}. Check if DynamoDB Local is running and accessible.`,
             },
           ],
         },
@@ -172,130 +192,153 @@ export function buildJsonApi(options: CatalogApiOptions) {
     }
 
     throw err;
-  });
+  }
 
-  // OpenAPI document
-  app.get('/openapi.json', async c => {
-    const denied = await authorizeAction(c, { action: 'readOpenApi', format: 'json' });
-    if (denied) return denied;
-    const url = new URL(c.req.url);
-    const doc = (await loadOpenApiBuilder())({ basePath });
-    return c.json({
-      ...doc,
-      servers: [{ url: `${url.origin}${basePath}` }],
-    });
-  });
+  async function fetchInner(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    const method = request.method;
 
-  app.get('/openapi.yaml', async c => {
-    const denied = await authorizeAction(c, { action: 'readOpenApi', format: 'yaml' });
-    if (denied) return denied;
-    const url = new URL(c.req.url);
-    const doc = (await loadOpenApiBuilder())({ basePath });
-    const yaml = openApiDocumentToYaml({
-      ...doc,
-      servers: [{ url: `${url.origin}${basePath}` }],
-    });
-    return c.body(yaml, 200, { 'Content-Type': 'application/yaml' });
-  });
+    // Run the per-action authorization hook. Returns a ready error Response
+    // when the action is denied, or `null` when it's allowed.
+    const authorizeAction = async (action: CatalogAuthorizeAction): Promise<Response | null> => {
+      const denial = resolveAuthorization(await authorize({ ...action, request }));
+      if (!denial) return null;
+      return respondError(Result.fail(denial));
+    };
 
-  // Collections
-  app.get('/collections', async c => {
-    const denied = await authorizeAction(c, { action: 'listCollections' });
+    let path = url.pathname.substring(basePath.length);
+    if (path.startsWith('/')) path = path.substring(1);
+    if (path.endsWith('/')) path = path.slice(0, -1);
+
+    if (path === 'openapi.json' && method === 'GET') {
+      const denied = await authorizeAction({ action: 'readOpenApi', format: 'json' });
+      if (denied) return denied;
+      const doc = (await loadOpenApiBuilder())({ basePath });
+      return json({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
+    }
+
+    if (path === 'openapi.yaml' && method === 'GET') {
+      const denied = await authorizeAction({ action: 'readOpenApi', format: 'yaml' });
+      if (denied) return denied;
+      const doc = (await loadOpenApiBuilder())({ basePath });
+      const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
+      return new Response(yaml, {
+        status: 200,
+        headers: { 'Content-Type': 'application/yaml', 'Cache-Control': 'no-store' },
+      });
+    }
+
+    // `collections` and `collections/{key}`. A key never spans a slash, which
+    // is the same shape the `:key` route matched before.
+    const segments = path === '' ? [] : path.split('/');
+
+    if (segments[0] === 'collections' && segments.length === 1) {
+      if (method === 'GET') return await listCollections(authorizeAction);
+      if (method === 'POST') return await createCollection(request, authorizeAction);
+    }
+
+    if (segments[0] === 'collections' && segments.length === 2) {
+      const key = safeDecode(segments[1]!);
+      if (method === 'GET') return await getCollection(key, authorizeAction);
+      if (method === 'PATCH') return await updateCollection(request, key, authorizeAction);
+      if (method === 'DELETE') return await deleteCollection(key, authorizeAction);
+    }
+
+    return respondError(Result.fail(new NotFoundError(`No route for ${method} ${url.pathname}.`)));
+  }
+
+  type AuthorizeAction = (action: CatalogAuthorizeAction) => Promise<Response | null>;
+
+  async function listCollections(authorizeAction: AuthorizeAction): Promise<Response> {
+    const denied = await authorizeAction({ action: 'listCollections' });
     if (denied) return denied;
     const settings = await LaikaTask.runPromiseResult(repo.getCatalog());
     if (Result.isFailure(settings)) {
-      return respondError(c, settings);
+      return respondError(settings);
     }
     const collections = settings.success.collections ?? {};
-    const settingsList = Object.values(collections);
-    return respondCollection(c, Result.succeed(settingsList), collectionToJsonApi);
-  });
+    return respondCollection(Result.succeed(Object.values(collections)), collectionToJsonApi);
+  }
 
-  app.get('/collections/:key', async c => {
-    const key = c.req.param('key');
-    const denied = await authorizeAction(c, { action: 'getCollection', key });
+  async function getCollection(key: string, authorizeAction: AuthorizeAction): Promise<Response> {
+    const denied = await authorizeAction({ action: 'getCollection', key });
     if (denied) return denied;
     const allSettings = await LaikaTask.runPromiseResult(repo.getCatalog());
     if (Result.isFailure(allSettings)) {
-      return respondError(c, allSettings);
+      return respondError(allSettings);
     }
     const collections = allSettings.success.collections ?? {};
     const collectionSettings = collections[key];
     if (!collectionSettings) {
-      return respondError(
-        c,
-        Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
-      );
+      return respondError(Result.fail(new NotFoundError(`Collection '${key}' not found.`)));
     }
     if (collectionSettings.type === 'document') {
       const docSettingsResult = await LaikaTask.runPromiseResult(repo.getDocumentCollectionSettings(key));
       if (Result.isFailure(docSettingsResult)) {
-        return respondError(c, docSettingsResult);
+        return respondError(docSettingsResult);
       }
-      return respondResource(c, docSettingsResult, collectionToJsonApi);
+      return respondResource(docSettingsResult, collectionToJsonApi);
     } else if (collectionSettings.type === 'media') {
       const mediaSettingsResult = await LaikaTask.runPromiseResult(repo.getMediaCollectionSettings(key));
       if (Result.isFailure(mediaSettingsResult)) {
-        return respondError(c, mediaSettingsResult);
+        return respondError(mediaSettingsResult);
       }
-      return respondResource(c, mediaSettingsResult, collectionToJsonApi);
+      return respondResource(mediaSettingsResult, collectionToJsonApi);
     }
-    return respondError(c, Result.fail(new BadRequestError(`Unknown collection type`)));
-  });
+    return respondError(Result.fail(new BadRequestError(`Unknown collection type`)));
+  }
 
-  app.post('/collections', async c => {
+  async function createCollection(request: Request, authorizeAction: AuthorizeAction): Promise<Response> {
     try {
-      const jsonData = await c.req.json();
+      const jsonData = await request.json() as { data: unknown };
       const validatedData = decodeCollectionJsonApi(jsonData.data);
       const body = collectionFromJsonApi(validatedData as CollectionJsonApi);
 
-      const denied = await authorizeAction(c, { action: 'createCollection', collection: body });
+      const denied = await authorizeAction({ action: 'createCollection', collection: body });
       if (denied) return denied;
 
       if (body.type === 'document') {
         const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(body.key, body));
         if (Result.isFailure(result)) {
-          return respondError(c, result);
+          return respondError(result);
         }
-        return c.json({ data: collectionToJsonApi(body) }, 201);
+        return json({ data: collectionToJsonApi(body) }, 201);
       } else if (body.type === 'media') {
         const result = await LaikaTask.runPromiseResult(repo.putMediaCollectionSettings(body.key, body));
         if (Result.isFailure(result)) {
-          return respondError(c, result);
+          return respondError(result);
         }
-        return c.json({ data: collectionToJsonApi(body) }, 201);
+        return json({ data: collectionToJsonApi(body) }, 201);
       }
-      return respondError(c, Result.fail(new BadRequestError(`Unknown collection type`)));
+      return respondError(Result.fail(new BadRequestError(`Unknown collection type`)));
     } catch (error) {
       onError?.(error);
       const mapped = errorToJsonApiMapper(new BadRequestError((error as Error).message), logger);
-      return c.json({ errors: mapped.errors }, 400);
+      return json({ errors: mapped.errors }, 400);
     }
-  });
+  }
 
-  app.patch('/collections/:key', async c => {
+  async function updateCollection(
+    request: Request,
+    key: string,
+    authorizeAction: AuthorizeAction,
+  ): Promise<Response> {
     try {
-      const key = c.req.param('key');
-
       const allSettings = await LaikaTask.runPromiseResult(repo.getCatalog());
       if (Result.isFailure(allSettings)) {
-        return respondError(c, allSettings);
+        return respondError(allSettings);
       }
       const collections = allSettings.success.collections ?? {};
       if (!collections[key]) {
-        return respondError(
-          c,
-          Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
-        );
+        return respondError(Result.fail(new NotFoundError(`Collection '${key}' not found.`)));
       }
 
-      const jsonData = await c.req.json();
+      const jsonData = await request.json() as { data: unknown };
       const validatedData = decodeCollectionJsonApi(jsonData.data);
       const body = collectionFromJsonApi(validatedData as CollectionJsonApi);
 
       if (body.key !== key) {
         return respondError(
-          c,
           Result.fail(
             new ConflictError(
               `Body data.id ('${body.key}') does not match URL key ('${key}'). Use the URL key as the resource identifier.`,
@@ -306,58 +349,49 @@ export function buildJsonApi(options: CatalogApiOptions) {
 
       const bodyWithKey = { ...body, key };
 
-      const denied = await authorizeAction(c, { action: 'updateCollection', key, collection: bodyWithKey });
+      const denied = await authorizeAction({ action: 'updateCollection', key, collection: bodyWithKey });
       if (denied) return denied;
 
       if (bodyWithKey.type === 'document') {
         const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(key, bodyWithKey));
         if (Result.isFailure(result)) {
-          return respondError(c, result);
+          return respondError(result);
         }
-        return c.json({ data: collectionToJsonApi(bodyWithKey) });
+        return json({ data: collectionToJsonApi(bodyWithKey) });
       } else if (bodyWithKey.type === 'media') {
         const result = await LaikaTask.runPromiseResult(repo.putMediaCollectionSettings(key, bodyWithKey));
         if (Result.isFailure(result)) {
-          return respondError(c, result);
+          return respondError(result);
         }
-        return c.json({ data: collectionToJsonApi(bodyWithKey) });
+        return json({ data: collectionToJsonApi(bodyWithKey) });
       }
-      return respondError(c, Result.fail(new BadRequestError(`Unknown collection type`)));
+      return respondError(Result.fail(new BadRequestError(`Unknown collection type`)));
     } catch (error) {
       onError?.(error);
       const mapped = errorToJsonApiMapper(new BadRequestError((error as Error).message), logger);
-      return c.json({ errors: mapped.errors }, 400);
+      return json({ errors: mapped.errors }, 400);
     }
-  });
+  }
 
-  app.delete('/collections/:key', async c => {
-    const key = c.req.param('key');
-    const denied = await authorizeAction(c, { action: 'deleteCollection', key });
+  async function deleteCollection(key: string, authorizeAction: AuthorizeAction): Promise<Response> {
+    const denied = await authorizeAction({ action: 'deleteCollection', key });
     if (denied) return denied;
     const allSettings = await LaikaTask.runPromiseResult(repo.getCatalog());
     if (Result.isFailure(allSettings)) {
-      return respondError(c, allSettings);
+      return respondError(allSettings);
     }
     const collections = allSettings.success.collections ?? {};
     const collectionSettings = collections[key];
     if (!collectionSettings) {
-      return respondError(
-        c,
-        Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
-      );
+      return respondError(Result.fail(new NotFoundError(`Collection '${key}' not found.`)));
     }
     // Remove collection settings - create a new object without the key
     const { [key]: _, ...remainingCollections } = collections;
-    const updatedSettings = {
-      ...allSettings.success,
-      collections: remainingCollections,
-    };
+    const updatedSettings = { ...allSettings.success, collections: remainingCollections };
     const result = await LaikaTask.runPromiseResult(repo.putCatalog(updatedSettings));
     if (Result.isFailure(result)) {
-      return respondError(c, result);
+      return respondError(result);
     }
-    return c.body(null, 204);
-  });
-
-  return app;
+    return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
+  }
 }
