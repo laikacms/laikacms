@@ -35,11 +35,11 @@ it from the **project root** (so it can read that project's `node_modules`).
 2. **Read the specific page(s)** the task needs — pass the `docs/...` path:
 
    ```bash
-   node <skill-dir>/scripts/laika-docs.mjs get docs/guides/getting-started.md
+   node <skill-dir>/scripts/laika-docs.mjs get docs/getting-started/nodejs.md
    ```
 
    Prefer reading one or two targeted pages over dumping the whole tree into context. Good entry
-   points: `docs/index.md`, `docs/guides/getting-started.md`, `docs/reference/packages.md`, and the
+   points: `docs/index.md`, `docs/getting-started/nodejs.md`, `docs/reference/packages.md`, and the
    section index files.
 
 3. **Answer from what you read**, citing the doc path. If the ref was not version-pinned (see

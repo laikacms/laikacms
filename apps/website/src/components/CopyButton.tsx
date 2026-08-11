@@ -6,7 +6,7 @@ export function CopyButton({ text, label }: { text: string, label?: string }) {
   const [copied, copy] = useCopy();
   return (
     <button
-      className="inline-flex items-center gap-1.5 bg-transparent border border-code-line text-code-dim py-[5px] px-2.5 rounded-[7px] text-xs cursor-pointer transition-[color,border-color] duration-150 hover:text-code-ink hover:border-[#4a4f74] font-mono"
+      className="inline-flex items-center gap-1.5 bg-transparent border border-code-line text-code-dim py-[5px] px-2.5 rounded-[7px] text-xs cursor-pointer transition-[color,border-color] duration-150 hover:text-code-ink hover:border-code-line-2 font-mono"
       onClick={() => copy(text)}
       aria-label="copy"
     >

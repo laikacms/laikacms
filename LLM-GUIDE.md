@@ -78,7 +78,7 @@ const laika = laikaApi({
   authenticateAccessToken: yourValidator, // throw to reject; see task (e) for production auth
 });
 
-// Serve the Decap CMS admin bundle (built by esbuild — see docs/guides/decap/admin-shell.md → "Serving the Decap admin shell"):
+// Serve the Decap CMS admin bundle (built by esbuild — see docs/decap/admin-shell.md → "Serving the Decap admin shell"):
 app.use('/admin/*', serveStatic({ root: './admin' }));
 
 // Mount on every method at /api/decap/*:
@@ -115,7 +115,7 @@ app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 > ```
 >
 > See
-> [docs/guides/decap/standalone-worker.md → "Seeding the server-side Decap config"](./docs/guides/decap/standalone-worker.md#seeding-the-server-side-decap-config)
+> [docs/decap/standalone-worker.md → "Seeding the server-side Decap config"](./docs/decap/standalone-worker.md#seeding-the-server-side-decap-config)
 > for the full pattern (shared config constant, serializer requirements, server-vs-browser copies).
 
 ### b) Render content server-side in a framework page (Next/SvelteKit/Astro/Nuxt/Remix/etc.)
@@ -184,7 +184,7 @@ const makeLaika = (env: Env) => {
 app.all('/api/decap/*', c => makeLaika(c.env).fetch(c.req.raw));
 // Serve the Decap CMS admin bundle: build admin/ with esbuild, then declare
 // `[assets] directory = "./admin"` in wrangler.toml — Workers Assets serve /admin/* automatically.
-// See docs/guides/decap/admin-shell.md → "Serving the Decap admin shell"
+// See docs/decap/admin-shell.md → "Serving the Decap admin shell"
 
 export default app;
 ```
@@ -239,7 +239,7 @@ const laika = laikaApi({
 
 For a full self-contained login server (email/password, passkey, TOTP) use the `laikaOauth2(...)`
 PKCE server from `@laikacms/server/oauth2` — see
-[docs/guides/decap/auth.md → "Production auth with decap-oauth2"](./docs/guides/decap/auth.md#production-auth-with-decap-oauth2).
+[docs/decap/auth.md → "Production auth with decap-oauth2"](./docs/decap/auth.md#production-auth-with-decap-oauth2).
 
 ---
 
@@ -310,7 +310,7 @@ These are the things that consistently bite first-time integrators:
    - Inline server-rendered HTML response from a non-page route (SvelteKit `+server.ts`, Marko
      `+handler.ts`, Astro `is:inline`). Serve a small HTML string that loads Decap from CDN and
      registers `createLaikaBackend()` — see
-     [docs/guides/decap/admin-shell.md → "Serving the Decap admin shell"](./docs/guides/decap/admin-shell.md#serving-the-decap-admin-shell).
+     [docs/decap/admin-shell.md → "Serving the Decap admin shell"](./docs/decap/admin-shell.md#serving-the-decap-admin-shell).
 
 7. **`workspace:*` for internal deps; `catalog:*` for shared external deps.** Use `workspace:*` for
    any `@laikacms/*` package reference within the monorepo, and `catalog:*` for shared external
@@ -382,7 +382,7 @@ These are the things that consistently bite first-time integrators:
     The serializer registry must support structured data — `markdownSerializer`, `yamlSerializer`,
     or `jsonSerializer` all work; `rawSerializer` silently drops the `collections` field. See the
     callout in task (a) above and
-    [docs/guides/decap/standalone-worker.md → "Seeding the server-side Decap config"](./docs/guides/decap/standalone-worker.md#seeding-the-server-side-decap-config).
+    [docs/decap/standalone-worker.md → "Seeding the server-side Decap config"](./docs/decap/standalone-worker.md#seeding-the-server-side-decap-config).
 
 14. **`CatalogDocumentsRepository` injects a `language` field into every stored content object.**
     The implementation co-locates the document language with its content in storage so reads can
@@ -408,11 +408,9 @@ The `starter-*` names below identify the **pattern**. The starter directories th
 to separate repos in June 2026 (locations TBD — see the note at the top of this file). For the two
 canonical starting points, use the in-repo quickstart guides directly:
 
-- **Minimal Node example** →
-  [docs/guides/decap/quickstart-fs.md](./docs/guides/decap/quickstart-fs.md)
+- **Minimal Node example** → [docs/decap/quickstart-fs.md](./docs/decap/quickstart-fs.md)
   (`FileSystemStorageRepository` + Hono + Decap admin shell, running locally)
-- **Minimal edge example** →
-  [docs/guides/decap/standalone-worker.md](./docs/guides/decap/standalone-worker.md)
+- **Minimal edge example** → [docs/decap/standalone-worker.md](./docs/decap/standalone-worker.md)
   (`R2StorageRepository` + Hono + Cloudflare Workers Assets)
 - **Inline wiring code** → sections 2a (Node) and 2c (Workers/R2) above have copy-paste-ready code
 
@@ -454,7 +452,7 @@ canonical starting points, use the in-repo quickstart guides directly:
 ```
 
 If your target isn't listed: pick the closest pattern and copy the wiring from sections 2a–2c above,
-or from the `quickstart-fs.md` / `standalone-worker.md` guides in `docs/guides/decap/`.
+or from the `quickstart-fs.md` / `standalone-worker.md` guides in `docs/decap/`.
 
 ---
 

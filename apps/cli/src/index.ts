@@ -1,6 +1,9 @@
 export { layerStorageServer } from './server.js';
 export type { LocalStorageServerOptions } from './server.js';
 
+export { buildLocalMcpServer, buildRemoteMcpServer, runMcpStdioServer } from './mcp.js';
+export type { LocalMcpServerOptions, RemoteMcpServerOptions } from './mcp.js';
+
 export { discoverConfig, generateConfig, loadConfig, serialize, writeGenerated } from './cms/decap-config.js';
 export type { SerializeOptions } from './cms/decap-config.js';
 export { decapAdapter } from './cms/decap.js';
@@ -29,8 +32,10 @@ export {
   makeCreateCommand,
   makeGenerateCommand,
   makeListBackendsCommand,
+  makeMcpCommand,
   makeMigrateCommand,
   makeServeCommand,
+  mcpCommand,
   migrateCommand,
   serveCommand,
 } from './commands.js';

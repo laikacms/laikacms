@@ -113,6 +113,26 @@ const STRUCTURED_DATA = {
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Theme, before anything paints, so the page never flashes the wrong one.
+         The storage key is VitePress's: the docs under /docs/ are the same
+         origin, so a reader who picks dark here stays in dark through the docs
+         and back. Unset means 'auto' — follow the OS — which is also what
+         VitePress does. -->
+    <script is:inline>
+      (() => {
+        let preference = 'auto';
+        try {
+          preference = localStorage.getItem('vitepress-theme-appearance') || 'auto';
+        } catch {
+          /* storage blocked (private mode, third-party cookie rules) — follow the OS */
+        }
+        const dark = preference === 'auto'
+          ? matchMedia('(prefers-color-scheme: dark)').matches
+          : preference === 'dark';
+        document.documentElement.classList.toggle('dark', dark);
+      })();
+    </script>
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
@@ -171,6 +191,46 @@ const STRUCTURED_DATA = {
       const onScroll = () => nav?.classList.toggle('is-scrolled', window.scrollY > 12);
       onScroll();
       window.addEventListener('scroll', onScroll, { passive: true });
+    </script>
+
+    <!-- The other half of the theme: the head script decided what to show, this
+         one lets the reader change it. Same key as the docs, so a switch here
+         and a switch in the VitePress sidebar are the same switch. -->
+    <script>
+      const KEY = 'vitepress-theme-appearance';
+      const root = document.documentElement;
+      const system = matchMedia('(prefers-color-scheme: dark)');
+
+      const preference = () => {
+        try {
+          return localStorage.getItem(KEY) || 'auto';
+        } catch {
+          return 'auto';
+        }
+      };
+      const apply = () => {
+        const pref = preference();
+        root.classList.toggle('dark', pref === 'auto' ? system.matches : pref === 'dark');
+      };
+
+      /* Nobody has chosen yet, so the OS is still in charge — follow it live. */
+      system.addEventListener('change', () => {
+        if (preference() === 'auto') apply();
+      });
+      /* Another tab — the docs, most likely — changed the shared preference. */
+      window.addEventListener('storage', event => {
+        if (event.key === KEY) apply();
+      });
+
+      document.getElementById('theme-toggle')?.addEventListener('click', () => {
+        const next = root.classList.contains('dark') ? 'light' : 'dark';
+        try {
+          localStorage.setItem(KEY, next);
+        } catch {
+          /* the choice won't outlive the page, but it still applies to it */
+        }
+        root.classList.toggle('dark', next === 'dark');
+      });
     </script>
   </body>
 </html>

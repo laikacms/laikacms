@@ -109,6 +109,25 @@ export const IconGlobe = ({ size = 17 }: { size?: number }) => (
   />
 );
 
+/* The theme toggle renders both glyphs and lets CSS pick one, so the header
+   stays hydration-free — see the toggle in Nav.tsx. */
+export const IconSun = ({ size = 17 }: { size?: number }) => (
+  <Icon
+    size={size}
+    stroke={1.7}
+    d={
+      <>
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2.5v2M12 19.5v2M4.4 4.4l1.4 1.4M18.2 18.2l1.4 1.4M2.5 12h2M19.5 12h2M4.4 19.6l1.4-1.4M18.2 5.8l1.4-1.4" />
+      </>
+    }
+  />
+);
+
+export const IconMoon = ({ size = 17 }: { size?: number }) => (
+  <Icon size={size} stroke={1.7} d={<path d="M20.5 14.2A8.6 8.6 0 0 1 9.8 3.5a8.8 8.8 0 1 0 10.7 10.7Z" />} />
+);
+
 export const IconCube = ({ size = 17 }: { size?: number }) => (
   <Icon
     size={size}
@@ -333,7 +352,7 @@ export const Logo = ({ height = 30 }: { height?: number }) => (
       className="font-display font-semibold tracking-[-0.02em] text-ink"
       style={{ fontSize: height * 0.7 }}
     >
-      Laika<span className="text-indigo">CMS</span>
+      Laika<span className="text-accent">CMS</span>
     </span>
   </span>
 );

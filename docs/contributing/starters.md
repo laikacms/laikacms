@@ -43,5 +43,5 @@ If you prefer to wire an app without the wizard, these building blocks are the r
 - A `StorageRepository` for your runtime — `laikacms/storage/fs` (Node), `laikacms/storage/r2`
   (Workers / R2), `laikacms/storage/drizzle`, `laikacms/storage/webdav`, etc.
 
-See [Getting Started](../guides/getting-started.md) and the
-[Decap integration guides](../guides/decap/) for detailed wiring instructions.
+See [the quickstarts](../getting-started/nodejs) and the [Decap section](../decap/) for detailed
+wiring instructions.

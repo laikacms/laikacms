@@ -14,7 +14,7 @@ export function Pledge({ eyebrow, heading, children }: PledgeProps) {
   return (
     <section className="border-t border-hairline py-28 max-[760px]:py-[76px]">
       <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px]">
-        <span className="font-mono text-[12.5px] tracking-[0.12em] uppercase text-indigo font-medium inline-flex items-center gap-[9px] whitespace-nowrap before:content-[''] before:w-[22px] before:h-[1.5px] before:bg-indigo before:inline-block">
+        <span className="font-mono text-[12.5px] tracking-[0.12em] uppercase text-accent font-medium inline-flex items-center gap-[9px] whitespace-nowrap before:content-[''] before:w-[22px] before:h-[1.5px] before:bg-accent before:inline-block">
           {eyebrow}
         </span>
         <h2 className="text-[clamp(32px,4.2vw,50px)] mt-5 max-w-[22ch] font-display font-semibold tracking-[-0.02em] leading-[1.05]">

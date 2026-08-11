@@ -1,32 +1,50 @@
 @import "tailwindcss";
 
+/* Dark mode is a class on <html>, not a media query: the preference is shared
+   with the VitePress docs under /docs/ (same origin), and VitePress writes an
+   explicit choice. See the theme script in Base.astro. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ─── design tokens (Tailwind v4 @theme) ─────────────────────────────────── */
+/* Every colour below is a *role*, not a shade, so the dark theme is a block of
+   token overrides (see `html.dark`) rather than a `dark:` variant on every
+   element. Two roles carry the brand and must stay separate: `indigo` is the
+   solid fill that always carries white text (buttons, badges, the active code
+   chip), `accent` is brand-coloured text/rules on a surface. On dark they
+   diverge — no single indigo can both hold white text and read as text against
+   a dark background. */
 @theme {
   /* brand — shades derive from indigo so the accent stays a single source */
   --color-indigo: #3F51B5;
-  --color-indigo-600: color-mix(in oklab, #3F51B5, black 12%);
-  --color-indigo-700: color-mix(in oklab, #3F51B5, black 24%);
-  --color-indigo-800: color-mix(in oklab, #3F51B5, black 40%);
+  --color-accent: var(--color-indigo);
+  --color-indigo-hover: color-mix(in oklab, #3F51B5, black 24%);
   --color-indigo-ink: color-mix(in oklab, #3F51B5, black 54%);
   --color-indigo-tint: color-mix(in oklab, #3F51B5, white 90%);
   --color-indigo-tint-2: color-mix(in oklab, #3F51B5, white 82%);
+  --color-indigo-tint-3: color-mix(in oklab, #3F51B5, white 60%);
 
   /* cool neutrals */
   --color-bg: #fbfbfd;
   --color-surface: #ffffff;
   --color-surface-2: #f5f6fa;
+  /* the bright icon well on a tinted card — invisible on white, it earns its
+     keep only on dark, where the card is no longer the lightest thing around */
+  --color-well: #ffffff;
   --color-ink: #16171d;
   --color-ink-2: #54586a;
   --color-ink-3: #888da0;
   --color-hairline: #e8e9f1;
   --color-hairline-2: #dcdee9;
 
-  /* dark code surface */
+  /* dark code surface — the one region that was always dark, in both themes */
   --color-code-bg: #1b1d2a;
   --color-code-bg-2: #23263a;
   --color-code-ink: #e7e9f5;
   --color-code-dim: #8a90b4;
   --color-code-line: #313554;
+  --color-code-line-2: #4a4f74;
+  --color-code-edge: #2c2f44;
+  --color-code-gutter: #474c70;
 
   /* syntax */
   --color-tk-key: #c3a6ff;
@@ -55,6 +73,64 @@
   --animate-swapflash: swapflash 0.6s ease-out;
 }
 
+/* ─── elevation ───────────────────────────────────────────────────────────── */
+/* A cast navy shadow on light, a real black one on dark. These are deliberately
+   *not* `@theme` tokens: Tailwind resolves a theme shadow at build time and
+   bakes the literal into the utility, so `html.dark` would have nothing left to
+   override. Declared as plain properties and read back through `var()`, they
+   stay live. */
+:root {
+  --shadow-btn: 0 1px 2px rgba(31, 38, 95, 0.18), 0 8px 22px -12px rgba(63, 81, 181, 0.55);
+  --shadow-lift: 0 14px 30px -18px rgba(31, 38, 95, 0.4);
+  --shadow-tile: 0 4px 14px -10px rgba(31, 38, 95, 0.4);
+  --shadow-panel: 0 2px 4px rgba(20, 23, 40, 0.2), 0 30px 60px -28px rgba(31, 38, 95, 0.5);
+}
+
+@utility shadow-btn { box-shadow: var(--shadow-btn); }
+@utility shadow-lift { box-shadow: var(--shadow-lift); }
+@utility shadow-tile { box-shadow: var(--shadow-tile); }
+@utility shadow-panel { box-shadow: var(--shadow-panel); }
+
+/* ─── dark theme ──────────────────────────────────────────────────────────── */
+/* Only the role tokens change; not one component knows the theme exists. The
+   neutrals are the code surface's own ramp, so the code panels — dark in both
+   themes — sit in the same family as everything around them instead of reading
+   as a hole in the page. Unlayered, so it wins over Tailwind's `theme` layer. */
+html.dark {
+  color-scheme: dark;
+
+  --color-bg: #14161f;
+  --color-surface: #1b1d2a;
+  --color-surface-2: #23263a;
+  --color-well: #23263a;
+  --color-ink: #e7e9f5;
+  --color-ink-2: #a9aecb;
+  --color-ink-3: #8a90b4;
+  --color-hairline: #262a41;
+  --color-hairline-2: #313554;
+
+  /* the fill stays put — white-on-indigo is 6.9:1 and needs no help — while
+     accent text lifts off the background (5.6:1 on the page, 5.2:1 on a card) */
+  --color-accent: color-mix(in oklab, var(--color-indigo), white 34%);
+  --color-indigo-hover: color-mix(in oklab, var(--color-indigo), white 14%);
+  --color-indigo-ink: color-mix(in oklab, var(--color-indigo), white 62%);
+
+  /* Tints are mixed toward the page, not toward white — a white-mixed tint on a
+     dark page is a light patch, not a tint. The page colour is repeated as a
+     literal rather than read from `--color-bg`: the build precomputes a plain
+     rgb() fallback for these mixes, and it resolves `var()` against `:root`,
+     which would hand a no-color-mix browser the *light* page colour and a pale
+     lavender card. Keep in step with `--color-bg` above. */
+  --color-indigo-tint: color-mix(in oklab, var(--color-indigo), #14161f 80%);
+  --color-indigo-tint-2: color-mix(in oklab, var(--color-indigo), #14161f 62%);
+  --color-indigo-tint-3: color-mix(in oklab, var(--color-indigo), #14161f 45%);
+
+  --shadow-btn: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 22px -12px rgba(63, 81, 181, 0.7);
+  --shadow-lift: 0 14px 30px -18px rgba(0, 0, 0, 0.75);
+  --shadow-tile: 0 4px 14px -10px rgba(0, 0, 0, 0.7);
+  --shadow-panel: 0 2px 4px rgba(0, 0, 0, 0.5), 0 30px 60px -28px rgba(0, 0, 0, 0.9);
+}
+
 @keyframes marquee {
   from { transform: translateX(0); }
   to { transform: translateX(-50%); }
@@ -75,7 +151,12 @@
 
 /* ─── base layer ──────────────────────────────────────────────────────────── */
 @layer base {
-  html { scroll-behavior: smooth; }
+  html {
+    scroll-behavior: smooth;
+    /* light by default; `html.dark` flips it, so form controls, scrollbars and
+       the canvas behind the page follow the theme the user picked */
+    color-scheme: light;
+  }
 
   body {
     margin: 0;
@@ -141,7 +222,7 @@
 }
 
 .prose a {
-  color: var(--color-indigo);
+  color: var(--color-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

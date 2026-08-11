@@ -44,6 +44,8 @@
   "dependencies": {
     "@effect/platform-node": "catalog:default",
     "@effect/platform-node-shared": "catalog:default",
+    "@laikacms/server": "workspace:*",
+    "@modelcontextprotocol/sdk": "catalog:default",
     "@standard-schema/spec": "catalog:schema",
     "bcryptjs": "catalog:",
     "effect": "catalog:default",

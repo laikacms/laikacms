@@ -412,7 +412,7 @@ Content-Type: application/vnd.api+json
 > `content` must always be an object — raw strings cannot be stored directly. To transport a raw
 > string, the convention is to wrap it as `{ "body": "<content>" }`; markdown with frontmatter
 > becomes `{ ...frontmatter, "body": "<markdown>" }`. See
-> [the `body` convention](../../concepts/content-model#the-body-convention).
+> [the `body` convention](../../concepts/storage#the-body-convention).
 
 | Field                     | Type       | Required | Description                               |
 | ------------------------- | ---------- | -------- | ----------------------------------------- |

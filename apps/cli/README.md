@@ -20,6 +20,7 @@ Then:
 ```sh
 laika create                      # wizard: starter, directory, title, CMS + its backends/widgets/locales
 laika local serve                 # start the local-file JSON:API storage server
+laika local mcp                   # the same content over MCP stdio, for Claude Code / Claude Desktop
 laika local generate              # config.yaml -> typed config.gen.ts (add --watch to keep it fresh)
 laika local migrate -s ./a -d ./b # copy a storage repository to another backend
 laika local list-backends         # show every registered storage backend
@@ -41,6 +42,7 @@ non-local commands.
 | --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
 | `create`              | Wizard that bootstraps a starter app and generates its `src/cms.ts` from your backend/widget/locale selection                              |
 | `local serve`         | Local-file JSON:API storage server for dev workflows (`--root`, `--port`, `--host`, `--default-extension` (default: `md`), `--auth-token`) |
+| `local mcp`           | MCP server over stdio for Claude Code / Claude Desktop (`--root`, `--default-extension`, or `--base-url` + `--auth-token` for a remote)    |
 | `local generate`      | Generate a typed TypeScript module from the CMS config file (`--input/-i`, `--output/-o`, `--watch/-w`, `--cms`)                           |
 | `local migrate`       | Copy every atom from one storage repository to another (fs, webdav, s3, github, gitlab, bitbucket, …); see flags below                     |
 | `local list-backends` | List every registered storage backend and its pinned package version                                                                       |
@@ -91,6 +93,42 @@ Adding one means writing a sibling of `src/cms/decap.ts` that implements `CmsAda
 (`src/cms/types.ts`) and listing it in `src/cms/registry.ts`; nothing outside that folder knows what
 a Decap import looks like. Note that a CMS **backend** (a content source the admin UI talks to) is a
 different axis from a **storage backend** (`local migrate`, `local list-backends`).
+
+### `local mcp` — MCP server over stdio
+
+Exposes Laika CMS content to MCP clients (Claude Code, Claude Desktop, …) through two generic tools:
+`api_request` (an authenticated "curl" into the JSON:API) and `read_api_spec` (the OpenAPI contract,
+served as an index and sliced on demand so the model discovers endpoints instead of guessing). By
+default it wraps the same local-file JSON:API `local serve` exposes — dispatched in-process, no
+port; with `--base-url` it proxies a remote Laika CMS deployment instead.
+
+```sh
+laika local mcp --root ./content            # local files, in-process
+laika local mcp --base-url https://cms.example.com/api --auth-token $TOKEN
+```
+
+Claude Code registration:
+
+```sh
+claude mcp add laika -- npx laikacli local mcp --root ./content
+```
+
+or in a Claude Desktop / `.mcp.json` config:
+
+```json
+{
+  "mcpServers": {
+    "laika": { "command": "npx", "args": ["laikacli", "local", "mcp", "--root", "./content"] }
+  }
+}
+```
+
+| Flag                  | Alias | Description                                                             |
+| --------------------- | ----- | ----------------------------------------------------------------------- |
+| `--root`              | `-r`  | Root directory served by the storage repo (default: cwd)                |
+| `--default-extension` | —     | Default file extension for new objects (default: `md`)                  |
+| `--base-url`          | —     | Proxy `api_request` calls to a remote Laika CMS JSON:API at this URL    |
+| `--auth-token`        | —     | Bearer token sent to the remote API (only meaningful with `--base-url`) |
 
 ### `local generate` — config codegen
 

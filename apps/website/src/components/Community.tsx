@@ -17,12 +17,12 @@ export function Card({ icon, title, blurb, href }: CardProps) {
   const Glyph = ICONS[icon];
   return (
     <a
-      className="flex gap-3.5 items-start p-[22px] border border-hairline rounded-[14px] bg-surface transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-[3px] hover:border-hairline-2 hover:shadow-[0_14px_30px_-18px_rgba(31,38,95,0.4)]"
+      className="flex gap-3.5 items-start p-[22px] border border-hairline rounded-[14px] bg-surface transition-[transform,box-shadow,border-color] duration-150 hover:-translate-y-[3px] hover:border-hairline-2 hover:shadow-lift"
       href={href}
       target="_blank"
       rel="noreferrer"
     >
-      <span className="text-indigo flex-none mt-0.5">
+      <span className="text-accent flex-none mt-0.5">
         <Glyph size={18} />
       </span>
       <span className="flex flex-col gap-[5px]">
@@ -50,7 +50,7 @@ export function Community({ eyebrow, heading, involveHeading, children }: Commun
   return (
     <section className="py-28 max-[760px]:py-[76px] relative">
       <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px]">
-        <span className="font-mono text-[12.5px] tracking-[0.12em] uppercase text-indigo font-medium inline-flex items-center gap-[9px] whitespace-nowrap before:content-[''] before:w-[22px] before:h-[1.5px] before:bg-indigo before:inline-block">
+        <span className="font-mono text-[12.5px] tracking-[0.12em] uppercase text-accent font-medium inline-flex items-center gap-[9px] whitespace-nowrap before:content-[''] before:w-[22px] before:h-[1.5px] before:bg-accent before:inline-block">
           {eyebrow}
         </span>
         <h2 className="text-[clamp(32px,4.2vw,50px)] mt-5 max-w-[18ch] font-display font-semibold tracking-[-0.02em] leading-[1.05]">

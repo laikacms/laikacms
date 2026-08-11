@@ -7,10 +7,15 @@ import { IconArrow, IconGitHub, IconGlobe } from './icons';
 const TAG_DOT_SHADOW = 'shadow-[0_0_0_3px_color-mix(in_oklab,oklch(0.7_0.17_150),transparent_78%)]';
 
 const BTN_PRIMARY =
-  'font-body font-medium text-[15.5px] rounded-[10px] py-[13px] px-[22px] inline-flex items-center gap-[9px] cursor-pointer border border-transparent whitespace-nowrap bg-indigo text-white shadow-[0_1px_2px_rgba(31,38,95,0.18),0_8px_22px_-12px_rgba(63,81,181,0.55)] transition-[background,color,border-color,transform,box-shadow] duration-150 hover:bg-indigo-700 active:translate-y-px';
+  'font-body font-medium text-[15.5px] rounded-[10px] py-[13px] px-[22px] inline-flex items-center gap-[9px] cursor-pointer border border-transparent whitespace-nowrap bg-indigo text-white shadow-btn transition-[background,color,border-color,transform,box-shadow] duration-150 hover:bg-indigo-hover active:translate-y-px';
 
 const BTN_GHOST =
   'font-body font-medium text-[15.5px] rounded-[10px] py-[13px] px-[22px] inline-flex items-center gap-[9px] cursor-pointer whitespace-nowrap bg-surface text-ink border border-hairline-2 transition-[background,color,border-color,transform,box-shadow] duration-150 hover:border-ink-3 hover:bg-surface-2 active:translate-y-px';
+
+/* The dog behind the code panel is a pale disc: at 55% it reads as a wash on
+   white, and as a spotlight on dark — hence the pull-back. */
+const MOTIF =
+  'absolute w-[128%] h-[128%] max-w-none top-1/2 left-[64%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-55 dark:opacity-25 z-0 pointer-events-none';
 
 /* The marquee is decorative: every backend twice so the loop is seamless. */
 const marquee = [...LAIKA_GROUPS.flatMap(g => g.items), ...CATALOGUE_SERIALIZERS.items];
@@ -93,7 +98,7 @@ export function Hero({
 
         <div className="relative min-w-0 max-[940px]:order-2">
           <img
-            className="absolute w-[128%] h-[128%] max-w-none top-1/2 left-[64%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-55 z-0 pointer-events-none"
+            className={MOTIF}
             src="/assets/laika-dog-mid.png"
             alt=""
             aria-hidden="true"
@@ -108,7 +113,7 @@ export function Hero({
             {loop.map((b, i) => (
               <span
                 key={`${b.name}-${i}`}
-                className="w-[50px] h-[50px] rounded-[13px] grid place-items-center bg-surface border border-hairline-2 shadow-[0_4px_14px_-10px_rgba(31,38,95,0.4)] flex-none"
+                className="w-[50px] h-[50px] rounded-[13px] grid place-items-center bg-surface border border-hairline-2 shadow-tile flex-none"
                 title={b.name}
               >
                 <BackendIcon icon={b.icon} size={26} />

@@ -57,7 +57,7 @@ export function Backends() {
 
       <p className="mt-2 text-[13px] text-ink-3 font-mono">
         {FOOTNOTE.text}{' '}
-        <a className="text-indigo" href={FOOTNOTE.href} target="_blank" rel="noreferrer">
+        <a className="text-accent" href={FOOTNOTE.href} target="_blank" rel="noreferrer">
           {FOOTNOTE.linkLabel}
         </a>
       </p>

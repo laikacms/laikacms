@@ -3,79 +3,55 @@ layout: home
 
 hero:
   name: Laika CMS
-  text: Composable, runtime-agnostic content management.
-  tagline: Modular packages for storage, documents, and assets — bring your own UI, run anywhere JavaScript runs.
+  text: The content API you self-host.
+  tagline: Git, S3, SQL, or Obsidian as the backend. Decap CMS as the editor. Runs anywhere fetch runs. MIT, forever.
   actions:
     - theme: brand
       text: Get Started
-      link: /guides/getting-started
+      link: /getting-started/vite
     - theme: alt
-      text: Concepts
-      link: /concepts/
+      text: What is Laika?
+      link: /concepts/motivation
     - theme: alt
-      text: View on GitHub
-      link: https://github.com/laikacms/laikacms
-
-features:
-  - title: Modular by Design
-    details: Pick only the packages you need — storage, documents, assets, auth, crypto, sanitizer, i18n.
-  - title: Runtime Agnostic
-    details: Works on Node.js, Cloudflare Workers, AWS Lambda, Deno, and anywhere modern JavaScript runs.
-  - title: Minimal Dependencies
-    details: Extremely slim bundles so your edge and serverless deployments stay fast.
-  - title: Standard Schema Compatible
-    details: Use Zod, Valibot, ArkType, or any Standard Schema validator interchangeably.
-  - title: Security First
-    details: Quantum-safe cryptography, file sanitization, and built-in defaults to harden production.
-  - title: API-First
-    details: JSON:API endpoints out of the box — pair with Decap CMS or any frontend you already use.
+      text: Backends
+      link: /backends/github
 ---
 
-## Quick Links
+## Content where you already keep it
 
-**Guides**
+```ts
+import { GithubStorageRepository } from '@laikacms/github/storage-gh';
+import { runTask } from 'laikacms/compat';
 
-- [Getting Started](./guides/getting-started) — Installation and basic usage
-- [Decap CMS Integration](./guides/decap/) — Using Decap CMS as a frontend
-- [Deployment](./guides/deployment) — Production deployment guides
-- [Security](./guides/security) — Security best practices
+const repo = new GithubStorageRepository({
+  owner: 'acme',
+  repo: 'content',
+  branch: 'main',
+  ...auth,
+});
 
-**Concepts**
-
-- [Architecture](./concepts/architecture) — How Laika CMS is structured
-- [Repositories](./concepts/repositories) — The repository pattern and its implementations
-- [Content Model](./concepts/content-model) — Atoms, folders, the `body` convention, change tracking
-
-**Reference**
-
-- [JSON:API Reference](./reference/json-api/) — Complete API documentation
-- [Packages](./reference/packages) — Overview of all packages
-- [Glossary](./reference/glossary) — Shared vocabulary (protocol, repository, adapter, version, sync
-  token, change feed)
-
-**Contributing**
-
-- [Contributing](./contributing/) — starter templates and the contribution workflow
-
-## Architecture Overview
-
-```mermaid
-flowchart TD
-  api["API Layer<br/><small>storage-api, documents-api, assets-api, catalog-api</small>"]
-  domain["Domain Layer<br/><small>storage, documents, assets, catalog</small>"]
-  implementation["Implementation Layer<br/><small>storage-r2, storage-fs, documents-drizzle, assets-r2</small>"]
-  shared["Shared Layer<br/><small>core, auth, crypto, sanitizer, i18n, json-api</small>"]
-
-  api --> domain --> implementation --> shared
+const post = await runTask(repo.getObject('posts/hello-world'));
+// swap GitHub for S3, SQL, R2, WebDAV, or your own disk — one constructor, nothing else changes
 ```
 
-## Getting Help
+Every backend implements the same small contracts, the [JSON:API](./reference/json-api/) exposes
+them over plain `fetch`, and [Decap CMS](./decap/) edits through it. Your content shape stays yours
+— the protocol never interprets it.
 
-- **GitHub Issues** — For bugs and feature requests
-- **GitHub Discussions** — For questions and discussions
-- **Contributing** — See
-  [CONTRIBUTING.md](https://github.com/laikacms/laikacms/blob/develop/CONTRIBUTING.md)
+## Three doors
 
-## License
+- **[Quickstarts](./getting-started/vite)** — Vite, Next.js, Node.js, Cloudflare Workers, Vercel.
+  Each ends with a working editor and a page serving the content. Or try the
+  [in-browser starter](./getting-started/starters) — no install at all.
+- **[Concepts](./concepts/motivation)** — what LaikaCMS is, the four protocols, and why everything
+  is a repository.
+- **[Backends](./backends/github)** — GitHub, GitLab, Bitbucket, S3, R2, DynamoDB, SQL, filesystem,
+  the browser, WebDAV, Obsidian, or another LaikaCMS server.
 
-Laika CMS is [MIT licensed](https://github.com/laikacms/laikacms/blob/develop/LICENSE).
+## Getting help
+
+- [GitHub Issues](https://github.com/laikacms/laikacms/issues) — bugs and feature requests
+- [GitHub Discussions](https://github.com/laikacms/laikacms/discussions) — questions and ideas
+- [Contributing](./contributing/) — LaikaCMS is
+  [MIT licensed](https://github.com/laikacms/laikacms/blob/develop/LICENSE), no open-core, no hosted
+  tier

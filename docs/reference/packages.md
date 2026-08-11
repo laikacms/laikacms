@@ -148,7 +148,7 @@ The scoped single-package fork of Decap CMS v4. It is a **required peer dependen
 `@laikacms/server`** — the admin bundle esbuild step resolves its subpaths at build time, so without
 it the build fails with unresolved `@laikacms/decap-cms/…` errors.
 
-See [The `@laikacms/decap-cms` fork](../guides/decap/fork) for the full package reference.
+See [Decap CMS → Overview](../decap/) for the full package reference.
 
 ### Install
 

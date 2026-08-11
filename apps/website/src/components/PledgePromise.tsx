@@ -18,7 +18,7 @@ export function PledgePromise({ icon, title, children }: PledgePromiseProps) {
 
   return (
     <div className="px-[26px] py-[28px] border rounded-[14px] bg-surface border-hairline">
-      <span className="inline-grid place-items-center w-11 h-11 rounded-[11px] text-indigo border border-indigo-tint-2 bg-surface">
+      <span className="inline-grid place-items-center w-11 h-11 rounded-[11px] text-accent border border-indigo-tint-2 bg-surface">
         <Glyph size={19} />
       </span>
       <h3 className="text-[20px] mt-[18px] font-display font-semibold tracking-[-0.02em] leading-[1.05]">

@@ -61,6 +61,11 @@
       "types": "./dist/embedded/index.d.ts",
       "import": "./dist/embedded/index.js",
       "default": "./dist/embedded/index.js"
+    },
+    "./mcp": {
+      "types": "./dist/mcp/index.d.ts",
+      "import": "./dist/mcp/index.js",
+      "default": "./dist/mcp/index.js"
     }
   },
   "scripts": {
@@ -73,7 +78,10 @@
     "prepack": "node ../../scripts/check-no-pnpm-catalog-deps.mjs"
   },
   "dependencies": {
+    "@hono/mcp": "catalog:server",
+    "@modelcontextprotocol/sdk": "catalog:default",
     "effect": "catalog:default",
+    "hono": "catalog:server",
     "laikacms": "workspace:*"
   },
   "devDependencies": {

@@ -20,12 +20,12 @@ export interface CodePanelProps {
 }
 
 const CHIP_BASE =
-  'font-mono text-xs text-code-dim bg-transparent border border-code-line rounded-[7px] py-[5px] px-[11px] cursor-pointer transition-[color,border-color,background] duration-150 hover:text-code-ink hover:border-[#4a4f74]';
+  'font-mono text-xs text-code-dim bg-transparent border border-code-line rounded-[7px] py-[5px] px-[11px] cursor-pointer transition-[color,border-color,background] duration-150 hover:text-code-ink hover:border-code-line-2';
 const CHIP_ACTIVE =
   ' text-white bg-indigo border-[color-mix(in_oklab,var(--color-indigo),white_18%)] hover:text-white hover:border-[color-mix(in_oklab,var(--color-indigo),white_18%)]';
 
 const COPY_BTN =
-  'inline-flex items-center gap-1.5 bg-transparent border border-code-line text-code-dim py-[5px] px-2.5 rounded-[7px] text-xs cursor-pointer transition-[color,border-color] duration-150 hover:text-code-ink hover:border-[#4a4f74]';
+  'inline-flex items-center gap-1.5 bg-transparent border border-code-line text-code-dim py-[5px] px-2.5 rounded-[7px] text-xs cursor-pointer transition-[color,border-color] duration-150 hover:text-code-ink hover:border-code-line-2';
 
 const LINE = 'flex gap-4 whitespace-pre rounded-[5px] px-1.5 -mx-1.5';
 
@@ -52,7 +52,7 @@ export default { fetch: api.fetch };`;
   const lines = code.split('\n');
 
   return (
-    <div className="relative z-[1] bg-code-bg rounded-[14px] border border-[#2c2f44] shadow-[0_2px_4px_rgba(20,23,40,0.2),0_30px_60px_-28px_rgba(31,38,95,0.5)] overflow-hidden text-[13.5px]">
+    <div className="relative z-[1] bg-code-bg rounded-[14px] border border-code-edge shadow-panel overflow-hidden text-[13.5px]">
       {/* title bar */}
       <div className="flex items-center gap-3 px-3.5 py-3 border-b border-code-line bg-[color-mix(in_oklab,var(--color-code-bg),white_3%)]">
         <span className="inline-flex gap-[7px]">
@@ -99,7 +99,7 @@ export default { fetch: api.fetch };`;
                   : '')
               }
             >
-              <span className="text-[#474c70] select-none text-right w-[18px] flex-none">
+              <span className="text-code-gutter select-none text-right w-[18px] flex-none">
                 {i + 1}
               </span>
               <span className="text-code-ink">{ln ? hl(ln) : ' '}</span>
@@ -116,7 +116,7 @@ export function CodeBlock({ code, file }: { code: string, file: string }) {
   const [copied, copy] = useCopy();
   const lines = code.split('\n');
   return (
-    <div className="bg-code-bg rounded-[14px] border border-[#2c2f44] shadow-[0_2px_4px_rgba(20,23,40,0.2),0_30px_60px_-28px_rgba(31,38,95,0.5)] overflow-hidden text-[13.5px]">
+    <div className="bg-code-bg rounded-[14px] border border-code-edge shadow-panel overflow-hidden text-[13.5px]">
       <div className="flex items-center gap-3 px-3.5 py-3 border-b border-code-line bg-[color-mix(in_oklab,var(--color-code-bg),white_3%)]">
         <span className="inline-flex gap-[7px]">
           <i className="w-[11px] h-[11px] rounded-full block bg-[#e06c63]" />
@@ -132,7 +132,7 @@ export function CodeBlock({ code, file }: { code: string, file: string }) {
       <pre className="m-0 px-4 pt-[18px] pb-5 overflow-x-auto leading-[1.62] font-mono">
         {lines.map((ln, i) => (
           <div key={i} className={LINE}>
-            <span className="text-[#474c70] select-none text-right w-[18px] flex-none">{i + 1}</span>
+            <span className="text-code-gutter select-none text-right w-[18px] flex-none">{i + 1}</span>
             <span className="text-code-ink">{ln ? hl(ln) : ' '}</span>
           </div>
         ))}

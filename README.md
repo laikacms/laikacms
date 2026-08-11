@@ -45,7 +45,7 @@ export default { fetch: api.fetch };
 > `true`/`false`/a `LaikaError`. `allowAll` above is the explicit opt-out for a surface you know is
 > unreachable by untrusted callers. `authorize` decides _what_ a caller may do — it does not
 > authenticate them; use `laikaApi` for built-in Bearer auth. See
-> [Getting Started](./docs/guides/getting-started.md) for both.
+> [Getting Started](./docs/getting-started/nodejs.md) for both.
 
 ## Cloudflare Workers
 
@@ -81,11 +81,11 @@ including the packages that now live in separate repositories.
 
 - **[LLM-GUIDE.md](./LLM-GUIDE.md) — start here if you're an LLM/agent or want the 5-minute
   version**
-- [Getting Started](./docs/guides/getting-started.md)
+- [Getting Started](./docs/getting-started/nodejs.md)
 - [Architecture](./docs/concepts/architecture.md)
 - [API Reference](./docs/reference/json-api/index.md)
-- [Decap Integration](./docs/guides/decap/index.md)
-- [Deployment](./docs/guides/deployment.md)
+- [Decap Integration](./docs/decap/index.md)
+- [Deployment](./docs/getting-started/deploy.md)
 - [Packages](./docs/reference/packages.md)
 
 ## Contributing

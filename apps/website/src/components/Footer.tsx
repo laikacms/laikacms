@@ -34,7 +34,7 @@ export function Footer({ tagline, legal, columns }: FooterProps) {
               {column.links.map(link => (
                 <a
                   key={link.href}
-                  className="text-sm text-ink-2 transition-colors duration-150 hover:text-indigo"
+                  className="text-sm text-ink-2 transition-colors duration-150 hover:text-accent"
                   href={link.href}
                   target={link.href.startsWith('http') ? '_blank' : undefined}
                   rel={link.href.startsWith('http') ? 'noreferrer' : undefined}

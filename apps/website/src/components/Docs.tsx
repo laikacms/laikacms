@@ -49,7 +49,7 @@ export function Docs({ copy, starter }: DocsProps) {
   return (
     <section className="py-28 max-[760px]:py-[76px] relative">
       <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px]">
-        <span className="font-mono text-[12.5px] tracking-[0.12em] uppercase text-indigo font-medium inline-flex items-center gap-[9px] whitespace-nowrap before:content-[''] before:w-[22px] before:h-[1.5px] before:bg-indigo before:inline-block">
+        <span className="font-mono text-[12.5px] tracking-[0.12em] uppercase text-accent font-medium inline-flex items-center gap-[9px] whitespace-nowrap before:content-[''] before:w-[22px] before:h-[1.5px] before:bg-accent before:inline-block">
           {EYEBROW}
         </span>
         <h2 className="text-[clamp(32px,4.2vw,50px)] mt-5 max-w-[18ch] font-display font-semibold tracking-[-0.02em] leading-[1.05]">
@@ -83,7 +83,7 @@ export function Docs({ copy, starter }: DocsProps) {
                   {link.title}
                 </span>
                 <span className="text-[13px] text-ink-2">{link.blurb}</span>
-                <span className="absolute right-[22px] top-1/2 -translate-y-1/2 text-ink-3 transition-[color,transform] duration-150 group-hover:text-indigo group-hover:translate-x-[2px] group-hover:-translate-y-1/2">
+                <span className="absolute right-[22px] top-1/2 -translate-y-1/2 text-ink-3 transition-[color,transform] duration-150 group-hover:text-accent group-hover:translate-x-[2px] group-hover:-translate-y-1/2">
                   <IconArrowUpRight size={16} />
                 </span>
               </a>

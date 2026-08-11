@@ -1,7 +1,8 @@
 # Contributing
 
 Notes for people working _on_ LaikaCMS rather than _with_ it. If you're building an app that uses
-LaikaCMS, see the [Guides](../guides/) instead — this section is for changes to this repo.
+LaikaCMS, see the [quickstarts](../getting-started/vite) instead — this section is for changes to
+this repo.
 
 ## Orientation
 

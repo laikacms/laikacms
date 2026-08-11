@@ -8,6 +8,7 @@ import {
   makeCreateCommand,
   makeGenerateCommand,
   makeListBackendsCommand,
+  makeMcpCommand,
   makeMigrateCommand,
   makeServeCommand,
 } from './commands.js';
@@ -23,6 +24,7 @@ const localCommand = Command.make('local').pipe(
   ),
   Command.withSubcommands([
     makeServeCommand('serve', 'laika local'),
+    makeMcpCommand('mcp', 'laika local'),
     makeGenerateCommand('generate', 'laika local'),
     makeMigrateCommand('migrate', 'laika local'),
     makeListBackendsCommand(),

@@ -16,7 +16,8 @@ const packageSidebarItems = existsSync(packageSidebarFile)
 
 export default defineConfig({
   title: 'Laika CMS',
-  description: 'Modular, runtime-agnostic content management software for your own custom or existing UIs.',
+  description:
+    'The self-hosted content API: Git, S3, SQL, or Obsidian as the backend, Decap CMS as the editor, running anywhere fetch runs.',
   // Served at laikacms.com/docs/ alongside the marketing site (see the
   // laika-cloud repo, ADR-0028). `pnpm build:site` at the workspace root
   // assembles apps/website/dist + this dist into one Cloudflare Pages deploy.
@@ -28,55 +29,130 @@ export default defineConfig({
   ignoreDeadLinks: [/\/apps\//],
   themeConfig: {
     nav: [
-      { text: 'Guides', link: '/guides/getting-started', activeMatch: '/guides/' },
-      { text: 'Concepts', link: '/concepts/', activeMatch: '/concepts/' },
+      { text: 'Get Started', link: '/getting-started/vite', activeMatch: '/getting-started/' },
+      { text: 'Concepts', link: '/concepts/motivation', activeMatch: '/concepts/' },
+      { text: 'Decap CMS', link: '/decap/', activeMatch: '/decap/' },
       { text: 'Reference', link: '/reference/json-api/', activeMatch: '/reference/' },
-      { text: 'Contributing', link: '/contributing/', activeMatch: '/contributing/' },
     ],
     sidebar: [
       {
-        text: 'Guides',
+        text: 'Getting Started',
         items: [
-          { text: 'Overview', link: '/guides/' },
-          { text: 'Getting Started', link: '/guides/getting-started' },
-          { text: 'Deployment', link: '/guides/deployment' },
-          { text: 'Security', link: '/guides/security' },
-          {
-            text: 'Advanced',
-            collapsed: true,
-            items: [
-              { text: 'Raw Storage API (buildJsonApi)', link: '/guides/advanced/raw-storage-api' },
-            ],
-          },
-          {
-            text: 'Decap CMS',
-            collapsed: false,
-            items: [
-              { text: 'Overview', link: '/guides/decap/' },
-              { text: 'The decap-cms Fork', link: '/guides/decap/fork' },
-              { text: 'Quickstart: FileSystem + Decap', link: '/guides/decap/quickstart-fs' },
-              { text: 'Standalone Worker', link: '/guides/decap/standalone-worker' },
-              { text: 'Serving the Admin Shell', link: '/guides/decap/admin-shell' },
-              { text: 'Authentication', link: '/guides/decap/auth' },
-              { text: 'Widgets & Editor Components', link: '/guides/decap/widgets-and-editors' },
-              { text: 'Framework Setup Notes', link: '/guides/decap/frameworks' },
-            ],
-          },
+          { text: 'Quickstart: Vite', link: '/getting-started/vite' },
+          { text: 'Quickstart: Next.js', link: '/getting-started/nextjs' },
+          { text: 'Quickstart: Node.js', link: '/getting-started/nodejs' },
+          { text: 'Quickstart: Cloudflare Workers', link: '/getting-started/cloudflare-workers' },
+          { text: 'Quickstart: Vercel', link: '/getting-started/vercel' },
+          { text: 'Starters', link: '/getting-started/starters' },
+          { text: 'Deploy to Production', link: '/getting-started/deploy' },
+        ],
+      },
+      {
+        text: 'Decap CMS',
+        items: [
+          { text: 'Overview', link: '/decap/' },
+          { text: 'Configuration', link: '/decap/configuration' },
+          { text: 'Authentication', link: '/decap/auth' },
+          { text: 'Serving the Admin Shell', link: '/decap/admin-shell' },
+          { text: 'Widgets & Editor Components', link: '/decap/widgets-and-editors' },
+          { text: 'Standalone Worker', link: '/decap/standalone-worker' },
         ],
       },
       {
         text: 'Concepts',
         items: [
-          { text: 'Overview', link: '/concepts/' },
+          { text: 'Motivation', link: '/concepts/motivation' },
           { text: 'Architecture', link: '/concepts/architecture' },
-          { text: 'Repositories', link: '/concepts/repositories' },
-          { text: 'Content Model', link: '/concepts/content-model' },
+          {
+            text: 'Protocols',
+            items: [
+              { text: 'Storage', link: '/concepts/storage' },
+              { text: 'Documents', link: '/concepts/documents' },
+              { text: 'Assets', link: '/concepts/assets' },
+              { text: 'Catalog', link: '/concepts/catalog' },
+            ],
+          },
+          { text: 'Transports', link: '/concepts/transports' },
+        ],
+      },
+      {
+        text: 'Backends',
+        collapsed: false,
+        items: [
+          {
+            text: 'Git hosts',
+            items: [
+              { text: 'GitHub', link: '/backends/github' },
+              { text: 'GitLab', link: '/backends/gitlab' },
+              { text: 'Bitbucket', link: '/backends/bitbucket' },
+            ],
+          },
+          {
+            text: 'Object storage',
+            items: [
+              { text: 'S3 (and compatibles)', link: '/backends/s3' },
+              { text: 'Cloudflare R2', link: '/backends/r2' },
+            ],
+          },
+          {
+            text: 'Databases',
+            items: [
+              { text: 'SQL (Drizzle)', link: '/backends/sql' },
+              { text: 'DynamoDB', link: '/backends/dynamodb' },
+            ],
+          },
+          {
+            text: 'Filesystem & browser',
+            items: [
+              { text: 'FileSystem', link: '/backends/fs' },
+              { text: 'Browser FS (OPFS)', link: '/backends/opfs' },
+              { text: 'Web Storage', link: '/backends/web' },
+            ],
+          },
+          {
+            text: 'Other',
+            items: [
+              { text: 'WebDAV', link: '/backends/webdav' },
+              { text: 'Obsidian', link: '/backends/obsidian' },
+              { text: 'JSON:API Proxy', link: '/backends/jsonapi-proxy' },
+              { text: 'GitHub CDN', link: '/backends/github-cdn' },
+            ],
+          },
+        ],
+      },
+      {
+        text: 'Serializers',
+        collapsed: true,
+        items: [
+          { text: 'Overview', link: '/serializers/' },
+          { text: 'JSON', link: '/serializers/json' },
+          { text: 'Markdown', link: '/serializers/markdown' },
+          { text: 'YAML', link: '/serializers/yaml' },
+          { text: 'Raw', link: '/serializers/raw' },
+          { text: 'Write Your Own', link: '/serializers/custom' },
+        ],
+      },
+      {
+        text: 'Middleware',
+        items: [
+          { text: 'API', link: '/middleware/api' },
+          { text: 'OAuth2', link: '/middleware/oauth2' },
+        ],
+      },
+      {
+        text: 'CLI',
+        collapsed: true,
+        items: [
+          { text: 'Overview', link: '/cli/' },
+          { text: 'create', link: '/cli/create' },
+          { text: 'local serve', link: '/cli/serve' },
+          { text: 'local generate', link: '/cli/generate' },
+          { text: 'local migrate', link: '/cli/migrate' },
         ],
       },
       {
         text: 'Reference',
         items: [
-          { text: 'Overview', link: '/reference/' },
           {
             text: 'JSON:API',
             collapsed: false,

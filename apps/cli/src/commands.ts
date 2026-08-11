@@ -9,6 +9,7 @@ import { cmsAdapters, DEFAULT_CMS_ADAPTER, findCmsAdapter } from './cms/registry
 import type { CmsAdapter, CmsConfigCodegen, CmsSelection } from './cms/types.js';
 import { storageDrivers } from './drivers/registry.js';
 import type { MigrateConfig } from './drivers/types.js';
+import { buildLocalMcpServer, buildRemoteMcpServer, runMcpStdioServer } from './mcp.js';
 import { loadMigrateConfig, runMigrate } from './migrate-runner.js';
 import type { MigrateEvent } from './migrate.js';
 import { layerStorageServer } from './server.js';
@@ -328,6 +329,71 @@ export const makeServeCommand = (name = 'serve', binName = 'laika local') =>
   );
 
 export const serveCommand = makeServeCommand();
+
+// ---------------------------------------------------------------------------
+// `mcp` subcommand — the same content over MCP stdio instead of HTTP: an MCP
+// server (for Claude Code / Claude Desktop) wrapping either the local-file
+// JSON:API in-process, or a remote Laika CMS deployment via --base-url.
+// ---------------------------------------------------------------------------
+
+const mcpBaseUrl = Flag.string('base-url').pipe(
+  Flag.withDescription(
+    'Proxy api_request calls to a remote Laika CMS JSON:API at this URL instead of serving local files',
+  ),
+  Flag.optional,
+);
+
+const mcpAuthToken = Flag.string('auth-token').pipe(
+  Flag.withDescription(`Bearer token sent to the remote API (only meaningful with --base-url)`),
+  Flag.optional,
+);
+
+/**
+ * The stdio MCP server command. Like `makeServeCommand`, the name and bin
+ * label are parameterised so embedders can mount it under their own spelling
+ * (the `laika` CLI uses `laika local mcp`).
+ */
+export const makeMcpCommand = (name = 'mcp', binName = 'laika local') =>
+  Command.make(
+    name,
+    { root, defaultExtension, baseUrl: mcpBaseUrl, authToken: mcpAuthToken },
+    ({ root, defaultExtension, baseUrl, authToken }) =>
+      Effect.gen(function*() {
+        // stdout carries the MCP JSON-RPC stream, so every diagnostic —
+        // including these startup notices — must go to stderr.
+        let server;
+        if (baseUrl._tag === 'Some') {
+          server = yield* Effect.try({
+            try: () =>
+              buildRemoteMcpServer({
+                baseUrl: baseUrl._tag === 'Some' ? baseUrl.value : '',
+                authToken: authToken._tag === 'Some' ? authToken.value : undefined,
+              }),
+            catch: () => new Error(`${binName} mcp: --base-url must be an absolute URL`),
+          });
+          yield* Effect.sync(() => process.stderr.write(`${binName} mcp: proxying ${baseUrl.value} over stdio\n`));
+        } else {
+          const abs = path.resolve(root);
+          server = buildLocalMcpServer({ root: abs, defaultExtension });
+          yield* Effect.sync(() => process.stderr.write(`${binName} mcp: serving ${abs} over stdio\n`));
+        }
+        // Block until the client disconnects; interruption (SIGINT) aborts the
+        // signal, which closes the server cleanly.
+        yield* Effect.callback<void, Error>((resume, signal) => {
+          runMcpStdioServer(server, signal).then(
+            () => resume(Effect.void),
+            (error: unknown) => resume(Effect.fail(error instanceof Error ? error : new Error(String(error)))),
+          );
+        });
+      }),
+  ).pipe(
+    Command.withDescription(
+      'Start an MCP (Model Context Protocol) server over stdio, exposing the local-file JSON:API '
+        + '(or a remote Laika CMS via --base-url) to MCP clients like Claude Code.',
+    ),
+  );
+
+export const mcpCommand = makeMcpCommand();
 
 // ---------------------------------------------------------------------------
 // `generate` subcommand — codegen typed TS from the CMS's config file.

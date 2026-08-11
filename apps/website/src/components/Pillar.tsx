@@ -37,14 +37,14 @@ export function Pillar({ icon, title, badge, children }: PillarProps) {
   const Glyph = ICONS[icon];
 
   const card = badge
-    ? 'relative px-[26px] py-[28px] border rounded-[14px] bg-indigo-tint border-[color-mix(in_oklab,var(--color-indigo),white_60%)]'
+    ? 'relative px-[26px] py-[28px] border rounded-[14px] bg-indigo-tint border-indigo-tint-3'
     : 'relative px-[26px] py-[28px] border rounded-[14px] bg-surface border-hairline';
 
   return (
     <div className={card}>
       <span
-        className={'inline-grid place-items-center w-11 h-11 rounded-[11px] text-indigo border border-indigo-tint-2 '
-          + (badge ? 'bg-white' : 'bg-surface')}
+        className={'inline-grid place-items-center w-11 h-11 rounded-[11px] text-accent border border-indigo-tint-2 '
+          + (badge ? 'bg-well' : 'bg-surface')}
       >
         <Glyph size={20} />
       </span>
