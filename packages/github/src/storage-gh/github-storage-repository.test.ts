@@ -1,4 +1,12 @@
-import { ForbiddenError, LaikaTask, TooManyRequestsError } from 'laikacms/core';
+import {
+  AuthenticationError,
+  AuthorizationError,
+  ForbiddenError,
+  InternalError,
+  LaikaTask,
+  TooManyRequestsError,
+  VersionMismatchError,
+} from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
 import { describe, expect, it } from 'vitest';
 
@@ -101,5 +109,77 @@ describe('GithubStorageRepository.getAtom error propagation', () => {
     await expect(
       LaikaTask.runPromise(repo.getAtom('notes/article')),
     ).rejects.toBeInstanceOf(ForbiddenError);
+  });
+
+  it('propagates AuthenticationError (401) instead of falling through to getObject', async () => {
+    const unauthorizedError = Object.assign(new Error('Bad credentials'), { status: 401 });
+    const repo = makeRepoWithGetContent(async () => {
+      throw unauthorizedError;
+    });
+
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(AuthenticationError);
+  });
+
+  it('propagates TooManyRequestsError for a 403 with x-ratelimit-remaining: 0', async () => {
+    const rateLimitedForbidden = Object.assign(new Error('API rate limit exceeded'), {
+      status: 403,
+      response: { headers: { 'x-ratelimit-remaining': '0' } },
+    });
+    const repo = makeRepoWithGetContent(async () => {
+      throw rateLimitedForbidden;
+    });
+
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(TooManyRequestsError);
+  });
+
+  it('propagates AuthorizationError for a generic 403 (no rate-limit header, no "Resource not accessible" message)', async () => {
+    const genericForbidden = Object.assign(new Error('Forbidden'), {
+      status: 403,
+      response: { headers: {} },
+    });
+    const repo = makeRepoWithGetContent(async () => {
+      throw genericForbidden;
+    });
+
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(AuthorizationError);
+  });
+
+  it('propagates VersionMismatchError for a 409 conflict', async () => {
+    const conflictError = Object.assign(new Error('Conflict'), { status: 409 });
+    const repo = makeRepoWithGetContent(async () => {
+      throw conflictError;
+    });
+
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(VersionMismatchError);
+  });
+
+  it('propagates VersionMismatchError for a 422 unprocessable entity', async () => {
+    const unprocessableError = Object.assign(new Error('Unprocessable Entity'), { status: 422 });
+    const repo = makeRepoWithGetContent(async () => {
+      throw unprocessableError;
+    });
+
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(VersionMismatchError);
+  });
+
+  it('propagates InternalError for an unmapped status (500)', async () => {
+    const serverError = Object.assign(new Error('Internal Server Error'), { status: 500 });
+    const repo = makeRepoWithGetContent(async () => {
+      throw serverError;
+    });
+
+    await expect(
+      LaikaTask.runPromise(repo.getAtom('notes/article')),
+    ).rejects.toBeInstanceOf(InternalError);
   });
 });
