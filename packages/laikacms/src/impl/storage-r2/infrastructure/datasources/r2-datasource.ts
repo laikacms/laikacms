@@ -148,7 +148,6 @@ export class R2DataSource {
 
       return Result.succeed({ content, key: keyWithoutExt, extension });
     } catch (error) {
-      console.error(error);
       return Result.fail(
         new InternalError(`Failed to get object contents`, {
           cause: Cause.fail(error),
@@ -215,7 +214,6 @@ export class R2DataSource {
         etag: object.etag,
       });
     } catch (error) {
-      console.error(error);
       return Result.fail(
         new InternalError(`Failed to get object metadata`, {
           cause: Cause.fail(error),
@@ -250,7 +248,6 @@ export class R2DataSource {
       const now = new Date();
       return Result.succeed({ createdAt: now, updatedAt: now });
     } catch (error) {
-      console.error(error);
       return Result.fail(
         new InternalError(`Failed to get folder metadata`, {
           cause: Cause.fail(error),
@@ -322,7 +319,6 @@ export class R2DataSource {
 
       return Result.succeed(entries);
     } catch (error) {
-      console.error(error);
       return Result.fail(
         new InternalError(`Failed to list directory`, {
           cause: Cause.fail(error),
@@ -359,7 +355,6 @@ export class R2DataSource {
       // Return key without extension for the interface
       return Result.succeed({ key: keyWithoutExt });
     } catch (error) {
-      console.error(error);
       return Result.fail(
         new InternalError(`Failed to create or update object`, {
           cause: Cause.fail(error),
