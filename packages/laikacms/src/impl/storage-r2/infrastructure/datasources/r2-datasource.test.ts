@@ -18,13 +18,33 @@ let etagCounter = 0;
 class InMemoryR2Bucket {
   readonly store = new Map<string, StoredObject>();
 
+  /**
+   * When set, the next call to the named method rejects with this error
+   * instead of performing its normal operation, then the flag is cleared.
+   */
+  private failNext = new Map<'head' | 'get' | 'put' | 'delete' | 'list', unknown>();
+
+  failNextCall(method: 'head' | 'get' | 'put' | 'delete' | 'list', error: unknown = new Error('boom')) {
+    this.failNext.set(method, error);
+  }
+
+  private maybeThrow(method: 'head' | 'get' | 'put' | 'delete' | 'list') {
+    if (this.failNext.has(method)) {
+      const error = this.failNext.get(method);
+      this.failNext.delete(method);
+      throw error;
+    }
+  }
+
   async head(key: string) {
+    this.maybeThrow('head');
     const obj = this.store.get(key);
     if (!obj) return null;
     return { size: obj.body.length, uploaded: obj.uploaded, etag: obj.etag };
   }
 
   async get(key: string) {
+    this.maybeThrow('get');
     const obj = this.store.get(key);
     if (!obj) return null;
     return {
@@ -36,6 +56,7 @@ class InMemoryR2Bucket {
   }
 
   async put(key: string, body: string) {
+    this.maybeThrow('put');
     this.store.set(key, {
       key,
       body,
@@ -45,6 +66,7 @@ class InMemoryR2Bucket {
   }
 
   async delete(key: string) {
+    this.maybeThrow('delete');
     this.store.delete(key);
   }
 
@@ -54,6 +76,7 @@ class InMemoryR2Bucket {
     cursor?: string,
     limit?: number,
   }) {
+    this.maybeThrow('list');
     const prefix = opts.prefix ?? '';
     const delimiter = opts.delimiter;
     const limit = opts.limit ?? 1000;
@@ -148,6 +171,18 @@ describe('R2DataSource.createOrUpdate', () => {
     await ds.createOrUpdate('note', 'second', 'md');
     expect(bucket.store.get('note.md')?.body).toBe('second');
   });
+
+  it('returns InternalError with failedToCreateOrUpdateObject translation when the bucket rejects', async () => {
+    const ds = makeDS();
+    bucket.failNextCall('put');
+
+    const result = await ds.createOrUpdate('docs/hello', '# Hi', 'md');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('internal_error');
+      expect(result.failure.translation?.message).toBe('storage.r2.failedToCreateOrUpdateObject');
+    }
+  });
 });
 
 describe('R2DataSource.getObjectContents', () => {
@@ -196,6 +231,19 @@ describe('R2DataSource.getObjectContents', () => {
       expect(result.success.extension).toBe('md');
     }
   });
+
+  it('returns InternalError with failedToReadObject translation when the bucket rejects', async () => {
+    const ds = makeDS();
+    await bucket.put('doc.md', 'hello');
+    bucket.failNextCall('get');
+
+    const result = await ds.getObjectContents('doc');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('internal_error');
+      expect(result.failure.translation?.message).toBe('storage.r2.failedToReadObject');
+    }
+  });
 });
 
 describe('R2DataSource.findExistingObjectExtension', () => {
@@ -233,6 +281,19 @@ describe('R2DataSource.getObjectMeta', () => {
     const result = await ds.getObjectMeta('missing');
     expect(Result.isFailure(result)).toBe(true);
   });
+
+  it('returns InternalError with failedToGetObjectMetadata translation when the bucket rejects', async () => {
+    const ds = makeDS();
+    await bucket.put('doc.md', 'twelve bytes');
+    bucket.failNextCall('head');
+
+    const result = await ds.getObjectMeta('doc');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('internal_error');
+      expect(result.failure.translation?.message).toBe('storage.r2.failedToGetObjectMetadata');
+    }
+  });
 });
 
 describe('R2DataSource.getFolderMeta', () => {
@@ -248,6 +309,18 @@ describe('R2DataSource.getFolderMeta', () => {
     const ds = makeDS();
     const result = await ds.getFolderMeta('does-not-exist');
     expect(Result.isFailure(result)).toBe(true);
+  });
+
+  it('returns InternalError with failedToGetDirectoryMetadata translation when the bucket rejects', async () => {
+    const ds = makeDS();
+    bucket.failNextCall('list');
+
+    const result = await ds.getFolderMeta('sub');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('internal_error');
+      expect(result.failure.translation?.message).toBe('storage.r2.failedToGetDirectoryMetadata');
+    }
   });
 });
 
@@ -288,6 +361,18 @@ describe('R2DataSource.listDirectory', () => {
       expect(result.failure.code).toBe('not_found');
     }
   });
+
+  it('returns InternalError with failedToListDirectory translation when the bucket rejects', async () => {
+    const ds = makeDS();
+    bucket.failNextCall('list');
+
+    const result = await ds.listDirectory('sub');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('internal_error');
+      expect(result.failure.translation?.message).toBe('storage.r2.failedToListDirectory');
+    }
+  });
 });
 
 describe('R2DataSource.isFile / isDirectory', () => {
@@ -311,6 +396,12 @@ describe('R2DataSource.isFile / isDirectory', () => {
   it('isDirectory returns false when no objects share the prefix', async () => {
     const ds = makeDS();
     expect(await ds.isDirectory('nothing')).toBe(false);
+  });
+
+  it('isDirectory swallows bucket errors and returns false', async () => {
+    const ds = makeDS();
+    bucket.failNextCall('list');
+    expect(await ds.isDirectory('sub')).toBe(false);
   });
 });
 
@@ -340,5 +431,24 @@ describe('R2DataSource.deleteObjects', () => {
     expect(Result.isFailure(results[0]!)).toBe(true);
     const failure = (results[0] as Result.Failure<unknown>).failure;
     expect((failure as { code?: string }).code).toBe('not_found');
+  });
+
+  it('yields InternalError with failedToDeleteObject translation when the bucket rejects', async () => {
+    const ds = makeDS();
+    await bucket.put('a.md', 'a');
+    bucket.failNextCall('delete');
+
+    const results: Array<Result.Result<unknown, unknown>> = [];
+    for await (const result of ds.deleteObjects(['a'])) {
+      results.push(result);
+    }
+    expect(results).toHaveLength(1);
+    expect(Result.isFailure(results[0]!)).toBe(true);
+    const failure = (results[0] as Result.Failure<unknown>).failure as {
+      code?: string,
+      translation?: { message?: string },
+    };
+    expect(failure.code).toBe('internal_error');
+    expect(failure.translation?.message).toBe('storage.r2.failedToDeleteObject');
   });
 });
