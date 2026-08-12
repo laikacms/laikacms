@@ -89,6 +89,15 @@ export class LaikaTypegen {
   private readonly channelUnsub?: () => void;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private disposed = false;
+  /**
+   * Tracks the most recently scheduled asynchronous work (a debounced flush,
+   * or a channel-triggered `handleEvent`) so `dispose()` can drain it before
+   * returning. Without this, a caller that disposes right after an emitted
+   * channel event could return while a write is still in flight — and a test
+   * tearing down its tmp dir immediately after could hit `ENOTEMPTY` racing
+   * that write.
+   */
+  private pending: Promise<void> = Promise.resolve();
 
   constructor(private readonly options: LaikaTypegenOptions) {
     this.writer = new TypegenWriter(options.viteRoot);
@@ -96,7 +105,9 @@ export class LaikaTypegen {
     this.namespaces = options.namespaces ?? ['doc', 'store'];
     if (options.channel) {
       this.channelUnsub = options.channel.subscribe(event => {
-        void this.handleEvent(event);
+        this.pending = this.handleEvent(event).catch(error => {
+          this.log(`laika typegen: channel event handling failed: ${String(error)}`);
+        });
       });
     }
   }
@@ -159,7 +170,7 @@ export class LaikaTypegen {
       collection: collectionOf(resolved.key),
       block,
     });
-    this.schedule();
+    await this.schedule();
   }
 
   /** Read one item via the reader and ingest it. */
@@ -177,7 +188,7 @@ export class LaikaTypegen {
   async remove(id: string | LaikaId): Promise<void> {
     const resolved = this.resolveId(id);
     this.items.delete(toSource(resolved));
-    this.schedule();
+    await this.schedule();
   }
 
   /**
@@ -217,23 +228,33 @@ export class LaikaTypegen {
     return typeof id === 'string' ? parseLaikaId(id) : id;
   }
 
-  private schedule(): void {
+  /**
+   * With `debounceMs <= 0` this flushes immediately and the returned promise
+   * resolves once the write has landed, so callers (`ingest`/`remove`) that
+   * `await` it observe a fully-written filesystem before returning. With a
+   * positive debounce it arms/no-ops the coalescing timer and resolves right
+   * away; the eventual flush is still tracked via `this.pending` so
+   * `dispose()` can drain it.
+   */
+  private schedule(): Promise<void> {
     if (this.disposed) {
-      return;
+      return Promise.resolve();
     }
     if (this.debounceMs <= 0) {
-      void this.flush();
-      return;
+      const flushed = this.flush();
+      this.pending = flushed;
+      return flushed;
     }
     if (this.timer) {
-      return;
+      return Promise.resolve();
     }
     this.timer = setTimeout(() => {
       this.timer = undefined;
-      void this.flush();
+      this.pending = this.flush();
     }, this.debounceMs);
     // Do not keep the process alive solely for a pending typegen flush.
     (this.timer as { unref?: () => void }).unref?.();
+    return Promise.resolve();
   }
 
   private buildTypes(): string {
@@ -305,6 +326,10 @@ export class LaikaTypegen {
     }
     this.disposed = true;
     this.channelUnsub?.();
+    // Drain any in-flight channel-triggered handler or debounced flush before
+    // the (possibly) final flush below, so no write is left in flight once
+    // dispose() resolves.
+    await this.pending;
     if (this.timer) {
       clearTimeout(this.timer);
       this.timer = undefined;
