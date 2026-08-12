@@ -66,6 +66,72 @@ export interface Translation {
   'storage.fs.failedToListDirectory': string;
   'storage.fs.failedToListDrives': string;
   'storage.fs.unexpectedFileSystemError': string;
+
+  // storage-r2 (LCMS-547)
+  'storage.r2.fileNotFound': string;
+  'storage.r2.directoryNotFound': string;
+  'storage.r2.entryAlreadyExists': string;
+  'storage.r2.contentRequired': string;
+  'storage.r2.invalidRequest': string;
+  'storage.r2.failedToReadObject': string;
+  'storage.r2.failedToDeleteObject': string;
+  'storage.r2.failedToGetObjectMetadata': string;
+  'storage.r2.failedToGetDirectoryMetadata': string;
+  'storage.r2.failedToListDirectory': string;
+  'storage.r2.failedToCreateOrUpdateObject': string;
+
+  // storage-drizzle (LCMS-547)
+  'storage.drizzle.fileNotFound': string;
+  'storage.drizzle.directoryNotFound': string;
+  'storage.drizzle.atomNotFound': string;
+  'storage.drizzle.entryAlreadyExists': string;
+  'storage.drizzle.contentRequired': string;
+  'storage.drizzle.invalidJsonContent': string;
+  'storage.drizzle.cannotRemoveFolderKey': string;
+  'storage.drizzle.failedToRemoveAtom': string;
+
+  // storage-webdav (LCMS-547)
+  'storage.webdav.fileNotFound': string;
+  'storage.webdav.directoryNotFound': string;
+  'storage.webdav.atomNotFound': string;
+  'storage.webdav.entryAlreadyExists': string;
+  'storage.webdav.contentRequired': string;
+  'storage.webdav.directoryNotEmpty': string;
+  'storage.webdav.invalidRequest': string;
+  'storage.webdav.authenticationFailed': string;
+  'storage.webdav.permissionDenied': string;
+  'storage.webdav.resourceNotFound': string;
+  'storage.webdav.methodNotAllowed': string;
+  'storage.webdav.conflict': string;
+  'storage.webdav.resourceLocked': string;
+  'storage.webdav.tooManyRequests': string;
+  'storage.webdav.serviceUnavailable': string;
+  'storage.webdav.serverUnreachable': string;
+  'storage.webdav.fetchImplementationMissing': string;
+  'storage.webdav.unexpectedError': string;
+
+  // documents-jsonapi-proxy (LCMS-547)
+  'documentsJsonapiProxy.invalidResponse': string;
+  'documentsJsonapiProxy.lockAttributesMissing': string;
+  'documentsJsonapiProxy.lockTimestampInvalid': string;
+  'documentsJsonapiProxy.networkError': string;
+  'documentsJsonapiProxy.syncTokenMissing': string;
+  'documentsJsonapiProxy.unknownRecordType': string;
+
+  // assets-obsidian (LCMS-547)
+  'assetsObsidian.fileNotFound': string;
+  'assetsObsidian.directoryNotFound': string;
+  'assetsObsidian.atomNotFound': string;
+  'assetsObsidian.filesystemError': string;
+  'assetsObsidian.pathTraversalRejected': string;
+  'assetsObsidian.expectedAssetFoundDocument': string;
+  'assetsObsidian.expectedFileFoundDirectory': string;
+  'assetsObsidian.updateUnsupported': string;
+
+  // documents-obsidian (LCMS-547)
+  'documentsObsidian.notPublished': string;
+  'documentsObsidian.notUnpublished': string;
+  'documentsObsidian.revisionsUnsupported': string;
 }
 
 export type TranslationKey = keyof Translation;

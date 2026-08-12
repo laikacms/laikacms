@@ -205,7 +205,9 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
         const obj = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(key), emit);
         if (!this.isPublished(obj.content)) {
           return yield* Effect.fail(
-            new NotFoundError(`Note '${key}' exists but is not a published document`),
+            new NotFoundError(`Note '${key}' exists but is not a published document`, {
+              translation: { message: 'documentsObsidian.notPublished' },
+            }),
           );
         }
         return this.toDocument(key, obj);
@@ -275,7 +277,9 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
         const obj = yield* LaikaTask.runValueForwarding(this.storageRepository.getObject(key), emit);
         if (this.isPublished(obj.content)) {
           return yield* Effect.fail(
-            new NotFoundError(`Note '${key}' exists but is published, not an unpublished draft`),
+            new NotFoundError(`Note '${key}' exists but is published, not an unpublished draft`, {
+              translation: { message: 'documentsObsidian.notUnpublished' },
+            }),
           );
         }
         return this.toUnpublished(key, obj);
@@ -431,13 +435,17 @@ export class ObsidianDocumentsRepository extends DocumentsRepository {
 
   getRevision(_key: Key, _revision: string): LaikaTask.LaikaTask<Revision> {
     return LaikaTask.fail(
-      new BadRequestError('The Obsidian backend has no version history; revisions are unsupported'),
+      new BadRequestError('The Obsidian backend has no version history; revisions are unsupported', {
+        translation: { message: 'documentsObsidian.revisionsUnsupported' },
+      }),
     );
   }
 
   createRevision(_create: RevisionCreate): LaikaTask.LaikaTask<Revision> {
     return LaikaTask.fail(
-      new BadRequestError('The Obsidian backend has no version history; revisions are unsupported'),
+      new BadRequestError('The Obsidian backend has no version history; revisions are unsupported', {
+        translation: { message: 'documentsObsidian.revisionsUnsupported' },
+      }),
     );
   }
 

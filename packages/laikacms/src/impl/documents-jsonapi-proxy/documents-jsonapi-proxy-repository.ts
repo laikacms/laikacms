@@ -112,12 +112,20 @@ function ownedLockFromJsonApi(raw: LockJsonApi): Effect.Effect<OwnedLock, LaikaE
       typeof key !== 'string' || typeof ownerId !== 'string' || typeof ownerName !== 'string'
       || typeof acquiredAt !== 'string' || typeof expiresAt !== 'string'
     ) {
-      return yield* Effect.fail(new InvalidData('Upstream /locks response is missing required lock attributes'));
+      return yield* Effect.fail(
+        new InvalidData('Upstream /locks response is missing required lock attributes', {
+          translation: { message: 'documentsJsonapiProxy.lockAttributesMissing' },
+        }),
+      );
     }
     const acquired = DateTime.make(acquiredAt);
     const expires = DateTime.make(expiresAt);
     if (acquired._tag === 'None' || expires._tag === 'None') {
-      return yield* Effect.fail(new InvalidData('Upstream /locks response has an unparseable timestamp'));
+      return yield* Effect.fail(
+        new InvalidData('Upstream /locks response has an unparseable timestamp', {
+          translation: { message: 'documentsJsonapiProxy.lockTimestampInvalid' },
+        }),
+      );
     }
     return {
       key,
@@ -137,7 +145,8 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
     super();
     this.transport = new JsonApiHttpTransport({
       ...options,
-      networkError: message => new InternalError(message),
+      networkError: message =>
+        new InternalError(message, { translation: { message: 'documentsJsonapiProxy.networkError' } }),
     });
   }
 
@@ -275,10 +284,15 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
                   case 'folder':
                     return folderFromJsonApi(item as FolderJsonApi) as unknown as DocumentRecord;
                   default:
-                    throw new IllegalStateException('Unknown record type: ' + item.type);
+                    throw new IllegalStateException('Unknown record type: ' + item.type, {
+                      translation: { message: 'documentsJsonapiProxy.unknownRecordType' },
+                    });
                 }
               },
-              catch: e => new InvalidData((e as Error).message),
+              catch: e =>
+                new InvalidData((e as Error).message, {
+                  translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+                }),
             }),
           );
           if (decoded._tag === 'Failure') {
@@ -328,10 +342,15 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
                   case 'folder-summary':
                     return folderSummaryFromJsonApi(item as FolderSummaryJsonApi) as unknown as RecordSummary;
                   default:
-                    throw new IllegalStateException('Unknown record type: ' + item.type);
+                    throw new IllegalStateException('Unknown record type: ' + item.type, {
+                      translation: { message: 'documentsJsonapiProxy.unknownRecordType' },
+                    });
                 }
               },
-              catch: e => new InvalidData((e as Error).message),
+              catch: e =>
+                new InvalidData((e as Error).message, {
+                  translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+                }),
             }),
           );
           if (decoded._tag === 'Failure') {
@@ -359,7 +378,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         );
         return yield* Effect.try({
           try: () => documentFromJsonApi(raw),
-          catch: e => new InvalidData((e as Error).message),
+          catch: e =>
+            new InvalidData((e as Error).message, {
+              translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+            }),
         });
       })
     );
@@ -375,7 +397,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         );
         return yield* Effect.try({
           try: () => documentFromJsonApi(raw),
-          catch: e => new InvalidData((e as Error).message),
+          catch: e =>
+            new InvalidData((e as Error).message, {
+              translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+            }),
         });
       })
     );
@@ -391,7 +416,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         );
         return yield* Effect.try({
           try: () => documentFromJsonApi(raw),
-          catch: e => new InvalidData((e as Error).message),
+          catch: e =>
+            new InvalidData((e as Error).message, {
+              translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+            }),
         });
       })
     );
@@ -419,7 +447,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         );
         return yield* Effect.try({
           try: () => unpublishedFromJsonApi(raw),
-          catch: e => new InvalidData((e as Error).message),
+          catch: e =>
+            new InvalidData((e as Error).message, {
+              translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+            }),
         });
       })
     );
@@ -435,7 +466,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         );
         return yield* Effect.try({
           try: () => unpublishedFromJsonApi(raw),
-          catch: e => new InvalidData((e as Error).message),
+          catch: e =>
+            new InvalidData((e as Error).message, {
+              translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+            }),
         });
       })
     );
@@ -451,7 +485,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         );
         return yield* Effect.try({
           try: () => unpublishedFromJsonApi(raw),
-          catch: e => new InvalidData((e as Error).message),
+          catch: e =>
+            new InvalidData((e as Error).message, {
+              translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+            }),
         });
       })
     );
@@ -477,7 +514,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         );
         return yield* Effect.try({
           try: () => documentFromJsonApi(raw),
-          catch: e => new InvalidData((e as Error).message),
+          catch: e =>
+            new InvalidData((e as Error).message, {
+              translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+            }),
         });
       })
     );
@@ -496,7 +536,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         );
         return yield* Effect.try({
           try: () => unpublishedFromJsonApi(raw),
-          catch: e => new InvalidData((e as Error).message),
+          catch: e =>
+            new InvalidData((e as Error).message, {
+              translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+            }),
         });
       })
     );
@@ -514,7 +557,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         );
         return yield* Effect.try({
           try: () => revisionFromJsonApi(raw),
-          catch: e => new InvalidData((e as Error).message),
+          catch: e =>
+            new InvalidData((e as Error).message, {
+              translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+            }),
         });
       })
     );
@@ -530,7 +576,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         );
         return yield* Effect.try({
           try: () => revisionFromJsonApi(raw),
-          catch: e => new InvalidData((e as Error).message),
+          catch: e =>
+            new InvalidData((e as Error).message, {
+              translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+            }),
         });
       })
     );
@@ -552,7 +601,9 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
         const token = raw?.attributes?.syncToken;
         if (typeof token !== 'string') {
           return yield* Effect.fail(
-            new InvalidData('Upstream /sync-token response is missing attributes.syncToken'),
+            new InvalidData('Upstream /sync-token response is missing attributes.syncToken', {
+              translation: { message: 'documentsJsonapiProxy.syncTokenMissing' },
+            }),
           );
         }
         return SyncToken.make(token);
@@ -589,7 +640,11 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
 
         const token = collection.meta?.syncToken;
         if (typeof token !== 'string') {
-          return yield* Effect.fail(new InvalidData('Upstream /changes response is missing meta.syncToken'));
+          return yield* Effect.fail(
+            new InvalidData('Upstream /changes response is missing meta.syncToken', {
+              translation: { message: 'documentsJsonapiProxy.syncTokenMissing' },
+            }),
+          );
         }
         return {
           syncToken: SyncToken.make(token),
@@ -710,7 +765,10 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
           const decoded = yield* Effect.result(
             Effect.try({
               try: () => revisionSummaryFromJsonApi(item as RevisionSummaryJsonApi),
-              catch: e => new InvalidData((e as Error).message),
+              catch: e =>
+                new InvalidData((e as Error).message, {
+                  translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+                }),
             }),
           );
           if (decoded._tag === 'Failure') {

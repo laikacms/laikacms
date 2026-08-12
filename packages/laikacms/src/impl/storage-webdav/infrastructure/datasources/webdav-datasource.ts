@@ -60,24 +60,60 @@ const base64Utf8 = (value: string): string => {
 const errorForStatus = (status: number, context: string): LaikaResult<never> => {
   switch (status) {
     case 401:
-      return Result.fail(new AuthenticationError(`WebDAV authentication failed for ${context}`));
+      return Result.fail(
+        new AuthenticationError(`WebDAV authentication failed for ${context}`, {
+          translation: { message: 'storage.webdav.authenticationFailed' },
+        }),
+      );
     case 403:
-      return Result.fail(new ForbiddenError(`WebDAV access forbidden for ${context}`));
+      return Result.fail(
+        new ForbiddenError(`WebDAV access forbidden for ${context}`, {
+          translation: { message: 'storage.webdav.permissionDenied' },
+        }),
+      );
     case 404:
     case 410:
-      return Result.fail(new NotFoundError(`WebDAV resource not found: ${context}`));
+      return Result.fail(
+        new NotFoundError(`WebDAV resource not found: ${context}`, {
+          translation: { message: 'storage.webdav.resourceNotFound' },
+        }),
+      );
     case 405:
-      return Result.fail(new ConflictError(`WebDAV method not allowed for ${context}`));
+      return Result.fail(
+        new ConflictError(`WebDAV method not allowed for ${context}`, {
+          translation: { message: 'storage.webdav.methodNotAllowed' },
+        }),
+      );
     case 409:
-      return Result.fail(new ConflictError(`WebDAV conflict for ${context} (missing parent collection?)`));
+      return Result.fail(
+        new ConflictError(`WebDAV conflict for ${context} (missing parent collection?)`, {
+          translation: { message: 'storage.webdav.conflict' },
+        }),
+      );
     case 423:
-      return Result.fail(new ConflictError(`WebDAV resource is locked: ${context}`));
+      return Result.fail(
+        new ConflictError(`WebDAV resource is locked: ${context}`, {
+          translation: { message: 'storage.webdav.resourceLocked' },
+        }),
+      );
     case 429:
-      return Result.fail(new TooManyRequestsError(`WebDAV server rate-limited request for ${context}`));
+      return Result.fail(
+        new TooManyRequestsError(`WebDAV server rate-limited request for ${context}`, {
+          translation: { message: 'storage.webdav.tooManyRequests' },
+        }),
+      );
     case 503:
-      return Result.fail(new ServiceUnavailableError(`WebDAV server unavailable for ${context}`));
+      return Result.fail(
+        new ServiceUnavailableError(`WebDAV server unavailable for ${context}`, {
+          translation: { message: 'storage.webdav.serviceUnavailable' },
+        }),
+      );
     default:
-      return Result.fail(new InternalError(`WebDAV request for ${context} failed with HTTP ${status}`));
+      return Result.fail(
+        new InternalError(`WebDAV request for ${context} failed with HTTP ${status}`, {
+          translation: { message: 'storage.webdav.unexpectedError' },
+        }),
+      );
   }
 };
 
@@ -103,7 +139,9 @@ export class WebDavDataSource {
   ) {
     this.fetchImpl = config.fetch ?? globalThis.fetch;
     if (typeof this.fetchImpl !== 'function') {
-      throw new InternalError('No `fetch` implementation available; pass one via WebDavConfig.fetch');
+      throw new InternalError('No `fetch` implementation available; pass one via WebDavConfig.fetch', {
+        translation: { message: 'storage.webdav.fetchImplementationMissing' },
+      });
     }
 
     const trimmed = config.baseUrl.replace(/\/+$/, '');
@@ -173,7 +211,12 @@ export class WebDavDataSource {
         headers: { Depth: '0', 'Content-Type': 'application/xml; charset=utf-8' },
       });
     } catch (cause) {
-      return Result.fail(new ServiceUnavailableError(`WebDAV server unreachable`, { cause }));
+      return Result.fail(
+        new ServiceUnavailableError(`WebDAV server unreachable`, {
+          cause,
+          translation: { message: 'storage.webdav.serverUnreachable' },
+        }),
+      );
     }
     if (response.status === 404 || response.status === 410) return Result.succeed(null);
     if (response.status !== 207) return errorForStatus(response.status, key || '<root>');
@@ -209,7 +252,12 @@ export class WebDavDataSource {
     try {
       response = await this.send('GET', target);
     } catch (cause) {
-      return Result.fail(new ServiceUnavailableError('WebDAV server unreachable', { cause }));
+      return Result.fail(
+        new ServiceUnavailableError('WebDAV server unreachable', {
+          cause,
+          translation: { message: 'storage.webdav.serverUnreachable' },
+        }),
+      );
     }
     if (!response.ok) return errorForStatus(response.status, target);
     return Result.succeed(await response.text());
@@ -230,7 +278,12 @@ export class WebDavDataSource {
         headers: { 'Content-Type': 'application/octet-stream' },
       });
     } catch (cause) {
-      return Result.fail(new ServiceUnavailableError('WebDAV server unreachable', { cause }));
+      return Result.fail(
+        new ServiceUnavailableError('WebDAV server unreachable', {
+          cause,
+          translation: { message: 'storage.webdav.serverUnreachable' },
+        }),
+      );
     }
     if (!response.ok) return errorForStatus(response.status, target);
     return Result.succeed(undefined);
@@ -242,7 +295,12 @@ export class WebDavDataSource {
     try {
       response = await this.send('DELETE', key);
     } catch (cause) {
-      return Result.fail(new ServiceUnavailableError('WebDAV server unreachable', { cause }));
+      return Result.fail(
+        new ServiceUnavailableError('WebDAV server unreachable', {
+          cause,
+          translation: { message: 'storage.webdav.serverUnreachable' },
+        }),
+      );
     }
     if (!response.ok && response.status !== 404) return errorForStatus(response.status, key);
     return Result.succeed(undefined);
@@ -261,10 +319,19 @@ export class WebDavDataSource {
         headers: { Depth: '1', 'Content-Type': 'application/xml; charset=utf-8' },
       });
     } catch (cause) {
-      return Result.fail(new ServiceUnavailableError('WebDAV server unreachable', { cause }));
+      return Result.fail(
+        new ServiceUnavailableError('WebDAV server unreachable', {
+          cause,
+          translation: { message: 'storage.webdav.serverUnreachable' },
+        }),
+      );
     }
     if (response.status === 404 || response.status === 410) {
-      return Result.fail(new NotFoundError(`WebDAV collection not found: ${key || '<root>'}`));
+      return Result.fail(
+        new NotFoundError(`WebDAV collection not found: ${key || '<root>'}`, {
+          translation: { message: 'storage.webdav.directoryNotFound' },
+        }),
+      );
     }
     if (response.status !== 207) return errorForStatus(response.status, key || '<root>');
 
@@ -292,7 +359,12 @@ export class WebDavDataSource {
       try {
         response = await this.send('MKCOL', prefix);
       } catch (cause) {
-        return Result.fail(new ServiceUnavailableError('WebDAV server unreachable', { cause }));
+        return Result.fail(
+          new ServiceUnavailableError('WebDAV server unreachable', {
+            cause,
+            translation: { message: 'storage.webdav.serverUnreachable' },
+          }),
+        );
       }
       // 201 Created; 405/301 mean the collection already exists.
       if (response.ok || response.status === 405 || response.status === 301) continue;
