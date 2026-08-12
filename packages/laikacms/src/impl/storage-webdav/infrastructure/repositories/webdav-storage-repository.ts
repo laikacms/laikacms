@@ -83,6 +83,7 @@ export class WebDavStorageRepository extends StorageRepository {
       throw new BadRequestError(
         `No serializer found for file extension: .${extension}. `
           + `Available formats: ${this.availableExtensions.join(', ')}`,
+        { translation: { message: 'storage.webdav.invalidRequest' } },
       );
     }
     try {
@@ -90,6 +91,7 @@ export class WebDavStorageRepository extends StorageRepository {
     } catch (error) {
       throw new BadRequestError(
         `Failed to serialize content: ${error instanceof Error ? error.message : String(error)}`,
+        { translation: { message: 'storage.webdav.invalidRequest' } },
       );
     }
   }
@@ -100,6 +102,7 @@ export class WebDavStorageRepository extends StorageRepository {
       throw new BadRequestError(
         `No serializer found for file extension: .${extension}. `
           + `Available formats: ${this.availableExtensions.join(', ')}`,
+        { translation: { message: 'storage.webdav.invalidRequest' } },
       );
     }
     try {
@@ -107,6 +110,7 @@ export class WebDavStorageRepository extends StorageRepository {
     } catch (error) {
       throw new BadRequestError(
         `Failed to deserialize content: ${error instanceof Error ? error.message : String(error)}`,
+        { translation: { message: 'storage.webdav.invalidRequest' } },
       );
     }
   }
@@ -125,6 +129,7 @@ export class WebDavStorageRepository extends StorageRepository {
         new BadRequestError(
           `determineExtension returned unregistered extension "${requested}". `
             + `Available: ${this.availableExtensions.join(', ')}`,
+          { translation: { message: 'storage.webdav.invalidRequest' } },
         ),
       );
     }
@@ -136,7 +141,11 @@ export class WebDavStorageRepository extends StorageRepository {
       Effect.gen({ self: this }, function*() {
         const resolved = yield* liftResult(this.dataSource.resolveExisting(key));
         if (!resolved) {
-          return yield* Effect.fail(new NotFoundError(`No object found at key "${key}"`));
+          return yield* Effect.fail(
+            new NotFoundError(`No object found at key "${key}"`, {
+              translation: { message: 'storage.webdav.fileNotFound' },
+            }),
+          );
         }
         const raw = yield* liftResult(this.dataSource.readFile(key, resolved.extension));
         const content = yield* Effect.promise(() => this.deserialize(resolved.extension, raw));
@@ -157,7 +166,11 @@ export class WebDavStorageRepository extends StorageRepository {
       Effect.gen({ self: this }, function*() {
         const resource = yield* liftResult(this.dataSource.statResource(key));
         if (!resource || !resource.isCollection) {
-          return yield* Effect.fail(new NotFoundError(`No folder found at key "${key}"`));
+          return yield* Effect.fail(
+            new NotFoundError(`No folder found at key "${key}"`, {
+              translation: { message: 'storage.webdav.directoryNotFound' },
+            }),
+          );
         }
         return {
           type: 'folder',
@@ -185,13 +198,18 @@ export class WebDavStorageRepository extends StorageRepository {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
         if (!create.content) {
-          return yield* Effect.fail(new InvalidData('Object content is required for creation'));
+          return yield* Effect.fail(
+            new InvalidData('Object content is required for creation', {
+              translation: { message: 'storage.webdav.contentRequired' },
+            }),
+          );
         }
         const existing = yield* liftResult(this.dataSource.resolveExisting(create.key));
         if (existing) {
           return yield* Effect.fail(
             new EntryAlreadyExistsError(
               `An object with key "${create.key}" already exists with extension .${existing.extension}`,
+              { translation: { message: 'storage.webdav.entryAlreadyExists' } },
             ),
           );
         }
@@ -224,7 +242,11 @@ export class WebDavStorageRepository extends StorageRepository {
       Effect.gen({ self: this }, function*() {
         const existing = yield* liftResult(this.dataSource.resolveExisting(update.key));
         if (!existing) {
-          return yield* Effect.fail(new NotFoundError(`No object found at key "${update.key}"`));
+          return yield* Effect.fail(
+            new NotFoundError(`No object found at key "${update.key}"`, {
+              translation: { message: 'storage.webdav.fileNotFound' },
+            }),
+          );
         }
         if (update.content) {
           const serialized = yield* Effect.promise(() => this.serialize(existing.extension, update.content!));
@@ -268,7 +290,9 @@ export class WebDavStorageRepository extends StorageRepository {
             }
             if (children.success.length > 0) {
               yield* emit.recoverableError(
-                new ForbiddenError(`Refusing to delete non-empty folder "${key}"`),
+                new ForbiddenError(`Refusing to delete non-empty folder "${key}"`, {
+                  translation: { message: 'storage.webdav.directoryNotEmpty' },
+                }),
               );
               skipped += 1;
               continue;
@@ -292,7 +316,11 @@ export class WebDavStorageRepository extends StorageRepository {
             continue;
           }
           if (!resolved.success) {
-            yield* emit.recoverableError(new NotFoundError(`No atom found at key "${key}"`));
+            yield* emit.recoverableError(
+              new NotFoundError(`No atom found at key "${key}"`, {
+                translation: { message: 'storage.webdav.atomNotFound' },
+              }),
+            );
             skipped += 1;
             continue;
           }

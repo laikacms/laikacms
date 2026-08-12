@@ -97,6 +97,7 @@ export class DrizzleStorageRepository extends StorageRepository {
             `Invalid JSON content format for key "${row.key}": ${
               error instanceof Error ? error.message : 'Unknown error'
             }`,
+            { translation: { message: 'storage.drizzle.invalidJsonContent' } },
           ),
         );
       }
@@ -128,7 +129,9 @@ export class DrizzleStorageRepository extends StorageRepository {
           );
           if (children.length > 0) {
             yield* emit.recoverableError(
-              new ForbiddenError(`Cannot remove folder key via removeAtoms: '${key}'`),
+              new ForbiddenError(`Cannot remove folder key via removeAtoms: '${key}'`, {
+                translation: { message: 'storage.drizzle.cannotRemoveFolderKey' },
+              }),
             );
             skipped += 1;
             continue;
@@ -144,7 +147,7 @@ export class DrizzleStorageRepository extends StorageRepository {
               catch: cause =>
                 new InternalError(
                   `Failed to remove "${key}": ${cause instanceof Error ? cause.message : String(cause)}`,
-                  { cause },
+                  { cause, translation: { message: 'storage.drizzle.failedToRemoveAtom' } },
                 ),
             }),
           );
@@ -155,7 +158,11 @@ export class DrizzleStorageRepository extends StorageRepository {
             continue;
           }
           if (attempt.success.length === 0) {
-            yield* emit.recoverableError(new NotFoundError(`No atom found at key "${key}"`));
+            yield* emit.recoverableError(
+              new NotFoundError(`No atom found at key "${key}"`, {
+                translation: { message: 'storage.drizzle.atomNotFound' },
+              }),
+            );
             skipped += 1;
             continue;
           }
@@ -178,7 +185,11 @@ export class DrizzleStorageRepository extends StorageRepository {
           })
         );
         if (objects.length === 0) {
-          return yield* Effect.fail(new NotFoundError(`Folder not found: ${key}`));
+          return yield* Effect.fail(
+            new NotFoundError(`Folder not found: ${key}`, {
+              translation: { message: 'storage.drizzle.directoryNotFound' },
+            }),
+          );
         }
         const now = new Date().toISOString();
         return { type: 'folder' as const, key, createdAt: now, updatedAt: now };
@@ -207,7 +218,11 @@ export class DrizzleStorageRepository extends StorageRepository {
           })
         );
         if (rows.length === 0) {
-          return yield* Effect.fail(new NotFoundError(`Object not found: ${key}`));
+          return yield* Effect.fail(
+            new NotFoundError(`Object not found: ${key}`, {
+              translation: { message: 'storage.drizzle.fileNotFound' },
+            }),
+          );
         }
         return yield* this.parseObjectRow(rows[0]!);
       })
@@ -237,7 +252,11 @@ export class DrizzleStorageRepository extends StorageRepository {
       Effect.gen({ self: this }, function*() {
         this.debug('createObject', create.key);
         if (!create.content) {
-          return yield* Effect.fail(new InvalidData('Object content is required for creation'));
+          return yield* Effect.fail(
+            new InvalidData('Object content is required for creation', {
+              translation: { message: 'storage.drizzle.contentRequired' },
+            }),
+          );
         }
         const exists = yield* Effect.promise(() =>
           this.options.callbacks.select({
@@ -246,7 +265,9 @@ export class DrizzleStorageRepository extends StorageRepository {
         );
         if (exists.length > 0 && exists[0]) {
           return yield* Effect.fail(
-            new EntryAlreadyExistsError(`An object with key "${create.key}" already exists`),
+            new EntryAlreadyExistsError(`An object with key "${create.key}" already exists`, {
+              translation: { message: 'storage.drizzle.entryAlreadyExists' },
+            }),
           );
         }
         const now = new Date().toISOString();
@@ -271,7 +292,11 @@ export class DrizzleStorageRepository extends StorageRepository {
     return LaikaTask.make<StorageObject>(() =>
       Effect.gen({ self: this }, function*() {
         if (!create.content) {
-          return yield* Effect.fail(new InvalidData('Object content is required'));
+          return yield* Effect.fail(
+            new InvalidData('Object content is required', {
+              translation: { message: 'storage.drizzle.contentRequired' },
+            }),
+          );
         }
         const exists = yield* Effect.promise(() =>
           this.options.callbacks.select({

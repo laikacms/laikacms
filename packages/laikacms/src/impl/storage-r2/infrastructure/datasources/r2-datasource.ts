@@ -89,7 +89,11 @@ export class R2DataSource {
         const resolvedKey = await this.resolveKeyWithExtension(key);
 
         if (!resolvedKey) {
-          yield Result.fail(new NotFoundError(`Object at ${key} does not exist`));
+          yield Result.fail(
+            new NotFoundError(`Object at ${key} does not exist`, {
+              translation: { message: 'storage.r2.fileNotFound' },
+            }),
+          );
           continue;
         }
 
@@ -97,7 +101,12 @@ export class R2DataSource {
         const keyWithoutExt = this.stripExtension(resolvedKey);
         yield Result.succeed(keyWithoutExt);
       } catch (error) {
-        yield Result.fail(new InternalError(`Failed to delete object at ${key}`, { cause: Cause.fail(error) }));
+        yield Result.fail(
+          new InternalError(`Failed to delete object at ${key}`, {
+            cause: Cause.fail(error),
+            translation: { message: 'storage.r2.failedToDeleteObject' },
+          }),
+        );
       }
     }
   }
@@ -111,13 +120,21 @@ export class R2DataSource {
       const resolvedKey = await this.resolveKeyWithExtension(normalizedKey);
 
       if (!resolvedKey) {
-        return Result.fail(new NotFoundError(`Object at ${key} cannot be resolved`));
+        return Result.fail(
+          new NotFoundError(`Object at ${key} cannot be resolved`, {
+            translation: { message: 'storage.r2.fileNotFound' },
+          }),
+        );
       }
 
       const object = await this.bucket.get(resolvedKey);
 
       if (!object) {
-        return Result.fail(new NotFoundError(`Object at ${key} does not exist`));
+        return Result.fail(
+          new NotFoundError(`Object at ${key} does not exist`, {
+            translation: { message: 'storage.r2.fileNotFound' },
+          }),
+        );
       }
 
       const content = await object.text();
@@ -132,7 +149,12 @@ export class R2DataSource {
       return Result.succeed({ content, key: keyWithoutExt, extension });
     } catch (error) {
       console.error(error);
-      return Result.fail(new InternalError(`Failed to get object contents`, { cause: Cause.fail(error) }));
+      return Result.fail(
+        new InternalError(`Failed to get object contents`, {
+          cause: Cause.fail(error),
+          translation: { message: 'storage.r2.failedToReadObject' },
+        }),
+      );
     }
   }
 
@@ -154,13 +176,21 @@ export class R2DataSource {
       const resolvedKey = await this.resolveKeyWithExtension(normalizedKey);
 
       if (!resolvedKey) {
-        return Result.fail(new NotFoundError(`Object at ${key} cannot be resolved`));
+        return Result.fail(
+          new NotFoundError(`Object at ${key} cannot be resolved`, {
+            translation: { message: 'storage.r2.fileNotFound' },
+          }),
+        );
       }
 
       const object = await this.bucket.head(resolvedKey);
 
       if (!object) {
-        return Result.fail(new NotFoundError(`Object at ${key} does not exist`));
+        return Result.fail(
+          new NotFoundError(`Object at ${key} does not exist`, {
+            translation: { message: 'storage.r2.fileNotFound' },
+          }),
+        );
       }
 
       // Extract extension from resolved key
@@ -186,7 +216,12 @@ export class R2DataSource {
       });
     } catch (error) {
       console.error(error);
-      return Result.fail(new InternalError(`Failed to get object metadata`, { cause: Cause.fail(error) }));
+      return Result.fail(
+        new InternalError(`Failed to get object metadata`, {
+          cause: Cause.fail(error),
+          translation: { message: 'storage.r2.failedToGetObjectMetadata' },
+        }),
+      );
     }
   }
 
@@ -204,7 +239,11 @@ export class R2DataSource {
       const listed = await this.bucket.list({ prefix, limit: 1 });
 
       if (listed.objects.length === 0 && listed.delimitedPrefixes.length === 0) {
-        return Result.fail(new NotFoundError(`Folder at ${key} does not exist`));
+        return Result.fail(
+          new NotFoundError(`Folder at ${key} does not exist`, {
+            translation: { message: 'storage.r2.directoryNotFound' },
+          }),
+        );
       }
 
       // R2 folders don't have real timestamps, use current time
@@ -212,7 +251,12 @@ export class R2DataSource {
       return Result.succeed({ createdAt: now, updatedAt: now });
     } catch (error) {
       console.error(error);
-      return Result.fail(new InternalError(`Failed to get folder metadata`, { cause: Cause.fail(error) }));
+      return Result.fail(
+        new InternalError(`Failed to get folder metadata`, {
+          cause: Cause.fail(error),
+          translation: { message: 'storage.r2.failedToGetDirectoryMetadata' },
+        }),
+      );
     }
   }
 
@@ -269,13 +313,22 @@ export class R2DataSource {
       // from a non-existent one. If nothing was listed (not even a .keep marker),
       // treat the folder as missing so callers get the same contract as FS/WebDAV.
       if (!hasAnyListing) {
-        return Result.fail(new NotFoundError(`Folder at ${prefix} does not exist`));
+        return Result.fail(
+          new NotFoundError(`Folder at ${prefix} does not exist`, {
+            translation: { message: 'storage.r2.directoryNotFound' },
+          }),
+        );
       }
 
       return Result.succeed(entries);
     } catch (error) {
       console.error(error);
-      return Result.fail(new InternalError(`Failed to list directory`, { cause: Cause.fail(error) }));
+      return Result.fail(
+        new InternalError(`Failed to list directory`, {
+          cause: Cause.fail(error),
+          translation: { message: 'storage.r2.failedToListDirectory' },
+        }),
+      );
     }
   }
 
@@ -307,7 +360,12 @@ export class R2DataSource {
       return Result.succeed({ key: keyWithoutExt });
     } catch (error) {
       console.error(error);
-      return Result.fail(new InternalError(`Failed to create or update object`, { cause: Cause.fail(error) }));
+      return Result.fail(
+        new InternalError(`Failed to create or update object`, {
+          cause: Cause.fail(error),
+          translation: { message: 'storage.r2.failedToCreateOrUpdateObject' },
+        }),
+      );
     }
   }
 

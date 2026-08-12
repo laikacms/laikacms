@@ -79,9 +79,15 @@ async function consumeBinary(
 /** Map a Node filesystem error to a `LaikaError`. */
 function fsError(error: unknown, key: string): LaikaError {
   const code = (error as NodeJS.ErrnoException | undefined)?.code;
-  if (code === 'ENOENT') return new NotFoundError(`Asset '${key}' not found in the vault`);
+  if (code === 'ENOENT') {
+    return new NotFoundError(`Asset '${key}' not found in the vault`, {
+      translation: { message: 'assetsObsidian.fileNotFound' },
+    });
+  }
   const message = error instanceof Error ? error.message : String(error);
-  return new BadRequestError(`Filesystem error for '${key}': ${message}`);
+  return new BadRequestError(`Filesystem error for '${key}': ${message}`, {
+    translation: { message: 'assetsObsidian.filesystemError' },
+  });
 }
 
 /**
@@ -161,7 +167,11 @@ export class ObsidianAssetsRepository extends AssetsRepository {
     const normalized = key.replace(/^\/+/, '');
     const resolved = nodePath.resolve(this.assetRoot, normalized);
     if (resolved !== this.assetRoot && !resolved.startsWith(this.assetRoot + nodePath.sep)) {
-      return Result.fail(new BadRequestError(`Asset key '${key}' escapes the vault root`));
+      return Result.fail(
+        new BadRequestError(`Asset key '${key}' escapes the vault root`, {
+          translation: { message: 'assetsObsidian.pathTraversalRejected' },
+        }),
+      );
     }
     return Result.succeed(resolved);
   }
@@ -192,13 +202,19 @@ export class ObsidianAssetsRepository extends AssetsRepository {
     if (Result.isFailure(pathResult)) return Result.fail(pathResult.failure);
     if (this.isDocument(key)) {
       return Result.fail(
-        new BadRequestError(`'${key}' is a document, not an asset`),
+        new BadRequestError(`'${key}' is a document, not an asset`, {
+          translation: { message: 'assetsObsidian.expectedAssetFoundDocument' },
+        }),
       );
     }
     try {
       const stat = await fs.stat(pathResult.success);
       if (!stat.isFile()) {
-        return Result.fail(new NotFoundError(`Asset '${key}' is not a file`));
+        return Result.fail(
+          new NotFoundError(`Asset '${key}' is not a file`, {
+            translation: { message: 'assetsObsidian.expectedFileFoundDirectory' },
+          }),
+        );
       }
       return Result.succeed(this.assetFromStat(key, stat));
     } catch (error) {
@@ -268,7 +284,11 @@ export class ObsidianAssetsRepository extends AssetsRepository {
         if (stat.isFile() && !this.isDocument(key)) {
           return [this.assetFromStat(key, stat) as Resource];
         }
-        return yield* Effect.fail(new NotFoundError(`No asset or folder at '${key}'`));
+        return yield* Effect.fail(
+          new NotFoundError(`No asset or folder at '${key}'`, {
+            translation: { message: 'assetsObsidian.atomNotFound' },
+          }),
+        );
       })
     );
   }
@@ -369,11 +389,21 @@ export class ObsidianAssetsRepository extends AssetsRepository {
     const pathResult = this.toFsPath(key);
     if (Result.isFailure(pathResult)) return Result.fail(pathResult.failure);
     if (this.isDocument(key)) {
-      return Result.fail(new BadRequestError(`'${key}' is a document, not an asset`));
+      return Result.fail(
+        new BadRequestError(`'${key}' is a document, not an asset`, {
+          translation: { message: 'assetsObsidian.expectedAssetFoundDocument' },
+        }),
+      );
     }
     try {
       const stat = await fs.stat(pathResult.success);
-      if (!stat.isFile()) return Result.fail(new NotFoundError(`Asset '${key}' is not a file`));
+      if (!stat.isFile()) {
+        return Result.fail(
+          new NotFoundError(`Asset '${key}' is not a file`, {
+            translation: { message: 'assetsObsidian.expectedFileFoundDirectory' },
+          }),
+        );
+      }
       const body = Readable.toWeb(
         createReadStream(pathResult.success),
       ) as ReadableStream<Uint8Array>;
@@ -390,6 +420,7 @@ export class ObsidianAssetsRepository extends AssetsRepository {
           return yield* Effect.fail(
             new BadRequestError(
               `Refusing to write '${create.key}': that extension belongs to the documents layer`,
+              { translation: { message: 'assetsObsidian.expectedAssetFoundDocument' } },
             ),
           );
         }
@@ -421,6 +452,7 @@ export class ObsidianAssetsRepository extends AssetsRepository {
       new BadRequestError(
         `Cannot update asset '${update.key}': an Obsidian vault keeps no per-file metadata. `
           + 'Replace the file with createAsset instead.',
+        { translation: { message: 'assetsObsidian.updateUnsupported' } },
       ),
     );
   }
@@ -524,7 +556,11 @@ export class ObsidianAssetsRepository extends AssetsRepository {
           fs.stat(fsPath).then(Result.succeed, e => Result.fail(fsError(e, key))),
         );
         if (!stat.isDirectory()) {
-          return yield* Effect.fail(new NotFoundError(`'${key}' is not a folder`));
+          return yield* Effect.fail(
+            new NotFoundError(`'${key}' is not a folder`, {
+              translation: { message: 'assetsObsidian.directoryNotFound' },
+            }),
+          );
         }
         return this.folderFromStat(key, stat);
       })

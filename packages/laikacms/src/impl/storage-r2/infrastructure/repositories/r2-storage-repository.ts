@@ -82,6 +82,7 @@ export class R2StorageRepository extends StorageRepository {
       throw new BadRequestError(
         `No serializer found for file extension: .${ext}. `
           + `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`,
+        { translation: { message: 'storage.r2.invalidRequest' } },
       );
     }
     try {
@@ -89,6 +90,7 @@ export class R2StorageRepository extends StorageRepository {
     } catch (error) {
       throw new BadRequestError(
         `Failed to serialize content: ${error instanceof Error ? error.message : String(error)}`,
+        { translation: { message: 'storage.r2.invalidRequest' } },
       );
     }
   }
@@ -100,6 +102,7 @@ export class R2StorageRepository extends StorageRepository {
       throw new BadRequestError(
         `No serializer found for file extension: .${ext}. `
           + `Available formats: ${Object.keys(this.serializerRegistry).join(', ')}`,
+        { translation: { message: 'storage.r2.invalidRequest' } },
       );
     }
     try {
@@ -107,6 +110,7 @@ export class R2StorageRepository extends StorageRepository {
     } catch (error) {
       throw new BadRequestError(
         `Failed to deserialize content: ${error instanceof Error ? error.message : String(error)}`,
+        { translation: { message: 'storage.r2.invalidRequest' } },
       );
     }
   }
@@ -132,7 +136,11 @@ export class R2StorageRepository extends StorageRepository {
         if (isFile) return yield* LaikaTask.runValue(this.getObject(key));
         const isDir = yield* Effect.promise(() => this.r2DataSource.isDirectory(key));
         if (isDir) return yield* LaikaTask.runValue(this.getFolder(key));
-        return yield* Effect.fail(new BadRequestError(`Path not found: ${key}`));
+        return yield* Effect.fail(
+          new BadRequestError(`Path not found: ${key}`, {
+            translation: { message: 'storage.r2.fileNotFound' },
+          }),
+        );
       })
     );
   }
@@ -181,13 +189,18 @@ export class R2StorageRepository extends StorageRepository {
     return LaikaTask.make<StorageObject>(emit =>
       Effect.gen({ self: this }, function*() {
         if (!create.content) {
-          return yield* Effect.fail(new InvalidData('Object content is required for creation'));
+          return yield* Effect.fail(
+            new InvalidData('Object content is required for creation', {
+              translation: { message: 'storage.r2.contentRequired' },
+            }),
+          );
         }
         const existingExt = yield* Effect.promise(() => this.r2DataSource.findExistingObjectExtension(create.key));
         if (existingExt) {
           return yield* Effect.fail(
             new EntryAlreadyExistsError(
               `An object with key "${create.key}" already exists with extension .${existingExt}`,
+              { translation: { message: 'storage.r2.entryAlreadyExists' } },
             ),
           );
         }
