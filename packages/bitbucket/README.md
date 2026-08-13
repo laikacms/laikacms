@@ -62,6 +62,40 @@ Two modes, both handled behind the scenes:
 The end-to-end auth-header test verifies that the right scheme reaches the wire (`Basic <b64>` for
 app passwords, `Bearer <token>` for OAuth), so misconfiguration surfaces early.
 
+- **Extra headers** (`auth.headers`) — a plain object of headers merged into every request, after
+  the `Authorization` header and before any per-call override. No default. Useful for
+  Bitbucket-adjacent proxies or gateways that require an additional header such as a tenant ID or a
+  `User-Agent` override:
+
+  ```ts
+  auth: {
+    oauthToken: process.env.BITBUCKET_OAUTH_TOKEN!,
+    headers: { 'X-Tenant-Id': 'esstudio' },
+  },
+  ```
+
+### Advanced options
+
+- **`fetch`** — a custom `fetch` implementation. Defaults to `globalThis.fetch`. Useful for tests
+  (inject a mock/spy) or non-standard runtimes that don't expose a global `fetch`:
+
+  ```ts
+  const repo = new BitbucketStorageRepository({
+    // ...
+    fetch: mySpyFetch,
+  });
+  ```
+
+- **`apiUrl`** — overrides the API base URL. Defaults to `https://api.bitbucket.org/2.0`. Useful for
+  pointing at a self-hosted Bitbucket Data Center mirror or a test double:
+
+  ```ts
+  const repo = new BitbucketStorageRepository({
+    // ...
+    apiUrl: 'https://bitbucket.internal.example.com/2.0',
+  });
+  ```
+
 ### Behaviour notes
 
 - **Extension hiding.** Keys are extension-free at the boundary; the on-server file name is
