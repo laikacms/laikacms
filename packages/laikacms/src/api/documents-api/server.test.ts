@@ -9,12 +9,14 @@ import type {
   ListRevisionsDone,
   RevisionSummary,
 } from 'laikacms/documents';
+import type { Key, Lock, LockOwner, LockToken, OwnedLock } from 'laikacms/storage';
 import { describe, expect, it, vi } from 'vitest';
 import { allowAll } from '../../shared/json-api/authorize.js';
 
 import {
   BadRequestError,
   EntryAlreadyExistsError,
+  errorCode,
   InternalError,
   InvalidData,
   LaikaStream,
@@ -23,6 +25,7 @@ import {
 } from 'laikacms/core';
 
 import { InMemoryDocumentsRepository } from '../../domain/documents/testing/in-memory-documents.js';
+import { InProcessLockManager } from '../../impl/locks-in-process/in-process-lock-manager.js';
 
 import { buildJsonApi } from './server.js';
 
@@ -3309,5 +3312,225 @@ describe('documents-api change signals', () => {
     expect(res.status).toBe(501);
     const body = await res.json() as { errors: Array<{ code: string }> };
     expect(body.errors[0]!.code).toBe('not_implemented');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Advisory lock routes — LCMS-544
+// ---------------------------------------------------------------------------
+
+class LockingInMemoryDocuments extends InMemoryDocumentsRepository {
+  constructor(readonly manager: InProcessLockManager) {
+    super();
+  }
+
+  override getCapabilities(): LaikaTask.LaikaTask<DocumentsCapabilities> {
+    return LaikaTask.map(super.getCapabilities(), caps => ({
+      ...caps,
+      locks: InProcessLockManager.capability,
+    }));
+  }
+
+  override acquireLock(
+    key: Key,
+    owner: LockOwner,
+    options?: { ttlMs?: number | undefined, force?: boolean | undefined },
+  ): LaikaTask.LaikaTask<OwnedLock> {
+    return this.manager.acquireLock(key, owner, options);
+  }
+
+  override refreshLock(
+    key: Key,
+    token: LockToken,
+    owner: LockOwner,
+    options?: { ttlMs?: number | undefined },
+  ): LaikaTask.LaikaTask<OwnedLock> {
+    return this.manager.refreshLock(key, token, owner, options);
+  }
+
+  override releaseLock(key: Key, token: LockToken): LaikaTask.LaikaTask<void> {
+    return this.manager.releaseLock(key, token);
+  }
+
+  override getLock(key: Key): LaikaTask.LaikaTask<Lock | null> {
+    return this.manager.getLock(key);
+  }
+}
+
+describe('documents-api lock routes (LCMS-544)', () => {
+  const KEY = 'doc-1' as Key;
+  const alice: LockOwner = { id: 'u1', name: 'Alice' };
+  const bob: LockOwner = { id: 'u2', name: 'Bob' };
+
+  function makeRepo() {
+    return new LockingInMemoryDocuments(new InProcessLockManager({ defaultTtlMs: 60_000 }));
+  }
+
+  function acquireBody(owner: LockOwner, opts?: { force?: boolean }) {
+    return JSON.stringify({
+      data: { type: 'lock', attributes: { owner, ...(opts?.force ? { force: true } : {}) } },
+    });
+  }
+
+  it('GET /locks/{key} returns null when no lock is held', async () => {
+    const api = buildJsonApi({ repo: makeRepo(), authorize: allowAll });
+    const res = await api.fetch(new Request(`http://localhost/locks/${KEY}`));
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: null };
+    expect(body.data).toBeNull();
+  });
+
+  it('POST /locks/{key} acquires a lock and returns 201 with OwnedLock data', async () => {
+    const api = buildJsonApi({ repo: makeRepo(), authorize: allowAll });
+    const res = await api.fetch(
+      new Request(`http://localhost/locks/${KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: acquireBody(alice),
+      }),
+    );
+    expect(res.status).toBe(201);
+    const body = await res.json() as {
+      data: { type: string, id: string, attributes: { owner: LockOwner, token: string } },
+    };
+    expect(body.data.type).toBe('lock');
+    expect(body.data.id).toBe(KEY);
+    expect(body.data.attributes.owner).toEqual(alice);
+    expect(typeof body.data.attributes.token).toBe('string');
+  });
+
+  it('GET /locks/{key} returns the lock holder without the token when held', async () => {
+    const repo = makeRepo();
+    const api = buildJsonApi({ repo, authorize: allowAll });
+    await api.fetch(
+      new Request(`http://localhost/locks/${KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: acquireBody(alice),
+      }),
+    );
+
+    const res = await api.fetch(new Request(`http://localhost/locks/${KEY}`));
+    expect(res.status).toBe(200);
+    const body = await res.json() as {
+      data: { type: string, id: string, attributes: Record<string, unknown> },
+    };
+    expect(body.data.type).toBe('lock');
+    expect(body.data.attributes['owner']).toEqual(alice);
+    expect(body.data.attributes).not.toHaveProperty('token');
+  });
+
+  it('POST /locks/{key} on an already-held lock returns 423 with meta.lock populated', async () => {
+    const repo = makeRepo();
+    const api = buildJsonApi({ repo, authorize: allowAll });
+    await api.fetch(
+      new Request(`http://localhost/locks/${KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: acquireBody(alice),
+      }),
+    );
+
+    const res = await api.fetch(
+      new Request(`http://localhost/locks/${KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: acquireBody(bob),
+      }),
+    );
+    expect(res.status).toBe(423);
+    const body = await res.json() as {
+      errors: Array<{ code: string }>,
+      meta?: { lock?: { owner?: { name?: string } } },
+    };
+    expect(body.errors[0]!.code).toBe(errorCode.LOCK_CONFLICT);
+    expect(body.meta?.lock?.owner?.name).toBe('Alice');
+  });
+
+  it('POST /locks/{key}/refresh extends the TTL and returns 200', async () => {
+    const repo = makeRepo();
+    const api = buildJsonApi({ repo, authorize: allowAll });
+    const acquireRes = await api.fetch(
+      new Request(`http://localhost/locks/${KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: acquireBody(alice),
+      }),
+    );
+    const { data: { attributes: { token } } } = await acquireRes.json() as {
+      data: { attributes: { token: string } },
+    };
+
+    const res = await api.fetch(
+      new Request(`http://localhost/locks/${KEY}/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: { type: 'lock', attributes: { token, owner: alice } } }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { data: { attributes: { owner: LockOwner } } };
+    expect(body.data.attributes.owner).toEqual(alice);
+  });
+
+  it('DELETE /locks/{key} releases the lock and returns meta.released: true', async () => {
+    const repo = makeRepo();
+    const api = buildJsonApi({ repo, authorize: allowAll });
+    const acquireRes = await api.fetch(
+      new Request(`http://localhost/locks/${KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: acquireBody(alice),
+      }),
+    );
+    const { data: { attributes: { token } } } = await acquireRes.json() as {
+      data: { attributes: { token: string } },
+    };
+
+    const res = await api.fetch(
+      new Request(`http://localhost/locks/${KEY}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: { type: 'lock', attributes: { token } } }),
+      }),
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json() as { meta: { released: boolean } };
+    expect(body.meta.released).toBe(true);
+
+    const getRes = await api.fetch(new Request(`http://localhost/locks/${KEY}`));
+    const getBody = await getRes.json() as { data: null };
+    expect(getBody.data).toBeNull();
+  });
+
+  it('any lock action on a repo without locking capability returns 501', async () => {
+    const api = buildJsonApi({ repo: new InMemoryDocumentsRepository(), authorize: allowAll });
+
+    for (
+      const req of [
+        new Request(`http://localhost/locks/${KEY}`),
+        new Request(`http://localhost/locks/${KEY}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: acquireBody(alice),
+        }),
+      ]
+    ) {
+      const res = await api.fetch(req);
+      expect(res.status).toBe(501);
+      const body = await res.json() as { errors: Array<{ code: string }> };
+      expect(body.errors[0]!.code).toBe(errorCode.NOT_IMPLEMENTED);
+    }
+  });
+
+  it('authorize returning false on a lock action returns 403', async () => {
+    const api = buildJsonApi({
+      repo: makeRepo(),
+      authorize: ({ action }) => action === 'getLock' ? false : true,
+    });
+    const res = await api.fetch(new Request(`http://localhost/locks/${KEY}`));
+    expect(res.status).toBe(403);
+    const body = await res.json() as { errors: Array<{ code: string }> };
+    expect(body.errors[0]!.code).toBe(errorCode.FORBIDDEN);
   });
 });
