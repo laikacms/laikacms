@@ -27,13 +27,40 @@ pnpm add @laikacms/server
 
 ## Exports
 
-| Export                    | Purpose                                                          |
-| ------------------------- | ---------------------------------------------------------------- |
-| `@laikacms/server/api`    | Single-endpoint JSON:API router over the `laikacms` repositories |
-| `@laikacms/server/oauth2` | OAuth 2.0 authorization server (PKCE, passkey, TOTP, email)      |
+| Export                      | Purpose                                                                                 |
+| --------------------------- | --------------------------------------------------------------------------------------- |
+| `@laikacms/server/api`      | Single-endpoint JSON:API router over the `laikacms` repositories                        |
+| `@laikacms/server/oauth2`   | OAuth 2.0 authorization server (PKCE, passkey, TOTP, email)                             |
+| `@laikacms/server/embedded` | Quick-start all-in-one Node.js backend: filesystem storage + config seeding (see below) |
 
 The admin-side counterpart, `createLaikaBackend()`, lives in the fork:
 [`@laikacms/decap-cms/backends/laika`](https://www.npmjs.com/package/@laikacms/decap-cms).
+
+#### `embedded` — quick-start Node.js backend
+
+`createEmbeddedLaika()` wires a complete filesystem-backed Decap CMS backend from one options
+object. It is Node.js-only — for edge runtimes (Cloudflare Workers, Deno Deploy) use `laikaApi` from
+`@laikacms/server/api` directly.
+
+```ts
+import { resolve } from 'node:path';
+import { createEmbeddedLaika } from '@laikacms/server/embedded';
+
+export const laika = createEmbeddedLaika({
+  contentDir: resolve(process.cwd(), 'content'),
+  basePath: '/api/decap',
+  auth: { mode: 'dev' }, // accepts DEFAULT_DEV_TOKEN; use mode: 'token' in production
+  decapConfig: {
+    backend: { name: 'laika', api_url: '/api/decap' },
+    media_folder: 'public/uploads',
+    public_folder: '/uploads',
+    collections: [...],
+  },
+});
+```
+
+`laika.fetch` handles all `/api/decap/*` requests. `laika.documents` / `laika.storage` /
+`laika.assets` expose the repositories for SSR route handlers that read/write content directly.
 
 #### `api` options
 
@@ -44,8 +71,6 @@ Key options accepted by `laikaApi(options)`:
 | `documents`               | `DocumentsRepository`                                    | yes      | Document storage backend                                                                                                                                                         |
 | `storage`                 | `StorageRepository`                                      | yes      | Raw file storage backend                                                                                                                                                         |
 | `assets`                  | `AssetsRepository`                                       | no       | Binary asset storage; enables the `/assets` endpoint when provided                                                                                                               |
-| `locks`                   | `LockStore`                                              | no       | Shared store enabling **advisory entry locking**; mounts the `/locks` endpoint (see below)                                                                                       |
-| `locksTtlMs`              | `number`                                                 | no       | Advisory-lock lifetime in ms. Defaults to 5 minutes (matches the Decap admin's refresh cadence)                                                                                  |
 | `basePath`                | `string`                                                 | no       | URL prefix for all endpoints (e.g. `'/api/decap'`)                                                                                                                               |
 | `authenticateAccessToken` | `(token: string) => Promise<User>`                       | yes      | Validates a Bearer access token and returns the principal's **identity**                                                                                                         |
 | `authenticateApiToken`    | `(key: string) => Promise<User>`                         | no       | Validates an API key sent via `X-API-Key` or `Authorization: ApiKey` for M2M access                                                                                              |
@@ -92,7 +117,7 @@ interface AuthorizeContext {
   user: User; // identity from your authenticate* callback
   request: Request; // raw request, for anything the parsed fields don't cover
   method: string; // upper-cased HTTP method
-  domain: 'documents' | 'storage' | 'assets' | 'session';
+  domain: 'documents' | 'storage' | 'assets' | 'session' | 'locks';
   operation: 'read' | 'create' | 'update' | 'delete' | 'publish' | 'unpublish';
   collection?: string; // first path segment after the domain (the API resource)
   itemId?: string; // item key/slug, URL-decoded, when present
@@ -128,32 +153,29 @@ own permissions; reach for `ctx.request` only for what the parsed fields don't c
 
 When two editors open the same entry, the Decap admin (`@laikacms/decap-cms` ≥ 4.1.0) can show a
 _"being edited by X"_ banner. This is an **advisory** signal only — it never blocks a write; it just
-warns before someone clobbers a concurrent edit. Pass a `locks` store to arbitrate those locks
-server-side, so two _different_ browsers/users see the same lock (the admin's bundled fallback only
-shares locks between tabs of one browser):
+warns before someone clobbers a concurrent edit.
+
+The `/locks` endpoint is **auto-enabled** when the `documents` repository implements the lock
+methods (`acquireLock`, `releaseLock`, `getLock`, `refreshLock`). No separate store or option is
+needed:
 
 ```ts
-import { createInMemoryLockStore, laikaApi } from '@laikacms/server/api';
+import { laikaApi } from '@laikacms/server/api';
 
 const api = laikaApi({
-  // …documents, storage, authenticate*, authorize…
-  locks: createInMemoryLockStore(),
+  documents, // if documents supports locks, /locks is mounted automatically
+  storage,
+  authenticate*, authorize,
 });
 ```
 
-- **Opt-in.** Omit `locks` and the `/locks` endpoint isn't mounted; the admin silently degrades to
-  "locking unsupported" (no banner, no errors).
+- **Automatic.** When the repository signals no lock capability, the `/locks` endpoint responds
+  `501 Not Implemented`; the admin silently degrades to "locking unsupported" (no banner, no
+  errors).
 - **Owner identity is the authenticated principal's** (`user.email`), derived server-side — never
   trusted from the request body — so a caller can't release or override someone else's lock.
-- **Bring a shared store for multi-node deploys.** `createInMemoryLockStore()` is a single-instance
-  reference; on more than one node its locks are invisible across nodes. Implement `LockStore` (a
-  small TTL key/value: `get`/`set`/`delete`) over Redis, a KV namespace, or a DB table. Locks are
-  advisory, so the store is best-effort — it need not be strictly atomic.
-
-> **No client implements `/locks` today.** The four optional `CmsImplementation` lock methods
-> (`getEntryLock`/`acquireEntryLock`/`releaseEntryLock`/`refreshEntryLock`) are not wired up in
-> `@laikacms/decap-cms/backends/laika`, so the endpoint currently has no caller. Mounting it is
-> harmless but inert until that lands.
+- **Atomic by the repository.** Lock arbitration is delegated to the `DocumentsRepository`, where
+  each backend uses its datasource's native conditional write rather than a read-check-write seam.
 
 ### Decap CMS backend options
 
