@@ -62,6 +62,26 @@ new GitlabStorageRepository({
 });
 ```
 
+### Extra auth headers
+
+`auth.headers` are merged into every request, on top of whatever header the chosen auth method
+(`token`/`oauthToken`/`jobToken`) sets. Defaults to none. Useful for GitLab instances behind a
+reverse proxy that requires its own header (e.g. an internal gateway token) alongside your normal
+GitLab credentials:
+
+```ts
+new GitlabStorageRepository({
+  projectId: 'esstudio/content',
+  branch: 'main',
+  auth: {
+    token: process.env.GITLAB_PAT!,
+    headers: { 'X-Gateway-Token': process.env.GATEWAY_TOKEN! },
+  },
+  serializerRegistry,
+  defaultFileExtension: 'md',
+});
+```
+
 ## Behaviour notes
 
 - **Extension hiding.** Keys are extension-free at the boundary, exactly like `@laikacms/github` and
@@ -80,6 +100,11 @@ new GitlabStorageRepository({
 - **Pagination.** Cursor pagination is not supported. The directory listing pages through
   `X-Next-Page` until exhausted, then offset/page styles are applied in memory.
 - **Self-hosted.** Pass `apiUrl: 'https://gitlab.example.com/api/v4'` for a self-hosted instance.
+- **Custom `fetch`.** Defaults to `globalThis.fetch`. Pass `fetch` to swap in a different
+  implementation — e.g. a mocked `fetch` in tests, or an instrumented/proxied one on a runtime
+  without a global `fetch`.
+- **`userAgent`.** Sent as the `User-Agent` header on every request. Defaults to `@laikacms/gitlab`.
+  Override it to identify your app in GitLab's request logs, e.g. `userAgent: 'my-cms/1.4.0'`.
 
 ## What this does not do
 
