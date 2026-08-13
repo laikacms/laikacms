@@ -1,13 +1,13 @@
 /**
- * Cloudflare Workers + D1 blog starter for LaikaCMS.
+ * Cloudflare Workers + R2 blog starter for LaikaCMS.
  *
  * Unlike the Node.js starters (Astro, Next, Hono, Express) this app cannot use
  * `createEmbeddedLaika` — that helper hardcodes `FileSystemStorageRepository`
  * which requires `node:fs` and is incompatible with the Workers runtime.
  *
  * Instead we wire the lower-level `laikaApi` by hand:
- *   D1StorageRepository (Cloudflare REST API)
- *   → DecapCatalogProvider (reads Decap config from D1)
+ *   R2StorageRepository (native Cloudflare R2 binding)
+ *   → DecapCatalogProvider (reads Decap config from R2)
  *   → CatalogDocumentsRepository
  *   → CatalogAssetsRepository
  *   → laikaApi({ documents, storage, assets, basePath, auth })
@@ -24,19 +24,15 @@ import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
 import { rawSerializer } from 'laikacms/storage-serializers-raw';
 import { yamlSerializer } from 'laikacms/storage-serializers-yaml';
+import { R2StorageRepository } from 'laikacms/storage/r2';
 
-import { D1StorageRepository } from '@laikacms/cloudflare/storage-d1';
 import { laikaApi } from '@laikacms/server/api';
 
 import { decapConfig } from './decap-config.js';
 
 export interface Env {
-  /** Cloudflare API token with D1:Edit permission — set via `wrangler secret put CF_API_TOKEN`. */
-  CF_API_TOKEN: string;
-  /** Cloudflare account ID — set via `wrangler secret put CF_ACCOUNT_ID`. */
-  CF_ACCOUNT_ID: string;
-  /** D1 database UUID — set via `wrangler secret put CF_D1_DATABASE_ID`. */
-  CF_D1_DATABASE_ID: string;
+  /** R2 bucket binding — set via `[[r2_buckets]]` in wrangler.toml. */
+  LAIKACMS_BUCKET: R2Bucket;
   /** Optional override for the dev bearer token (defaults to 'dev-local-laika-token'). */
   DEV_TOKEN?: string;
 }
@@ -56,23 +52,15 @@ interface LaikaResources {
 
 // ── Per-isolate cache ─────────────────────────────────────────────────────────
 // Workers re-use isolates across requests; cache the initialized API so we
-// don't pay the D1 config round-trip on every single request.
+// don't pay the R2 config round-trip on every single request.
 let cached: LaikaResources | null = null;
-let cachedApiToken = '';
 
 async function getOrCreate(env: Env): Promise<LaikaResources> {
-  // Invalidate if the token changed (e.g. secret rotation during dev).
-  if (cached && cachedApiToken === env.CF_API_TOKEN) return cached;
+  if (cached) return cached;
 
-  const storage = new D1StorageRepository({
-    auth: { apiToken: env.CF_API_TOKEN },
-    accountId: env.CF_ACCOUNT_ID,
-    databaseId: env.CF_D1_DATABASE_ID,
-    serializerRegistry: serializers,
-    defaultFileExtension: 'md',
-  });
+  const storage = new R2StorageRepository(env.LAIKACMS_BUCKET, serializers, 'md');
 
-  // Seed config.yml into D1 on first use so DecapCatalogProvider
+  // Seed config.yml into R2 on first use so DecapCatalogProvider
   // can read it.  Mirrors what createEmbeddedLaika does via ensureConfigOnDisk.
   await ensureConfig(storage);
 
@@ -95,12 +83,11 @@ async function getOrCreate(env: Env): Promise<LaikaResources> {
   });
 
   cached = { api, documents };
-  cachedApiToken = env.CF_API_TOKEN;
   return cached;
 }
 
-/** Seed config.yml into D1 if it does not already exist. */
-async function ensureConfig(storage: D1StorageRepository): Promise<void> {
+/** Seed config.yml into R2 if it does not already exist. */
+async function ensureConfig(storage: R2StorageRepository): Promise<void> {
   try {
     await runTask(storage.getObject('config.yml'));
     return; // already present
@@ -117,7 +104,7 @@ async function ensureConfig(storage: D1StorageRepository): Promise<void> {
       }),
     );
   } catch (err) {
-    console.error('starter-workers-blog: failed to seed config.yml into D1', err);
+    console.error('starter-workers-blog: failed to seed config.yml into R2', err);
   }
 }
 

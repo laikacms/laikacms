@@ -72,7 +72,6 @@ workspace-protocol dependency.
 > `@laikacms/decap-cms/backends/laika` admin imports. Before a starter's StackBlitz embed goes live
 > its **server side** must still:
 >
-> - replace `starter-workers-blog`'s `@laikacms/cloudflare` imports with `laikacms/storage/r2`;
 > - adopt the `decap-api` `authorize` callback (secure-by-default); and
 > - for `starter-vite-react-blog`, adopt `WebStorageRepository` — **blocked on LCMS-451**.
 >

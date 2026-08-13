@@ -2,15 +2,14 @@
   "name": "@laikacms/starter-workers-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Starter blog built with Cloudflare Workers + D1 + LaikaCMS. Shows lower-level laikaApi wiring for edge runtimes where createEmbeddedLaika (Node.js / FileSystem) is not available.",
+  "description": "Starter blog built with Cloudflare Workers + R2 + LaikaCMS. Shows lower-level laikaApi wiring for edge runtimes where createEmbeddedLaika (Node.js / FileSystem) is not available.",
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
     "dev": "pnpm build:admin && wrangler dev",
     "build": "pnpm build:admin",
     "deploy": "pnpm build:admin && wrangler deploy",
-    "typecheck": "tsc --noEmit",
-    "db:migrate": "wrangler d1 migrations apply starter-workers-blog-db"
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@laikacms/server": "^5.0.0",
