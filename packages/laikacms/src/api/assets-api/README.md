@@ -79,6 +79,8 @@ interface AssetsApiOptions {
 
 | Method | Path              | Status    | Description                                           |
 | ------ | ----------------- | --------- | ----------------------------------------------------- |
+| GET    | `/openapi.json`   | 200       | OpenAPI 3.1 specification                             |
+| GET    | `/openapi.yaml`   | 200       | OpenAPI 3.1 specification, as YAML                    |
 | GET    | `/capabilities`   | 200       | Repository capabilities (pagination styles, etc.)     |
 | GET    | `/resources`      | 200       | List assets and folders under a folder prefix         |
 | GET    | `/resources/:key` | 200       | Read a single asset or folder                         |
