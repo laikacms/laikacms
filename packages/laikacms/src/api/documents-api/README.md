@@ -81,6 +81,8 @@ interface DocumentsApiOptions {
 | Method | Path                            | Status | Description                                                              |
 | ------ | ------------------------------- | ------ | ------------------------------------------------------------------------ |
 | GET    | `/`                             | 200    | API info + endpoint discovery                                            |
+| GET    | `/openapi.json`                 | 200    | OpenAPI 3.1 specification                                                |
+| GET    | `/openapi.yaml`                 | 200    | OpenAPI 3.1 specification, as YAML                                       |
 | GET    | `/capabilities`                 | 200    | Repository capabilities (pagination styles, supported features)          |
 | GET    | `/records`                      | 200    | List full records (published + unpublished view per key)                 |
 | GET    | `/record-summaries`             | 200    | List record summaries (lightweight listing, fewer attributes)            |
