@@ -13,15 +13,15 @@ importers:
 
   starter-astro-blog:
     dependencies:
-      '@laikacms/decap':
-        specifier: ^3.1.0
-        version: 3.1.0(@laikacms/decap-cms@4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3))(react@19.2.8)
       '@laikacms/decap-cms':
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
+      '@laikacms/server':
+        specifier: ^5.0.0
+        version: 5.0.0
       '@laikacms/vite-plugin':
-        specifier: ^3.1.0
-        version: 3.1.0(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))
+        specifier: ^5.0.0
+        version: 5.0.0(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))
       astro:
         specifier: ^7.1.6
         version: 7.2.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(tsx@4.23.11)(yaml@2.9.0)
@@ -53,12 +53,12 @@ importers:
       '@hono/node-server':
         specifier: ^2.0.10
         version: 2.1.0(hono@4.13.1)
-      '@laikacms/decap':
-        specifier: ^3.1.0
-        version: 3.1.0(@laikacms/decap-cms@4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3))(react@19.2.8)
       '@laikacms/decap-cms':
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
+      '@laikacms/server':
+        specifier: ^5.0.0
+        version: 5.0.0
       hono:
         specifier: ^4.12.31
         version: 4.13.1
@@ -133,12 +133,12 @@ importers:
 
   starter-vite-react-blog:
     dependencies:
-      '@laikacms/decap':
-        specifier: ^3.1.0
-        version: 3.1.0(@laikacms/decap-cms@4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3))(react@19.2.8)
       '@laikacms/decap-cms':
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
+      '@laikacms/server':
+        specifier: ^5.0.0
+        version: 5.0.0
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -182,12 +182,12 @@ importers:
 
   starter-workers-blog:
     dependencies:
-      '@laikacms/decap':
-        specifier: ^3.1.0
-        version: 3.1.0(@laikacms/decap-cms@4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3))(react@19.2.8)
       '@laikacms/decap-cms':
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
+      '@laikacms/server':
+        specifier: ^5.0.0
+        version: 5.0.0
       laikacms:
         specifier: link:../../packages/laikacms
         version: link:../../packages/laikacms
@@ -1590,20 +1590,12 @@ packages:
       zod:
         optional: true
 
-  '@laikacms/decap@3.1.0':
-    resolution: {integrity: sha512-cDSJGr8i81Pq9F7ETX/qVSTKwMOP1+ttxNTpABa5x7WJd652ety44UwH3CeSpHqUO00pcQBNhCFZObVx2gIQNw==}
+  '@laikacms/server@5.0.0':
+    resolution: {integrity: sha512-M/lPV+zzc20NsUYpefjtwm+WDCMMRBMMPM9E7WW7HDWauAABvN+j3b2MKumkplKuolLU51ak//8ZtX6Pp1+ZEA==}
     engines: {node: '>=24.0.0'}
-    peerDependencies:
-      '@laikacms/decap-cms': '>=4.1.0'
-      react: ^19.2.8
-    peerDependenciesMeta:
-      '@laikacms/decap-cms':
-        optional: true
-      react:
-        optional: true
 
-  '@laikacms/vite-plugin@3.1.0':
-    resolution: {integrity: sha512-OWnJbzj5JW8FLbVfaXBi11sRHAeoiiuqwhDBvkMdUdWcMQo+eSzN+e+CEyb4WTAjqauIh6/araYRUe2rAHyerw==}
+  '@laikacms/vite-plugin@5.0.0':
+    resolution: {integrity: sha512-T55J8tbKgVGx5aCgl+eBIfV8IVsTa5kFiN1Ex5Gn5q2A5+Gp1MenAHLUHVsmmwm9d/TJj7hcockPyKnq947RJA==}
     engines: {node: '>=24.0.0'}
     peerDependencies:
       rolldown: '>=1'
@@ -4011,10 +4003,6 @@ packages:
     resolution: {integrity: sha512-vzi9uRZ926x4XV73S/4qQaTwPXM2JBj6/6lI/byHH1jOpCzb0zDbfytgA9LcN/hzb2l7WQSQnxITOVx5un/wGw==}
     hasBin: true
 
-  uuid@14.0.1:
-    resolution: {integrity: sha512-6ZxzVpzDXDa3bJWaHilVayA+BH/1zmxCJoVgvmqJnid/gPoKHxUrS/aC/T6LGQtNHT+XHG9fXPJB4d+IrU30Ew==}
-    hasBin: true
-
   vary@1.1.2:
     resolution: {integrity: sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg==}
     engines: {node: '>= 0.8'}
@@ -5598,17 +5586,11 @@ snapshots:
       - utf-8-validate
       - yjs
 
-  '@laikacms/decap@3.1.0(@laikacms/decap-cms@4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3))(react@19.2.8)':
+  '@laikacms/server@5.0.0':
     dependencies:
-      effect: 4.0.0-beta.66
       laikacms: link:../packages/laikacms
-      uuid: 14.0.1
-      yaml: 2.9.0
-    optionalDependencies:
-      '@laikacms/decap-cms': 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
-      react: 19.2.8
 
-  '@laikacms/vite-plugin@3.1.0(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))':
+  '@laikacms/vite-plugin@5.0.0(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))':
     dependencies:
       es-module-lexer: 2.3.1
       laikacms: link:../packages/laikacms
@@ -8432,8 +8414,6 @@ snapshots:
       react: 19.2.8
 
   uuid@13.0.2: {}
-
-  uuid@14.0.1: {}
 
   vary@1.1.2: {}
 
