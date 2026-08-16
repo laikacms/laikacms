@@ -7,7 +7,7 @@ import { defineConfig } from 'vitest/config';
  * Example (packages/shared/crypto/vitest.config.ts):
  *
  *   import { mergeConfig } from "vitest/config";
- *   import base from "../../../vitest.config.base";
+ *   import base from "../../../vitest.config.base.mjs";
  *
  *   export default mergeConfig(base, {
  *     test: { include: ["src/**\/*.test.ts"] },
