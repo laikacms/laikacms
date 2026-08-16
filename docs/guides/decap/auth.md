@@ -277,6 +277,8 @@ const OAUTH_BASE = '/oauth2';
 const oauth2 = laikaOauth2({
   basePath: OAUTH_BASE,
   clientId: CLIENT_ID,
+  // Required: allowlist of redirect URIs that may receive an authorization code.
+  allowedRedirectUris: ['https://cms.example.com/admin/'],
   callbacks: {
     // Return User | null — { id, email, passwordHash }
     getUserByEmail: async email => db.users.findByEmail(email),
@@ -330,7 +332,12 @@ for `laika`):
 import { laikaOauth2 } from '@laikacms/server/oauth2';
 import express from 'express';
 
-const oauth2 = laikaOauth2({ basePath: '/oauth2', clientId: CLIENT_ID, callbacks });
+const oauth2 = laikaOauth2({
+  basePath: '/oauth2',
+  clientId: CLIENT_ID,
+  allowedRedirectUris: ['https://cms.example.com/admin/'],
+  callbacks,
+});
 
 const app = express();
 // oauth2 speaks Web API — it has its own body parsing, no express.json() needed here
