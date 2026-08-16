@@ -18,7 +18,7 @@ export const blogCollections = [
       { label: 'Title', name: 'title', widget: 'string' },
       { label: 'Date', name: 'date', widget: 'datetime' },
       { label: 'Description', name: 'description', widget: 'string', required: false },
-      { label: 'Body', name: 'body', widget: 'markdown' },
+      { label: 'Body', name: 'body', widget: 'richtext' },
     ],
   },
 ] as const;
