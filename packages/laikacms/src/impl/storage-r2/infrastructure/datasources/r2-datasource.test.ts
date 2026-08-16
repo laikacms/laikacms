@@ -390,18 +390,22 @@ describe('R2DataSource.isFile / isDirectory', () => {
   it('isDirectory returns true when objects exist under the prefix', async () => {
     const ds = makeDS();
     await bucket.put('sub/file.md', 'x');
-    expect(await ds.isDirectory('sub')).toBe(true);
+    expect(await ds.isDirectory('sub')).toEqual(Result.succeed(true));
   });
 
   it('isDirectory returns false when no objects share the prefix', async () => {
     const ds = makeDS();
-    expect(await ds.isDirectory('nothing')).toBe(false);
+    expect(await ds.isDirectory('nothing')).toEqual(Result.succeed(false));
   });
 
-  it('isDirectory swallows bucket errors and returns false', async () => {
+  it('isDirectory propagates bucket errors as InternalError', async () => {
     const ds = makeDS();
     bucket.failNextCall('list');
-    expect(await ds.isDirectory('sub')).toBe(false);
+    const result = await ds.isDirectory('sub');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure.code).toBe('internal_error');
+    }
   });
 });
 
