@@ -6,11 +6,6 @@ The Decap admin and the blog both talk to a
 backed by the browser's File System API, wrapped in the same Catalog documents/assets adapters
 the server-side stacks use.
 
-> Requires the LaikaCMS release that ships `laikacms/storage/web-fs` (the release train keeps this
-> starter's dependency ranges in sync automatically). Inside this repo it runs today via the
-> temporary `laikacms` `link:` override in `../pnpm-workspace.yaml` — run
-> `pnpm -C .. --filter laikacms build` from the repo root first.
-
 ## Two storage modes
 
 | Mode | Where content lives | Browser support |

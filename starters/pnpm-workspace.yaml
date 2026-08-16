@@ -18,7 +18,10 @@ packages:
 # version is published. Build the relevant packages first:
 #   pnpm -C .. --filter laikacms --filter @laikacms/github build
 #
-# - laikacms: needed by starter-opfs-blog (laikacms/storage/web-fs not yet on npm)
+# - laikacms: still load-bearing for catalog-convention exports that starter-opfs-blog
+#   imports (laikacms/assets/catalog, laikacms/catalog-convention, laikacms/documents/catalog).
+#   npm laikacms@5.0.0 does NOT export those subpaths. storage/web-fs IS published;
+#   the override must stay until a release publishes the catalog-convention family.
 # - @laikacms/github: needed by starter-github-blog (1.0.4 not yet on npm; registry has 1.0.0)
 overrides:
   laikacms: "link:../packages/laikacms"
