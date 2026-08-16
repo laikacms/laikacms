@@ -69,7 +69,7 @@ interface GitTreeEntry {
 const downloadStarter = async (starter: StarterName, destination: string): Promise<void> => {
   const prefix = `starters/${starter}/`;
   const response = await fetch(
-    'https://api.github.com/repos/laikacms/laikacms/git/trees/main?recursive=1',
+    'https://api.github.com/repos/laikacms/laikacms/git/trees/develop?recursive=1',
     { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'laikacli' } },
   );
   if (!response.ok) throw new Error(`Could not download ${starter}: GitHub returned ${response.status}`);
