@@ -16,12 +16,10 @@ packages:
 # build so starters can be installed and typechecked in this workspace before
 # the npm registry catches up. Remove each line once the corresponding package
 # version is published. Build the relevant packages first:
-#   pnpm -C .. --filter laikacms --filter @laikacms/github build
+#   pnpm -C .. --filter @laikacms/github build
 #
-# - laikacms: needed by starter-opfs-blog (laikacms/storage/web-fs not yet on npm)
 # - @laikacms/github: needed by starter-github-blog (1.0.4 not yet on npm; registry has 1.0.0)
 overrides:
-  laikacms: "link:../packages/laikacms"
   "@laikacms/github": "link:../packages/github"
 
 # Dependencies whose install scripts are allowed to run (pnpm blocks build
