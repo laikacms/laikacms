@@ -61,6 +61,36 @@
       "types": "./dist/embedded/index.d.ts",
       "import": "./dist/embedded/index.js",
       "default": "./dist/embedded/index.js"
+    },
+    "./ai": {
+      "types": "./dist/ai/index.d.ts",
+      "import": "./dist/ai/index.js",
+      "default": "./dist/ai/index.js"
+    },
+    "./ai/providers": {
+      "types": "./dist/ai/providers/index.d.ts",
+      "import": "./dist/ai/providers/index.js",
+      "default": "./dist/ai/providers/index.js"
+    },
+    "./ai/tools": {
+      "types": "./dist/ai/tools/index.d.ts",
+      "import": "./dist/ai/tools/index.js",
+      "default": "./dist/ai/tools/index.js"
+    },
+    "./ai/i18n/en": {
+      "types": "./dist/ai/i18n/en.d.ts",
+      "import": "./dist/ai/i18n/en.js",
+      "default": "./dist/ai/i18n/en.js"
+    },
+    "./ai/i18n/nl": {
+      "types": "./dist/ai/i18n/nl.d.ts",
+      "import": "./dist/ai/i18n/nl.js",
+      "default": "./dist/ai/i18n/nl.js"
+    },
+    "./ai/i18n/types": {
+      "types": "./dist/ai/i18n/types.d.ts",
+      "import": "./dist/ai/i18n/types.js",
+      "default": "./dist/ai/i18n/types.js"
     }
   },
   "scripts": {
@@ -76,9 +106,28 @@
     "effect": "catalog:default",
     "laikacms": "workspace:*"
   },
+  "peerDependencies": {
+    "@ai-sdk/anthropic": "^4.0.16",
+    "@ai-sdk/openai": "^4.0.16",
+    "ai": "^7.0.31"
+  },
+  "peerDependenciesMeta": {
+    "@ai-sdk/anthropic": {
+      "optional": true
+    },
+    "@ai-sdk/openai": {
+      "optional": true
+    },
+    "ai": {
+      "optional": true
+    }
+  },
   "devDependencies": {
+    "@ai-sdk/anthropic": "catalog:ai",
+    "@ai-sdk/openai": "catalog:ai",
     "@hono/node-server": "catalog:server",
     "@types/node": "catalog:types",
+    "ai": "catalog:ai",
     "rimraf": "catalog:tools",
     "typescript": "catalog:tools",
     "vitest": "catalog:tools"

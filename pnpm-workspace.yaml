@@ -11,6 +11,13 @@ packages:
 
 catalogs:
 
+  # Vercel AI SDK, used by @laikacms/server/ai (optional peers there, so only
+  # consumers that mount the AI endpoints install them).
+  ai:
+    "@ai-sdk/anthropic": "^4.0.16"
+    "@ai-sdk/openai": "^4.0.16"
+    "ai": "^7.0.31"
+
   astro:
     "@astrojs/check": "^0.9.10"
     "@astrojs/mdx": "^7.0.5"

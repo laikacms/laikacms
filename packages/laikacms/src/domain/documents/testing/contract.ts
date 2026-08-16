@@ -24,7 +24,7 @@ export interface DocumentsContractCase {
   skip?: DocumentsContractCapability[];
   /**
    * Optional folder name to scope created keys under. Some impls (e.g.
-   * content-base on top of an Obsidian vault) require keys to live inside a
+   * catalog on top of an Obsidian vault) require keys to live inside a
    * configured collection directory.
    */
   collectionFolder?: string;

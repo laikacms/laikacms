@@ -140,7 +140,7 @@ export function buildCatalogOpenApi(options: CatalogOpenApiOptions = {}): OpenAp
       title: 'Laika CMS Catalog API',
       version: '1.0.1',
       license: { name: 'MIT', identifier: 'MIT' },
-      description: 'JSON:API-style server for content-base collection settings (document and media collections). '
+      description: 'JSON:API-style server for catalog collection settings (document and media collections). '
         + 'All responses carry Cache-Control: no-store. '
         + 'Warning: this API ships no built-in authentication — wrap the handler with an authentication '
         + 'layer before exposing it to an untrusted network, otherwise anyone who can reach it can read, '
@@ -148,7 +148,7 @@ export function buildCatalogOpenApi(options: CatalogOpenApiOptions = {}): OpenAp
     },
     servers: [{ url: basePath === '' ? '/' : basePath }],
     tags: [
-      { name: 'collections', description: 'Content-base collection settings.' },
+      { name: 'collections', description: 'Catalog collection settings.' },
       { name: 'openapi', description: 'API metadata.' },
     ],
     paths: {

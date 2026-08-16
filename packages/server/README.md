@@ -16,10 +16,16 @@ are CMS-agnostic and have no React or admin-UI dependency.
 
 > **Moved (July 2026, DCMS-492):** the client-side pieces that used to live here now ship with the
 > `@laikacms/decap-cms` fork: icon widgets (`@laikacms/decap-cms/widgets/lucide-icon`,
-> `…/widgets/radix-icon`), the AI chat widget (`…/widgets/aichat`) and server adapter (`…/ai`), the
-> embedded-entry editor component (`…/editor-component-embedded-entry`), config type utilities
-> (`…/config-types`), and the Dutch locale (`…/locales/nl`, bundled with all other locales). The
-> `@laikacms/decap-ai` package is discontinued.
+> `…/widgets/radix-icon`), the AI chat widget (`…/widgets/aichat`), the embedded-entry editor
+> component (`…/editor-component-embedded-entry`), config type utilities (`…/config-types`), and the
+> Dutch locale (`…/locales/nl`, bundled with all other locales). The `@laikacms/decap-ai` package is
+> discontinued.
+
+> **Moved back (August 2026):** the AI chat/session server came home as `@laikacms/server/ai` — it
+> is server code, and the fork now ships only the client half of AI (an `LlmTransport` interface
+> plus chat panel and translate action). The client implementation that speaks to these endpoints is
+> the `Dulla` transport in the fork's `@laikacms/decap-cms-llm-dulla` extension. The Vercel AI SDK
+> is an **optional peer** here, so nothing changes for consumers that do not mount `/ai`.
 
 ```bash
 pnpm add @laikacms/server
@@ -32,6 +38,7 @@ pnpm add @laikacms/server
 | `@laikacms/server/api`      | Single-endpoint JSON:API router over the `laikacms` repositories                        |
 | `@laikacms/server/oauth2`   | OAuth 2.0 authorization server (PKCE, passkey, TOTP, email)                             |
 | `@laikacms/server/embedded` | Quick-start all-in-one Node.js backend: filesystem storage + config seeding (see below) |
+| `@laikacms/server/ai`       | AI chat + session endpoints for the Decap CMS assistant (optional `ai` peer)            |
 
 The admin-side counterpart, `createLaikaBackend()`, lives in the fork:
 [`@laikacms/decap-cms/backends/laika`](https://www.npmjs.com/package/@laikacms/decap-cms).

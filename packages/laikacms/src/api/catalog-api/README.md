@@ -1,6 +1,6 @@
 # laikacms/catalog-api
 
-JSON:API server for content-base collection settings (document and media collections).
+JSON:API server for catalog collection settings (document and media collections).
 
 ## ⚠️ Access control
 
