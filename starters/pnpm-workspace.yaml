@@ -11,22 +11,18 @@
 # with the current release).
 packages:
   - "starter-*"
-  # Excluded until @laikacms/github catches up on npm: the release train
-  # pinned it to the workspace version (1.0.3) but the registry stopped at
-  # 1.0.0, so this starter cannot install from published packages yet. Drop
-  # the exclusion once the next release publishes it.
-  - "!starter-github-blog"
 
-# TEMPORARY (remove once the release carrying `laikacms/storage/web-fs`
-# ships): link every laikacms resolution — including the one nested under
-# @laikacms/decap-cms — to the local build, so starter-opfs-blog can run
-# before that release exists. `link:` (unlike `file:` or workspace
-# membership) symlinks without installing the target's dependencies, so no
-# catalog mirroring is needed; laikacms's own deps resolve through the root
-# workspace install. Build the library first:
-#   pnpm -C .. --filter laikacms build
+# TEMPORARY overrides — link unpublished/ahead-of-npm packages to their local
+# build so starters can be installed and typechecked in this workspace before
+# the npm registry catches up. Remove each line once the corresponding package
+# version is published. Build the relevant packages first:
+#   pnpm -C .. --filter laikacms --filter @laikacms/github build
+#
+# - laikacms: needed by starter-opfs-blog (laikacms/storage/web-fs not yet on npm)
+# - @laikacms/github: needed by starter-github-blog (1.0.4 not yet on npm; registry has 1.0.0)
 overrides:
   laikacms: "link:../packages/laikacms"
+  "@laikacms/github": "link:../packages/github"
 
 # Dependencies whose install scripts are allowed to run (pnpm blocks build
 # scripts by default). esbuild ships its platform binary via postinstall.
