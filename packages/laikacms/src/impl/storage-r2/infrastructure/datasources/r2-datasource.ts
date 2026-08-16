@@ -367,16 +367,20 @@ export class R2DataSource {
   /**
    * Check if a key represents a directory (has objects with that prefix)
    */
-  async isDirectory(key: string): Promise<boolean> {
+  async isDirectory(key: string): Promise<LaikaResult<boolean>> {
     const normalizedKey = this.normalizeKey(key);
     const prefix = normalizedKey ? `${normalizedKey}/` : '';
 
     try {
       const listed = await this.bucket.list({ prefix, limit: 1 });
-      return listed.objects.length > 0 || listed.delimitedPrefixes.length > 0;
+      return Result.succeed(listed.objects.length > 0 || listed.delimitedPrefixes.length > 0);
     } catch (error) {
-      console.error(error);
-      return false;
+      return Result.fail(
+        new InternalError(`Failed to check if key is a directory: ${key}`, {
+          cause: Cause.fail(error),
+          translation: { message: 'storage.r2.failedToListDirectory' },
+        }),
+      );
     }
   }
 

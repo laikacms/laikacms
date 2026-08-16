@@ -134,7 +134,7 @@ export class R2StorageRepository extends StorageRepository {
       Effect.gen({ self: this }, function*() {
         const isFile = yield* Effect.promise(() => this.r2DataSource.isFile(key));
         if (isFile) return yield* LaikaTask.runValue(this.getObject(key));
-        const isDir = yield* Effect.promise(() => this.r2DataSource.isDirectory(key));
+        const isDir = yield* liftResult(this.r2DataSource.isDirectory(key));
         if (isDir) return yield* LaikaTask.runValue(this.getFolder(key));
         return yield* Effect.fail(
           new BadRequestError(`Path not found: ${key}`, {
