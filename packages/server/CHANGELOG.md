@@ -1,4 +1,12 @@
-# @laikacms/decap
+# @laikacms/server
+
+## 6.0.0
+
+### Minor Changes
+
+- 524a8b5: Add `@laikacms/server/ai` subpath — chat + session endpoints for AI-assisted editing via
+  `decapAi(config)`. Exports `./ai`, `./ai/providers`, `./ai/tools`, `./ai/i18n/en`, `./ai/i18n/nl`,
+  `./ai/i18n/types`.
 
 ## 5.0.0
 
