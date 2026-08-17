@@ -1,5 +1,24 @@
 # laikacms
 
+## 6.0.0
+
+### Major Changes
+
+- e8ab49b: **Breaking:** rename `ContentBase` to `Catalog` — all `contentbase` subpaths
+  (`laikacms/assets-contentbase`, `laikacms/documents-contentbase`,
+  `laikacms/contentbase-settings-default`, `laikacms/contentbase-settings-decap`,
+  `laikacms/contentbase-api`) are replaced by their `catalog` equivalents
+  (`laikacms/assets-catalog`, `laikacms/documents-catalog`, `laikacms/catalog-convention`,
+  `laikacms/catalog-decap`, `laikacms/catalog-api`). Update all imports.
+
+- 676fae09: **Breaking:** `catalog-api` no longer exports a Hono app — it returns a plain `fetch`
+  handler instead.
+
+- e8ab49b: **Breaking:** `laikaApi` now requires an `authorize` option; the option is no longer
+  optional.
+
+- e8ab49b: **New:** Node 22 is now supported.
+
 ## 5.0.0
 
 ### Minor Changes
