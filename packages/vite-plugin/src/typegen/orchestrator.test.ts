@@ -131,11 +131,15 @@ describe('LaikaTypegen.regenerateAll', () => {
     expect(postsAlias).toContain('export type Posts =');
     expect(postsAlias).toContain("| typeof import('laika:doc/posts/a')");
     expect(postsAlias).toContain("| typeof import('laika:doc/posts/b')");
+    // Glob comment must use the laika: protocol, not a filesystem path.
+    expect(postsAlias).toContain("import.meta.glob<Posts>('laika:doc/posts/*', { eager: true })");
+    expect(postsAlias).not.toContain('/content/');
     const imagesAlias = await fs.readFile(
       path.join(viteRoot, '.laika', 'vite-generated', 'collections', 'images.ts'),
       'utf8',
     );
     expect(imagesAlias).toContain("| typeof import('laika:store/images/logo')");
+    expect(imagesAlias).toContain("import.meta.glob<Images>('laika:store/images/*', { eager: true })");
 
     // Committed reference + ignore wiring.
     expect(await fs.readFile(path.join(viteRoot, 'laika-env.d.ts'), 'utf8')).toContain(
