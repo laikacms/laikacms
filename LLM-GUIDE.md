@@ -4,11 +4,9 @@ A condensed entry point for anyone (LLM or human) bootstrapping with LaikaCMS in
 If you're a coding agent dropped into a repo that wants to use LaikaCMS, **read this first**, then
 [`docs/contributing/starters.md`](./docs/contributing/starters.md), then the specific docs you need.
 
-> **Note (June 2026):** the `starter-*` reference apps and most adapter packages were moved out of
-> this monorepo (see
-> [`docs/contributing/restructure-2026-06.md`](./docs/contributing/restructure-2026-06.md)). The
-> `starter-…` names below still tell you which **pattern** to use; the directories themselves now
-> live in separate repositories (locations TBD).
+Six curated starters live in [`starters/`](./starters/README.md) in this monorepo. Create a new
+project with `npx laikacli create` — see
+[`docs/contributing/starters.md`](./docs/contributing/starters.md).
 
 ---
 
@@ -404,8 +402,8 @@ These are the things that consistently bite first-time integrators:
 
 > "I need to build X. Which pattern should I use?"
 
-The `starter-*` names below identify the **pattern**. The starter directories themselves were moved
-to separate repos in June 2026 (locations TBD — see the note at the top of this file). For the two
+The `starter-*` names below identify the **pattern**. The six curated starters live in
+[`starters/`](./starters/README.md) and are scaffolded via `npx laikacli create`. For the two
 canonical starting points, use the in-repo quickstart guides directly:
 
 - **Minimal Node example** →
