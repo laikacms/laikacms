@@ -241,6 +241,47 @@ PKCE server from `@laikacms/server/oauth2` — see
 
 ---
 
+### f) Add the AI assistant
+
+`@laikacms/server/ai` mounts chat and session endpoints that power the Decap CMS editor assistant.
+Install the optional peer first:
+
+```bash
+pnpm add ai @ai-sdk/anthropic   # or any other @ai-sdk/* provider
+```
+
+Then mount `decapAi` alongside your existing `laikaApi`:
+
+```ts
+import { decapAi } from '@laikacms/server/ai';
+import { anthropic } from '@laikacms/server/ai/providers';
+import { resolveBearer } from 'laikacms/auth';
+
+const ai = decapAi({
+  model: anthropic('claude-3-5-sonnet-20241022'),
+  basePath: '/api/ai',
+  authenticateAccessToken: async token => {
+    const ctx = await resolveBearer(token, { verifySessionToken, lookupPatByHash });
+    if (!ctx) throw new Error('Unauthorized');
+    return { ...ctx.user, scopes: ctx.scopes };
+  },
+  callbacks: { createSession, getSession, getSessionsByDocument, updateSession, deleteSession },
+});
+
+// In your framework router alongside laikaApi:
+app.all('/api/ai/*', c => ai.fetch(c.req.raw));
+```
+
+The client half is the `Dulla` transport in `@laikacms/decap-cms-llm-dulla` — it implements the
+CMS's `LlmTransport` interface and points the chat panel at this server. The server ships two
+client-side tools (`getDocumentData` / `updateDocument`) with no `execute` so the SDK ships them to
+the browser where the open editor entry lives. Add your own server-side tools via `config.tools`.
+
+See the full options reference in
+[packages/server/src/ai/README.md](./packages/server/src/ai/README.md).
+
+---
+
 ## 3. Choosing a storage backend
 
 `laikaApi(...)` is runtime-agnostic — the only thing that changes between Node and the edge is which
@@ -449,9 +490,15 @@ canonical starting points, use the in-repo quickstart guides directly:
 │  Vercel Edge?        → starter-vercel-edge pattern (PoC)         │
 │  Netlify Functions?  → starter-netlify-functions pattern (dev)   │
 └──────────────────────────────────────────────────────────────────┘
+
+┌─ Adding an AI assistant to the editor? ──────────────────────────┐
+│                                                                  │
+│  → mount @laikacms/server/ai (section 2f above)                  │
+│    + wire the Dulla transport in @laikacms/decap-cms-llm-dulla   │
+└──────────────────────────────────────────────────────────────────┘
 ```
 
-If your target isn't listed: pick the closest pattern and copy the wiring from sections 2a–2c above,
+If your target isn't listed: pick the closest pattern and copy the wiring from sections 2a–2f above,
 or from the `quickstart-fs.md` / `standalone-worker.md` guides in `docs/guides/decap/`.
 
 ---

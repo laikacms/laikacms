@@ -127,21 +127,32 @@ AWS service implementations.
 
 ## `@laikacms/server`
 
-Decap CMS server-side integrations: the Decap-compatible API and the OAuth2 server.
+Decap CMS server-side integrations: the Decap-compatible API, the OAuth2 server, and the AI
+chat/session endpoints.
 
-> **Moved (July 2026, DCMS-492):** AI chat (`@laikacms/decap-ai`, now discontinued), the icon
-> widgets, the Dutch locale, the embedded-entry editor component, and the config type utilities all
-> moved into the `@laikacms/decap-cms` fork: `…/widgets/aichat`, `…/widgets/lucide-icon`,
-> `…/widgets/radix-icon`, `…/locales/nl`, `…/editor-component-embedded-entry`, and `…/config-types`.
+> **Moved (July 2026, DCMS-492):** The icon widgets, the Dutch locale, the embedded-entry editor
+> component, and the config type utilities moved into the `@laikacms/decap-cms` fork:
+> `…/widgets/lucide-icon`, `…/widgets/radix-icon`, `…/locales/nl`,
+> `…/editor-component-embedded-entry`, and `…/config-types`.
+>
+> **Moved back (August 2026):** The AI chat/session server (`@laikacms/server/ai`) returned to this
+> package after a brief stint in the fork. Do **not** look for it in `@laikacms/decap-cms`.
 
-| Subpath                              | Description                                                                                            |
-| ------------------------------------ | ------------------------------------------------------------------------------------------------------ |
-| `@laikacms/decap-cms/backends/laika` | Decap CMS backend (`createLaikaBackend()`)                                                             |
-| `@laikacms/server/api`               | [JSON:API router](https://github.com/laikacms/laikacms/blob/develop/packages/server/src/api/README.md) |
-| `@laikacms/server/oauth2`            | OAuth2 server with PKCE                                                                                |
-| `@laikacms/server/oauth2/i18n`       | i18n bundle index for the OAuth2 UI                                                                    |
-| `@laikacms/server/oauth2/i18n/en`    | English translations for the OAuth2 UI                                                                 |
-| `@laikacms/server/oauth2/i18n/nl`    | Dutch translations for the OAuth2 UI                                                                   |
+| Subpath                              | Description                                                                                                                                        |
+| ------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@laikacms/decap-cms/backends/laika` | Decap CMS backend (`createLaikaBackend()`)                                                                                                         |
+| `@laikacms/server/api`               | [JSON:API router](https://github.com/laikacms/laikacms/blob/develop/packages/server/src/api/README.md)                                             |
+| `@laikacms/server/embedded`          | Node.js-only `createEmbeddedLaika()` — wires a full backend from one options object                                                                |
+| `@laikacms/server/oauth2`            | OAuth2 server with PKCE                                                                                                                            |
+| `@laikacms/server/oauth2/i18n`       | i18n bundle index for the OAuth2 UI                                                                                                                |
+| `@laikacms/server/oauth2/i18n/en`    | English translations for the OAuth2 UI                                                                                                             |
+| `@laikacms/server/oauth2/i18n/nl`    | Dutch translations for the OAuth2 UI                                                                                                               |
+| `@laikacms/server/ai`                | AI chat + session endpoints (optional `ai` peer; see [README](https://github.com/laikacms/laikacms/blob/develop/packages/server/src/ai/README.md)) |
+| `@laikacms/server/ai/providers`      | Re-exported Vercel AI SDK provider factories                                                                                                       |
+| `@laikacms/server/ai/tools`          | Built-in document tools (`getDocumentData`, `updateDocument`) for the client-side tool loop                                                        |
+| `@laikacms/server/ai/i18n/en`        | English translations for the AI UI                                                                                                                 |
+| `@laikacms/server/ai/i18n/nl`        | Dutch translations for the AI UI                                                                                                                   |
+| `@laikacms/server/ai/i18n/types`     | `Translation` interface for custom i18n                                                                                                            |
 
 ## `@laikacms/decap-cms`
 
