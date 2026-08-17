@@ -149,9 +149,11 @@ automatically), referenced from a one-line `laika-env.d.ts` that is scaffolded a
 Make sure your `tsconfig.json` includes it (root `*.d.ts` are included by default). Then
 `import { title } from 'laika:doc/posts/hello'` types `title` as whatever the compiler infers from
 the actual file. For `import.meta.glob`, a per-collection union type is generated so you can
-annotate the value type:
+annotate the value type (the type file is generated into git-ignored `.laika/vite-generated/`):
 
 ```ts
+import type { Posts } from './.laika/vite-generated/collections/posts.js';
+
 const posts = import.meta.glob<Posts>('laika:doc/posts/*', { eager: true });
 ```
 
