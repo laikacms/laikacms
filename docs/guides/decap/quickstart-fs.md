@@ -221,7 +221,7 @@ pnpm add -D esbuild
 > `ERR_PNPM_IGNORED_BUILDS` and the install step fails.
 
 > The `laika` backend ships as `@laikacms/decap-cms/backends/laika` (a subpath of the
-> `@laikacms/server` package). Import `createLaikaBackend` from there.
+> `@laikacms/decap-cms` package). Import `createLaikaBackend` from there.
 >
 > `@emotion/react` and `@emotion/styled` are required (non-optional) peer dependencies of
 > `@laikacms/decap-cms` — the admin shell is styled with Emotion. Without them the esbuild step will

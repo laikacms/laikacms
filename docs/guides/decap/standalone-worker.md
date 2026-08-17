@@ -72,7 +72,7 @@ await runTask(
           create: true,
           fields: [
             { name: 'title', widget: 'string' },
-            { name: 'body', widget: 'markdown' },
+            { name: 'body', widget: 'richtext' },
           ],
         },
         // …more folder collections…
@@ -116,7 +116,7 @@ export const decapConfig = {
       label: 'Posts',
       folder: 'posts',
       create: true,
-      fields: [{ name: 'title', widget: 'string' }, { name: 'body', widget: 'markdown' }],
+      fields: [{ name: 'title', widget: 'string' }, { name: 'body', widget: 'richtext' }],
     },
   ],
 };
