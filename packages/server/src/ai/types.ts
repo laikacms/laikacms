@@ -195,7 +195,7 @@ export interface DecapAiConfig {
   tools?: ToolSet;
 
   /**
-   * Base path for the AI endpoints (default: '/ai')
+   * Base path for the AI endpoints (default: '/api/ai')
    */
   basePath?: string;
 
