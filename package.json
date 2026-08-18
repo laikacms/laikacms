@@ -16,7 +16,8 @@
     "format:check": "dprint check",
     "version": "changeset version && node scripts/sync-starter-versions.mjs",
     "check:starters": "node scripts/check-starter-versions.mjs",
-    "release": "changeset publish",
+    "gen-sbom": "node scripts/generate-sbom.mjs",
+    "release": "pnpm gen-sbom && changeset publish",
     "prepare": "husky"
   },
   "devDependencies": {
