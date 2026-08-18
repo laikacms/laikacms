@@ -12,7 +12,13 @@
  * script, after `changeset version` bumps the packages). `check-starter-
  * versions.mjs` asserts they are already in sync and carry no workspace
  * protocols (CI guard). Both import from here.
+ *
+ * Version sources:
+ *   workspaceVersions()   — reads packages/ on disk; use for sync (pre-publish)
+ *   npmPublishedVersions() — queries the npm registry; use for the CI guard
+ *     (starters must be installable, not just match the in-progress workspace)
  */
+import { execFileSync } from 'node:child_process';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -20,6 +26,27 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const DEP_FIELDS = ['dependencies', 'devDependencies', 'peerDependencies', 'optionalDependencies'];
 const WORKSPACE_PROTOCOLS = ['workspace:', 'catalog:', 'link:', 'file:'];
+
+/**
+ * Query npm for the latest published version of each package in `workspaceMap`.
+ * Falls back to the workspace version for packages not yet on the registry
+ * (brand-new packages that have never been published).
+ */
+export function npmPublishedVersions(workspaceMap) {
+  const result = { ...workspaceMap };
+  for (const name of Object.keys(workspaceMap)) {
+    try {
+      const version = execFileSync('npm', ['view', name, 'version'], {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'ignore'],
+      }).trim();
+      if (version) result[name] = version;
+    } catch {
+      // Package not yet published — keep workspace version as fallback.
+    }
+  }
+  return result;
+}
 
 /** Map of every publishable workspace package name → its current version. */
 export function workspaceVersions() {
