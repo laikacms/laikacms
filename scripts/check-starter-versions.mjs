@@ -4,16 +4,26 @@
  *   1. carries a workspace: / catalog: / link: / file: dependency protocol
  *      (unusable outside this monorepo — a downloaded starter would not install), or
  *   2. pins a laikacms / @laikacms/* dependency to anything other than a caret
- *      range against the package's current version (stale after a release).
+ *      range against the package's latest npm-published version (stale after a
+ *      release, or bumped ahead of what's on npm).
+ *
+ * Versions are resolved from the npm registry, not from workspace package.json
+ * files, so the guard reflects what users can actually install. Packages not
+ * yet published fall back to their workspace version.
  *
  * Fix drift with: node scripts/sync-starter-versions.mjs
  *
  * Run: node scripts/check-starter-versions.mjs
  */
 import { relative } from 'node:path';
-import { inspectStarter, starterPackageJsonPaths, workspaceVersions } from './starter-versions.mjs';
+import {
+  inspectStarter,
+  npmPublishedVersions,
+  starterPackageJsonPaths,
+  workspaceVersions,
+} from './starter-versions.mjs';
 
-const versions = workspaceVersions();
+const versions = npmPublishedVersions(workspaceVersions());
 const problems = [];
 
 for (const pkgPath of starterPackageJsonPaths()) {
@@ -25,7 +35,7 @@ for (const pkgPath of starterPackageJsonPaths()) {
     );
   }
   for (const r of rewrites) {
-    problems.push(`  ${rel}: ${r.name} is "${r.from}", expected "${r.to}" (current release).`);
+    problems.push(`  ${rel}: ${r.name} is "${r.from}", expected "${r.to}" (latest npm release).`);
   }
 }
 
