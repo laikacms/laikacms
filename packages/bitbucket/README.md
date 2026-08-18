@@ -96,6 +96,24 @@ app passwords, `Bearer <token>` for OAuth), so misconfiguration surfaces early.
   });
   ```
 
+- **`ignoreList`** — glob patterns for files excluded from directory listings. When supplied,
+  overrides the built-in list entirely. Default:
+
+  ```
+  **/.keep
+  **/.DS_Store
+  **/Thumbs.db
+  **/desktop.ini
+  **/.catalog
+  **/.laikacms
+  ```
+
+- **`commitAuthor`** — `{ name: string; email: string }` stamped as both the author and committer on
+  every write call. Omit to let Bitbucket infer the identity from the auth credential.
+
+- **`determineExtension`** — custom resolver that picks the file extension for a new object given
+  its key and metadata. Replaces the built-in `defaultDetermineExtension` logic when provided.
+
 ### Behaviour notes
 
 - **Extension hiding.** Keys are extension-free at the boundary; the on-server file name is
