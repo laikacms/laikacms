@@ -18,7 +18,6 @@
 import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
 import { collectStream, runTask } from 'laikacms/compat';
 import { DecapCatalogProvider } from 'laikacms/catalog-decap';
-import type { RecordSummary } from 'laikacms/documents';
 import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
 import { markdownSerializer } from 'laikacms/storage-serializers-markdown';
@@ -164,7 +163,7 @@ export default {
           }),
         );
 
-        const posts = (items as RecordSummary[])
+        const posts = items
           .filter(r => r.type === 'published-summary')
           .sort((a, b) => {
             const aTime = 'updatedAt' in a && a.updatedAt ? a.updatedAt : '';
