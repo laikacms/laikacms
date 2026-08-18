@@ -1,5 +1,3 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-import type { StandardSchemaV1 } from '@standard-schema/spec';
 import * as S from 'effect/Schema';
 import { StorageFormatSchema } from '../types/index.js';
 
