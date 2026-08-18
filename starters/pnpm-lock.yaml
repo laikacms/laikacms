@@ -6,6 +6,8 @@ settings:
 
 overrides:
   laikacms: link:../packages/laikacms
+  '@laikacms/server': link:../packages/server
+  '@laikacms/vite-plugin': link:../packages/vite-plugin
   '@laikacms/github': link:../packages/github
 
 importers:
@@ -18,11 +20,11 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
-        specifier: ^5.0.0
-        version: 5.0.0
+        specifier: link:../../packages/server
+        version: link:../../packages/server
       '@laikacms/vite-plugin':
-        specifier: ^5.0.0
-        version: 5.0.0(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))
+        specifier: link:../../packages/vite-plugin
+        version: link:../../packages/vite-plugin
       astro:
         specifier: ^7.1.6
         version: 7.2.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(tsx@4.23.11)(yaml@2.9.0)
@@ -61,8 +63,8 @@ importers:
         specifier: link:../../packages/github
         version: link:../../packages/github
       '@laikacms/server':
-        specifier: ^5.0.0
-        version: 5.0.0
+        specifier: link:../../packages/server
+        version: link:../../packages/server
       hono:
         specifier: ^4.12.31
         version: 4.13.1
@@ -104,8 +106,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
-        specifier: ^5.0.0
-        version: 5.0.0
+        specifier: link:../../packages/server
+        version: link:../../packages/server
       hono:
         specifier: ^4.12.31
         version: 4.13.1
@@ -184,8 +186,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
-        specifier: ^5.0.0
-        version: 5.0.0
+        specifier: link:../../packages/server
+        version: link:../../packages/server
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -233,8 +235,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
-        specifier: ^5.0.0
-        version: 5.0.0
+        specifier: link:../../packages/server
+        version: link:../../packages/server
       laikacms:
         specifier: link:../../packages/laikacms
         version: link:../../packages/laikacms
@@ -1635,25 +1637,6 @@ packages:
       uploadcare-widget-tab-effects:
         optional: true
       zod:
-        optional: true
-
-  '@laikacms/server@5.0.0':
-    resolution: {integrity: sha512-M/lPV+zzc20NsUYpefjtwm+WDCMMRBMMPM9E7WW7HDWauAABvN+j3b2MKumkplKuolLU51ak//8ZtX6Pp1+ZEA==}
-    engines: {node: '>=24.0.0'}
-
-  '@laikacms/vite-plugin@5.0.0':
-    resolution: {integrity: sha512-T55J8tbKgVGx5aCgl+eBIfV8IVsTa5kFiN1Ex5Gn5q2A5+Gp1MenAHLUHVsmmwm9d/TJj7hcockPyKnq947RJA==}
-    engines: {node: '>=24.0.0'}
-    peerDependencies:
-      rolldown: '>=1'
-      typescript: '>=5'
-      vite: '>=8'
-    peerDependenciesMeta:
-      rolldown:
-        optional: true
-      typescript:
-        optional: true
-      vite:
         optional: true
 
   '@lexical/a11y@0.48.0':
@@ -5632,21 +5615,6 @@ snapshots:
       - typescript
       - utf-8-validate
       - yjs
-
-  '@laikacms/server@5.0.0':
-    dependencies:
-      laikacms: link:../packages/laikacms
-
-  '@laikacms/vite-plugin@5.0.0(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))':
-    dependencies:
-      es-module-lexer: 2.3.1
-      laikacms: link:../packages/laikacms
-      magic-string: 1.1.0
-      minimatch: 10.2.6
-    optionalDependencies:
-      rolldown: 1.2.3
-      typescript: 6.0.3
-      vite: 8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0)
 
   '@lexical/a11y@0.48.0(typescript@6.0.3)':
     dependencies:

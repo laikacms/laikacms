@@ -16,15 +16,21 @@ packages:
 # build so starters can be installed and typechecked in this workspace before
 # the npm registry catches up. Remove each line once the corresponding package
 # version is published. Build the relevant packages first:
-#   pnpm -C .. --filter laikacms --filter @laikacms/github build
+#   pnpm -C .. --filter laikacms --filter @laikacms/server --filter @laikacms/vite-plugin --filter @laikacms/github build
 #
 # - laikacms: still load-bearing for catalog-convention exports that starter-opfs-blog
 #   imports (laikacms/assets/catalog, laikacms/catalog-convention, laikacms/documents/catalog).
 #   npm laikacms@5.0.0 does NOT export those subpaths. storage/web-fs IS published;
 #   the override must stay until a release publishes the catalog-convention family.
+# - @laikacms/server: npm@5.0.0 imports laikacms/assets-contentbase which was removed in
+#   the workspace's laikacms@6.0.0; pin to local build to keep API surfaces in sync.
+# - @laikacms/vite-plugin: npm@5.0.0 dist/backend.js imports laikacms/assets/contentbase
+#   (removed in 6.0.0); local src was already updated for 6.x, pin to rebuilt local.
 # - @laikacms/github: needed by starter-github-blog (1.0.4 not yet on npm; registry has 1.0.0)
 overrides:
   laikacms: "link:../packages/laikacms"
+  "@laikacms/server": "link:../packages/server"
+  "@laikacms/vite-plugin": "link:../packages/vite-plugin"
   "@laikacms/github": "link:../packages/github"
 
 # Dependencies whose install scripts are allowed to run (pnpm blocks build
