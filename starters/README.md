@@ -38,11 +38,19 @@ generates the app's `src/cms.ts` from that selection (flags `--backends`/`--widg
 Like `examples/`, this directory is its **own pnpm workspace**
 ([`pnpm-workspace.yaml`](./pnpm-workspace.yaml)): running `pnpm install` here (or inside a starter)
 never climbs up into the monorepo's root workspace, and gets its own lockfile and `node_modules`.
-Unlike `examples/`, it links nothing from the monorepo — installs resolve exactly the published
-packages a user who downloaded one starter folder would get. To validate a starter against the
-working tree instead, that's what `examples/` (workspace-linked `laikacms`) is for.
+In the canonical state, starters install against **published** LaikaCMS versions so they resolve
+exactly what a user who downloaded one folder would get. Currently, `pnpm-workspace.yaml` carries
+temporary `link:` overrides for packages that are ahead of npm (`laikacms`, `@laikacms/server`,
+`@laikacms/vite-plugin`, `@laikacms/github`) — those overrides are removed once the corresponding
+versions are published. To validate a starter against the working tree without overrides, use
+`examples/` (workspace-linked `laikacms`).
+
+Because of those link: overrides, the linked packages must be built before typechecking:
 
 ```sh
+# Build the packages that are linked into this workspace
+pnpm -C .. --filter laikacms --filter @laikacms/server --filter @laikacms/vite-plugin --filter @laikacms/github build
+
 cd starters
 pnpm install          # one isolated install for all starters
 pnpm -r typecheck     # or -F @laikacms/starter-<name> for one
