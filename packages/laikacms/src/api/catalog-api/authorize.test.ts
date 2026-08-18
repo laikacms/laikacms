@@ -94,6 +94,23 @@ describe('catalog-api authorize hook', () => {
     expect(getCatalog).not.toHaveBeenCalled();
     expect(putCatalog).not.toHaveBeenCalled();
   });
+
+  it('denies PATCH before any repo read when the callback returns false', async () => {
+    const { repo, getCatalog, putCatalog } = spyRepo();
+    const api = buildJsonApi({ repo, authorize: () => false });
+
+    const res = await api.fetch(
+      new Request('http://localhost/collections/posts', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: { type: 'document-collection', id: 'posts', attributes: { name: 'Posts' } } }),
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(getCatalog).not.toHaveBeenCalled();
+    expect(putCatalog).not.toHaveBeenCalled();
+  });
 });
 
 describe('catalog-api authorize hook — OpenAPI routes', () => {

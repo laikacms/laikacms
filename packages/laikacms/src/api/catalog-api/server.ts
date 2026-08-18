@@ -31,7 +31,7 @@ export type CatalogAuthorizeAction =
   | { action: 'listCollections' }
   | { action: 'getCollection', key: string }
   | { action: 'createCollection', collection: CollectionSettings }
-  | { action: 'updateCollection', key: string, collection: CollectionSettings }
+  | { action: 'updateCollection', key: string, collection?: CollectionSettings }
   | { action: 'deleteCollection', key: string };
 
 /**
@@ -277,6 +277,11 @@ export function buildJsonApi(options: CatalogApiOptions) {
     try {
       const key = c.req.param('key');
 
+      // Authorize before any repo read so callers cannot probe collection
+      // existence via 404/409 differentials without valid credentials.
+      const denied = await authorizeAction(c, { action: 'updateCollection', key });
+      if (denied) return denied;
+
       const allSettings = await LaikaTask.runPromiseResult(repo.getCatalog());
       if (Result.isFailure(allSettings)) {
         return respondError(c, allSettings);
@@ -305,9 +310,6 @@ export function buildJsonApi(options: CatalogApiOptions) {
       }
 
       const bodyWithKey = { ...body, key };
-
-      const denied = await authorizeAction(c, { action: 'updateCollection', key, collection: bodyWithKey });
-      if (denied) return denied;
 
       if (bodyWithKey.type === 'document') {
         const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(key, bodyWithKey));
