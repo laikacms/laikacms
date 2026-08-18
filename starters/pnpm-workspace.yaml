@@ -3,12 +3,14 @@
 # and have zero effect on the main workspace.
 #
 # Unlike examples/ (which lists ../packages/laikacms as a member to build
-# against the working tree), this workspace deliberately links NOTHING from
-# the monorepo: starters ship as download-and-go templates pinned to
-# published LaikaCMS versions, and installing them here must resolve exactly
-# what a user who downloaded one folder would get. CI enforces this with
-# `pnpm check:starters` (no workspace:/catalog: protocols, ranges in sync
-# with the current release).
+# against the working tree), this workspace canonically links nothing from the
+# monorepo: starters ship as download-and-go templates pinned to published
+# LaikaCMS versions, and installing them here must resolve exactly what a user
+# who downloaded one folder would get. CI enforces this with `pnpm
+# check:starters` (no workspace:/catalog: protocols, ranges in sync with the
+# current release). The overrides block below carries temporary link:
+# exceptions while ahead-of-npm packages are being published; remove each
+# once the corresponding version lands on the registry.
 packages:
   - "starter-*"
 
