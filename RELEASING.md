@@ -42,3 +42,15 @@ CI is the normal path. As a fallback, `pnpm release` runs `changeset publish` lo
 local npm credentials — it publishes whatever versioned-but-unpublished packages exist, under the
 correct dist-tag (pre mode aware). Afterwards, still push the `v*` tag so the GitHub release is
 created; the publish workflow it triggers is a no-op for already-published versions.
+
+## SBOM (Software Bill of Materials)
+
+`pnpm gen-sbom` generates a CycloneDX SBOM for each published package (`laikacms`,
+`@laikacms/server`) via pnpm's built-in `pnpm sbom` command — no extra dependency needed. Output
+goes to `sbom/laikacms.cdx.json` and `sbom/laikacms-server.cdx.json` (gitignored — regenerate, don't
+commit). The script is `scripts/generate-sbom.mjs`.
+
+This is intentionally a local/publish-time step, not a GitHub Actions workflow step — GH Actions
+billing is org-wide blocked (see `AGENTS.md`), so anything load-bearing runs locally. `pnpm release`
+runs it automatically before `changeset publish`; run it by hand (`pnpm gen-sbom`) any time you want
+a fresh SBOM, e.g. right before cutting a release or for a supply-chain audit.

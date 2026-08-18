@@ -37,7 +37,6 @@ Deliberate cautions to avoid over-positioning Laika before adoption earns it.
       until a second, independent implementer exists (see Positioning caveats)
 - [ ] Laika creates a homogeneous, backend-agnostic RAG architecture
 - [ ] Bundle skills using vercel's skills package. Skills identify how one could use laika cli to
-- [ ] SBOM
 
 ### Recoverable-warning pipeline — follow-ups
 
@@ -61,6 +60,8 @@ lower-priority extensions to it.
 - [x] OAuth2 with PKCE
 - [x] File sanitization
 - [x] Editorial workflow
+- [x] SBOM — `pnpm gen-sbom` (see RELEASING.md), local/publish-time only, no GitHub Actions
+      dependency
 - [x] Effect-based repository contracts + recoverable-warning pipeline — `LaikaTask` / `LaikaStream`
       (Effect Channel-backed) carry data, recoverable warnings, progress events, and a terminal
       value/done. Every storage / documents / assets repository interface returns them;
