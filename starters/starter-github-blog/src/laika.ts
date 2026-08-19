@@ -14,7 +14,8 @@
  *   GITHUB_REPO                 — repository name
  *   GITHUB_BRANCH               — branch where content is committed (e.g. "main")
  *
- * See .env.example and the GitHub App setup guide in docs/decap-integration.md.
+ * See .env.example and the starter's README for GitHub App credentials setup.
+ * For the full wiring pattern, see docs/guides/decap/standalone-worker.md.
  */
 import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
 import { runTask } from 'laikacms/compat';
