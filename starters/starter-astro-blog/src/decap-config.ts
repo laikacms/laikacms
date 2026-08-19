@@ -11,6 +11,7 @@ export const blogCollections = [
     label: 'Blog Posts',
     folder: 'posts',
     extension: 'md',
+    format: 'markdown',
     create: true,
     slug: '{{slug}}',
     sortable_fields: ['title', 'date'],
