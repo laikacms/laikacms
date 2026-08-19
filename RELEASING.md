@@ -7,12 +7,9 @@ via `scripts/check-no-pnpm-catalog-deps.mjs`. `changeset publish` is safe here: 
 the root `packageManager` field and runs `pnpm publish` per package. It also skips versions already
 on npm, so re-running it (or racing CI) is harmless.
 
-Pushing a `v*` tag triggers `.github/workflows/publish.yml`, which lints, typechecks, tests, builds,
-and runs `pnpm changeset publish` using npm OIDC trusted publishing (no token secret; each package
-must have this repo + `publish.yml` configured as a Trusted Publisher on npmjs.com).
-`.github/workflows/create-release.yml` creates the matching GitHub release. The per-package git tags
-`changeset publish` creates (`laikacms@X.Y.Z`, …) stay local to the CI runner; the manually pushed
-`v*` tag is the release marker.
+Publishing runs locally via `pnpm release` (see below) — GH Actions billing is org-wide blocked, so
+the npm publish step is not automated in CI. Pushing a `v*` tag triggers only
+`.github/workflows/create-release.yml`, which creates the matching GitHub release.
 
 ## Alpha releases
 
@@ -21,6 +18,7 @@ pnpm changeset pre enter alpha   # once, at the start of an alpha cycle
 pnpm changeset                   # as usual, per change
 pnpm changeset version           # bumps to e.g. 1.3.0-alpha.0
 git commit -am "chore(release): version packages to 1.3.0-alpha.0"
+pnpm release                     # publishes to npm under the alpha dist-tag
 git tag v1.3.0-alpha.0
 git push origin develop v1.3.0-alpha.0
 ```
@@ -33,15 +31,14 @@ End the alpha cycle with `pnpm changeset pre exit` before versioning the stable 
 
 ## Stable releases
 
-Same flow without pre mode: `pnpm changeset version`, commit, tag `vX.Y.Z`, push. The workflow
-publishes under `latest`.
+Same flow without pre mode: `pnpm changeset version`, commit, run `pnpm release` to publish, then
+tag `vX.Y.Z` and push so the GitHub release is created.
 
 ## Publishing from your machine
 
-CI is the normal path. As a fallback, `pnpm release` runs `changeset publish` locally using your
-local npm credentials — it publishes whatever versioned-but-unpublished packages exist, under the
-correct dist-tag (pre mode aware). Afterwards, still push the `v*` tag so the GitHub release is
-created; the publish workflow it triggers is a no-op for already-published versions.
+`pnpm release` runs `changeset publish` locally using your local npm credentials — it publishes
+whatever versioned-but-unpublished packages exist, under the correct dist-tag (pre mode aware).
+Afterwards, push the `v*` tag so `.github/workflows/create-release.yml` creates the GitHub release.
 
 ## SBOM (Software Bill of Materials)
 
