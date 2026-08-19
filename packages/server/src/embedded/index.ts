@@ -132,6 +132,7 @@ export function createEmbeddedLaika(options: EmbeddedLaikaOptions): EmbeddedLaik
             key: 'config.yml',
             type: 'object',
             content: decapConfig,
+            metadata: { extension: 'yml' },
           }),
         );
       } catch (err) {

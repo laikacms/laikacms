@@ -215,12 +215,11 @@ describe('token auth — authenticate() delegation', () => {
 // ---------------------------------------------------------------------------
 // Suite: config seeding
 //
-// The storage backend seeds the config using the key 'config.yml' but
-// resolves the final extension from the repository's default (i.e. 'md'), so
-// the file lands as 'config.md'. What matters functionally:
-//   1. Some config file appears in contentDir after the first fetch().
-//   2. A pre-existing 'config.yml' is NOT overwritten (resolvePathWithExtension
-//      finds it before attempting to create).
+// ensureConfig() passes `metadata: { extension: 'yml' }` so the storage
+// backend writes the file as 'config.yml', matching the documented promise.
+// What matters functionally:
+//   1. 'config.yml' appears in contentDir after the first fetch().
+//   2. A pre-existing 'config.yml' is NOT overwritten.
 //   3. The seed does not re-run on subsequent fetch() calls (configSeeded flag).
 // ---------------------------------------------------------------------------
 
@@ -231,7 +230,7 @@ async function findConfigFile(dir: string): Promise<string | null> {
 }
 
 describe('config seeding', () => {
-  it('creates a config file in contentDir on the first fetch() when none is present', async () => {
+  it('creates config.yml in contentDir on the first fetch() when none is present', async () => {
     const decapConfig = { backend: { name: 'laika' }, collections: [{ name: 'posts' }] };
     const { fetch } = makeEmbedded({ decapConfig });
 
@@ -239,6 +238,7 @@ describe('config seeding', () => {
 
     const seeded = await findConfigFile(tmpDir);
     expect(seeded).not.toBeNull();
+    expect(path.basename(seeded!)).toBe('config.yml');
   });
 
   it('seeded config file content encodes the decapConfig object', async () => {
