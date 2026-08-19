@@ -402,6 +402,30 @@ describe('decapAi()', () => {
       expect(typeof body.error).toBe('string');
     });
 
+    it('returns 500 when convertToModelMessages throws and calls logger.error', async () => {
+      const { convertToModelMessages } = await import('ai');
+      const convertError = new Error('tool result part not matching any tool call in history');
+      vi.mocked(convertToModelMessages).mockRejectedValueOnce(convertError);
+
+      const loggerError = vi.fn();
+      const adapter = decapAi(makeConfig({ logger: { error: loggerError } }));
+
+      const req = makeRequest('/ai/chat', {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [{ role: 'user', content: 'Hello' }],
+          document: { slug: 'posts/hello' },
+        }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const res = await adapter.fetch(req);
+      expect(res.status).toBe(500);
+      expect(loggerError).toHaveBeenCalledWith('AI chat error:', convertError);
+      const body = await res.json() as { error: string };
+      expect(typeof body.error).toBe('string');
+    });
+
     it('returns 500 when streamText throws and calls logger.error', async () => {
       const modelError = new Error('model failure');
       vi.mocked(streamText).mockImplementationOnce(() => {

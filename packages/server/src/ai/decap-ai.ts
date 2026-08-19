@@ -186,14 +186,14 @@ export function decapAi(config: DecapAiConfig): DecapAi {
       ...config.tools,
     };
 
-    // Use Vercel AI SDK's convertToModelMessages - handles tool calls/results automatically
-    // Pass tools so it can properly convert tool calls and results
-    // ignoreIncompleteToolCalls: false ensures tool results are properly processed
-    const modelMessages = await convertToModelMessages(parsedBody.messages, {
-      tools,
-    });
-
     try {
+      // convertToModelMessages is inside the try so malformed tool-result parts
+      // (e.g. a toolCallId with no matching prior tool call) return a clean 500
+      // JSON response instead of propagating as an unhandled rejection (LCMS-890).
+      const modelMessages = await convertToModelMessages(parsedBody.messages, {
+        tools,
+      });
+
       const result = streamText({
         model: config.model,
         system: systemPrompt,
