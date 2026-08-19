@@ -15,7 +15,12 @@ init({
   config: {
     // The complete config is inline; do not also fetch /admin/config.yml.
     load_config_file: false,
-    backend: { name: 'laika', api_url: '/api/decap' },
+    backend: {
+      name: 'laika',
+      base_url: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
+      api_root: '/api/decap',
+      dev_token: 'dev-local-laika-token',
+    },
     media_folder: 'public/uploads',
     public_folder: '/uploads',
     collections: blogCollections,

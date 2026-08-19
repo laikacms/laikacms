@@ -17,7 +17,8 @@ init({
     load_config_file: false,
     backend: {
       name: 'laika',
-      api_url: '/api/decap',
+      base_url: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
+      api_root: '/api/decap',
       dev_token: 'dev-local-laika-token',
     },
     media_folder: 'uploads',

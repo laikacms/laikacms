@@ -3,6 +3,7 @@ export const blogCollections = [
     name: 'posts',
     label: 'Blog Posts',
     folder: 'posts',
+    format: 'json',
     create: true,
     slug: '{{slug}}',
     sortable_fields: ['title', 'date'],
@@ -16,7 +17,7 @@ export const blogCollections = [
 ] as const;
 
 export const decapConfig = {
-  backend: { name: 'laika', api_url: '/api/decap' },
+  backend: { name: 'laika', api_root: '/api/decap' },
   media_folder: 'uploads',
   public_folder: '/uploads',
   collections: blogCollections,
