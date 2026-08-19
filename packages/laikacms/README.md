@@ -85,6 +85,7 @@ export default {
 | `laikacms/assets/obsidian`         | Obsidian-vault-backed assets — **Node.js / Bun only** (uses `node:fs` / `node:path` / `node:stream`; not available on Cloudflare Workers)                                |
 | `laikacms/catalog-convention`      | In-memory / file-backed settings                                                                                                                                         |
 | `laikacms/catalog-decap`           | Decap-CMS-compatible settings                                                                                                                                            |
+| `laikacms/locks/in-process`        | In-process advisory document locking (ADR-007) — `InProcessLockManager`, single-node only (`scope: 'in-process'`)                                                        |
 
 ### Testing utilities
 
@@ -101,7 +102,7 @@ export default {
 ### Shared utilities
 
 `laikacms/core` · `laikacms/crypto` · `laikacms/file-sanitizer` · `laikacms/sanitizer` ·
-`laikacms/json-api` · `laikacms/i18n` (`/en`, `/nl`)
+`laikacms/json-api` · `laikacms/i18n` (`/en`, `/nl`) · `laikacms/auth`
 
 ## Companion packages
 
@@ -109,8 +110,8 @@ export default {
   repository
 - [`@laikacms/aws`](https://www.npmjs.com/package/@laikacms/aws) — AWS service implementations
   (DynamoDB, S3 `StorageRepository`)
-- [`@laikacms/server`](https://www.npmjs.com/package/@laikacms/server) — Decap CMS integrations
-  (backend, OAuth2, widgets)
+- [`@laikacms/server`](https://www.npmjs.com/package/@laikacms/server) — API, OAuth2, AI, and
+  embedded Node.js server
 - [`@laikacms/decap-cms`](https://www.npmjs.com/package/@laikacms/decap-cms) — Laika-aware Decap CMS
   fork with AI chat widget (`…/widgets/aichat`), icon widgets, embedded-entry editor, and config
   type utilities (`@laikacms/decap-ai` is discontinued; AI features moved here)
