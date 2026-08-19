@@ -3,6 +3,7 @@ export const blogCollections = [
     name: 'posts',
     label: 'Blog Posts',
     folder: 'posts',
+    format: 'json',
     create: true,
     slug: '{{slug}}',
     sortable_fields: ['title', 'date'],

@@ -10,6 +10,7 @@ export const blogCollections = [
     name: 'posts',
     label: 'Blog Posts',
     folder: 'posts',
+    format: 'json',
     create: true,
     slug: '{{slug}}',
     sortable_fields: ['title', 'date'],
@@ -24,7 +25,12 @@ export const blogCollections = [
 
 /** Full Decap config — passed to laika on the server and to CMS.init() in the browser. */
 export const decapConfig = {
-  backend: { name: 'laika', api_url: '/api/decap' },
+  backend: {
+    name: 'laika',
+    base_url: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000',
+    api_root: '/api/decap',
+    dev_token: 'dev-local-laika-token',
+  },
   // For production, point media_folder at an R2 bucket (see wrangler.toml [[r2_buckets]]).
   media_folder: 'uploads',
   public_folder: '/uploads',
