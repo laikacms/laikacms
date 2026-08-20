@@ -5,6 +5,7 @@ import {
   NotFoundError,
   ServiceUnavailableError,
   TooManyRequestsError,
+  UpstreamUnAuthorizedError,
   VersionMismatchError,
 } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
@@ -419,5 +420,14 @@ describe('GitlabStorageRepository mapError', () => {
     await expect(
       LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'some-key', content: { body: 'hi' } })),
     ).rejects.toBeInstanceOf(ServiceUnavailableError);
+  });
+
+  it('maps a 401 response to UpstreamUnAuthorizedError', async () => {
+    const fetch401: typeof fetch = async () => new Response('{"message":"401 Unauthorized"}', { status: 401 });
+    const repo = makeRepoWithFetch(fetch401);
+
+    await expect(
+      LaikaTask.runPromise(repo.createObject({ type: 'object', key: 'some-key', content: { body: 'hi' } })),
+    ).rejects.toBeInstanceOf(UpstreamUnAuthorizedError);
   });
 });

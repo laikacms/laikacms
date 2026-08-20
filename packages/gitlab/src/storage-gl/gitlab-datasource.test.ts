@@ -1,4 +1,6 @@
-import { InternalError } from 'laikacms/core';
+import * as Result from 'effect/Result';
+
+import { ForbiddenError, InternalError, UpstreamUnAuthorizedError } from 'laikacms/core';
 import { describe, expect, it } from 'vitest';
 
 import { GitlabDataSource } from './gitlab-datasource.js';
@@ -196,5 +198,30 @@ describe('GitlabDataSource — url() project-path encoding and query building', 
     await ds.createOrUpdate('some/file.json', '{}');
     expect(calls[0].url).toBe(`${API_URL}/projects/42/repository/files/some%2Ffile.json`);
     expect(calls[0].url).not.toContain('?');
+  });
+});
+
+describe('GitlabDataSource — mapStatus', () => {
+  const makeDs = (status: number) => {
+    const fetchImpl: typeof fetch = async () => new Response(`{"message":"${status}"}`, { status });
+    return new GitlabDataSource({ projectId: '42', branch: BRANCH, apiUrl: API_URL, fetch: fetchImpl });
+  };
+
+  it('maps 401 to UpstreamUnAuthorizedError', async () => {
+    const ds = makeDs(401);
+    const result = await ds.listDirectory('some/path');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(UpstreamUnAuthorizedError);
+    }
+  });
+
+  it('maps 403 to ForbiddenError', async () => {
+    const ds = makeDs(403);
+    const result = await ds.listDirectory('some/path');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(ForbiddenError);
+    }
   });
 });
