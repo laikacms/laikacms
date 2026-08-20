@@ -132,6 +132,32 @@ export interface Translation {
   'documentsObsidian.notPublished': string;
   'documentsObsidian.notUnpublished': string;
   'documentsObsidian.revisionsUnsupported': string;
+
+  // storage-web (LCMS-899)
+  'storage.web.fileNotFound': string;
+  'storage.web.directoryNotFound': string;
+  'storage.web.quotaExceeded': string;
+  'storage.web.unexpectedError': string;
+
+  // storage-webfs (LCMS-899)
+  'storage.webfs.fileNotFound': string;
+  'storage.webfs.directoryNotFound': string;
+  'storage.webfs.quotaExceeded': string;
+  'storage.webfs.permissionDenied': string;
+  'storage.webfs.permissionPromptRequired': string;
+  'storage.webfs.staleHandle': string;
+  'storage.webfs.fileInsteadOfDirectory': string;
+  'storage.webfs.directoryInsteadOfFile': string;
+  'storage.webfs.cannotDeleteRoot': string;
+  'storage.webfs.directoryNotEmpty': string;
+  'storage.webfs.unexpectedError': string;
+
+  // storage-githubCdn (LCMS-899)
+  'storage.githubCdn.fileNotFound': string;
+  'storage.githubCdn.directoryInsteadOfFile': string;
+  'storage.githubCdn.fileInsteadOfDirectory': string;
+  'storage.githubCdn.tooManyRequests': string;
+  'storage.githubCdn.unexpectedError': string;
 }
 
 export type TranslationKey = keyof Translation;

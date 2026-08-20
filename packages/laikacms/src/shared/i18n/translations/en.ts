@@ -134,6 +134,33 @@ export const en = {
   'documentsObsidian.notPublished': 'This note exists but is not a published document.',
   'documentsObsidian.notUnpublished': 'This note exists but is published, not an unpublished draft.',
   'documentsObsidian.revisionsUnsupported': 'The Obsidian backend has no version history; revisions are unsupported.',
+
+  // storage-web (LCMS-899)
+  'storage.web.fileNotFound': 'The requested object could not be found in local storage.',
+  'storage.web.directoryNotFound': 'The requested folder could not be found in local storage.',
+  'storage.web.quotaExceeded': 'The storage quota has been exceeded.',
+  'storage.web.unexpectedError': 'An unexpected local storage error occurred.',
+
+  // storage-webfs (LCMS-899)
+  'storage.webfs.fileNotFound': 'The requested file could not be found.',
+  'storage.webfs.directoryNotFound': 'The requested folder could not be found.',
+  'storage.webfs.quotaExceeded': 'The file system storage quota has been exceeded.',
+  'storage.webfs.permissionDenied': 'You do not have the necessary file system permissions for this operation.',
+  'storage.webfs.permissionPromptRequired':
+    'File system access must be re-requested; trigger a user gesture to call requestPermission().',
+  'storage.webfs.staleHandle': 'The directory handle is no longer valid; ask the user to pick the directory again.',
+  'storage.webfs.fileInsteadOfDirectory': 'A file was found where a folder was expected.',
+  'storage.webfs.directoryInsteadOfFile': 'A folder was found where a file was expected.',
+  'storage.webfs.cannotDeleteRoot': 'The repository root directory cannot be deleted.',
+  'storage.webfs.directoryNotEmpty': 'The folder could not be deleted because it still contains items.',
+  'storage.webfs.unexpectedError': 'An unexpected file system error occurred.',
+
+  // storage-githubCdn (LCMS-899)
+  'storage.githubCdn.fileNotFound': 'The requested file could not be found in the repository.',
+  'storage.githubCdn.directoryInsteadOfFile': 'A folder was found where a file was expected.',
+  'storage.githubCdn.fileInsteadOfDirectory': 'A file was found where a folder was expected.',
+  'storage.githubCdn.tooManyRequests': 'The CDN is rate-limiting requests. Please try again later.',
+  'storage.githubCdn.unexpectedError': 'An unexpected error occurred while fetching from the CDN.',
 };
 
 /**

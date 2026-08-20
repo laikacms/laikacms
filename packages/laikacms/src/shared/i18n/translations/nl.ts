@@ -141,6 +141,34 @@ export const nl: Translation = {
   'documentsObsidian.notUnpublished': 'Deze notitie bestaat, maar is gepubliceerd en dus geen conceptversie.',
   'documentsObsidian.revisionsUnsupported':
     'De Obsidian-backend heeft geen versiegeschiedenis; revisies worden niet ondersteund.',
+
+  // storage-web (LCMS-899)
+  'storage.web.fileNotFound': 'Het opgevraagde object kon niet worden gevonden in de lokale opslag.',
+  'storage.web.directoryNotFound': 'De opgevraagde map kon niet worden gevonden in de lokale opslag.',
+  'storage.web.quotaExceeded': 'De opslagquota is overschreden.',
+  'storage.web.unexpectedError': 'Er is een onverwachte fout opgetreden in de lokale opslag.',
+
+  // storage-webfs (LCMS-899)
+  'storage.webfs.fileNotFound': 'Het opgevraagde bestand kon niet worden gevonden.',
+  'storage.webfs.directoryNotFound': 'De opgevraagde map kon niet worden gevonden.',
+  'storage.webfs.quotaExceeded': 'De bestandssysteemopslagquota is overschreden.',
+  'storage.webfs.permissionDenied': 'U heeft niet de benodigde bestandssysteemrechten voor deze bewerking.',
+  'storage.webfs.permissionPromptRequired':
+    'Bestandssysteemtoegang moet opnieuw worden aangevraagd; activeer een gebruikersgebaar om requestPermission() aan te roepen.',
+  'storage.webfs.staleHandle':
+    'De mapverwijzing is niet meer geldig; vraag de gebruiker om de map opnieuw te selecteren.',
+  'storage.webfs.fileInsteadOfDirectory': 'Hier werd een map verwacht, maar er is een bestand gevonden.',
+  'storage.webfs.directoryInsteadOfFile': 'Hier werd een bestand verwacht, maar er is een map gevonden.',
+  'storage.webfs.cannotDeleteRoot': 'De hoofdmap van het archief kan niet worden verwijderd.',
+  'storage.webfs.directoryNotEmpty': 'De map kon niet worden verwijderd omdat deze nog items bevat.',
+  'storage.webfs.unexpectedError': 'Er is een onverwachte bestandssysteemfout opgetreden.',
+
+  // storage-githubCdn (LCMS-899)
+  'storage.githubCdn.fileNotFound': 'Het opgevraagde bestand kon niet worden gevonden in het archief.',
+  'storage.githubCdn.directoryInsteadOfFile': 'Hier werd een bestand verwacht, maar er is een map gevonden.',
+  'storage.githubCdn.fileInsteadOfDirectory': 'Hier werd een map verwacht, maar er is een bestand gevonden.',
+  'storage.githubCdn.tooManyRequests': 'Het CDN beperkt het aantal verzoeken. Probeer het later opnieuw.',
+  'storage.githubCdn.unexpectedError': 'Er is een onverwachte fout opgetreden bij het ophalen van het CDN.',
 };
 
 export default nl;
