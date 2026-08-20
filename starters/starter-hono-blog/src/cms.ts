@@ -10,6 +10,7 @@ import { CMS, init } from '@laikacms/decap-cms/laika-app/bare';
 import en from '@laikacms/decap-cms/locales/en';
 
 import createLaikaBackend from '@laikacms/decap-cms/backends/laika';
+import { jsonEntryCodec } from '@laikacms/decap-cms/entry-codecs/json';
 import DecapCmsWidgetString from '@laikacms/decap-cms/widgets/string';
 import DecapCmsWidgetDatetime from '@laikacms/decap-cms/widgets/datetime';
 import { markdownFormat } from '@laikacms/decap-cms/format-packs/markdown';
@@ -18,6 +19,11 @@ import { passthroughSerializer, Widget as RichtextWidget } from '@laikacms/decap
 CMS.registerLocale('en', en);
 
 CMS.registerBackend('laika', createLaikaBackend());
+
+// The bare app registers no entry codecs; every collection sets format:'json',
+// so the identity codec must be registered or entryExtension() throws and
+// save is silently blocked before any network call.
+CMS.registerEntryCodec(jsonEntryCodec);
 
 CMS.registerWidget(DecapCmsWidgetString.Widget());
 CMS.registerWidget(DecapCmsWidgetDatetime.Widget());
