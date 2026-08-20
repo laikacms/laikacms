@@ -282,6 +282,62 @@ describe('config seeding', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Suite: default serializers — .raw and .markdown support
+//
+// Before LCMS-900 fix, these extensions were absent from defaultSerializers
+// so FileSystemStorageRepository could not locate the files; GET returned 404.
+// ---------------------------------------------------------------------------
+
+describe('default serializers', () => {
+  it('reads a .raw file through the embedded storage handler', async () => {
+    await fs.writeFile(path.join(tmpDir, 'hello.raw'), 'hello raw content', 'utf8');
+
+    const { fetch } = makeEmbedded();
+    const res = await fetch(
+      makeRequest('/api/decap/storage/objects/hello', {
+        Authorization: `Bearer ${DEFAULT_DEV_TOKEN}`,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+  });
+
+  it('reads a .markdown file through the embedded storage handler', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, 'post.markdown'),
+      '---\ntitle: Test Post\n---\nHello world',
+      'utf8',
+    );
+
+    const { fetch } = makeEmbedded();
+    const res = await fetch(
+      makeRequest('/api/decap/storage/objects/post', {
+        Authorization: `Bearer ${DEFAULT_DEV_TOKEN}`,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+  });
+
+  it('reads a .mdx file through the embedded storage handler', async () => {
+    await fs.writeFile(
+      path.join(tmpDir, 'component.mdx'),
+      '---\ntitle: MDX Page\n---\nHello MDX',
+      'utf8',
+    );
+
+    const { fetch } = makeEmbedded();
+    const res = await fetch(
+      makeRequest('/api/decap/storage/objects/component', {
+        Authorization: `Bearer ${DEFAULT_DEV_TOKEN}`,
+      }),
+    );
+
+    expect(res.status).toBe(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Suite: returned EmbeddedLaika object
 // ---------------------------------------------------------------------------
 

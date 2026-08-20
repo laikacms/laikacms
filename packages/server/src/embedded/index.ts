@@ -61,9 +61,12 @@ export interface EmbeddedLaika {
 
 const defaultSerializers = {
   md: markdownSerializer,
+  markdown: markdownSerializer,
+  mdx: markdownSerializer,
   yaml: yamlSerializer,
   yml: yamlSerializer,
   json: jsonSerializer,
+  raw: rawSerializer,
   txt: rawSerializer,
 };
 
