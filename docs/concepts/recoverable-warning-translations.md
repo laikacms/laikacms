@@ -47,6 +47,15 @@ Non-storage backends (`documents-jsonapi-proxy`, `catalog`, `obsidian`, …) sho
 `documentsJsonapiProxy.upstreamTimeout`) — this convention isn't storage-specific, `storage-fs` is
 just the reference implementation for LCMS-471.
 
+## Rollout status
+
+**Done** — all keys present in `en.ts`/`nl.ts` and wired at every construction site: `storage-fs`,
+`storage-r2`, `storage-drizzle`, `storage-webdav`, `documents-jsonapi-proxy`, `assets-obsidian`,
+`documents-obsidian`, `storage-web`, `storage-web-fs`, `storage-github-cdn`.
+
+**Remaining** — no storage or document backends are outstanding; any newly-added backend should
+apply the same pattern at initial authoring time rather than as a follow-up.
+
 ## Where keys live
 
 Add the key to three places, in this order:
@@ -109,6 +118,5 @@ is additive, not a replacement for the English fallback string.
 
 `storage-fs` (`packages/laikacms/src/impl/storage-fs/`) is the reference implementation: every
 `LaikaError` constructed in its datasource, repository, and `utilities.ts` error-mapping helper sets
-`translation.message` per the scheme above. Other backends (`storage-r2`, `storage-s3`,
-`storage-drizzle`, `storage-webdav`, `documents-jsonapi-proxy`, `catalog`, `obsidian`, …) are
-follow-up work — apply the same pattern per-backend rather than in one large cross-cutting change.
+`translation.message` per the scheme above. Apply the same pattern to every new backend at initial
+authoring time rather than as a follow-up.

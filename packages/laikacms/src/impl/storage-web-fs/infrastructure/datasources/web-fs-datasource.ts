@@ -58,25 +58,36 @@ const mapWebFsError = (error: unknown, message: string): LaikaError => {
   // attempt) pass through unchanged rather than being masked as a generic
   // `InternalError`.
   if (error instanceof LaikaError) return error;
-  if (isQuotaError(error)) return new QuotaExceededError(message, { cause: error });
+  if (isQuotaError(error)) {
+    return new QuotaExceededError(message, { cause: error, translation: { message: 'storage.webfs.quotaExceeded' } });
+  }
   switch (domExceptionName(error)) {
     case 'NotFoundError':
-      return new NotFoundError(message, { cause: error });
+      return new NotFoundError(message, { cause: error, translation: { message: 'storage.webfs.fileNotFound' } });
     case 'TypeMismatchError':
       // Reachable from `getDirectoryHandle` over an existing file; the inverse
       // case (`getFileHandle` over a directory) is mapped at its call sites.
-      return new FileInsteadOfDir(message, { cause: error });
+      return new FileInsteadOfDir(message, {
+        cause: error,
+        translation: { message: 'storage.webfs.fileInsteadOfDirectory' },
+      });
     case 'InvalidModificationError':
     case 'NoModificationAllowedError':
-      return new ForbiddenError(message, { cause: error });
+      return new ForbiddenError(message, { cause: error, translation: { message: 'storage.webfs.permissionDenied' } });
     case 'NotAllowedError':
     case 'SecurityError':
       // Access was revoked (or never granted for this mode — e.g. a write on a
       // `'read'`-granted handle). Re-requesting permission may fix it, but the
       // repository never prompts itself; the application does, in a gesture.
-      return new PermissionDeniedError(message, { cause: error });
+      return new PermissionDeniedError(message, {
+        cause: error,
+        translation: { message: 'storage.webfs.permissionDenied' },
+      });
     default:
-      return new InternalError(message, { cause: Cause.fail(error) });
+      return new InternalError(message, {
+        cause: Cause.fail(error),
+        translation: { message: 'storage.webfs.unexpectedError' },
+      });
   }
 };
 
@@ -166,18 +177,20 @@ export class WebFsDataSource {
       } catch (error) {
         throw new StaleHandleError(
           'The stored directory handle is no longer usable; ask the user to pick the directory again.',
-          { cause: error },
+          { cause: error, translation: { message: 'storage.webfs.staleHandle' } },
         );
       }
       if (state === 'prompt') {
         throw new PermissionPromptRequiredError(
           `Permission for '${this.mode}' access to the root directory must be re-requested via `
             + 'requestPermission() inside a user gesture; this repository never prompts itself.',
+          { translation: { message: 'storage.webfs.permissionPromptRequired' } },
         );
       }
       if (state !== 'granted') {
         throw new PermissionDeniedError(
           `'${this.mode}' access to the root directory was denied; the user must grant access anew.`,
+          { translation: { message: 'storage.webfs.permissionDenied' } },
         );
       }
     }
@@ -187,7 +200,7 @@ export class WebFsDataSource {
       throw new StaleHandleError(
         'The stored directory handle no longer connects to an existing directory (it was deleted or '
           + 'moved, or the persisted handle expired). Ask the user to pick the directory again.',
-        { cause: error },
+        { cause: error, translation: { message: 'storage.webfs.staleHandle' } },
       );
     }
     return root;
@@ -308,7 +321,13 @@ export class WebFsDataSource {
   async getFolderMeta(key: Key): Promise<LaikaResult<{ createdAt: Date, updatedAt: Date }>> {
     try {
       const dir = await this.resolveDirectory(keyToSegments(key), false);
-      if (!dir) return Result.fail(new NotFoundError(`Folder at ${key} does not exist`));
+      if (!dir) {
+        return Result.fail(
+          new NotFoundError(`Folder at ${key} does not exist`, {
+            translation: { message: 'storage.webfs.directoryNotFound' },
+          }),
+        );
+      }
       const now = new Date();
       return Result.succeed({ createdAt: now, updatedAt: now });
     } catch (error) {
@@ -326,7 +345,13 @@ export class WebFsDataSource {
     try {
       const segments = keyToSegments(prefix);
       const dir = await this.resolveDirectory(segments, false);
-      if (!dir) return Result.fail(new NotFoundError(`Folder at ${prefix} does not exist`));
+      if (!dir) {
+        return Result.fail(
+          new NotFoundError(`Folder at ${prefix} does not exist`, {
+            translation: { message: 'storage.webfs.directoryNotFound' },
+          }),
+        );
+      }
       const searchPrefix = segments.length > 0 ? `${segments.join('/')}/` : '';
       const entries: WebFsEntry[] = [];
       for await (const [name, handle] of dir.entries()) {
@@ -358,7 +383,10 @@ export class WebFsDataSource {
         handle = await parent.getFileHandle(physicalName, { create: true });
       } catch (error) {
         if (domExceptionName(error) === 'TypeMismatchError') {
-          throw new DirInsteadOfFile(`The path ${key} is a directory`, { cause: error });
+          throw new DirInsteadOfFile(`The path ${key} is a directory`, {
+            cause: error,
+            translation: { message: 'storage.webfs.directoryInsteadOfFile' },
+          });
         }
         throw error;
       }
@@ -405,15 +433,25 @@ export class WebFsDataSource {
   private async deleteFolder(key: Key): Promise<LaikaResult<Key>> {
     const segments = keyToSegments(key);
     if (segments.length === 0) {
-      return Result.fail(new ForbiddenError('The repository root cannot be deleted'));
+      return Result.fail(
+        new ForbiddenError('The repository root cannot be deleted', {
+          translation: { message: 'storage.webfs.cannotDeleteRoot' },
+        }),
+      );
     }
     const parent = await this.resolveDirectory(segments.slice(0, -1), false);
     const name = segments[segments.length - 1];
     const dir = parent ? await this.resolveDirectory(segments, false) : null;
-    if (!parent || !dir) return Result.fail(new NotFoundError(`Atom at ${key} does not exist`));
+    if (!parent || !dir) {
+      return Result.fail(
+        new NotFoundError(`Atom at ${key} does not exist`, { translation: { message: 'storage.webfs.fileNotFound' } }),
+      );
+    }
     for await (const _ of dir.entries()) {
       return Result.fail(
-        new ForbiddenError('Due to security concerns, deleting directories with content is not allowed'),
+        new ForbiddenError('Due to security concerns, deleting directories with content is not allowed', {
+          translation: { message: 'storage.webfs.directoryNotEmpty' },
+        }),
       );
     }
     await parent.removeEntry(name);

@@ -124,7 +124,9 @@ export class GithubCdnDataSource {
         if (!res.ok) {
           // Cache-bust on failure so a transient error doesn't stick for the instance's life.
           this.treePromise = undefined;
-          throw new InternalError(`jsDelivr metadata request failed (${res.status}) for ${this.owner}/${this.repo}`);
+          throw new InternalError(`jsDelivr metadata request failed (${res.status}) for ${this.owner}/${this.repo}`, {
+            translation: { message: 'storage.githubCdn.unexpectedError' },
+          });
         }
         const json = (await res.json()) as { files?: JsDelivrTreeNode[] };
         return json.files ?? [];
@@ -158,20 +160,34 @@ export class GithubCdnDataSource {
     try {
       const res = await this.doFetch(this.contentUrl(relativePath), { headers: this.headers() });
       if (res.status === 404) {
-        return Result.fail(new NotFoundError(`The file at ${relativePath} does not exist`));
+        return Result.fail(
+          new NotFoundError(`The file at ${relativePath} does not exist`, {
+            translation: { message: 'storage.githubCdn.fileNotFound' },
+          }),
+        );
       }
       if (res.status === 429) {
-        return Result.fail(new TooManyRequestsError(`CDN rate-limited request for ${relativePath}`));
+        return Result.fail(
+          new TooManyRequestsError(`CDN rate-limited request for ${relativePath}`, {
+            translation: { message: 'storage.githubCdn.tooManyRequests' },
+          }),
+        );
       }
       if (!res.ok) {
-        return Result.fail(new InternalError(`CDN returned ${res.status} for ${relativePath}`));
+        return Result.fail(
+          new InternalError(`CDN returned ${res.status} for ${relativePath}`, {
+            translation: { message: 'storage.githubCdn.unexpectedError' },
+          }),
+        );
       }
       const content = await res.text();
       const sha = await gitBlobSha(content);
       return Result.succeed({ content, sha, path: relativePath });
     } catch (e) {
       return Result.fail(
-        new InternalError(`CDN request failed for ${relativePath}: ${e instanceof Error ? e.message : String(e)}`),
+        new InternalError(`CDN request failed for ${relativePath}: ${e instanceof Error ? e.message : String(e)}`, {
+          translation: { message: 'storage.githubCdn.unexpectedError' },
+        }),
       );
     }
   }
@@ -186,10 +202,18 @@ export class GithubCdnDataSource {
     try {
       const node = await this.findNode(relativePath);
       if (!node) {
-        return Result.fail(new NotFoundError(`The file at ${relativePath} does not exist`));
+        return Result.fail(
+          new NotFoundError(`The file at ${relativePath} does not exist`, {
+            translation: { message: 'storage.githubCdn.fileNotFound' },
+          }),
+        );
       }
       if (node.type !== 'file') {
-        return Result.fail(new DirInsteadOfFile(`Expected a file at ${relativePath} but found a directory`));
+        return Result.fail(
+          new DirInsteadOfFile(`Expected a file at ${relativePath} but found a directory`, {
+            translation: { message: 'storage.githubCdn.directoryInsteadOfFile' },
+          }),
+        );
       }
 
       let sha = node.hash ?? '';
@@ -201,7 +225,9 @@ export class GithubCdnDataSource {
       return Result.succeed({ sha, createdAt: EPOCH, updatedAt: EPOCH });
     } catch (e) {
       return Result.fail(
-        new InternalError(`Metadata lookup failed for ${relativePath}: ${e instanceof Error ? e.message : String(e)}`),
+        new InternalError(`Metadata lookup failed for ${relativePath}: ${e instanceof Error ? e.message : String(e)}`, {
+          translation: { message: 'storage.githubCdn.unexpectedError' },
+        }),
       );
     }
   }
@@ -215,7 +241,11 @@ export class GithubCdnDataSource {
         const node = await this.findNode(relativePath);
         if (!node) return Result.succeed([]);
         if (node.type !== 'directory') {
-          return Result.fail(new FileInsteadOfDir(`Expected a directory at ${relativePath} but found a file`));
+          return Result.fail(
+            new FileInsteadOfDir(`Expected a directory at ${relativePath} but found a file`, {
+              translation: { message: 'storage.githubCdn.fileInsteadOfDirectory' },
+            }),
+          );
         }
         nodes = node.files;
       }
@@ -232,6 +262,7 @@ export class GithubCdnDataSource {
       return Result.fail(
         new InternalError(
           `Directory listing failed for ${relativePath}: ${e instanceof Error ? e.message : String(e)}`,
+          { translation: { message: 'storage.githubCdn.unexpectedError' } },
         ),
       );
     }
@@ -240,7 +271,11 @@ export class GithubCdnDataSource {
   /** Distinguish file vs dir. Throws NotFoundError for missing paths (mirrors GithubDataSource). */
   async pathType(relativePath: string): Promise<'file' | 'dir'> {
     const node = await this.findNode(relativePath);
-    if (!node) throw new NotFoundError(`The path at ${relativePath} does not exist`);
+    if (!node) {
+      throw new NotFoundError(`The path at ${relativePath} does not exist`, {
+        translation: { message: 'storage.githubCdn.fileNotFound' },
+      });
+    }
     return node.type === 'directory' ? 'dir' : 'file';
   }
 }

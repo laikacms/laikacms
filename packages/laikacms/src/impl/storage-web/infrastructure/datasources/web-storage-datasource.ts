@@ -36,8 +36,13 @@ const mapStorageError = (error: unknown, message: string): LaikaError => {
   // missing default `Storage` during SSR) pass through unchanged rather than
   // being masked as a generic `InternalError`.
   if (error instanceof LaikaError) return error;
-  if (isQuotaError(error)) return new QuotaExceededError(message, { cause: error });
-  return new InternalError(message, { cause: Cause.fail(error) });
+  if (isQuotaError(error)) {
+    return new QuotaExceededError(message, { cause: error, translation: { message: 'storage.web.quotaExceeded' } });
+  }
+  return new InternalError(message, {
+    cause: Cause.fail(error),
+    translation: { message: 'storage.web.unexpectedError' },
+  });
 };
 
 /**
@@ -138,9 +143,21 @@ export class WebStorageDataSource {
   async getObjectContents(key: Key): Promise<LaikaResult<{ content: string, key: string, extension: string }>> {
     try {
       const resolved = await this.resolveKeyWithExtension(key);
-      if (!resolved) return Result.fail(new NotFoundError(`Object at ${key} does not exist`));
+      if (!resolved) {
+        return Result.fail(
+          new NotFoundError(`Object at ${key} does not exist`, {
+            translation: { message: 'storage.web.fileNotFound' },
+          }),
+        );
+      }
       const envelope = this.readEnvelope(resolved.physicalKey);
-      if (!envelope) return Result.fail(new NotFoundError(`Object at ${key} does not exist`));
+      if (!envelope) {
+        return Result.fail(
+          new NotFoundError(`Object at ${key} does not exist`, {
+            translation: { message: 'storage.web.fileNotFound' },
+          }),
+        );
+      }
       return Result.succeed({ content: envelope.body, key: resolved.logicalKey, extension: resolved.extension });
     } catch (error) {
       return Result.fail(mapStorageError(error, `Failed to read object at ${key}`));
@@ -152,9 +169,21 @@ export class WebStorageDataSource {
   > {
     try {
       const resolved = await this.resolveKeyWithExtension(key);
-      if (!resolved) return Result.fail(new NotFoundError(`Object at ${key} does not exist`));
+      if (!resolved) {
+        return Result.fail(
+          new NotFoundError(`Object at ${key} does not exist`, {
+            translation: { message: 'storage.web.fileNotFound' },
+          }),
+        );
+      }
       const envelope = this.readEnvelope(resolved.physicalKey);
-      if (!envelope) return Result.fail(new NotFoundError(`Object at ${key} does not exist`));
+      if (!envelope) {
+        return Result.fail(
+          new NotFoundError(`Object at ${key} does not exist`, {
+            translation: { message: 'storage.web.fileNotFound' },
+          }),
+        );
+      }
       return Result.succeed({
         createdAt: new Date(envelope.createdAt),
         updatedAt: new Date(envelope.updatedAt),
@@ -177,7 +206,13 @@ export class WebStorageDataSource {
       const normalized = this.normalizeKey(key);
       const prefix = normalized ? `${normalized}/` : '';
       const hasEntries = this.listPhysicalEntries().some(e => e.logicalKeyWithExtension.startsWith(prefix));
-      if (!hasEntries) return Result.fail(new NotFoundError(`Folder at ${key} does not exist`));
+      if (!hasEntries) {
+        return Result.fail(
+          new NotFoundError(`Folder at ${key} does not exist`, {
+            translation: { message: 'storage.web.directoryNotFound' },
+          }),
+        );
+      }
       const now = new Date();
       return Result.succeed({ createdAt: now, updatedAt: now });
     } catch (error) {
@@ -213,7 +248,13 @@ export class WebStorageDataSource {
 
       // A flat store can't distinguish an empty existing folder from a
       // non-existent one unless a `.keep` marker was written — mirrors R2.
-      if (!hasAnyListing) return Result.fail(new NotFoundError(`Folder at ${prefix} does not exist`));
+      if (!hasAnyListing) {
+        return Result.fail(
+          new NotFoundError(`Folder at ${prefix} does not exist`, {
+            translation: { message: 'storage.web.directoryNotFound' },
+          }),
+        );
+      }
 
       return Result.succeed(entries);
     } catch (error) {
@@ -248,7 +289,11 @@ export class WebStorageDataSource {
       try {
         const resolved = await this.resolveKeyWithExtension(key);
         if (!resolved) {
-          yield Result.fail(new NotFoundError(`Object at ${key} does not exist`));
+          yield Result.fail(
+            new NotFoundError(`Object at ${key} does not exist`, {
+              translation: { message: 'storage.web.fileNotFound' },
+            }),
+          );
           continue;
         }
         this.storage.removeItem(resolved.physicalKey);
