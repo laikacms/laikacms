@@ -1,4 +1,5 @@
 import * as Result from 'effect/Result';
+import { ForbiddenError, TooManyRequestsError, UpstreamUnAuthorizedError } from 'laikacms/core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createAppAuthMock = vi.fn();
@@ -204,5 +205,52 @@ describe('GithubDataSource externalOctokit passthrough', () => {
     const second = await ds.getOctokit();
     expect(first).toBe(externalOctokit);
     expect(second).toBe(externalOctokit);
+  });
+});
+
+describe('GithubDataSource.mapError', () => {
+  const makeDs = (octokitError: object) => {
+    const externalOctokit = {
+      repos: { getContent: vi.fn().mockRejectedValue(octokitError) },
+      rest: { repos: { listCommits: vi.fn() } },
+    };
+    return new GithubDataSource({
+      owner: 'test-owner',
+      repo: 'test-repo',
+      branch: 'main',
+      octokit: externalOctokit as never,
+    });
+  };
+
+  it('maps 401 → UpstreamUnAuthorizedError', async () => {
+    const ds = makeDs({ status: 401, message: 'Unauthorized' });
+    const result = await ds.getFileContents('docs/readme.md');
+    expect(Result.isFailure(result)).toBe(true);
+    expect(Result.isFailure(result) && result.failure).toBeInstanceOf(UpstreamUnAuthorizedError);
+  });
+
+  it('maps 403 without rate-limit header → ForbiddenError', async () => {
+    const ds = makeDs({ status: 403, message: 'Forbidden' });
+    const result = await ds.getFileContents('docs/readme.md');
+    expect(Result.isFailure(result)).toBe(true);
+    expect(Result.isFailure(result) && result.failure).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('maps 403 with "Resource not accessible by" message → ForbiddenError', async () => {
+    const ds = makeDs({ status: 403, message: 'Resource not accessible by integration' });
+    const result = await ds.getFileContents('docs/readme.md');
+    expect(Result.isFailure(result)).toBe(true);
+    expect(Result.isFailure(result) && result.failure).toBeInstanceOf(ForbiddenError);
+  });
+
+  it('maps 403 with x-ratelimit-remaining=0 → TooManyRequestsError', async () => {
+    const ds = makeDs({
+      status: 403,
+      message: 'Forbidden',
+      response: { headers: { 'x-ratelimit-remaining': '0' } },
+    });
+    const result = await ds.getFileContents('docs/readme.md');
+    expect(Result.isFailure(result)).toBe(true);
+    expect(Result.isFailure(result) && result.failure).toBeInstanceOf(TooManyRequestsError);
   });
 });
