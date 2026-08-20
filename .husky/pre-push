@@ -6,6 +6,14 @@ pnpm typecheck
 pnpm lint
 pnpm test -- --passWithNoTests
 
+# Run starters build gate when starters/ or packages/ are touched by this push.
+# Uses the three-dot diff against origin/develop to find changed paths; silently
+# skips if the remote ref isn't available (first push of a new branch before
+# origin/develop is fetched, or offline).
+if git diff --name-only origin/develop...HEAD 2>/dev/null | grep -qE '^(starters/|packages/)'; then
+  pnpm build:starters
+fi
+
 # Scan every commit being pushed for secrets. Skipped if trufflehog is not
 # installed (see CONTRIBUTING.md).
 if command -v trufflehog >/dev/null 2>&1; then
