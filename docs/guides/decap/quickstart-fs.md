@@ -208,11 +208,22 @@ endpoint the Decap `laika` backend pings to confirm the server is reachable.
 time) — its required peer dependencies, and esbuild (used to compile the TypeScript entry file into
 a browser bundle):
 
+> **Version floor:** the range below keeps the solver off `@laikacms/decap-cms@4.0.2`, which was
+> published to npm with unresolved `catalog:` protocol specs in 97 of its 99 dependency entries and
+> has not been deprecated. Installing it fails outright with
+> `ERR_PNPM_SPEC_NOT_SUPPORTED_BY_ANY_RESOLVER: "ol@catalog:media" isn't supported by any available
+> resolver`.
+> Every release from `4.0.3` up is clean, and a plain unpinned install currently picks a good
+> version on its own — the floor is cheap insurance against a peer range steering the solver back
+> onto `4.0.2`, not a workaround you need today. Tracked upstream in
+> [laikacms/decap-cms#941](https://github.com/laikacms/decap-cms/issues/941); once `4.0.2` is
+> deprecated on npm the floor can be dropped.
+
 ```bash
-npm install @laikacms/decap-cms @emotion/react @emotion/styled
+npm install '@laikacms/decap-cms@^4.1.0' @emotion/react @emotion/styled
 npm install --save-dev esbuild
 
-pnpm add @laikacms/decap-cms @emotion/react @emotion/styled
+pnpm add '@laikacms/decap-cms@^4.1.0' @emotion/react @emotion/styled
 pnpm add -D esbuild
 ```
 
@@ -221,7 +232,8 @@ pnpm add -D esbuild
 > `ERR_PNPM_IGNORED_BUILDS` and the install step fails.
 
 > The `laika` backend ships as `@laikacms/decap-cms/backends/laika` (a subpath of the
-> `@laikacms/decap-cms` package). Import `createLaikaBackend` from there.
+> `@laikacms/decap-cms` package you just installed, not of `@laikacms/server`). Import
+> `createLaikaBackend` from there.
 >
 > `@emotion/react` and `@emotion/styled` are required (non-optional) peer dependencies of
 > `@laikacms/decap-cms` — the admin shell is styled with Emotion. Without them the esbuild step will

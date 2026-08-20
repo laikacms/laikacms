@@ -2,13 +2,13 @@ import * as Result from 'effect/Result';
 
 import type { LaikaResult } from 'laikacms/core';
 import {
-  AuthenticationError,
   ConflictError,
   ForbiddenError,
   InternalError,
   NotFoundError,
   ServiceUnavailableError,
   TooManyRequestsError,
+  UpstreamUnAuthorizedError,
   VersionMismatchError,
 } from 'laikacms/core';
 
@@ -419,7 +419,9 @@ export class GitlabDataSource {
   private mapStatus<T>(status: number, contextPath: string): LaikaResult<T> {
     switch (status) {
       case 401:
-        return Result.fail(new AuthenticationError(`GitLab authentication failed for ${contextPath}`));
+        return Result.fail(
+          new UpstreamUnAuthorizedError(`GitLab rejected this server's credential for ${contextPath}`),
+        );
       case 403:
         return Result.fail(new ForbiddenError(`GitLab access forbidden for ${contextPath}`));
       case 404:

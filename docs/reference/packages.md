@@ -165,8 +165,13 @@ See [The `@laikacms/decap-cms` fork](../guides/decap/fork) for the full package 
 ### Install
 
 ```sh
-pnpm add @laikacms/decap-cms @emotion/react @emotion/styled
+pnpm add '@laikacms/decap-cms@^4.1.0' @emotion/react @emotion/styled
 ```
+
+The `^4.1.0` floor keeps the solver off `4.0.2`, which was published with unresolved `catalog:`
+specs and is not deprecated — installing it fails with
+`ERR_PNPM_SPEC_NOT_SUPPORTED_BY_ANY_RESOLVER`. Releases from `4.0.3` up are clean. See
+[laikacms/decap-cms#941](https://github.com/laikacms/decap-cms/issues/941).
 
 `@emotion/react` and `@emotion/styled` are required (non-optional) peer dependencies — the admin
 shell is styled with Emotion. `@laikacms/decap-cms` also declares optional peers for specific

@@ -1,10 +1,9 @@
 import {
-  AuthenticationError,
-  AuthorizationError,
   ForbiddenError,
   InternalError,
   LaikaTask,
   TooManyRequestsError,
+  UpstreamUnAuthorizedError,
   VersionMismatchError,
 } from 'laikacms/core';
 import { runStorageRepositoryContract } from 'laikacms/storage/testing';
@@ -111,7 +110,7 @@ describe('GithubStorageRepository.getAtom error propagation', () => {
     ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
-  it('propagates AuthenticationError (401) instead of falling through to getObject', async () => {
+  it('propagates UpstreamUnAuthorizedError (401) instead of falling through to getObject', async () => {
     const unauthorizedError = Object.assign(new Error('Bad credentials'), { status: 401 });
     const repo = makeRepoWithGetContent(async () => {
       throw unauthorizedError;
@@ -119,7 +118,7 @@ describe('GithubStorageRepository.getAtom error propagation', () => {
 
     await expect(
       LaikaTask.runPromise(repo.getAtom('notes/article')),
-    ).rejects.toBeInstanceOf(AuthenticationError);
+    ).rejects.toBeInstanceOf(UpstreamUnAuthorizedError);
   });
 
   it('propagates TooManyRequestsError for a 403 with x-ratelimit-remaining: 0', async () => {
@@ -136,7 +135,7 @@ describe('GithubStorageRepository.getAtom error propagation', () => {
     ).rejects.toBeInstanceOf(TooManyRequestsError);
   });
 
-  it('propagates AuthorizationError for a generic 403 (no rate-limit header, no "Resource not accessible" message)', async () => {
+  it('propagates ForbiddenError for a generic 403 (no rate-limit header, no "Resource not accessible" message)', async () => {
     const genericForbidden = Object.assign(new Error('Forbidden'), {
       status: 403,
       response: { headers: {} },
@@ -147,7 +146,7 @@ describe('GithubStorageRepository.getAtom error propagation', () => {
 
     await expect(
       LaikaTask.runPromise(repo.getAtom('notes/article')),
-    ).rejects.toBeInstanceOf(AuthorizationError);
+    ).rejects.toBeInstanceOf(ForbiddenError);
   });
 
   it('propagates VersionMismatchError for a 409 conflict', async () => {

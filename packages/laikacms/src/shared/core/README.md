@@ -36,14 +36,14 @@ All error classes extend `LaikaError` and carry `.status`, `.code`, and `.title`
 ### Auth errors
 
 - `AuthenticationError` — Not logged in; HTTP 401
-- `AuthorizationError` — HTTP 401; used to deserialize or signal an unauthenticated challenge from a
-  remote server. Not for "logged in but no permission" — use `ForbiddenError` for that.
+- `UpstreamUnAuthorizedError` — HTTP 401; the deserialization target for a 401 challenge received
+  from an **upstream** server. Not for "logged in but no permission" — use `ForbiddenError`.
 - `ForbiddenError` — Logged in but lacks permissions; HTTP 403
 - `AuthorizerFailureError` — API Gateway authorizer failed (infrastructure error); HTTP 500
 
 > **Usage guidance:** use `AuthenticationError` when the user is not logged in at all (HTTP 401);
 > use `ForbiddenError` when the user is logged in but lacks permissions (HTTP 403); use
-> `AuthorizationError` when deserializing a 401 from a remote server.
+> `UpstreamUnAuthorizedError` only when deserializing a 401 this server received from a remote.
 
 ### Conflict / state errors
 

@@ -55,7 +55,8 @@
     "**/_site",
     "**/public/admin",
     "**/static/admin",
-    "**/.astro"
+    "**/.astro",
+    ".claude/*.local.md"
   ],
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.93.3.wasm",

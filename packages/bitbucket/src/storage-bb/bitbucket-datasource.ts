@@ -2,12 +2,12 @@ import * as Result from 'effect/Result';
 
 import type { LaikaResult } from 'laikacms/core';
 import {
-  AuthenticationError,
   ForbiddenError,
   InternalError,
   NotFoundError,
   ServiceUnavailableError,
   TooManyRequestsError,
+  UpstreamUnAuthorizedError,
 } from 'laikacms/core';
 
 const DEFAULT_API_URL = 'https://api.bitbucket.org/2.0';
@@ -70,7 +70,9 @@ const errorForResponse = <T>(status: number, body: string, context: string): Lai
   } catch { /* not JSON */ }
   switch (status) {
     case 401:
-      return Result.fail(new AuthenticationError(`Bitbucket authentication failed for ${context}${detail}`));
+      return Result.fail(
+        new UpstreamUnAuthorizedError(`Bitbucket rejected this server's credential for ${context}${detail}`),
+      );
     case 403:
       return Result.fail(new ForbiddenError(`Bitbucket access denied for ${context}${detail}`));
     case 404:

@@ -1521,3 +1521,48 @@ describe('storage-api: unmapped error code falls back to 500, not 400 (LCMS-434)
     expect(res.status).toBe(500);
   });
 });
+
+// ---------------------------------------------------------------------------
+// GET /atoms and GET /atom-summaries — keyless root listing (LCMS-885)
+// ---------------------------------------------------------------------------
+//
+// A root-level listing has no key segment, so the route parser yields
+// `rawKey === undefined`. That `undefined` must be normalized to the storage
+// root ('') before it reaches the repository — passing it through makes
+// filesystem-backed repositories call path.join(root, undefined), which throws
+// a synchronous TypeError that surfaces as an opaque 500.
+
+describe('storage-api keyless root listing (LCMS-885)', () => {
+  const makeStream = () =>
+    LaikaStream.make<{ type: 'folder', key: string, createdAt: string, updatedAt: string }, ListAtomsDone>(
+      () => Effect.succeed({} as ListAtomsDone),
+    );
+
+  it.each([
+    ['http://localhost/atom-summaries'],
+    ['http://localhost/atom-summaries/'],
+  ])('GET %s passes the storage root ("") to repo.listAtomSummaries', async url => {
+    const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeStream());
+    const api = buildJsonApi({ repo: { listAtomSummaries: spy } as unknown as StorageRepository, authorize: allowAll });
+
+    const res = await api.fetch(new Request(url));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0]).toBe('');
+  });
+
+  it.each([
+    ['http://localhost/atoms'],
+    ['http://localhost/atoms/'],
+  ])('GET %s passes the storage root ("") to repo.listAtoms', async url => {
+    const spy = vi.fn((_folderKey: string, _options: ListAtomsOptions) => makeStream());
+    const api = buildJsonApi({ repo: { listAtoms: spy } as unknown as StorageRepository, authorize: allowAll });
+
+    const res = await api.fetch(new Request(url));
+    expect(res.status).toBe(200);
+
+    expect(spy).toHaveBeenCalledOnce();
+    expect(spy.mock.calls[0]![0]).toBe('');
+  });
+});
