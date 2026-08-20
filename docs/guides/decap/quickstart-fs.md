@@ -260,7 +260,7 @@ The static file server needs an `index.html` to load your compiled bundle:
   </head>
   <body>
     <!-- esbuild compiles admin/index.ts → admin/bundle.js (see §5) -->
-    <script src="bundle.js"></script>
+    <script src="bundle.js" type="module"></script>
   </body>
 </html>
 ```
@@ -355,7 +355,7 @@ In two terminals:
 npm start
 
 # Terminal 2 — compile the admin bundle, then serve it
-npx esbuild admin/index.ts --bundle --outfile=admin/bundle.js --format=iife --target=es2020
+npx esbuild admin/index.ts --bundle --outfile=admin/bundle.js --format=esm --platform=browser
 npx serve admin/ -l 5000
 ```
 
