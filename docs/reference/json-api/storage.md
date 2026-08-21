@@ -25,7 +25,7 @@ interpreted as a new path segment rather than part of the key.
 | `posts/hello-world` | `/objects/posts%2Fhello-world` | `/objects/posts/hello-world` |
 | `a/b/c`             | `/objects/a%2Fb%2Fc`           | `/objects/a/b/c`             |
 
-The same rule applies to `/folders/{key}`.
+The same rule applies to `/folders/{key}` and `/atom/{key}`.
 
 ### Endpoints
 
@@ -63,6 +63,11 @@ Returns meta-information about the Storage API and its available endpoints.
         },
         { "path": "/atoms", "methods": ["POST"], "description": "Create a folder" },
         { "path": "/atoms/{key}", "methods": ["GET"], "description": "List atoms in a folder" },
+        {
+          "path": "/atom/{key}",
+          "methods": ["GET"],
+          "description": "Read a single atom (object or folder)"
+        },
         {
           "path": "/atom-summaries/{key}",
           "methods": ["GET"],
@@ -376,6 +381,84 @@ may omit them.
   }
 }
 ```
+
+---
+
+#### GET /atom/:key
+
+Read a single atom by key. Auto-detects whether the key points to an object or a folder and returns
+the corresponding resource. Use this endpoint when the caller does not know in advance whether the
+key is an object or a folder — it is equivalent to trying `GET /objects/:key` and then
+`GET /folders/:key` but in a single request.
+
+**Path Parameters**
+
+| Parameter | Type   | Description                                                                     |
+| --------- | ------ | ------------------------------------------------------------------------------- |
+| `key`     | string | Key of the atom (slashes must be encoded as `%2F`, e.g. `posts%2Fhello-world`) |
+
+**Example**
+
+```
+GET /atom/posts%2Fhello-world
+```
+
+**Response** — the requested atom as an `object` or `folder` resource
+
+When the key resolves to an object:
+
+```json
+{
+  "data": {
+    "type": "object",
+    "id": "posts/hello-world",
+    "attributes": {
+      "type": "object",
+      "content": {
+        "title": "Hello World",
+        "body": "This is my first post."
+      },
+      "createdAt": "2024-01-15T10:30:00Z",
+      "updatedAt": "2024-01-16T08:00:00Z"
+    }
+  }
+}
+```
+
+When the key resolves to a folder:
+
+```json
+{
+  "data": {
+    "type": "folder",
+    "id": "posts/drafts",
+    "attributes": {
+      "type": "folder",
+      "createdAt": "2024-01-10T09:00:00Z",
+      "updatedAt": "2024-01-10T09:00:00Z"
+    }
+  }
+}
+```
+
+**Error Response** — `404 Not Found`
+
+```json
+{
+  "errors": [
+    {
+      "status": "404",
+      "code": "not_found",
+      "detail": "The file at posts/hello-world does not exist"
+    }
+  ]
+}
+```
+
+> **Choosing between `/atom`, `/objects`, and `/folders`:**
+> Use `/objects/:key` or `/folders/:key` when you know the atom type — they are slightly more
+> explicit and self-documenting. Use `/atom/:key` when the type is unknown (e.g. when resolving
+> an arbitrary user-supplied key).
 
 ---
 
