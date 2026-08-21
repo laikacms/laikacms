@@ -85,7 +85,10 @@ app.get('/blog/:slug', async c => {
 </html>`);
 });
 
-// Static files from public/ — serves /admin/index.html, /admin/bundle.js, /uploads/*, etc.
+// Uploaded media — stored in content/uploads/ by the Decap assets repository.
+app.use('/uploads/*', serveStatic({ root: './content' }));
+
+// Static files from public/ — serves /admin/index.html, /admin/bundle.js, etc.
 app.use('/*', serveStatic({ root: './public' }));
 
 const PORT = Number(process.env.PORT ?? 3000);
