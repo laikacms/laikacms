@@ -422,4 +422,48 @@ describe('ConventionCatalogProvider', () => {
       }
     });
   });
+
+  describe('cache-key stability invariant (GH#927)', () => {
+    it('getDocumentCollectionSettings returns identical directory on repeated calls', async () => {
+      const r1 = await LaikaTask.runPromiseResult(provider.getDocumentCollectionSettings('blog'));
+      const r2 = await LaikaTask.runPromiseResult(provider.getDocumentCollectionSettings('blog'));
+      expect(Result.isSuccess(r1) && Result.isSuccess(r2)).toBe(true);
+      if (Result.isSuccess(r1) && Result.isSuccess(r2)) {
+        expect(r1.success.directory).toBe(r2.success.directory);
+      }
+    });
+
+    it('getDocumentCollectionSettings returns identical directory from two fresh instances', async () => {
+      const store = makeMemoryStorage();
+      const p1 = new ConventionCatalogProvider({ storage: store });
+      const p2 = new ConventionCatalogProvider({ storage: store });
+      const r1 = await LaikaTask.runPromiseResult(p1.getDocumentCollectionSettings('posts'));
+      const r2 = await LaikaTask.runPromiseResult(p2.getDocumentCollectionSettings('posts'));
+      expect(Result.isSuccess(r1) && Result.isSuccess(r2)).toBe(true);
+      if (Result.isSuccess(r1) && Result.isSuccess(r2)) {
+        expect(r1.success.directory).toBe(r2.success.directory);
+      }
+    });
+
+    it('getMediaCollectionSettings returns identical directory on repeated calls', async () => {
+      const r1 = await LaikaTask.runPromiseResult(provider.getMediaCollectionSettings('uploads'));
+      const r2 = await LaikaTask.runPromiseResult(provider.getMediaCollectionSettings('uploads'));
+      expect(Result.isSuccess(r1) && Result.isSuccess(r2)).toBe(true);
+      if (Result.isSuccess(r1) && Result.isSuccess(r2)) {
+        expect(r1.success.directory).toBe(r2.success.directory);
+      }
+    });
+
+    it('getMediaCollectionSettings returns identical directory from two fresh instances', async () => {
+      const store = makeMemoryStorage();
+      const p1 = new ConventionCatalogProvider({ storage: store });
+      const p2 = new ConventionCatalogProvider({ storage: store });
+      const r1 = await LaikaTask.runPromiseResult(p1.getMediaCollectionSettings('images'));
+      const r2 = await LaikaTask.runPromiseResult(p2.getMediaCollectionSettings('images'));
+      expect(Result.isSuccess(r1) && Result.isSuccess(r2)).toBe(true);
+      if (Result.isSuccess(r1) && Result.isSuccess(r2)) {
+        expect(r1.success.directory).toBe(r2.success.directory);
+      }
+    });
+  });
 });
