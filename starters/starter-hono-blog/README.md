@@ -33,7 +33,7 @@ src/index.ts          Hono server: /api/decap/* → laika.fetch, blog routes, st
 src/admin-client.ts   Admin entry point (bundled to public/admin/bundle.js)
 src/cms.ts            Decap bare-app registration (widgets, backend)
 content/              Markdown post files (created by Decap admin)
-public/uploads/       Media uploads
+content/uploads/       Media uploads (served at /uploads/* by Hono)
 ```
 
 `createEmbeddedLaika` roots a `FileSystemStorageRepository` at `content/`, seeds `config.yml` from the `decapConfig` option, and returns a `fetch`-compatible handler for the Decap JSON:API + auth endpoints. Import `laika.documents` in any route to read/write content without going through HTTP.
