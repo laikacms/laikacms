@@ -393,8 +393,8 @@ key is an object or a folder — it is equivalent to trying `GET /objects/:key` 
 
 **Path Parameters**
 
-| Parameter | Type   | Description                                                                     |
-| --------- | ------ | ------------------------------------------------------------------------------- |
+| Parameter | Type   | Description                                                                    |
+| --------- | ------ | ------------------------------------------------------------------------------ |
 | `key`     | string | Key of the atom (slashes must be encoded as `%2F`, e.g. `posts%2Fhello-world`) |
 
 **Example**
@@ -455,10 +455,9 @@ When the key resolves to a folder:
 }
 ```
 
-> **Choosing between `/atom`, `/objects`, and `/folders`:**
-> Use `/objects/:key` or `/folders/:key` when you know the atom type — they are slightly more
-> explicit and self-documenting. Use `/atom/:key` when the type is unknown (e.g. when resolving
-> an arbitrary user-supplied key).
+> **Choosing between `/atom`, `/objects`, and `/folders`:** Use `/objects/:key` or `/folders/:key`
+> when you know the atom type — they are slightly more explicit and self-documenting. Use
+> `/atom/:key` when the type is unknown (e.g. when resolving an arbitrary user-supplied key).
 
 ---
 
