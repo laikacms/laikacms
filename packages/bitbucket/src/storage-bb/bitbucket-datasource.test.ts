@@ -1,4 +1,5 @@
-import { InternalError } from 'laikacms/core';
+import * as Result from 'effect/Result';
+import { ForbiddenError, InternalError, ServiceUnavailableError, UpstreamUnAuthorizedError } from 'laikacms/core';
 import { describe, expect, it } from 'vitest';
 
 import { BitbucketDataSource } from './bitbucket-datasource.js';
@@ -133,5 +134,69 @@ describe('BitbucketDataSource encodePath (via getFileContents URL)', () => {
     expect(urls[0]).toBe(
       `${API_URL}/repositories/${WORKSPACE}/${REPO}/src/${BRANCH}/notes/a.md`,
     );
+  });
+});
+
+describe('BitbucketDataSource errorForResponse (via getFileContents)', () => {
+  const makeDs = (status: number, body = '') => {
+    const fetchImpl: typeof fetch = async () => new Response(body, { status });
+    return new BitbucketDataSource({
+      workspace: WORKSPACE,
+      repo: REPO,
+      branch: BRANCH,
+      auth: { oauthToken: 'tok' },
+      apiUrl: API_URL,
+      fetch: fetchImpl,
+    });
+  };
+
+  it('maps 401 → UpstreamUnAuthorizedError', async () => {
+    const result = await makeDs(401).getFileContents('docs/readme.md');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(UpstreamUnAuthorizedError);
+    }
+  });
+
+  it('maps 403 → ForbiddenError', async () => {
+    const result = await makeDs(403).getFileContents('docs/readme.md');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(ForbiddenError);
+    }
+  });
+
+  it('maps 500 → ServiceUnavailableError', async () => {
+    const result = await makeDs(500).getFileContents('docs/readme.md');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(ServiceUnavailableError);
+    }
+  });
+
+  it('maps 503 → ServiceUnavailableError', async () => {
+    const result = await makeDs(503).getFileContents('docs/readme.md');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(ServiceUnavailableError);
+    }
+  });
+
+  it('maps 422 (non-404/401/403/5xx) → InternalError', async () => {
+    const result = await makeDs(422).getFileContents('docs/readme.md');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(InternalError);
+    }
+  });
+
+  it('includes parsed Bitbucket error message in the error when body is JSON', async () => {
+    const body = JSON.stringify({ error: { message: 'repository access denied' } });
+    const result = await makeDs(403, body).getFileContents('docs/readme.md');
+    expect(Result.isFailure(result)).toBe(true);
+    if (Result.isFailure(result)) {
+      expect(result.failure).toBeInstanceOf(ForbiddenError);
+      expect((result.failure as ForbiddenError).message).toContain('repository access denied');
+    }
   });
 });
