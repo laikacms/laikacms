@@ -60,7 +60,7 @@ interface AuthorizeContext {
   user: User; // the identity from your authenticate* callback
   request: Request; // the raw request, for anything the fields below don't cover
   method: string; // upper-cased HTTP method
-  domain: 'documents' | 'storage' | 'assets' | 'session';
+  domain: 'documents' | 'storage' | 'assets' | 'session' | 'locks'; // 'locks' = advisory-locking sub-API
   operation: 'read' | 'create' | 'update' | 'delete' | 'publish' | 'unpublish';
   collection?: string; // first path segment after the domain (the API resource)
   itemId?: string; // the item key/slug (URL-decoded), when present
@@ -123,8 +123,8 @@ lives in `laikacms/auth`:
 
 | Scope           | Grants                                                              |
 | --------------- | ------------------------------------------------------------------- |
-| `content:read`  | GET requests to `/storage`, `/documents`                            |
-| `content:write` | Mutating requests to `/storage`, `/documents`                       |
+| `content:read`  | GET requests to `/storage`, `/documents`, `/locks`                  |
+| `content:write` | Mutating requests to `/storage`, `/documents`, `/locks`             |
 | `media:read`    | GET requests to `/assets`                                           |
 | `media:write`   | Mutating requests to `/assets`                                      |
 | `config:read`   | Read access to config atoms (checked at scope level, not API level) |
