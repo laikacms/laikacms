@@ -15,6 +15,7 @@ pnpm add laikacms
 ### Node / Bun
 
 ```ts
+import { allowAll } from 'laikacms/json-api';
 import { markdownSerializer } from 'laikacms/serializers/markdown';
 import { buildJsonApi } from 'laikacms/storage/api';
 import { FileSystemStorageRepository } from 'laikacms/storage/fs';
@@ -28,6 +29,7 @@ export default { fetch: api.fetch };
 ### Cloudflare Workers
 
 ```ts
+import { allowAll } from 'laikacms/json-api';
 import { markdownSerializer } from 'laikacms/serializers/markdown';
 import { buildJsonApi } from 'laikacms/storage/api';
 import { R2StorageRepository } from 'laikacms/storage/r2';
