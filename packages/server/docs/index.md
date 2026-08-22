@@ -21,19 +21,19 @@ pnpm add @laikacms/server
 > AI chat widget, the embedded-entry editor, config type utilities, and the Dutch locale — now ship
 > with the `@laikacms/decap-cms` fork. `@laikacms/decap-ai` is discontinued.
 
-> **Moved back (August 2026):** the AI chat/session server returned as `@laikacms/server/ai` — it
-> is server code. The fork ships only the client half (an `LlmTransport` interface plus chat panel).
+> **Moved back (August 2026):** the AI chat/session server returned as `@laikacms/server/ai` — it is
+> server code. The fork ships only the client half (an `LlmTransport` interface plus chat panel).
 
 See [Usage](./usage) for the `api` options and a wiring example.
 
 ## Exports
 
-| Export                      | Purpose                                                                                 |
-| --------------------------- | --------------------------------------------------------------------------------------- |
-| `@laikacms/server/api`      | Single-endpoint JSON:API router over the `laikacms` repositories                        |
-| `@laikacms/server/oauth2`   | OAuth 2.0 authorization server (PKCE, passkey, TOTP, email)                             |
-| `@laikacms/server/embedded` | Quick-start all-in-one Node.js backend: filesystem storage + config seeding             |
-| `@laikacms/server/ai`       | AI chat + session endpoints for the Decap CMS assistant (optional `ai` peer)            |
+| Export                      | Purpose                                                                      |
+| --------------------------- | ---------------------------------------------------------------------------- |
+| `@laikacms/server/api`      | Single-endpoint JSON:API router over the `laikacms` repositories             |
+| `@laikacms/server/oauth2`   | OAuth 2.0 authorization server (PKCE, passkey, TOTP, email)                  |
+| `@laikacms/server/embedded` | Quick-start all-in-one Node.js backend: filesystem storage + config seeding  |
+| `@laikacms/server/ai`       | AI chat + session endpoints for the Decap CMS assistant (optional `ai` peer) |
 
 The admin-side counterpart, `createLaikaBackend()`, ships with the fork as
 `@laikacms/decap-cms/backends/laika`.
