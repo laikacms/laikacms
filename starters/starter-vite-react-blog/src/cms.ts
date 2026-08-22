@@ -6,6 +6,7 @@
  * uses is registered explicitly below. Re-run the wizard or edit this file
  * to change the selection. English is always registered as the fallback.
 */
+import './prism-global.js';
 import { CMS, init } from '@laikacms/decap-cms/laika-app/bare';
 import en from '@laikacms/decap-cms/locales/en';
 
