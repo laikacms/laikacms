@@ -7,6 +7,7 @@ section documents every endpoint, grouped by API server.
 - [Documents API](./documents) — versioned content with a publish/unpublish lifecycle
 - [Assets API](./assets) — binary file and folder management
 - [Catalog API](./catalog) — collection settings
+- [Locks API](./locks) — advisory entry locking for admin UIs
 - [Error Responses](./errors) — shared error format and codes
 
 ## Overview
@@ -20,6 +21,7 @@ specification. All responses use the `application/vnd.api+json` content type.
 | Documents API | configurable      | Versioned content with publish/unpublish lifecycle |
 | Assets API    | `/api/assets`     | Binary file and folder management                  |
 | Catalog API   | configurable      | Collection settings (document and media folders)   |
+| Locks API     | configurable      | Advisory entry locking for admin UIs (ADR-007)     |
 
 ### JSON:API Conventions
 
