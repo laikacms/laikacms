@@ -16,11 +16,13 @@
     "@laikacms/vite-plugin": "^5.0.0",
     "astro": "^7.1.6",
     "laikacms": "^5.0.0",
+    "prismjs": "^1.30.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.4"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.10",
+    "@types/prismjs": "^1.26.5",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "typescript": "^6.0.3"

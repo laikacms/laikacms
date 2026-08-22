@@ -31,6 +31,9 @@ importers:
       laikacms:
         specifier: link:../../packages/laikacms
         version: link:../../packages/laikacms
+      prismjs:
+        specifier: ^1.30.0
+        version: 1.30.0
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -41,6 +44,9 @@ importers:
       '@astrojs/check':
         specifier: ^0.9.10
         version: 0.9.10(prettier@3.9.6)(typescript@6.0.3)
+      '@types/prismjs':
+        specifier: ^1.26.5
+        version: 1.26.6
       '@types/react':
         specifier: ^19.2.17
         version: 19.2.18
@@ -194,6 +200,9 @@ importers:
       laikacms:
         specifier: link:../../packages/laikacms
         version: link:../../packages/laikacms
+      prismjs:
+        specifier: ^1.30.0
+        version: 1.30.0
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -207,6 +216,9 @@ importers:
       '@types/node':
         specifier: ^24.13.3
         version: 24.13.3
+      '@types/prismjs':
+        specifier: ^1.26.5
+        version: 1.26.6
       '@types/react':
         specifier: ^19.2.17
         version: 19.2.18
