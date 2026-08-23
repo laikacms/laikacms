@@ -94,14 +94,17 @@ async function ensureConfig(storage: R2StorageRepository): Promise<void> {
     // NotFoundError — seed it
   }
   try {
-    // Pass the JS object — the yml serializer converts it to YAML for storage.
+    // metadata.extension: 'yml' forces yamlSerializer regardless of defaultFileExtension ('md'),
+    // so the stored key in R2 is config.yml — matching what the log and comments say.
     await runTask(
       storage.createOrUpdateObject({
         key: 'config.yml',
         type: 'object',
         content: decapConfig as Record<string, unknown>,
+        metadata: { extension: 'yml' },
       }),
     );
+    console.log('starter-workers-blog: seeded config.yml into R2');
   } catch (err) {
     console.error('starter-workers-blog: failed to seed config.yml into R2', err);
   }

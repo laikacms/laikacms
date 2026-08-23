@@ -74,11 +74,14 @@ async function ensureConfig(): Promise<void> {
     // Not found — seed it
   }
   try {
+    // metadata.extension: 'yml' forces yamlSerializer regardless of defaultFileExtension ('md'),
+    // so the stored file in the repo is config.yml — matching what the log says.
     await runTask(
       storage.createOrUpdateObject({
         key: 'config.yml',
         type: 'object',
         content: decapConfig as Record<string, unknown>,
+        metadata: { extension: 'yml' },
       }),
     );
     console.log('starter-github-blog: seeded config.yml into GitHub repo');
