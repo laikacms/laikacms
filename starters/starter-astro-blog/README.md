@@ -16,9 +16,13 @@ backend/widget/locale choices:
 npx laikacli create
 ```
 
-Or, working inside this checkout directly:
+Or, working inside this checkout directly — the `starters/pnpm-workspace.yaml` carries `link:`
+overrides for packages ahead of npm, so those packages must be built first:
 
 ```bash
+# Build the linked packages (run from this directory)
+pnpm -C ../.. --filter laikacms --filter @laikacms/server --filter @laikacms/vite-plugin build
+
 pnpm install
 pnpm dev
 ```

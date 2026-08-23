@@ -15,6 +15,20 @@ Open <http://localhost:3000> — the blog is at `/`, the Decap admin at `/admin/
 
 The admin uses **dev token auth**: no password required in development.
 
+## Working from the monorepo
+
+If you cloned the `laikacms` repository and are running this starter in-place (not via the wizard),
+the `starters/pnpm-workspace.yaml` carries `link:` overrides pointing at local builds of packages
+that are ahead of npm. Build those packages first, then install and run:
+
+```sh
+# Build the linked packages (run from this directory)
+pnpm -C ../.. --filter laikacms --filter @laikacms/server build
+
+pnpm install
+pnpm dev
+```
+
 ## Scripts
 
 | Script | What it does |
