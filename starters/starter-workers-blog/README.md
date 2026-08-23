@@ -35,7 +35,9 @@ pnpm -C ../.. --filter laikacms --filter @laikacms/server build
 
 pnpm install
 pnpm dev
-``` The blog is at `/`, the Decap admin at `/admin/`.
+```
+
+The blog is at `/`, the Decap admin at `/admin/`.
 
 Dev authentication uses a hardcoded bearer token (`dev-local-laika-token`). Override it by setting `DEV_TOKEN` in `wrangler.toml` under `[vars]`.
 

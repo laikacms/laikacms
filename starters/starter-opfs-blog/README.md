@@ -41,7 +41,9 @@ pnpm -C ../.. --filter laikacms build
 
 pnpm install
 pnpm dev
-``` The admin logs in automatically:
+```
+
+The admin logs in automatically:
 there is no server to authenticate against, so the `laika` backend runs in `dev_token` mode and a
 tiny same-origin fetch shim (`src/local-session.ts`) answers its `/session` and `/health` checks.
 
