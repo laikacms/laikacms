@@ -527,6 +527,17 @@ describe('renderForgotPasswordPage', () => {
     expect(html).toContain('https://api.example.com/cms/forgot-password');
   });
 
+  it('defaults back-link to authorize endpoint (not javascript:)', () => {
+    const { html } = renderForgotPasswordPage(base);
+    expect(html).not.toContain('javascript:');
+    expect(html).toContain('https://api.example.com/cms/authorize');
+  });
+
+  it('uses provided loginUrl as back-link', () => {
+    const { html } = renderForgotPasswordPage({ ...base, loginUrl: '/admin/login' });
+    expect(html).toContain('href="/admin/login"');
+  });
+
   it('includes error message when provided', () => {
     const { html } = renderForgotPasswordPage({ ...base, error: 'Email not found' });
     expect(html).toContain('Email not found');
@@ -551,6 +562,12 @@ describe('renderForgotPasswordSuccessPage', () => {
     const { html } = renderForgotPasswordSuccessPage({ baseUrl: 'https://api.example.com/cms' });
     expect(html.length).toBeGreaterThan(0);
     expect(html).toContain('<!DOCTYPE html>');
+  });
+
+  it('defaults back-link to authorize endpoint (not javascript:)', () => {
+    const { html } = renderForgotPasswordSuccessPage({ baseUrl: 'https://api.example.com/cms' });
+    expect(html).not.toContain('javascript:');
+    expect(html).toContain('https://api.example.com/cms/authorize');
   });
 });
 
@@ -585,6 +602,12 @@ describe('renderResetPasswordSuccessPage', () => {
     const { html } = renderResetPasswordSuccessPage({ baseUrl: 'https://api.example.com/cms' });
     expect(html.length).toBeGreaterThan(0);
     expect(html).toContain('<!DOCTYPE html>');
+  });
+
+  it('defaults sign-in link to authorize endpoint (not javascript:)', () => {
+    const { html } = renderResetPasswordSuccessPage({ baseUrl: 'https://api.example.com/cms' });
+    expect(html).not.toContain('javascript:');
+    expect(html).toContain('https://api.example.com/cms/authorize');
   });
 });
 
