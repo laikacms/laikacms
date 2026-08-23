@@ -162,8 +162,12 @@ export interface DecapAiConfig {
   callbacks: AiSessionCallbacks;
 
   /**
-   * System prompt for the AI assistant
-   * Will be prepended to all conversations
+   * System prompt for the AI assistant.
+   * **Replaces** the default prompt entirely — the built-in `getDocumentData`/`updateDocument`
+   * tool guidance is discarded when this is set.
+   * To extend the default rather than replace it, use the `messages` option instead:
+   * `import en from '@laikacms/server/ai/i18n/en';`
+   * `messages: { ...en, systemPrompt: 'Your prefix.\n\n' + en.systemPrompt }`
    */
   systemPrompt?: string;
 
