@@ -1,6 +1,4 @@
 import * as Result from 'effect/Result';
-import { Hono } from 'hono';
-import type { Context } from 'hono';
 import type { CatalogProvider } from 'laikacms/catalog';
 import { type CollectionSettings } from 'laikacms/catalog';
 import type { LaikaResult } from 'laikacms/core';
@@ -56,7 +54,7 @@ export interface CatalogApiOptions {
   logger?: JsonApiLogger;
   /**
    * Mount prefix advertised in the served OpenAPI document's `servers` URL.
-   * The Hono app itself is prefix-agnostic — mount it at this same path.
+   * Strip this same prefix from incoming request paths before routing.
    */
   basePath?: string;
   /**
@@ -68,14 +66,25 @@ export interface CatalogApiOptions {
   authorize: CatalogAuthorize;
 }
 
+export interface CatalogApi {
+  fetch(request: Request): Promise<Response>;
+}
+
+function jsonResponse(body: unknown, status: number = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+  });
+}
+
 function makeResponders(onError?: ((error: unknown) => void) | undefined, logger?: JsonApiLogger) {
-  function respondError(c: Context, result: LaikaResult<unknown>) {
+  function respondError(result: LaikaResult<unknown>): Response {
     if (Result.isFailure(result)) {
       onError?.(result.failure);
       const mapped = errorToJsonApiMapper(result.failure, logger);
-      return c.json({ errors: mapped.errors }, mapped.status);
+      return jsonResponse({ errors: mapped.errors }, mapped.status);
     }
-    return c.json(
+    return jsonResponse(
       {
         errors: [{ status: '500', code: 'unknown_error', title: 'Unknown Error', detail: 'An unknown error occurred' }],
       },
@@ -84,25 +93,19 @@ function makeResponders(onError?: ((error: unknown) => void) | undefined, logger
   }
 
   function respondResource<T extends CollectionSettings>(
-    c: Context,
     result: LaikaResult<T>,
     transformer: (item: T) => CollectionJsonApi,
-  ) {
-    if (Result.isFailure(result)) {
-      return respondError(c, result);
-    }
-    return c.json({ data: transformer(result.success) });
+  ): Response {
+    if (Result.isFailure(result)) return respondError(result);
+    return jsonResponse({ data: transformer(result.success) });
   }
 
   function respondCollection<T extends CollectionSettings>(
-    c: Context,
     result: LaikaResult<readonly T[]>,
     transformer: (item: T) => CollectionJsonApi,
-  ) {
-    if (Result.isFailure(result)) {
-      return respondError(c, result);
-    }
-    return c.json({ data: result.success.map(item => transformer(item)) });
+  ): Response {
+    if (Result.isFailure(result)) return respondError(result);
+    return jsonResponse({ data: result.success.map(item => transformer(item)) });
   }
 
   return { respondError, respondResource, respondCollection };
@@ -117,249 +120,207 @@ function makeResponders(onError?: ((error: unknown) => void) | undefined, logger
  * of its own: `authorize` receives the originating `Request`, so validating a
  * Bearer token (or delegating to `@laikacms/server/api`, which does it for you)
  * is the caller's job.
- *
- * Built on Hono rather than `@effect/platform` HttpApi: this API is meant to be
- * dropped into a consumer's *existing* router/framework, and Hono composes far
- * more cleanly there — its `Request`→`Response` `fetch` handler, `.route()`
- * mounting, and middleware model plug into arbitrary hosts without dragging the
- * Effect runtime into the caller's routing layer.
  */
-export function buildJsonApi(options: CatalogApiOptions) {
+export function buildJsonApi(options: CatalogApiOptions): CatalogApi {
   const { repo, onError, logger, basePath = '', authorize } = options;
   const { respondError, respondResource, respondCollection } = makeResponders(onError, logger);
-  // Register every route under `basePath` so the API works when mounted at a
-  // non-root path — requests arrive at `${basePath}/openapi.json`, not `/openapi.json`.
-  const app = new Hono().basePath(basePath);
 
-  // Run the per-action authorization hook. Returns a ready error Response when
-  // the action is denied, or `null` when it's allowed.
   const authorizeAction = async (
-    c: Context,
+    request: Request,
     action: CatalogAuthorizeAction,
   ): Promise<Response | null> => {
-    const denial = resolveAuthorization(await authorize({ ...action, request: c.req.raw }));
+    const denial = resolveAuthorization(await authorize({ ...action, request }));
     if (!denial) return null;
-    return respondError(c, Result.fail(denial));
+    return respondError(Result.fail(denial));
   };
 
-  // Ensure all responses carry Cache-Control: no-store
-  app.use('*', async (c, next) => {
-    await next();
-    c.res.headers.set('Cache-Control', 'no-store');
-  });
+  return {
+    async fetch(request: Request): Promise<Response> {
+      try {
+        const url = new URL(request.url);
+        const method = request.method.toUpperCase();
 
-  // Global error handler
-  app.onError((err, c) => {
-    logger?.error('catalog-api unhandled error:', err.constructor.name, err.message, err.stack);
+        // Strip basePath prefix so route matching is always against the relative path.
+        let routePath = url.pathname;
+        if (basePath) {
+          if (!url.pathname.startsWith(basePath)) {
+            return respondError(Result.fail(new NotFoundError('Endpoint not found')));
+          }
+          routePath = url.pathname.slice(basePath.length) || '/';
+        }
 
-    onError?.(err);
+        // GET /openapi.json
+        if (routePath === '/openapi.json' && method === 'GET') {
+          const denied = await authorizeAction(request, { action: 'readOpenApi', format: 'json' });
+          if (denied) return denied;
+          const doc = (await loadOpenApiBuilder())({ basePath });
+          return jsonResponse({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
+        }
 
-    // Handle AWS SDK errors
-    if (err.name === 'NetworkingError' || err.name === 'TimeoutError') {
-      return c.json(
-        {
-          errors: [
+        // GET /openapi.yaml
+        if (routePath === '/openapi.yaml' && method === 'GET') {
+          const denied = await authorizeAction(request, { action: 'readOpenApi', format: 'yaml' });
+          if (denied) return denied;
+          const doc = (await loadOpenApiBuilder())({ basePath });
+          const yaml = openApiDocumentToYaml({ ...doc, servers: [{ url: `${url.origin}${basePath}` }] });
+          return new Response(yaml, {
+            status: 200,
+            headers: { 'Content-Type': 'application/yaml', 'Cache-Control': 'no-store' },
+          });
+        }
+
+        // GET /collections — list
+        if (routePath === '/collections' && method === 'GET') {
+          const denied = await authorizeAction(request, { action: 'listCollections' });
+          if (denied) return denied;
+          const settings = await LaikaTask.runPromiseResult(repo.getCatalog());
+          if (Result.isFailure(settings)) return respondError(settings);
+          const collections = settings.success.collections ?? {};
+          return respondCollection(Result.succeed(Object.values(collections)), collectionToJsonApi);
+        }
+
+        // POST /collections — create
+        if (routePath === '/collections' && method === 'POST') {
+          try {
+            const jsonData = await request.json() as { data: unknown };
+            const validatedData = decodeCollectionJsonApi(jsonData.data);
+            const body = collectionFromJsonApi(validatedData as CollectionJsonApi);
+
+            const denied = await authorizeAction(request, { action: 'createCollection', collection: body });
+            if (denied) return denied;
+
+            if (body.type === 'document') {
+              const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(body.key, body));
+              if (Result.isFailure(result)) return respondError(result);
+              return jsonResponse({ data: collectionToJsonApi(body) }, 201);
+            } else if (body.type === 'media') {
+              const result = await LaikaTask.runPromiseResult(repo.putMediaCollectionSettings(body.key, body));
+              if (Result.isFailure(result)) return respondError(result);
+              return jsonResponse({ data: collectionToJsonApi(body) }, 201);
+            }
+            return respondError(Result.fail(new BadRequestError('Unknown collection type')));
+          } catch (error) {
+            onError?.(error);
+            const mapped = errorToJsonApiMapper(new BadRequestError((error as Error).message), logger);
+            return jsonResponse({ errors: mapped.errors }, 400);
+          }
+        }
+
+        // /collections/:key routes
+        const keyMatch = /^\/collections\/([^/]+)$/.exec(routePath);
+        if (keyMatch) {
+          const key = decodeURIComponent(keyMatch[1]!);
+
+          // GET /collections/:key
+          if (method === 'GET') {
+            const denied = await authorizeAction(request, { action: 'getCollection', key });
+            if (denied) return denied;
+            const allSettings = await LaikaTask.runPromiseResult(repo.getCatalog());
+            if (Result.isFailure(allSettings)) return respondError(allSettings);
+            const collections = allSettings.success.collections ?? {};
+            const collectionSettings = collections[key];
+            if (!collectionSettings) {
+              return respondError(Result.fail(new NotFoundError(`Collection '${key}' not found.`)));
+            }
+            if (collectionSettings.type === 'document') {
+              const result = await LaikaTask.runPromiseResult(repo.getDocumentCollectionSettings(key));
+              if (Result.isFailure(result)) return respondError(result);
+              return respondResource(result, collectionToJsonApi);
+            } else if (collectionSettings.type === 'media') {
+              const result = await LaikaTask.runPromiseResult(repo.getMediaCollectionSettings(key));
+              if (Result.isFailure(result)) return respondError(result);
+              return respondResource(result, collectionToJsonApi);
+            }
+            return respondError(Result.fail(new BadRequestError('Unknown collection type')));
+          }
+
+          // PATCH /collections/:key — update
+          if (method === 'PATCH') {
+            try {
+              // Authorize before any repo read so callers cannot probe collection
+              // existence via 404/409 differentials without valid credentials.
+              const denied = await authorizeAction(request, { action: 'updateCollection', key });
+              if (denied) return denied;
+
+              const allSettings = await LaikaTask.runPromiseResult(repo.getCatalog());
+              if (Result.isFailure(allSettings)) return respondError(allSettings);
+              const collections = allSettings.success.collections ?? {};
+              if (!collections[key]) {
+                return respondError(Result.fail(new NotFoundError(`Collection '${key}' not found.`)));
+              }
+
+              const jsonData = await request.json() as { data: unknown };
+              const validatedData = decodeCollectionJsonApi(jsonData.data);
+              const body = collectionFromJsonApi(validatedData as CollectionJsonApi);
+
+              if (body.key !== key) {
+                return respondError(Result.fail(
+                  new ConflictError(
+                    `Body data.id ('${body.key}') does not match URL key ('${key}'). Use the URL key as the resource identifier.`,
+                  ),
+                ));
+              }
+
+              const bodyWithKey = { ...body, key };
+
+              if (bodyWithKey.type === 'document') {
+                const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(key, bodyWithKey));
+                if (Result.isFailure(result)) return respondError(result);
+                return jsonResponse({ data: collectionToJsonApi(bodyWithKey) });
+              } else if (bodyWithKey.type === 'media') {
+                const result = await LaikaTask.runPromiseResult(repo.putMediaCollectionSettings(key, bodyWithKey));
+                if (Result.isFailure(result)) return respondError(result);
+                return jsonResponse({ data: collectionToJsonApi(bodyWithKey) });
+              }
+              return respondError(Result.fail(new BadRequestError('Unknown collection type')));
+            } catch (error) {
+              onError?.(error);
+              const mapped = errorToJsonApiMapper(new BadRequestError((error as Error).message), logger);
+              return jsonResponse({ errors: mapped.errors }, 400);
+            }
+          }
+
+          // DELETE /collections/:key
+          if (method === 'DELETE') {
+            const denied = await authorizeAction(request, { action: 'deleteCollection', key });
+            if (denied) return denied;
+            const allSettings = await LaikaTask.runPromiseResult(repo.getCatalog());
+            if (Result.isFailure(allSettings)) return respondError(allSettings);
+            const collections = allSettings.success.collections ?? {};
+            if (!collections[key]) {
+              return respondError(Result.fail(new NotFoundError(`Collection '${key}' not found.`)));
+            }
+            const { [key]: _, ...remainingCollections } = collections;
+            const updatedSettings = { ...allSettings.success, collections: remainingCollections };
+            const result = await LaikaTask.runPromiseResult(repo.putCatalog(updatedSettings));
+            if (Result.isFailure(result)) return respondError(result);
+            return new Response(null, { status: 204, headers: { 'Cache-Control': 'no-store' } });
+          }
+        }
+
+        return respondError(Result.fail(new NotFoundError('Endpoint not found')));
+      } catch (err) {
+        const error = err as Error;
+        logger?.error('catalog-api unhandled error:', error.constructor.name, error.message, error.stack);
+        onError?.(err);
+
+        if (error.name === 'NetworkingError' || error.name === 'TimeoutError') {
+          return jsonResponse(
             {
-              status: '503',
-              code: 'service_unavailable',
-              title: 'Service Unavailable',
-              detail: `Cannot connect to DynamoDB: ${err.message}. Check if DynamoDB Local is running and accessible.`,
+              errors: [{
+                status: '503',
+                code: 'service_unavailable',
+                title: 'Service Unavailable',
+                detail:
+                  `Cannot connect to DynamoDB: ${error.message}. Check if DynamoDB Local is running and accessible.`,
+              }],
             },
-          ],
-        },
-        503,
-      );
-    }
-
-    throw err;
-  });
-
-  // OpenAPI document
-  app.get('/openapi.json', async c => {
-    const denied = await authorizeAction(c, { action: 'readOpenApi', format: 'json' });
-    if (denied) return denied;
-    const url = new URL(c.req.url);
-    const doc = (await loadOpenApiBuilder())({ basePath });
-    return c.json({
-      ...doc,
-      servers: [{ url: `${url.origin}${basePath}` }],
-    });
-  });
-
-  app.get('/openapi.yaml', async c => {
-    const denied = await authorizeAction(c, { action: 'readOpenApi', format: 'yaml' });
-    if (denied) return denied;
-    const url = new URL(c.req.url);
-    const doc = (await loadOpenApiBuilder())({ basePath });
-    const yaml = openApiDocumentToYaml({
-      ...doc,
-      servers: [{ url: `${url.origin}${basePath}` }],
-    });
-    return c.body(yaml, 200, { 'Content-Type': 'application/yaml' });
-  });
-
-  // Collections
-  app.get('/collections', async c => {
-    const denied = await authorizeAction(c, { action: 'listCollections' });
-    if (denied) return denied;
-    const settings = await LaikaTask.runPromiseResult(repo.getCatalog());
-    if (Result.isFailure(settings)) {
-      return respondError(c, settings);
-    }
-    const collections = settings.success.collections ?? {};
-    const settingsList = Object.values(collections);
-    return respondCollection(c, Result.succeed(settingsList), collectionToJsonApi);
-  });
-
-  app.get('/collections/:key', async c => {
-    const key = c.req.param('key');
-    const denied = await authorizeAction(c, { action: 'getCollection', key });
-    if (denied) return denied;
-    const allSettings = await LaikaTask.runPromiseResult(repo.getCatalog());
-    if (Result.isFailure(allSettings)) {
-      return respondError(c, allSettings);
-    }
-    const collections = allSettings.success.collections ?? {};
-    const collectionSettings = collections[key];
-    if (!collectionSettings) {
-      return respondError(
-        c,
-        Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
-      );
-    }
-    if (collectionSettings.type === 'document') {
-      const docSettingsResult = await LaikaTask.runPromiseResult(repo.getDocumentCollectionSettings(key));
-      if (Result.isFailure(docSettingsResult)) {
-        return respondError(c, docSettingsResult);
-      }
-      return respondResource(c, docSettingsResult, collectionToJsonApi);
-    } else if (collectionSettings.type === 'media') {
-      const mediaSettingsResult = await LaikaTask.runPromiseResult(repo.getMediaCollectionSettings(key));
-      if (Result.isFailure(mediaSettingsResult)) {
-        return respondError(c, mediaSettingsResult);
-      }
-      return respondResource(c, mediaSettingsResult, collectionToJsonApi);
-    }
-    return respondError(c, Result.fail(new BadRequestError(`Unknown collection type`)));
-  });
-
-  app.post('/collections', async c => {
-    try {
-      const jsonData = await c.req.json();
-      const validatedData = decodeCollectionJsonApi(jsonData.data);
-      const body = collectionFromJsonApi(validatedData as CollectionJsonApi);
-
-      const denied = await authorizeAction(c, { action: 'createCollection', collection: body });
-      if (denied) return denied;
-
-      if (body.type === 'document') {
-        const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(body.key, body));
-        if (Result.isFailure(result)) {
-          return respondError(c, result);
+            503,
+          );
         }
-        return c.json({ data: collectionToJsonApi(body) }, 201);
-      } else if (body.type === 'media') {
-        const result = await LaikaTask.runPromiseResult(repo.putMediaCollectionSettings(body.key, body));
-        if (Result.isFailure(result)) {
-          return respondError(c, result);
-        }
-        return c.json({ data: collectionToJsonApi(body) }, 201);
+
+        throw err;
       }
-      return respondError(c, Result.fail(new BadRequestError(`Unknown collection type`)));
-    } catch (error) {
-      onError?.(error);
-      const mapped = errorToJsonApiMapper(new BadRequestError((error as Error).message), logger);
-      return c.json({ errors: mapped.errors }, 400);
-    }
-  });
-
-  app.patch('/collections/:key', async c => {
-    try {
-      const key = c.req.param('key');
-
-      // Authorize before any repo read so callers cannot probe collection
-      // existence via 404/409 differentials without valid credentials.
-      const denied = await authorizeAction(c, { action: 'updateCollection', key });
-      if (denied) return denied;
-
-      const allSettings = await LaikaTask.runPromiseResult(repo.getCatalog());
-      if (Result.isFailure(allSettings)) {
-        return respondError(c, allSettings);
-      }
-      const collections = allSettings.success.collections ?? {};
-      if (!collections[key]) {
-        return respondError(
-          c,
-          Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
-        );
-      }
-
-      const jsonData = await c.req.json();
-      const validatedData = decodeCollectionJsonApi(jsonData.data);
-      const body = collectionFromJsonApi(validatedData as CollectionJsonApi);
-
-      if (body.key !== key) {
-        return respondError(
-          c,
-          Result.fail(
-            new ConflictError(
-              `Body data.id ('${body.key}') does not match URL key ('${key}'). Use the URL key as the resource identifier.`,
-            ),
-          ),
-        );
-      }
-
-      const bodyWithKey = { ...body, key };
-
-      if (bodyWithKey.type === 'document') {
-        const result = await LaikaTask.runPromiseResult(repo.putDocumentCollectionSettings(key, bodyWithKey));
-        if (Result.isFailure(result)) {
-          return respondError(c, result);
-        }
-        return c.json({ data: collectionToJsonApi(bodyWithKey) });
-      } else if (bodyWithKey.type === 'media') {
-        const result = await LaikaTask.runPromiseResult(repo.putMediaCollectionSettings(key, bodyWithKey));
-        if (Result.isFailure(result)) {
-          return respondError(c, result);
-        }
-        return c.json({ data: collectionToJsonApi(bodyWithKey) });
-      }
-      return respondError(c, Result.fail(new BadRequestError(`Unknown collection type`)));
-    } catch (error) {
-      onError?.(error);
-      const mapped = errorToJsonApiMapper(new BadRequestError((error as Error).message), logger);
-      return c.json({ errors: mapped.errors }, 400);
-    }
-  });
-
-  app.delete('/collections/:key', async c => {
-    const key = c.req.param('key');
-    const denied = await authorizeAction(c, { action: 'deleteCollection', key });
-    if (denied) return denied;
-    const allSettings = await LaikaTask.runPromiseResult(repo.getCatalog());
-    if (Result.isFailure(allSettings)) {
-      return respondError(c, allSettings);
-    }
-    const collections = allSettings.success.collections ?? {};
-    const collectionSettings = collections[key];
-    if (!collectionSettings) {
-      return respondError(
-        c,
-        Result.fail(new NotFoundError(`Collection '${key}' not found.`)),
-      );
-    }
-    // Remove collection settings - create a new object without the key
-    const { [key]: _, ...remainingCollections } = collections;
-    const updatedSettings = {
-      ...allSettings.success,
-      collections: remainingCollections,
-    };
-    const result = await LaikaTask.runPromiseResult(repo.putCatalog(updatedSettings));
-    if (Result.isFailure(result)) {
-      return respondError(c, result);
-    }
-    return c.body(null, 204);
-  });
-
-  return app;
+    },
+  };
 }
