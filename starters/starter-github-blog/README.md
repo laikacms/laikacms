@@ -12,6 +12,14 @@ from the same repo that powers your CMS.
 
 ## Quick start
 
+> **Temporarily unavailable for standalone use.** This starter requires `@laikacms/github@>=1.0.4`
+> which is not yet published to npm (registry has 1.0.0; the `/storage-gh` subpath this starter
+> imports was added in 1.0.4). Running `npm install` gets the old version and the server fails at
+> runtime. Use the [Working from the monorepo](#working-from-the-monorepo) steps below until
+> `@laikacms/github@1.0.4` is released.
+
+Once the package is published:
+
 ```bash
 # 1. Copy and fill in credentials
 cp .env.example .env
