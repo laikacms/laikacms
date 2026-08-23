@@ -324,8 +324,8 @@ export interface PasswordResetPageOptions {
   messages?: OAuthMessages;
 }
 
-// Default login URL uses JavaScript history.back() as a fallback
-const DEFAULT_LOGIN_FALLBACK = 'javascript:history.back()';
+/** Derive a navigable fallback login URL from the base URL (the OAuth authorize endpoint). */
+const defaultLoginUrl = (baseUrl: string) => `${baseUrl}/authorize`;
 
 /**
  * Result of rendering a password reset page
@@ -346,7 +346,7 @@ export function renderForgotPasswordPage(options: PasswordResetPageOptions): Pas
   const t = msgs.passwordReset;
 
   const formUrl = `${options.baseUrl}/forgot-password`;
-  const backUrl = options.loginUrl || DEFAULT_LOGIN_FALLBACK;
+  const backUrl = options.loginUrl || defaultLoginUrl(options.baseUrl);
   const errorHtml = options.error ? escapeHtml(options.error) : '';
   // Process custom logo (handles URL vs HTML)
   const processedLogo = processCustomLogo(options.customLogo);
@@ -382,7 +382,7 @@ export function renderForgotPasswordSuccessPage(options: PasswordResetPageOption
   const msgs = options.messages ?? defaultMessages;
   const t = msgs.passwordReset;
 
-  const backUrl = options.loginUrl || DEFAULT_LOGIN_FALLBACK;
+  const backUrl = options.loginUrl || defaultLoginUrl(options.baseUrl);
   // Process custom logo (handles URL vs HTML)
   const processedLogo = processCustomLogo(options.customLogo);
 
@@ -449,7 +449,7 @@ export function renderResetPasswordSuccessPage(options: PasswordResetPageOptions
   const msgs = options.messages ?? defaultMessages;
   const t = msgs.passwordReset;
 
-  const backUrl = options.loginUrl || DEFAULT_LOGIN_FALLBACK;
+  const backUrl = options.loginUrl || defaultLoginUrl(options.baseUrl);
   // Process custom logo (handles URL vs HTML)
   const processedLogo = processCustomLogo(options.customLogo);
 
