@@ -50,6 +50,8 @@ interface DecapField extends DecapFieldBase {
   fields?: DecapField[];
   field?: DecapField;
   types?: DecapField[];
+  /** Which key tags a variable-type list item. Decap defaults this to `type`. */
+  typeKey?: string;
   options?: Array<string | number | { label: string, value: string | number }>;
   multiple?: boolean;
   min?: number;
@@ -58,6 +60,10 @@ interface DecapField extends DecapFieldBase {
   format?: string;
   date_format?: string | boolean;
   time_format?: string | boolean;
+  /** `code` widget: store the code as a bare string rather than an object. */
+  output_code_only?: boolean;
+  /** `code` widget: rename the two halves of the stored object. */
+  keys?: { code?: string, lang?: string };
 }
 
 interface DecapFolderCollection {
@@ -326,7 +332,7 @@ function decapFieldsToJsonSchema(fields: DecapField[]): JSONSchema7 {
   const properties: Record<string, JSONSchema7> = {};
   const required: string[] = [];
   for (const f of fields) {
-    properties[f.name] = decapFieldToJsonSchema(f);
+    properties[f.name] = annotate(f, decapFieldToJsonSchema(f));
     if (f.required !== false) required.push(f.name);
   }
   return {
@@ -337,38 +343,69 @@ function decapFieldsToJsonSchema(fields: DecapField[]): JSONSchema7 {
   };
 }
 
+/**
+ * Attach the field-level constraints that are independent of the widget.
+ *
+ * These are annotations on the catalog's schema, not something the Astro
+ * integration's Zod/TypeScript conversion reads — a `pattern` narrows what is
+ * *valid*, never what a field's TypeScript type is. They exist for the
+ * consumers that validate against the schema directly (the JSON:API, and
+ * anything generating OpenAPI from it).
+ */
+function annotate(field: DecapField, schema: JSONSchema7): JSONSchema7 {
+  const annotated: JSONSchema7 = { ...schema };
+  if (field.default !== undefined) annotated.default = field.default as JSONSchema7['default'];
+
+  // Decap's `pattern` is `[regexSource, errorMessage]`, and the source is a JS
+  // regex — the same dialect JSON Schema specifies. A config can still hold one
+  // that does not compile, and emitting that would produce a schema no
+  // validator can load, so an unusable pattern is dropped rather than
+  // propagated.
+  const source = field.pattern?.[0];
+  if (source !== undefined && annotated.type === 'string' && isValidRegex(source)) {
+    annotated.pattern = source;
+  }
+  return annotated;
+}
+
+function isValidRegex(source: string): boolean {
+  try {
+    new RegExp(source);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function decapFieldToJsonSchema(field: DecapField): JSONSchema7 {
   const widget = field.widget ?? 'string';
   switch (widget) {
     case 'string':
     case 'text':
     case 'markdown':
-    case 'code':
     case 'color':
     case 'hidden':
       return { type: 'string' };
+    case 'code':
+      return codeSchema(field);
     case 'boolean':
       return { type: 'boolean' };
-    case 'number':
-      return field.value_type === 'int'
+    case 'number': {
+      const schema: JSONSchema7 = field.value_type === 'int'
         ? { type: 'integer' }
         : { type: 'number' };
+      if (typeof field.min === 'number') schema.minimum = field.min;
+      if (typeof field.max === 'number') schema.maximum = field.max;
+      return schema;
+    }
     case 'date':
       return { type: 'string', format: 'date' };
     case 'datetime':
       return { type: 'string', format: 'date-time' };
     case 'object':
       return decapFieldsToJsonSchema(field.fields ?? []);
-    case 'list': {
-      let items: JSONSchema7;
-      if (field.fields) items = decapFieldsToJsonSchema(field.fields);
-      else if (field.field) items = decapFieldToJsonSchema(field.field);
-      else items = { type: 'string' };
-      const schema: JSONSchema7 = { type: 'array', items };
-      if (typeof field.min === 'number') schema.minItems = field.min;
-      if (typeof field.max === 'number') schema.maxItems = field.max;
-      return schema;
-    }
+    case 'list':
+      return listSchema(field);
     case 'select': {
       const opts = field.options ?? [];
       const values = opts.map(o => typeof o === 'string' || typeof o === 'number' ? o : o.value);
@@ -376,7 +413,7 @@ function decapFieldToJsonSchema(field: DecapField): JSONSchema7 {
       const itemSchema: JSONSchema7 = allString
         ? { type: 'string', enum: values as string[] }
         : { type: ['string', 'number'], enum: values };
-      return field.multiple ? { type: 'array', items: itemSchema } : itemSchema;
+      return field.multiple ? withLength(field, { type: 'array', items: itemSchema }) : itemSchema;
     }
     case 'image':
     case 'file':
@@ -387,6 +424,76 @@ function decapFieldToJsonSchema(field: DecapField): JSONSchema7 {
     default:
       return {};
   }
+}
+
+/**
+ * The `code` widget stores a bare string only under `output_code_only`.
+ * Otherwise it stores an object whose two halves live under configurable keys
+ * (`getKeys` in the widget's control defaults them to `code` and `lang`).
+ *
+ * Neither key is required: the control writes the two independently — the
+ * language is persisted only once the editor picks one — so a stored value can
+ * legitimately carry just the code.
+ */
+function codeSchema(field: DecapField): JSONSchema7 {
+  if (field.output_code_only === true) return { type: 'string' };
+  return {
+    type: 'object',
+    properties: {
+      [field.keys?.code ?? 'code']: { type: 'string' },
+      [field.keys?.lang ?? 'lang']: { type: 'string' },
+    },
+    additionalProperties: true,
+  };
+}
+
+function listSchema(field: DecapField): JSONSchema7 {
+  if (field.types !== undefined && field.types.length > 0) return typedListSchema(field);
+
+  let items: JSONSchema7;
+  if (field.fields) items = decapFieldsToJsonSchema(field.fields);
+  else if (field.field) items = decapFieldToJsonSchema(field.field);
+  else items = { type: 'string' };
+  return withLength(field, { type: 'array', items });
+}
+
+/**
+ * A variable-type list: each item is one of the declared types' field sets,
+ * tagged with that type's `name` under the list's type key (`resolveFieldKeyType`
+ * in the widget defaults it to `type`).
+ *
+ * Modelled as `anyOf` rather than a discriminated `oneOf` because a config can
+ * declare two types with overlapping fields, and `oneOf` would then reject a
+ * value that matches both — a stricter reading than the editor itself applies.
+ */
+function typedListSchema(field: DecapField): JSONSchema7 {
+  const typeKey = field.typeKey ?? 'type';
+  const variants = (field.types ?? []).map((type): JSONSchema7 => {
+    const shape = decapFieldsToJsonSchema(type.fields ?? []);
+    return {
+      ...shape,
+      properties: {
+        // A type that declares its own field under the type key wins: the
+        // editor writes one value there, and the config is the closer
+        // description of it.
+        [typeKey]: { type: 'string', enum: [type.name] },
+        ...shape.properties,
+      },
+      required: [...new Set([typeKey, ...(shape.required ?? [])])],
+    };
+  });
+
+  return withLength(field, {
+    type: 'array',
+    items: variants.length === 1 ? variants[0]! : { anyOf: variants },
+  });
+}
+
+function withLength(field: DecapField, schema: JSONSchema7): JSONSchema7 {
+  const sized: JSONSchema7 = { ...schema };
+  if (typeof field.min === 'number') sized.minItems = field.min;
+  if (typeof field.max === 'number') sized.maxItems = field.max;
+  return sized;
 }
 
 const defaultDocumentCollectionSettings = (collection: string): DocumentCollectionSettings => ({

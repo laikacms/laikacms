@@ -29,11 +29,13 @@ packages:
 # - @laikacms/vite-plugin: npm@5.0.0 dist/backend.js imports laikacms/assets/contentbase
 #   (removed in 6.0.0); local src was already updated for 6.x, pin to rebuilt local.
 # - @laikacms/github: needed by starter-github-blog (1.0.4 not yet on npm; registry has 1.0.0)
+# - @laikacms/astro: needed by starter-astro-blog (new package, not yet on npm)
 overrides:
   laikacms: "link:../packages/laikacms"
   "@laikacms/server": "link:../packages/server"
   "@laikacms/vite-plugin": "link:../packages/vite-plugin"
   "@laikacms/github": "link:../packages/github"
+  "@laikacms/astro": "link:../packages/astro"
 
 # Dependencies whose install scripts are allowed to run (pnpm blocks build
 # scripts by default). esbuild ships its platform binary via postinstall.

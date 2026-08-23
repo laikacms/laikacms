@@ -1,0 +1,106 @@
+{
+  "name": "@laikacms/astro",
+  "version": "5.0.0",
+  "publishConfig": {
+    "access": "public"
+  },
+  "description": "Astro integration for Laika CMS: Content Layer loaders for astro:content, live collections for runtime reads, and a dev-server JSON:API backed by a repository of your choice.",
+  "keywords": [
+    "astro",
+    "astro-integration",
+    "astro-loader",
+    "content-layer",
+    "headless-cms",
+    "laikacms",
+    "content-management"
+  ],
+  "author": {
+    "name": "Sem Postma",
+    "email": "sem@laikacms.com",
+    "url": "https://sem-postma.com"
+  },
+  "homepage": "https://github.com/laikacms/laikacms",
+  "bugs": {
+    "email": "sem@laikacms.com",
+    "url": "https://github.com/laikacms/laikacms/issues"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/laikacms/laikacms",
+  "type": "module",
+  "sideEffects": false,
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./loader": {
+      "types": "./dist/loader/index.d.ts",
+      "import": "./dist/loader/index.js",
+      "default": "./dist/loader/index.js"
+    },
+    "./live": {
+      "types": "./dist/live/index.d.ts",
+      "import": "./dist/live/index.js",
+      "default": "./dist/live/index.js"
+    },
+    "./live-collections": {
+      "types": "./dist/live-collections.d.ts",
+      "import": "./dist/live-collections.js",
+      "default": "./dist/live-collections.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/index.d.ts",
+      "import": "./dist/testing/index.js",
+      "default": "./dist/testing/index.js"
+    },
+    "./api": {
+      "types": "./dist/api/index.d.ts",
+      "import": "./dist/api/index.js",
+      "default": "./dist/api/index.js"
+    },
+    "./api-route": {
+      "types": "./dist/api-route.d.ts",
+      "import": "./dist/api-route.js",
+      "default": "./dist/api-route.js"
+    }
+  },
+  "scripts": {
+    "clean": "rimraf dist .turbo",
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepack": "node ../../scripts/check-no-pnpm-catalog-deps.mjs"
+  },
+  "dependencies": {
+    "@laikacms/vite-plugin": "workspace:*",
+    "@types/json-schema": "catalog:types",
+    "laikacms": "workspace:*"
+  },
+  "peerDependencies": {
+    "astro": ">=7"
+  },
+  "peerDependenciesMeta": {
+    "astro": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@types/node": "catalog:types",
+    "astro": "catalog:astro",
+    "rimraf": "catalog:tools",
+    "typescript": "catalog:tools",
+    "vitest": "catalog:tools"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}

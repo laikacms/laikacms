@@ -6,7 +6,8 @@
     [
       "laikacms",
       "@laikacms/server",
-      "@laikacms/vite-plugin"
+      "@laikacms/vite-plugin",
+      "@laikacms/astro"
     ]
   ],
   "linked": [],

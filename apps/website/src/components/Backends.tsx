@@ -1,17 +1,9 @@
+import { LAIKA_GROUPS } from '../data/laika';
 import { BackendGroup, type BackendGroupData } from './BackendGroup';
 
-/* The catalogue's numbered groups are a list of content files rather than one
-   page section, so they go through `import.meta.glob`. Order is key order:
-   `01-native.yaml`, `02-sql.yaml`, … — the number prefix is the ordering, so
-   reordering the page is a rename, not a code change. */
-const groupModules = import.meta.glob<BackendGroupData>('laika:store/backends/*', {
-  eager: true,
-  import: 'default',
-});
-
-export const LAIKA_GROUPS: BackendGroupData[] = Object.keys(groupModules)
-  .sort()
-  .map(key => groupModules[key]!);
+/* Re-exported so the components that already import it from here keep working;
+   the catalogue itself now comes from the `backends` content collection. */
+export { LAIKA_GROUPS };
 
 /* Two groups that don't come from `content/backends/*`: they describe the other
    contract (assets) and the on-disk formats (serializers), so they live with

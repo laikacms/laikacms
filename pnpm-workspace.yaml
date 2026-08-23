@@ -5,6 +5,7 @@ packages:
   - "packages/gitlab"
   - "packages/bitbucket"
   - "packages/vite-plugin"
+  - "packages/astro"
   - "docs"
   - "apps/website"
   - "apps/cli"
