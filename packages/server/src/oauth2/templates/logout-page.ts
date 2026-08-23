@@ -127,14 +127,19 @@ export const logoutAllSuccessTemplate: HtmlTemplate = html`<!DOCTYPE html>
 export interface LogoutPageOptions {
   /** Custom logo HTML (defaults to the built-in logo) */
   customLogo?: string;
-  /** Custom login URL (defaults to JavaScript history.back()) */
+  /**
+   * Base URL of the OAuth server (e.g. `https://api.example.com/cms`).
+   * Used to derive the default back-link (`{baseUrl}/authorize`) when `loginUrl` is not set.
+   */
+  baseUrl?: string;
+  /** Custom login URL. Overrides the `baseUrl`-derived default when provided. */
   loginUrl?: string;
   /** Localized messages for the logout pages */
   messages?: OAuthMessages;
 }
 
-// Default login URL uses JavaScript history.back() as a fallback
-const DEFAULT_LOGIN_FALLBACK = 'javascript:history.back()';
+/** Derive a navigable fallback login URL from the base URL (the OAuth authorize endpoint). */
+const defaultLoginUrl = (baseUrl: string) => `${baseUrl}/authorize`;
 
 /**
  * Result of rendering a logout page
@@ -157,7 +162,7 @@ export function renderLogoutSuccessPage(options: LogoutPageOptions): LogoutPageR
 
   const html = logoutSuccessTemplate({
     [messages]: options.messages ?? defaultMessages,
-    [loginUrl]: escapeHtmlAttribute(options.loginUrl || DEFAULT_LOGIN_FALLBACK),
+    [loginUrl]: escapeHtmlAttribute(options.loginUrl || (options.baseUrl ? defaultLoginUrl(options.baseUrl) : '/')),
     [logoHtml]: processedLogo.html,
     [pageTitle]: escapeHtml(t.pageTitle),
     [title]: escapeHtml(t.title),
@@ -182,7 +187,7 @@ export function renderLogoutAllSuccessPage(options: LogoutPageOptions): LogoutPa
 
   const html = logoutAllSuccessTemplate({
     [messages]: options.messages ?? defaultMessages,
-    [loginUrl]: escapeHtmlAttribute(options.loginUrl || DEFAULT_LOGIN_FALLBACK),
+    [loginUrl]: escapeHtmlAttribute(options.loginUrl || (options.baseUrl ? defaultLoginUrl(options.baseUrl) : '/')),
     [logoHtml]: processedLogo.html,
     [pageTitle]: escapeHtml(t.allPageTitle),
     [title]: escapeHtml(t.allTitle),
