@@ -627,6 +627,26 @@ describe('renderLogoutSuccessPage', () => {
     expect(html).toContain('href="/admin/login"');
   });
 
+  it('defaults back-link to authorize endpoint (not javascript:) when baseUrl provided', () => {
+    const { html } = renderLogoutSuccessPage({ baseUrl: 'https://api.example.com/cms' });
+    expect(html).not.toContain('javascript:');
+    expect(html).toContain('https://api.example.com/cms/authorize');
+  });
+
+  it('back-link is navigable (not javascript:) even without baseUrl', () => {
+    const { html } = renderLogoutSuccessPage({});
+    expect(html).not.toContain('javascript:');
+  });
+
+  it('loginUrl takes precedence over baseUrl-derived default', () => {
+    const { html } = renderLogoutSuccessPage({
+      baseUrl: 'https://api.example.com/cms',
+      loginUrl: '/custom/login',
+    });
+    expect(html).toContain('href="/custom/login"');
+    expect(html).not.toContain('/authorize');
+  });
+
   it('returns empty imgSrc without custom logo', () => {
     const { imgSrc } = renderLogoutSuccessPage({});
     expect(imgSrc).toHaveLength(0);
@@ -650,6 +670,17 @@ describe('renderLogoutAllSuccessPage', () => {
   it('uses the provided loginUrl in the back link', () => {
     const { html } = renderLogoutAllSuccessPage({ loginUrl: '/auth/login' });
     expect(html).toContain('href="/auth/login"');
+  });
+
+  it('defaults back-link to authorize endpoint (not javascript:) when baseUrl provided', () => {
+    const { html } = renderLogoutAllSuccessPage({ baseUrl: 'https://api.example.com/cms' });
+    expect(html).not.toContain('javascript:');
+    expect(html).toContain('https://api.example.com/cms/authorize');
+  });
+
+  it('back-link is navigable (not javascript:) even without baseUrl', () => {
+    const { html } = renderLogoutAllSuccessPage({});
+    expect(html).not.toContain('javascript:');
   });
 });
 

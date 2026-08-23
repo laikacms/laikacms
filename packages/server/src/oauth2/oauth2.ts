@@ -2343,6 +2343,7 @@ export async function handleLogout(
   // Render logout success page with custom logo support
   const baseCsp = "default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:";
   const page = renderLogoutSuccessPage({
+    baseUrl: url.origin + (config.basePath || ''),
     customLogo: config.customLogo,
     loginUrl: config.loginRedirectUrl,
     messages: config.translations,
@@ -2418,6 +2419,7 @@ export async function handleLogoutAll(
   // Render logout all success page with custom logo support
   const baseCsp = "default-src 'self'; style-src 'unsafe-inline'; img-src 'self' data:";
   const page = renderLogoutAllSuccessPage({
+    baseUrl: url.origin + (config.basePath || ''),
     customLogo: config.customLogo,
     loginUrl: config.loginRedirectUrl,
     messages: config.translations,
