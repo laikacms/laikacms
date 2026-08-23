@@ -27,7 +27,23 @@ npm install
 npm run dev
 ```
 
-Open the printed URL — the blog is at `/`, the admin at `/admin/`. The admin logs in automatically:
+Open the printed URL — the blog is at `/`, the admin at `/admin/`.
+
+## Working from the monorepo
+
+If you cloned the `laikacms` repository and are running this starter in-place (not via the wizard),
+the `starters/pnpm-workspace.yaml` carries `link:` overrides pointing at local builds of packages
+that are ahead of npm. Build those packages first, then install and run:
+
+```sh
+# Build the linked packages (run from this directory)
+pnpm -C ../.. --filter laikacms build
+
+pnpm install
+pnpm dev
+```
+
+The admin logs in automatically:
 there is no server to authenticate against, so the `laika` backend runs in `dev_token` mode and a
 tiny same-origin fetch shim (`src/local-session.ts`) answers its `/session` and `/health` checks.
 

@@ -26,6 +26,20 @@ npm run dev
 
 Open <http://localhost:3000> for the blog and <http://localhost:3000/admin/> for the CMS editor.
 
+## Working from the monorepo
+
+If you cloned the `laikacms` repository and are running this starter in-place (not via the wizard),
+the `starters/pnpm-workspace.yaml` carries `link:` overrides pointing at local builds of packages
+that are ahead of npm. Build those packages first, then install and run:
+
+```sh
+# Build the linked packages (run from this directory)
+pnpm -C ../.. --filter laikacms --filter @laikacms/server --filter @laikacms/github build
+
+pnpm install
+pnpm dev
+```
+
 ## Creating a GitHub App
 
 1. Go to <https://github.com/settings/apps/new>

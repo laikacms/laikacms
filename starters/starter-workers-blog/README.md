@@ -21,7 +21,23 @@ npm install
 npm run dev
 ```
 
-`wrangler dev` starts a local Worker at <http://localhost:8787>. The blog is at `/`, the Decap admin at `/admin/`.
+`wrangler dev` starts a local Worker at <http://localhost:8787>.
+
+## Working from the monorepo
+
+If you cloned the `laikacms` repository and are running this starter in-place (not via the wizard),
+the `starters/pnpm-workspace.yaml` carries `link:` overrides pointing at local builds of packages
+that are ahead of npm. Build those packages first, then install and run:
+
+```sh
+# Build the linked packages (run from this directory)
+pnpm -C ../.. --filter laikacms --filter @laikacms/server build
+
+pnpm install
+pnpm dev
+```
+
+The blog is at `/`, the Decap admin at `/admin/`.
 
 Dev authentication uses a hardcoded bearer token (`dev-local-laika-token`). Override it by setting `DEV_TOKEN` in `wrangler.toml` under `[vars]`.
 
