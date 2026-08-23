@@ -2,7 +2,7 @@
   "name": "@laikacms/starter-astro-blog",
   "version": "0.0.1",
   "private": true,
-  "description": "Static Astro blog with build-time LaikaCMS content and a local-dev JSON API.",
+  "description": "Static Astro blog reading LaikaCMS content through astro:content, with a local-dev JSON API.",
   "type": "module",
   "scripts": {
     "dev": "astro dev",
@@ -11,9 +11,9 @@
     "typecheck": "astro check"
   },
   "dependencies": {
-    "@laikacms/server": "^5.0.0",
+    "@laikacms/astro": "^5.0.0",
     "@laikacms/decap-cms": "^4.1.0",
-    "@laikacms/vite-plugin": "^5.0.0",
+    "@laikacms/server": "^5.0.0",
     "astro": "^7.1.6",
     "laikacms": "^5.0.0",
     "prismjs": "^1.30.0",

@@ -954,6 +954,177 @@ describe('DecapCatalogProvider', () => {
     });
   });
 
+  describe('getCollectionSchema — value shapes the widget config decides', () => {
+    const schemaFor = async (field: Record<string, unknown>) => {
+      const provider = makeProvider({
+        collections: [{ name: 'posts', folder: 'content/posts', fields: [field] }],
+      });
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      if (!Result.isSuccess(result)) throw new Error('expected a schema');
+      return result.success.properties?.[field['name'] as string] as Record<string, unknown>;
+    };
+
+    it('maps a code widget to the object it actually stores', async () => {
+      expect(await schemaFor({ name: 'snippet', widget: 'code' })).toEqual({
+        type: 'object',
+        properties: { code: { type: 'string' }, lang: { type: 'string' } },
+        additionalProperties: true,
+      });
+    });
+
+    it("honours the code widget's renamed keys", async () => {
+      expect(
+        await schemaFor({
+          name: 'snippet',
+          widget: 'code',
+          keys: { code: 'source', lang: 'language' },
+        }),
+      ).toEqual({
+        type: 'object',
+        properties: { source: { type: 'string' }, language: { type: 'string' } },
+        additionalProperties: true,
+      });
+    });
+
+    it('maps a code widget with output_code_only to a bare string', async () => {
+      expect(await schemaFor({ name: 'snippet', widget: 'code', output_code_only: true }))
+        .toEqual({ type: 'string' });
+    });
+
+    it('maps a variable-type list to a union tagged by the type key', async () => {
+      const schema = await schemaFor({
+        name: 'blocks',
+        widget: 'list',
+        types: [
+          { name: 'quote', widget: 'object', fields: [{ name: 'text', widget: 'string' }] },
+          { name: 'image', widget: 'object', fields: [{ name: 'src', widget: 'image' }] },
+        ],
+      });
+
+      expect(schema['type']).toBe('array');
+      expect(schema['items']).toEqual({
+        anyOf: [
+          {
+            type: 'object',
+            properties: { type: { type: 'string', enum: ['quote'] }, text: { type: 'string' } },
+            required: ['type', 'text'],
+            additionalProperties: true,
+          },
+          {
+            type: 'object',
+            properties: { type: { type: 'string', enum: ['image'] }, src: { type: 'string' } },
+            required: ['type', 'src'],
+            additionalProperties: true,
+          },
+        ],
+      });
+    });
+
+    it('tags a variable-type list with a custom typeKey', async () => {
+      const schema = await schemaFor({
+        name: 'blocks',
+        widget: 'list',
+        typeKey: 'kind',
+        types: [{ name: 'quote', widget: 'object', fields: [{ name: 'text', widget: 'string' }] }],
+      });
+
+      // A single declared type needs no union — the one variant *is* the item.
+      expect(schema['items']).toEqual({
+        type: 'object',
+        properties: { kind: { type: 'string', enum: ['quote'] }, text: { type: 'string' } },
+        required: ['kind', 'text'],
+        additionalProperties: true,
+      });
+    });
+
+    it('lets a declared field win over the injected type discriminator', async () => {
+      const schema = await schemaFor({
+        name: 'blocks',
+        widget: 'list',
+        types: [
+          {
+            name: 'quote',
+            widget: 'object',
+            fields: [{ name: 'type', widget: 'select', options: ['pull', 'block'] }],
+          },
+        ],
+      });
+
+      const items = schema['items'] as Record<string, unknown>;
+      const properties = items['properties'] as Record<string, unknown>;
+      expect(properties['type']).toEqual({ type: 'string', enum: ['pull', 'block'] });
+      // and the key is not required twice
+      expect(items['required']).toEqual(['type']);
+    });
+  });
+
+  describe('getCollectionSchema — field-level constraints', () => {
+    const schemaFor = async (field: Record<string, unknown>) => {
+      const provider = makeProvider({
+        collections: [{ name: 'posts', folder: 'content/posts', fields: [field] }],
+      });
+      const result = await LaikaTask.runPromiseResult(provider.getCollectionSchema('posts'));
+      if (!Result.isSuccess(result)) throw new Error('expected a schema');
+      return result.success.properties?.[field['name'] as string] as Record<string, unknown>;
+    };
+
+    it("carries a number widget's min/max as minimum/maximum", async () => {
+      expect(await schemaFor({ name: 'rating', widget: 'number', min: 1, max: 5 })).toEqual({
+        type: 'number',
+        minimum: 1,
+        maximum: 5,
+      });
+    });
+
+    it("carries a multi-select's min/max as minItems/maxItems", async () => {
+      const schema = await schemaFor({
+        name: 'tags',
+        widget: 'select',
+        multiple: true,
+        min: 1,
+        max: 3,
+        options: ['a', 'b', 'c'],
+      });
+      expect(schema['minItems']).toBe(1);
+      expect(schema['maxItems']).toBe(3);
+    });
+
+    it("carries a string field's pattern", async () => {
+      const schema = await schemaFor({
+        name: 'slug',
+        widget: 'string',
+        pattern: ['^[a-z0-9-]+$', 'lowercase and dashes only'],
+      });
+      expect(schema['pattern']).toBe('^[a-z0-9-]+$');
+    });
+
+    it('drops a pattern that is not a usable regex', async () => {
+      // Emitting it would produce a schema no validator can load, which is a
+      // worse failure than not enforcing the rule.
+      const schema = await schemaFor({
+        name: 'slug',
+        widget: 'string',
+        pattern: ['([unclosed', 'nope'],
+      });
+      expect(schema['pattern']).toBeUndefined();
+      expect(schema['type']).toBe('string');
+    });
+
+    it('does not put a pattern on a non-string field', async () => {
+      const schema = await schemaFor({
+        name: 'count',
+        widget: 'number',
+        pattern: ['^[0-9]+$', 'digits'],
+      });
+      expect(schema['pattern']).toBeUndefined();
+    });
+
+    it('carries a field default', async () => {
+      const schema = await schemaFor({ name: 'draft', widget: 'boolean', default: true });
+      expect(schema).toEqual({ type: 'boolean', default: true });
+    });
+  });
+
   describe('readOnly write guards', () => {
     it('putCatalog returns failure with InvalidData message', async () => {
       const provider = makeProvider({ collections: [] });

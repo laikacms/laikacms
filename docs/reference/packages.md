@@ -10,11 +10,11 @@ packages currently have co-located docs: [`laikacms`](./packages/laikacms/) and
 [`@laikacms/server`](./packages/server/).
 
 > **Repository layout (June 2026, updated July 2026, updated August 2026).** This monorepo carries
-> `laikacms`, `@laikacms/server`, `@laikacms/vite-plugin`, `@laikacms/github`, `@laikacms/gitlab`,
-> and `@laikacms/bitbucket` as actively developed packages (`@laikacms/decap-ai` and the client-side
-> decap extras moved into the `@laikacms/decap-cms` fork in July 2026, DCMS-492). The other packages
-> documented below (`@laikacms/aws`, `@laikacms/git-gateway`, `laikacli`,
-> `decap-cms-widget-lexicaleditor`, `decap-cms-widget-portabletext-editor`,
+> `laikacms`, `@laikacms/server`, `@laikacms/vite-plugin`, `@laikacms/astro`, `@laikacms/github`,
+> `@laikacms/gitlab`, and `@laikacms/bitbucket` as actively developed packages (`@laikacms/decap-ai`
+> and the client-side decap extras moved into the `@laikacms/decap-cms` fork in July 2026,
+> DCMS-492). The other packages documented below (`@laikacms/aws`, `@laikacms/git-gateway`,
+> `laikacli`, `decap-cms-widget-lexicaleditor`, `decap-cms-widget-portabletext-editor`,
 > `decap-cms-lexical-core`, and the rest of the adapters) are still published to npm under the same
 > names but are now developed in **separate repositories**. Their npm names are unchanged, so
 > consumers install them exactly as before.
@@ -201,6 +201,25 @@ need one, such as the Decap admin. See
 [`packages/vite-plugin/README.md`](https://github.com/laikacms/laikacms/blob/develop/packages/vite-plugin/README.md)
 for the full reference (the `laika:` protocol, `import.meta.glob` support, MDX bodies, hot reload,
 and all plugin options).
+
+## `@laikacms/astro`
+
+The Astro integration. Content reaches pages through Astro's own Content Layer — `getCollection`,
+`getEntry`, `render`, Zod schemas — rather than the `laika:` protocol, so `render(entry)` produces
+real HTML and collections get the incremental content store for free.
+
+| Subpath                   | Contents                                                               |
+| ------------------------- | ---------------------------------------------------------------------- |
+| `@laikacms/astro`         | the `laika()` integration: dev JSON:API, content hot-refresh, types    |
+| `@laikacms/astro/loader`  | `documentsLoader()`, `objectsLoader()`, `laikaCollections()`           |
+| `@laikacms/astro/live`    | `liveDocumentsLoader()` for `defineLiveCollection()` and draft preview |
+| `@laikacms/astro/testing` | a fake `LoaderContext` for testing loaders without booting Astro       |
+
+Sync is incremental and capability-driven: a change feed when the repository has one, version tokens
+when it tracks them, and a content digest otherwise — so it works on every backend without
+configuration. Passing `z` derives a collection's schema _and_ its entry types from the catalog, so
+fields declared in your CMS config need not be restated as Zod. See
+[`packages/astro/README.md`](https://github.com/laikacms/laikacms/blob/develop/packages/astro/README.md).
 
 ### Install
 

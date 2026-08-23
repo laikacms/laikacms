@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/website",
-  "description": "laikacms.com — the marketing website for Laika CMS.",
+  "description": "laikacms.com \u2014 the marketing website for Laika CMS.",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -18,7 +18,7 @@
     "@astrojs/check": "catalog:astro",
     "@astrojs/mdx": "catalog:astro",
     "@astrojs/react": "catalog:astro",
-    "@laikacms/vite-plugin": "workspace:*",
+    "@laikacms/astro": "workspace:*",
     "@tailwindcss/vite": "catalog:default",
     "@types/mdx": "catalog:types",
     "@types/react": "catalog:types",

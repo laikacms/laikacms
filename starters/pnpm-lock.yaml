@@ -9,6 +9,7 @@ overrides:
   '@laikacms/server': link:../packages/server
   '@laikacms/vite-plugin': link:../packages/vite-plugin
   '@laikacms/github': link:../packages/github
+  '@laikacms/astro': link:../packages/astro
 
 importers:
 
@@ -16,15 +17,15 @@ importers:
 
   starter-astro-blog:
     dependencies:
+      '@laikacms/astro':
+        specifier: link:../../packages/astro
+        version: link:../../packages/astro
       '@laikacms/decap-cms':
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
         specifier: link:../../packages/server
         version: link:../../packages/server
-      '@laikacms/vite-plugin':
-        specifier: link:../../packages/vite-plugin
-        version: link:../../packages/vite-plugin
       astro:
         specifier: ^7.1.6
         version: 7.2.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(tsx@4.23.11)(yaml@2.9.0)

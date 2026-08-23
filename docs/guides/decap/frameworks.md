@@ -240,6 +240,13 @@ export default jsxRenderer(({ children, title }: { children?: unknown, title?: s
 Without this augmentation, `c.render(<JSX />, { title: 'My Blog' })` produces a TypeScript error
 (`Expected 1 arguments, but got 2`).
 
+### Astro — prefer `@laikacms/astro`
+
+For reading content, do not hand-roll repository calls: `@laikacms/astro` plugs Laika into Astro's
+Content Layer, so pages use `getCollection` / `getEntry` / `render` and get the incremental content
+store, schema validation and generated entry types. The notes below apply when you are calling the
+repositories directly instead.
+
 ### Astro — use `laikacms/compat`, not `laikacms/core`
 
 `runTask` and `collectStream` must be imported from `laikacms/compat`. The `laikacms/core` subpath
