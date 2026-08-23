@@ -38,3 +38,5 @@ that handler.
   editor component.
 - **[Framework setup notes](./frameworks)** — per-framework request bridges (Express, Next.js,
   SvelteKit, Astro, Nuxt, AdonisJS, FoalTS, and more).
+- **[AI assistant](/reference/packages/server/ai)** — mount `@laikacms/server/ai` for the editor's
+  chat and session endpoints; `DecapAiConfig` options, session callbacks, and authorization.
