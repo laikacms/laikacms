@@ -1,16 +1,16 @@
 ---
 /**
- * Blog homepage.
- *
- * `getCollection` reads the store the Laika loader filled at build time, so the
- * built site has no CMS server dependency.
+ * Blog homepage — Vite expands this glob from the filesystem repository at
+ * build time. The resulting site has no production CMS server dependency.
  */
-import { getCollection } from 'astro:content';
-
 import Base from '../layouts/Base.astro';
 
-const posts = (await getCollection('posts'))
-  .sort((a, b) => b.data.date.getTime() - a.data.date.getTime());
+const modules = import.meta.glob('laika:doc/posts/*', { eager: true });
+const posts = Object.entries(modules).map(([id, value]) => ({
+  slug: id.slice('laika:doc/posts/'.length),
+  ...(value as { title?: string; date?: string; description?: string }),
+}));
+posts.sort((a, b) => (b.date ?? b.slug).localeCompare(a.date ?? a.slug));
 ---
 
 <Base title="My Blog">
@@ -25,16 +25,14 @@ const posts = (await getCollection('posts'))
       )
       : (
         <ul style="list-style:none;padding:0">
-          {posts.map(post => (
-            <li style="margin-bottom:1.5rem">
-              <a href={`/blog/${post.id}`}>{post.data.title}</a>
-              {' · '}
-              <time datetime={post.data.date.toISOString()}>
-                {post.data.date.toLocaleDateString()}
-              </time>
-              {post.data.description && <p style="margin:0.25rem 0 0">{post.data.description}</p>}
-            </li>
-          ))}
+          {posts.map(post => {
+            return (
+              <li style="margin-bottom:1.5rem">
+                <a href={`/blog/${post.slug}`}>{post.title ?? post.slug}</a>
+                {post.date && <> · <time>{new Date(post.date).toLocaleDateString()}</time></>}
+              </li>
+            );
+          })}
         </ul>
       )
   }
