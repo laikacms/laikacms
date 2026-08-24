@@ -83,6 +83,18 @@ The loader derives the collection's schema from the catalog and generates matchi
 types are inferred from the content instead. Both go through Astro's `Loader.createSchema()`, which
 writes them into `.astro/loaders/`.
 
+To enumerate all collections from the catalog at once, use `laikaCollections()`:
+
+```ts
+import { laikaCollections } from '@laikacms/astro/loader';
+
+export const collections = await laikaCollections({ dir: 'content', catalog: 'decap', z });
+```
+
+This trades static typing for brevity (`entry.data` stays `unknown`). Shape the result with
+`exclude` (skip named collections), `overrides` (per-collection schema/render/select/sync), and
+`allowEmpty` (return `{}` instead of throwing when the catalog is empty).
+
 ## Where content comes from
 
 Every loader accepts any `DocumentsRepository`. With no repository given, a filesystem repository
@@ -114,6 +126,37 @@ repository advertises through `getCapabilities()`, and degrades cleanly when it 
 
 `sync.strategy` defaults to `'auto'`. The filesystem path lands on `digest`; in dev, edits skip the
 listing entirely because the integration pushes changed keys straight into the refresh.
+
+## Live collections
+
+Live collections read per request instead of per build, enabling draft preview without a rebuild.
+Declare a `liveDocumentsLoader` in `src/live.config.ts`; pages that use it must be on-demand
+rendered.
+
+```ts
+import { liveDocumentsLoader } from '@laikacms/astro/live';
+import { defineLiveCollection } from 'astro:content';
+
+export const collections = {
+  posts: defineLiveCollection({ type: 'live', loader: liveDocumentsLoader({ documents }) }),
+};
+```
+
+Control Astro's per-entry cache hint with `cache`:
+
+```ts
+liveDocumentsLoader({
+  documents,
+  cache: {
+    tags: ({ key, collection }) => [`laika:${collection}:${key}`],
+    lastModified: false,
+  },
+});
+```
+
+Default tags: `['laika', 'laika:<collection>', 'laika:<key>']`. `lastModified` is taken from the
+entry's `updatedAt` when present; set `lastModified: false` to suppress it. The `LiveCacheOptions`
+type is exported from `@laikacms/astro/live`.
 
 ## Serving the API
 
