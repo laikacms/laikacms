@@ -101,6 +101,9 @@ app.use((_req, res) => {
 });
 
 const PORT = process.env['PORT'] ?? 3000;
+// Seed config.yml before accepting requests so direct repo access in SSR
+// routes (laika.documents.*) is safe without a prior fetch() call.
+await laika.ensureReady();
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
