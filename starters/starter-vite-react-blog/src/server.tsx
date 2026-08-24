@@ -58,7 +58,7 @@ app.all('/api/decap/*path', async (req, res) => {
 
 app.get('/', async (_req, res) => {
   const { items } = await collectStream(
-    laika.documents.listRecordSummaries({
+    laika.documents.listRecords({
       pagination: { page: 1, perPage: 100 },
       folder: 'posts',
       depth: 1,
@@ -66,7 +66,7 @@ app.get('/', async (_req, res) => {
     }),
   );
   const posts = items
-    .filter(r => r.type === 'published-summary')
+    .filter(r => r.type === 'published')
     .sort((a, b) => {
       if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
       return b.key.localeCompare(a.key);

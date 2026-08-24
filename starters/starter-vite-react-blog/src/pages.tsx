@@ -17,7 +17,7 @@ export function Layout({ children, title = 'Blog' }: { children: React.ReactNode
   );
 }
 
-export function HomePage({ posts }: { posts: Array<{ key: string }> }) {
+export function HomePage({ posts }: { posts: Array<{ key: string, content?: Record<string, unknown> }> }) {
   const slug = (key: string) => key.replace(/^posts\//, '').replace(/\.md$/, '');
   return (
     <Layout>
@@ -32,7 +32,9 @@ export function HomePage({ posts }: { posts: Array<{ key: string }> }) {
           <ul>
             {posts.map(p => (
               <li key={p.key}>
-                <a href={`/blog/${slug(p.key)}`}>{slug(p.key)}</a>
+                <a href={`/blog/${slug(p.key)}`}>
+                  {typeof p.content?.['title'] === 'string' ? p.content['title'] : slug(p.key)}
+                </a>
               </li>
             ))}
           </ul>
