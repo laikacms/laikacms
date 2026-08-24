@@ -49,6 +49,13 @@ export default defineConfig({
             ],
           },
           {
+            text: 'Astro',
+            collapsed: true,
+            items: [
+              { text: '@laikacms/astro', link: '/reference/packages/astro/' },
+            ],
+          },
+          {
             text: 'Decap CMS',
             collapsed: false,
             items: [

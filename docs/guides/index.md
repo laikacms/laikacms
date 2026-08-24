@@ -12,6 +12,14 @@ Task-oriented walkthroughs for getting LaikaCMS running and wired into your stac
 - **[Advanced: raw Storage API](./advanced/raw-storage-api)** — the low-level `buildJsonApi`
   primitive with no built-in auth. You secure it yourself; most projects want `laikaApi` instead.
 
+## Astro
+
+Use LaikaCMS content in Astro pages through Astro's own Content Layer — `getCollection`, `getEntry`,
+`render`, Zod schemas — with incremental sync and dev-server hot-reload.
+
+- **[`@laikacms/astro` reference](/reference/packages/astro/)** — loaders, the `laika()`
+  integration, live collections, and Zod schema derivation.
+
 ## Decap CMS
 
 Pair LaikaCMS with the [Decap CMS](https://decapcms.org/) admin UI. Start with the quickstart, then

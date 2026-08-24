@@ -239,11 +239,35 @@ export default defineConfig({
 
 <!-- STACKBLITZ_EMBED: static-vite-remote-source -->
 
+### Astro
+
+Astro uses Vite internally, but the right integration is
+[`@laikacms/astro`](/reference/packages/astro/) rather than the generic Vite plugin. It wires into
+Astro's own Content Layer so your content reaches pages through `getCollection` / `getEntry` /
+`render` — the same API Astro developers already know — with incremental sync, schema derivation,
+and dev-server hot-reload included.
+
+```js
+// astro.config.mjs
+import { laika } from '@laikacms/astro';
+import { FileSystemStorageRepository } from 'laikacms/storage-fs';
+import { jsonSerializer } from 'laikacms/storage-serializers-json';
+
+const storage = new FileSystemStorageRepository('./content', { json: jsonSerializer }, 'json');
+
+export default defineConfig({
+  integrations: [laika({ storage })],
+});
+```
+
+See the [`@laikacms/astro` reference](/reference/packages/astro/) for loaders, live collections, and
+Zod schema derivation.
+
 ### Without Vite
 
-Building with a non-Vite static site generator (Next.js SSG, Astro's non-Vite adapters, a plain
-Node.js build script)? Skip the plugin and call the repository directly at build time with the
-`laikacms/compat` Promise bridge, so the build script never has to import `effect`:
+Building with a truly non-Vite static site generator (Next.js SSG, a plain Node.js build script)?
+Skip the plugin and call the repository directly at build time with the `laikacms/compat` Promise
+bridge, so the build script never has to import `effect`:
 
 ```ts
 // scripts/build-content.ts

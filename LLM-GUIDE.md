@@ -463,7 +463,9 @@ canonical starting points, use the in-repo quickstart guides directly:
 │  Svelte?          → starter-sveltekit-blog pattern                │
 │  Solid?           → starter-solid-start pattern                   │
 │  Qwik?            → starter-qwik-blog pattern                     │
-│  Astro?           → starter-astro-blog pattern                    │
+│  Astro?           → @laikacms/astro (Content Layer loaders, dev   │
+│                     JSON:API, live collections, Zod schema) +     │
+│                     starter-astro-blog pattern                    │
 │  Eleventy/static? → starter-eleventy-jamstack pattern             │
 │  TanStack Router? → starter-tanstack-blog pattern                 │
 │  Marko?           → starter-marko-blog pattern                    │
