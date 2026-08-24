@@ -224,31 +224,43 @@ fields declared in your CMS config need not be restated as Zod. See
 ### Install
 
 ```sh
-npm install -D @laikacms/vite-plugin laikacms
+pnpm add @laikacms/astro laikacms
 ```
-
-Requires Vite `>=8` (Rolldown-based).
 
 ### Basic usage
 
-```ts
-// vite.config.ts
-import { laikacms } from '@laikacms/vite-plugin';
-import { defineConfig } from 'vite';
+```js
+// astro.config.mjs
+import { laika } from '@laikacms/astro';
+import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  plugins: [laikacms({ dir: 'content' })],
+  integrations: [laika({ dir: 'content', defaultExtension: 'md' })],
 });
+```
+
+```ts
+// src/content.config.ts
+import { documentsLoader } from '@laikacms/astro/loader';
+import { defineCollection, z } from 'astro:content';
+
+export const collections = {
+  posts: defineCollection({
+    loader: documentsLoader({ dir: 'content', defaultExtension: 'md' }),
+    schema: z.object({ title: z.string(), date: z.coerce.date() }),
+  }),
+};
 ```
 
 ### Main exports
 
-| Export                 | Description                                                                             |
-| ---------------------- | --------------------------------------------------------------------------------------- |
-| `laikacms()`           | The Vite plugin factory — the default export consumers use in `vite.config.ts`          |
-| `mountLocalApi()`      | Mounts local mode's JSON:API onto any dev server, independent of the `localApi` option  |
-| `LaikaLocalApiOptions` | Type for `mountLocalApi()`'s options                                                    |
-| `createRepositories()` | Helper to build the storage/documents repository pair when supplying your own `storage` |
+| Export                  | Subpath                  | Description                                                           |
+| ----------------------- | ------------------------ | --------------------------------------------------------------------- |
+| `laika()`               | `@laikacms/astro`        | Astro integration factory — adds dev JSON:API and content hot-refresh |
+| `documentsLoader()`     | `@laikacms/astro/loader` | Content Layer loader for document collections                         |
+| `objectsLoader()`       | `@laikacms/astro/loader` | Content Layer loader for object (singleton) collections               |
+| `laikaCollections()`    | `@laikacms/astro/loader` | Derives all collections from the catalog automatically                |
+| `liveDocumentsLoader()` | `@laikacms/astro/live`   | Runtime loader for `defineLiveCollection()` — draft preview and SSR   |
 
 ## `decap-cms-lexical-core`
 
