@@ -57,6 +57,12 @@ export interface EmbeddedLaika {
   assets: CatalogAssetsRepository;
   /** Fetch handler — route all `/basePath/*` requests here. */
   fetch: (request: Request) => Promise<Response>;
+  /**
+   * Await this before accessing `documents`, `storage`, or `assets` directly
+   * (e.g. in SSR route handlers). Seeds `config.yml` if absent. Idempotent —
+   * safe to call multiple times; the seeding only runs once.
+   */
+  ensureReady: () => Promise<void>;
 }
 
 const defaultSerializers = {
@@ -78,7 +84,7 @@ const defaultSerializers = {
  * import { resolve } from 'node:path';
  * import { createEmbeddedLaika } from '@laikacms/server/embedded';
  *
- * export const laika = createEmbeddedLaika({
+ * const laika = createEmbeddedLaika({
  *   contentDir: resolve(process.cwd(), 'content'),
  *   basePath: '/api/decap',
  *   auth: { mode: 'dev' },
@@ -89,6 +95,10 @@ const defaultSerializers = {
  *     collections: [...],
  *   },
  * });
+ *
+ * // Await before starting the server so direct repo access (SSR routes) is safe:
+ * await laika.ensureReady();
+ * server.listen(3000);
  * ```
  */
 export function createEmbeddedLaika(options: EmbeddedLaikaOptions): EmbeddedLaika {
@@ -121,11 +131,10 @@ export function createEmbeddedLaika(options: EmbeddedLaikaOptions): EmbeddedLaik
     authorize: () => true,
   });
 
-  let configSeeded = false;
-
-  async function ensureConfig(): Promise<void> {
-    if (configSeeded) return;
-    configSeeded = true;
+  // Seed config eagerly so direct repo access (SSR routes) is safe without
+  // waiting for a first fetch() call. The promise is shared — subsequent calls
+  // to ensureReady() and fetch() await the same settled promise.
+  const readyPromise: Promise<void> = (async () => {
     try {
       await runTask(storage.getObject('config.yml'));
     } catch {
@@ -142,14 +151,15 @@ export function createEmbeddedLaika(options: EmbeddedLaikaOptions): EmbeddedLaik
         console.error('[createEmbeddedLaika] failed to seed config.yml:', err);
       }
     }
-  }
+  })();
 
   return {
     documents,
     storage,
     assets,
+    ensureReady: () => readyPromise,
     async fetch(request: Request): Promise<Response> {
-      await ensureConfig();
+      await readyPromise;
       return api.fetch(request);
     },
   };

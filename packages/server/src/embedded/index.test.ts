@@ -215,12 +215,12 @@ describe('token auth — authenticate() delegation', () => {
 // ---------------------------------------------------------------------------
 // Suite: config seeding
 //
-// ensureConfig() passes `metadata: { extension: 'yml' }` so the storage
-// backend writes the file as 'config.yml', matching the documented promise.
+// Seeding starts eagerly at construction time (not lazily on first fetch).
+// ensureReady() and fetch() both await the same Promise.
 // What matters functionally:
-//   1. 'config.yml' appears in contentDir after the first fetch().
+//   1. 'config.yml' appears in contentDir after ensureReady() (no fetch needed).
 //   2. A pre-existing 'config.yml' is NOT overwritten.
-//   3. The seed does not re-run on subsequent fetch() calls (configSeeded flag).
+//   3. The seed runs only once (Promise is shared; subsequent awaits are no-ops).
 // ---------------------------------------------------------------------------
 
 async function findConfigFile(dir: string): Promise<string | null> {
@@ -230,6 +230,17 @@ async function findConfigFile(dir: string): Promise<string | null> {
 }
 
 describe('config seeding', () => {
+  it('creates config.yml in contentDir after ensureReady() without any fetch()', async () => {
+    const decapConfig = { backend: { name: 'laika' }, collections: [{ name: 'posts' }] };
+    const { ensureReady } = makeEmbedded({ decapConfig });
+
+    await ensureReady();
+
+    const seeded = await findConfigFile(tmpDir);
+    expect(seeded).not.toBeNull();
+    expect(path.basename(seeded!)).toBe('config.yml');
+  });
+
   it('creates config.yml in contentDir on the first fetch() when none is present', async () => {
     const decapConfig = { backend: { name: 'laika' }, collections: [{ name: 'posts' }] };
     const { fetch } = makeEmbedded({ decapConfig });
@@ -243,9 +254,9 @@ describe('config seeding', () => {
 
   it('seeded config file content encodes the decapConfig object', async () => {
     const decapConfig = { backend: { name: 'laika' }, collections: [{ name: 'posts' }] };
-    const { fetch } = makeEmbedded({ decapConfig });
+    const { ensureReady } = makeEmbedded({ decapConfig });
 
-    await fetch(makeRequest('/api/decap/health'));
+    await ensureReady();
 
     const seeded = await findConfigFile(tmpDir);
     expect(seeded).not.toBeNull();
@@ -254,15 +265,29 @@ describe('config seeding', () => {
     expect(raw).toContain('posts');
   });
 
-  it('does NOT overwrite a pre-existing config.yml on the first fetch()', async () => {
+  it('does NOT overwrite a pre-existing config.yml', async () => {
     const existing = 'backend:\n  name: existing\n';
     await fs.writeFile(path.join(tmpDir, 'config.yml'), existing, 'utf8');
 
-    const { fetch } = makeEmbedded({ decapConfig: { backend: { name: 'new' } } });
-    await fetch(makeRequest('/api/decap/health'));
+    const { ensureReady } = makeEmbedded({ decapConfig: { backend: { name: 'new' } } });
+    await ensureReady();
 
     const raw = await fs.readFile(path.join(tmpDir, 'config.yml'), 'utf8');
     expect(raw).toBe(existing);
+  });
+
+  it('is idempotent — multiple ensureReady() calls do not re-write the config', async () => {
+    const { ensureReady } = makeEmbedded({});
+    await ensureReady();
+
+    const seeded = await findConfigFile(tmpDir);
+    expect(seeded).not.toBeNull();
+    const stat1 = await fs.stat(seeded!);
+
+    await ensureReady();
+
+    const stat2 = await fs.stat(seeded!);
+    expect(stat2.mtimeMs).toBe(stat1.mtimeMs);
   });
 
   it('is idempotent — second fetch() does not write a second config file', async () => {
@@ -276,7 +301,6 @@ describe('config seeding', () => {
     await fetch(makeRequest('/api/decap/health'));
 
     const stat2 = await fs.stat(seeded!);
-    // mtime unchanged proves the file was not re-written on the second call
     expect(stat2.mtimeMs).toBe(stat1.mtimeMs);
   });
 });
@@ -360,6 +384,11 @@ describe('EmbeddedLaika shape', () => {
   it('exposes a fetch handler', () => {
     const embedded = makeEmbedded({});
     expect(typeof embedded.fetch).toBe('function');
+  });
+
+  it('exposes an ensureReady() function', () => {
+    const embedded = makeEmbedded({});
+    expect(typeof embedded.ensureReady).toBe('function');
   });
 
   it('uses a custom basePath when provided', async () => {
