@@ -6,26 +6,11 @@
 # against the working tree), this workspace canonically links nothing from the
 # monorepo: starters ship as download-and-go templates pinned to published
 # LaikaCMS versions, and installing them here must resolve exactly what a user
-# who downloaded one folder would get. CI enforces this with `pnpm
-# check:starters` (no workspace:/catalog: protocols, ranges in sync with the
-# current release). The overrides block below carries temporary link:
-# exceptions while ahead-of-npm packages are being published; remove each
-# once the corresponding version lands on the registry.
+# who downloaded one folder would get, except for temporary overrides documented
+# below. CI enforces this with `pnpm check:starters` (no workspace:/catalog:
+# protocols, ranges in sync with the current release).
 packages:
   - "starter-*"
-
-# TEMPORARY overrides — link unpublished/ahead-of-npm packages to their local
-# build so starters can be installed and typechecked in this workspace before
-# the npm registry catches up. Remove each line once the corresponding package
-# version is published. Build the relevant packages first:
-#   pnpm -C .. --filter laikacms --filter @laikacms/github build
-#
-# - laikacms: npm@6.0.0 is missing i18n keys that @laikacms/decap-cms@4.1.0 was compiled
-#   against (local build); type-check fails until a release publishes those additions.
-# - @laikacms/github: needed by starter-github-blog (2.0.0 not yet on npm; registry has 1.0.0)
-overrides:
-  laikacms: "link:../packages/laikacms"
-  "@laikacms/github": "link:../packages/github"
 
 # Dependencies whose install scripts are allowed to run (pnpm blocks build
 # scripts by default). esbuild ships its platform binary via postinstall.
@@ -36,3 +21,7 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - '@esbuild/openharmony-arm64@0.28.2'
+  - '@laikacms/astro@6.0.0'
+  - '@laikacms/server@6.0.0'
+  - '@laikacms/vite-plugin@6.0.0'
+  - laikacms@6.0.0
