@@ -134,6 +134,9 @@ temp/
 # Generated SBOMs (pnpm gen-sbom) — regenerate per release, don't commit
 /sbom/
 
+# Local pnpm store used by release tooling
+/.pnpm-store/
+
 # Claude Code skills are local by default. Personal/experimental skills stay on
 # your machine; only skills we deliberately share with contributors are checked
 # in via the explicit allowlist below.

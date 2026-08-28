@@ -4,6 +4,265 @@
 
 ### Major Changes
 
+- e8ab49b: Rename ContentBase to Catalog, and move its storage layout under `.laika/`.
+
+  "ContentBase" named the opinionated layer of the protocol — the named document and media
+  collections projected onto generic atoms and folders — but read like a product name and said
+  nothing about collections. Worse, the JSON:API it serves already spoke a different word for the
+  same thing (`/collections`, `document-collection`, `media-collection`), so the codebase carried
+  two vocabularies for one concept. It is now the **catalog**: a catalog contains collections.
+
+  Subpath exports:
+
+  | before                                  | after                         |
+  | --------------------------------------- | ----------------------------- |
+  | `laikacms/contentbase-settings`         | `laikacms/catalog`            |
+  | `laikacms/contentbase-api`              | `laikacms/catalog-api`        |
+  | `laikacms/documents/contentbase`        | `laikacms/documents/catalog`  |
+  | `laikacms/assets/contentbase`           | `laikacms/assets/catalog`     |
+  | `laikacms/contentbase-settings-default` | `laikacms/catalog-convention` |
+  | `laikacms/contentbase-settings-decap`   | `laikacms/catalog-decap`      |
+
+  Identifiers: `ContentBaseSettingsProvider` → `CatalogProvider`, `ContentBaseSettings` → `Catalog`,
+  `DefaultContentBaseSettingsProvider` → `ConventionCatalogProvider`,
+  `DecapContentBaseSettingsProvider` → `DecapCatalogProvider`, `ContentBaseDocumentsRepository` →
+  `CatalogDocumentsRepository`, `ContentBaseAssetsRepository` → `CatalogAssetsRepository`,
+  `buildContentbaseOpenApi` → `buildCatalogOpenApi`. On `CatalogProvider`,
+  `getSettings`/`putSettings` are now `getCatalog`/`putCatalog` — the per-collection accessors are
+  unchanged. The JSON:API wire format does not change: resource types stay
+  `document-collection`/`media-collection` and the routes stay `/collections`.
+
+  `laikacms/catalog-convention` now persists to `.laika/catalog`, `.laika/schemas/<collection>` and
+  `.laika/revisions/<collection>` instead of `.contentbase/…`. Keys stay extensionless so the
+  storage repository's configured serializers decide the format. Where a catalog lives is the
+  provider's business, not the contract's — `catalog-decap` still reads its `configKey` object, and
+  a database provider has no path at all.
+
+  `@laikacms/vite-plugin` moves its generated output from `.laika/` to `.laika/vite-generated/`, so
+  the two lifecycles no longer share a directory: everything directly under `.laika/` is durable
+  state that belongs in git, and only `vite-generated/` is ignored. The plugin now appends
+  `.laika/vite-generated/` to the project `.gitignore` (not `.laika/`) and writes `vite-generated/`
+  into `.laika/.gitignore`. Update the reference in your committed `laika-env.d.ts`:
+
+  ```ts
+  /// <reference path="./.laika/vite-generated/types.d.ts" />
+  ```
+
+  A project that previously had a bare `.laika/` rule in `.gitignore` must narrow it, or its catalog
+  will never be committed.
+
+- e8ab49b: Require an explicit `authorize` policy on every JSON:API handler, and authorize the
+  OpenAPI routes.
+
+  `authorize` was optional on `buildJsonApi` (storage, documents, catalog) and `buildAssetsApi`, and
+  omitting it meant "allow every caller everything". A security-critical default that you get by
+  _not_ typing something is the wrong shape: the handler that reads, mutates, and deletes all your
+  content was one forgotten option away from being wide open, and nothing in the type system said
+  so. `@laikacms/server`'s `laikaApi` already required its policy — the four raw handlers were the
+  inconsistency.
+
+  `authorize` is now a **required** option on all four:
+
+  ```typescript
+  const api = buildJsonApi({
+    repo,
+    authorize: async ({ action, request }) => {
+      const user = await myAuth(request);
+      if (!user) return new AuthenticationError('Missing token'); // → 401
+      return user.isAdmin || action === 'readOpenApi'; // false → 403
+    },
+  });
+  ```
+
+  For a surface that is deliberately open — a dev server on loopback, a test harness, or a handler
+  already behind an authenticating proxy — state that explicitly with the new `allowAll` export from
+  `laikacms/json-api`:
+
+  ```typescript
+  import { allowAll } from 'laikacms/json-api';
+
+  const api = buildJsonApi({ repo, authorize: allowAll });
+  ```
+
+  Naming it rather than inlining `() => true` means every intentionally-open surface in a deployment
+  is one `rg 'authorize: allowAll'` away during an audit.
+
+  `GET /openapi.json` and `GET /openapi.yaml` are now authorized like every other action, via a new
+  `{ action: 'readOpenApi', format: 'json' | 'yaml' }` variant on each API's action union.
+  Previously they were served unconditionally, so a deny-all policy still handed out the full schema
+  shape. A policy that wants a public spec alongside a private API allows that one action:
+
+  ```typescript
+  authorize: ({ action }) => action === 'readOpenApi' ? true : checkToken(...)
+  ```
+
+  `AuthorizeDecision` and `resolveAuthorization` moved to `laikacms/json-api` and are now publicly
+  exported — `AuthorizeDecision` appears in the signature of every `*Authorize` callback type but
+  was previously unnameable by consumers.
+
+  `@laikacms/vite-plugin`'s local dev API and `@laikacms/server`'s inner handlers pass `allowAll`
+  (the vite dev server is loopback-guarded; `laikaApi` authenticates and applies its own `authorize`
+  gate before dispatching), so neither changes behaviour.
+
+- 6b918c6: Rename `AuthorizationError` to `UpstreamUnAuthorizedError`, and stop using it for
+  authorization denials.
+
+  The old name promised the wrong thing. `AuthorizationError` reads as "authorization failed", but
+  the class is HTTP 401 and its actual job is narrow: it is the deserialization target for a 401
+  challenge this server received from an _upstream_ — nothing to do with "authenticated but not
+  permitted". That mismatch was actively misleading people (laikacms#851 proposed routing
+  authorization denials through it, which would have answered 401 to callers who are in fact
+  authenticated).
+
+  The auth vocabulary is now unambiguous:
+
+  | Case                                            | Error                       | Status |
+  | ----------------------------------------------- | --------------------------- | ------ |
+  | Caller has not proven who they are              | `AuthenticationError`       | 401    |
+  | Caller is authenticated but not permitted       | `ForbiddenError`            | 403    |
+  | An upstream rejected _this server's_ credential | `UpstreamUnAuthorizedError` | 401    |
+
+  The wire code is unchanged (`unauthorized`), so JSON:API error payloads and the proxy's
+  `rehydrateErrorCodes` round-trip are unaffected. The exported `errorCode`/`errorStatus` key moved
+  from `AUTHORIZATION_ERROR` to `UPSTREAM_UNAUTHORIZED`.
+
+  Two mapping bugs surfaced by the rename are fixed as part of it:
+
+  - **GitHub 403 returned 401.** `GithubDataSource.mapError` mapped a GitHub `403` to the 401 class,
+    so a permission denial told callers to re-authenticate when their token was valid but
+    under-scoped. It now returns `ForbiddenError` (403), matching the GitLab and Bitbucket
+    datasources.
+  - **Upstream 401s claimed the caller was unauthenticated.** All three git-host datasources mapped
+    an upstream `401` to `AuthenticationError`, which means "_this_ server rejected your
+    credential". A git host rejecting the server's own token is a different failure, and now returns
+    `UpstreamUnAuthorizedError`. Status is unchanged (both are 401); only the error code and message
+    change.
+
+### Minor Changes
+
+- 06b4a5a: Type live collections from the catalog, and map the Decap widgets whose value shape their
+  config decides.
+
+  **Live collections are no longer `Record<string, unknown>`.** Astro gives a live loader no
+  `createSchema()` hook, so `laika()` now reads the catalog at `astro:config:done` and emits a
+  `LaikaLiveCollections` augmentation into `.astro/`. Passing an explicit `collection` to
+  `liveDocumentsLoader()` picks up that collection's shape; a collection the catalog cannot describe
+  is not a member and stays `Record<string, unknown>`, as does omitting `collection`. A project can
+  override any member by augmenting `@laikacms/astro/live-collections` itself.
+
+  Dates come through as `string | Date` there rather than `Date`: nothing coerces on the live path
+  unless that loader opted into validation, and the build-time `Date` would have been a claim the
+  checker cannot catch.
+
+  **`liveDocumentsLoader({ validate: { catalog, z } })`** validates entries against the
+  catalog-derived schema at request time. Off by default — a build-time collection is validated once
+  per build, this runs per request — and the schema is derived once per collection rather than once
+  per request. A mismatch surfaces as `ValidationError` on the result's `error`, not a throw.
+
+  **`DecapCatalogProvider` now maps the widgets whose stored value depends on their own config:**
+
+  - `code` produces the object it really stores (`{ code, lang }`, honouring `keys`), and a bare
+    string only under `output_code_only`. It was previously typed as a string always.
+  - `list` with `types` produces a union of the declared variants, each tagged under the list's
+    `typeKey` (default `type`). It previously fell through to `Array<string>`.
+  - `number` carries `min`/`max` as `minimum`/`maximum`, multi-`select` carries them as
+    `minItems`/`maxItems`, string fields carry `pattern`, and any field carries its `default`. A
+    `pattern` that is not a usable regex is dropped rather than emitted into a schema no validator
+    can load.
+
+  `jsonSchemaToZod` and the entry-type renderer both learned `anyOf`, which is what makes the
+  variable-type lists reach `entry.data` as a real discriminated union instead of `unknown`.
+
+- e8ab49b: Support Node 22. The oauth2 safety gate no longer uses the Node version as a stand-in for
+  feature detection, and `engines` drops from `>=24.0.0` to `>=22.0.0` on both packages.
+
+  `LCMS_OAUTH2_NODE_UNSUPPORTED` fired below Node 24 on the stated grounds that such releases "lack
+  the global Web Crypto API and no longer receive upstream security fixes". Neither holds for Node
+  22: global Web Crypto has been present since Node 19, and Node 22 is in LTS maintenance until
+  2027-04-30. Nothing in the package required Node 24 either — `oauth2` imports no `node:*` builtins
+  at all (it is bundled for Workers, Deno and Bun), the whole tree compiles to `ES2022`, and the
+  heaviest runtime dependency, `@effect/platform-node`, asks only for `>=18`. The floor was the
+  repo's own dev-tooling pin propagated into a published constraint, and it refused a runtime that
+  could in fact uphold every guarantee the package makes.
+
+  Capability is now decided only by the probes that already existed and test the real thing:
+  `LCMS_OAUTH2_CSPRNG_MISSING`, `LCMS_OAUTH2_WEBCRYPTO_SUBTLE_MISSING`,
+  `LCMS_OAUTH2_CSPRNG_DEGENERATE`, `LCMS_OAUTH2_SHA256_UNAVAILABLE`, `LCMS_OAUTH2_HMAC_UNAVAILABLE`
+  and `LCMS_OAUTH2_PASSKEY_ES256_UNAVAILABLE`. These catch a shimmed or crippled runtime whatever
+  version it reports, and clear a capable one a version comparison would have rejected.
+
+  `LCMS_OAUTH2_NODE_UNSUPPORTED` is kept — reason codes are permanent — but now means only what a
+  capability probe cannot determine: **the runtime is past end-of-life and receives no security
+  patches.** The floor is 22 because Node 21 (EOL 2024-06-01) and Node 20 (EOL 2026-04-30) no longer
+  get security fixes, and no probe can detect that from inside the process. It stays `ignorable`.
+  Raise the floor when the floor line reaches EOL, not when a new LTS ships.
+
+  Consumers pinned to Node 24 are unaffected. The full `@laikacms/server` (502) and `laikacms`
+  (2014) suites pass on Node 22.
+
+- 14df4cf: Shrink the OpenAPI documents served by the four JSON:API handlers and stop shipping them
+  to deployments that never ask for one.
+
+  The specs were four hand-maintained copies of the same JSON:API vocabulary and had drifted apart:
+  the assets spec required only `status`/`code` on an error object the runtime always fills with
+  four members, catalog omitted `code` and `source` entirely, and every spec advertised a
+  `links.last` no link builder can produce. That vocabulary now lives once in `laikacms/json-api` as
+  `jsonApiErrorComponents`, `jsonApiLinkComponents`, `capabilityComponents`, `apiInfoComponents` and
+  `paginationParameters`, so all four surfaces describe the runtime identically.
+
+  New in `laikacms/json-api`: `compactOpenApiDocument`, which hoists response bodies and query
+  parameters that repeat across operations into `components` and replaces each occurrence with a
+  `$ref`. Operations keep their own wording — OpenAPI 3.1 allows a `description` alongside `$ref` —
+  so the pass is lossless once dereferenced. Served documents shrink by 3–14% (documents 41.5 KB →
+  35.9 KB, storage 30.0 KB → 27.0 KB).
+
+  The spec builders are now loaded on demand by their handlers instead of statically imported, so a
+  bundler puts each one in its own chunk (~30 KB for documents) rather than the startup path of
+  every worker that mounts the API. `buildDocumentsOpenApi`, `buildStorageOpenApi`,
+  `buildAssetsOpenApi` and `buildCatalogOpenApi` remain exported and unchanged in signature.
+
+  Also corrects the storage spec's `atomic:results`, which documented failed operations as always
+  omitted: a failed remove keeps its slot as an `errors` entry so callers stay index-aligned with
+  the keys they requested.
+
+  Component schema names changed in the served documents — notably the assets spec's `ErrorObject`
+  is now `JsonApiErrorObject`, and catalog's `JsonApiError`/`JsonApiErrorDocument` are now
+  `JsonApiErrorObject`/`JsonApiError` — so anything generating clients from a pinned copy of a
+  document should regenerate.
+
+### Patch Changes
+
+- 14df4cf: Fix `npx laikacli` crashing with `ERR_MODULE_NOT_FOUND` on
+  `effect/unstable/http/Multipasta/Node`.
+
+  The catalog pinned `effect` and `@effect/platform-node` to `4.0.0-beta.66` while
+  `@effect/platform-node-shared` sat at `4.0.0-beta.104`. Under npm's hoisting,
+  `@effect/platform-node@beta.66`'s own `^4.0.0-beta.66` range on `platform-node-shared` resolved to
+  a newer beta whose `effect` peer pulled a newer `effect` to the tree root — so
+  `platform-node@beta.66` resolved a module path that no longer exists. pnpm's isolated
+  `node_modules` masked this locally, so only npm/npx consumers hit it.
+
+  The whole effect stack is now aligned on `4.0.0-beta.104`. What matters is that all three packages
+  are pinned to the _same_ version: npm then dedupes `platform-node`'s transitive caret onto the
+  root pin, so the tree stays consistent even after newer betas ship.
+
+  Also fixes two problems surfaced by the bump:
+
+  - `@laikacms/server` imported `effect/DateTime` and `effect/Result` without declaring `effect` as
+    a dependency, resolving through a stale phantom symlink. It is now a declared dependency, which
+    also makes the published package installable on npm.
+  - `effect/Schema`'s `decodeUnknownSync` now throws a real `SchemaError` rather than a plain
+    `Error` carrying an `Issue` as its `cause`, so the documents-api error mapper detects it with
+    `Schema.isSchemaError`. Without this, internal decode failures regressed from `400 invalid_data`
+    to `500 internal_error`.
+
+- 387a1b4: Remove Hono dependency from `laikacms` core — `catalog-api` now uses a plain
+  `{ fetch(request: Request): Promise<Response> }` handler matching the sibling APIs
+  (`documents-api`, `assets-api`, `storage-api`). Drops `hono` and `@hono/node-server` from
+  `peerDependencies`.
+
+### Major Changes
+
 - e8ab49b: **Breaking:** rename `ContentBase` to `Catalog` — all `contentbase` subpaths
   (`laikacms/assets-contentbase`, `laikacms/documents-contentbase`,
   `laikacms/contentbase-settings-default`, `laikacms/contentbase-settings-decap`,

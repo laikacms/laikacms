@@ -13,11 +13,11 @@
   },
   "dependencies": {
     "@hono/node-server": "^2.0.10",
-    "@laikacms/server": "^5.0.0",
+    "@laikacms/server": "^6.0.0",
     "@laikacms/decap-cms": "^4.1.0",
     "@laikacms/github": "^1.0.0",
     "hono": "^4.12.31",
-    "laikacms": "^5.0.0",
+    "laikacms": "^6.0.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.4"
   },
