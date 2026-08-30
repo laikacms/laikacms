@@ -18,12 +18,11 @@
  */
 
 import { execSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 
 const CLI_DIR = resolve(import.meta.dirname, '../apps/cli');
-const REPO_ROOT = resolve(import.meta.dirname, '..');
 
 function run(cmd, opts = {}) {
   return execSync(cmd, { stdio: 'pipe', encoding: 'utf8', ...opts });
