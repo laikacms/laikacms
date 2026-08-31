@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { runTask } from 'laikacms/compat';
 import { LaikaTask } from 'laikacms/core';
-import { NotFoundError, NotImplementedError } from 'laikacms/core/errors';
+import { NotImplementedError } from 'laikacms/core/errors';
 import type { StorageObject } from 'laikacms/storage';
 import { InMemoryStorageRepository } from 'laikacms/storage/testing';
 
