@@ -92,8 +92,10 @@ export const collections = await laikaCollections({ dir: 'content', catalog: 'de
 ```
 
 This trades static typing for brevity (`entry.data` stays `unknown`). Shape the result with
-`exclude` (skip named collections), `overrides` (per-collection schema/render/select/sync), and
-`allowEmpty` (return `{}` instead of throwing when the catalog is empty).
+`include` (only these collections), `exclude` (skip named collections), `render` (shared render mode
+for every collection; per-collection `overrides[name].render` wins), `overrides` (per-collection
+schema/render/select/sync), and `allowEmpty` (return `{}` instead of throwing when the catalog is
+empty).
 
 ## Where content comes from
 
@@ -175,8 +177,7 @@ laika({ dir: 'content', api: { mode: 'route', basePath: '/api/laika', access: 'p
 
 ## Documentation
 
-See the [package reference](https://laikacms.com/docs/reference/packages/astro/) and the
-[Astro guide](https://laikacms.com/docs/guides/astro).
+See the [package reference](https://laikacms.com/docs/reference/packages/astro/).
 
 ## License
 

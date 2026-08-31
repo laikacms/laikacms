@@ -94,11 +94,14 @@ export const collections = await laikaCollections({ dir: 'content', catalog: 'de
 This trades static typing for brevity: collection names discovered at runtime cannot be known to
 TypeScript, so `entry.data` is `unknown`. Prefer the explicit form unless you have many collections.
 
-Three options let you shape the result:
+Five options let you shape the result:
 
 - **`allowEmpty`** — return `{}` instead of throwing when the catalog enumerates no collections. Off
   by default; a silent empty `collections` is almost always a misconfiguration.
+- **`include`** — only these collection names; symmetric counterpart of `exclude`.
 - **`exclude`** — skip specific collection names from the result.
+- **`render`** — shared render mode applied to every collection; a per-collection
+  `overrides[name].render` wins.
 - **`overrides`** — per-collection overrides for `schema`, `select`, `entry`, `render`, and `sync`:
 
 ```ts

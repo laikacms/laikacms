@@ -1,11 +1,12 @@
 # Releasing
 
-All four public packages (`laikacms`, `@laikacms/server`, `@laikacms/vite-plugin`, `@laikacms/astro`) are version-fixed via changesets and released
-together with `changeset publish`. Publishing MUST go through pnpm (never `npm publish`): pnpm
-resolves `catalog:` dependency ranges into the tarball, npm does not — `prepack` guards against this
-via `scripts/check-no-pnpm-catalog-deps.mjs`. `changeset publish` is safe here: it detects pnpm from
-the root `packageManager` field and runs `pnpm publish` per package. It also skips versions already
-on npm, so re-running it (or racing CI) is harmless.
+All four public packages (`laikacms`, `@laikacms/server`, `@laikacms/vite-plugin`,
+`@laikacms/astro`) are version-fixed via changesets and released together with `changeset publish`.
+Publishing MUST go through pnpm (never `npm publish`): pnpm resolves `catalog:` dependency ranges
+into the tarball, npm does not — `prepack` guards against this via
+`scripts/check-no-pnpm-catalog-deps.mjs`. `changeset publish` is safe here: it detects pnpm from the
+root `packageManager` field and runs `pnpm publish` per package. It also skips versions already on
+npm, so re-running it (or racing CI) is harmless.
 
 Publishing runs locally via `pnpm release` (see below) — GH Actions billing is org-wide blocked, so
 the npm publish step is not automated in CI. Pushing a `v*` tag triggers only
