@@ -64,10 +64,16 @@ export const laika = createEmbeddedLaika({
     collections: [...],
   },
 });
+
+// Await before starting the server so laika.documents.* is safe on first boot.
+await laika.ensureReady();
 ```
 
 `laika.fetch` handles all `/api/decap/*` requests. `laika.documents` / `laika.storage` /
-`laika.assets` expose the repositories for SSR route handlers that read/write content directly.
+`laika.assets` expose the repositories for SSR route handlers that read/write content directly. Call
+`await laika.ensureReady()` before your server starts accepting requests — on first boot it seeds
+`config.yml`, and any direct `laika.documents` access that races that write will see a missing
+config.
 
 #### `api` options
 
