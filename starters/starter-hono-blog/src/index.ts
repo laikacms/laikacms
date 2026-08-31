@@ -92,6 +92,9 @@ app.use('/uploads/*', serveStatic({ root: './content' }));
 app.use('/*', serveStatic({ root: './public' }));
 
 const PORT = Number(process.env.PORT ?? 3000);
+// Seed config.yml before accepting requests so direct repo access in SSR
+// routes (laika.documents.*) is safe without a prior fetch() call.
+await laika.ensureReady();
 serve({ fetch: app.fetch, port: PORT }, info => {
   console.log(`Hono blog running at http://localhost:${info.port}`);
   console.log(`  Blog:  http://localhost:${info.port}/`);
