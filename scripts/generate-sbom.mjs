@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // LCMS-886: generate CycloneDX SBOMs for the published packages (laikacms,
-// @laikacms/server) using pnpm's built-in `pnpm sbom` command (pnpm >=10.16,
+// @laikacms/server, @laikacms/vite-plugin, @laikacms/astro) using pnpm's built-in `pnpm sbom` command (pnpm >=10.16,
 // no extra dependency needed). Local/publish-time only — never wired into a
 // GitHub Actions workflow (CI billing is org-wide blocked; see RELEASING.md
 // and AGENTS.md).
@@ -12,7 +12,7 @@ import { fileURLToPath } from 'node:url';
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(rootDir, 'sbom');
 
-const packages = ['laikacms', '@laikacms/server'];
+const packages = ['laikacms', '@laikacms/server', '@laikacms/vite-plugin', '@laikacms/astro'];
 
 mkdirSync(outDir, { recursive: true });
 

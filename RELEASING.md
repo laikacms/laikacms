@@ -1,6 +1,6 @@
 # Releasing
 
-Both public packages (`laikacms`, `@laikacms/server`) are version-fixed via changesets and released
+All four public packages (`laikacms`, `@laikacms/server`, `@laikacms/vite-plugin`, `@laikacms/astro`) are version-fixed via changesets and released
 together with `changeset publish`. Publishing MUST go through pnpm (never `npm publish`): pnpm
 resolves `catalog:` dependency ranges into the tarball, npm does not — `prepack` guards against this
 via `scripts/check-no-pnpm-catalog-deps.mjs`. `changeset publish` is safe here: it detects pnpm from
@@ -43,9 +43,11 @@ Afterwards, push the `v*` tag so `.github/workflows/create-release.yml` creates 
 ## SBOM (Software Bill of Materials)
 
 `pnpm gen-sbom` generates a CycloneDX SBOM for each published package (`laikacms`,
-`@laikacms/server`) via pnpm's built-in `pnpm sbom` command — no extra dependency needed. Output
-goes to `sbom/laikacms.cdx.json` and `sbom/laikacms-server.cdx.json` (gitignored — regenerate, don't
-commit). The script is `scripts/generate-sbom.mjs`.
+`@laikacms/server`, `@laikacms/vite-plugin`, `@laikacms/astro`) via pnpm's built-in `pnpm sbom`
+command — no extra dependency needed. Output goes to `sbom/laikacms.cdx.json`,
+`sbom/laikacms-server.cdx.json`, `sbom/laikacms-vite-plugin.cdx.json`, and
+`sbom/laikacms-astro.cdx.json` (all gitignored — regenerate, don't commit). The script is
+`scripts/generate-sbom.mjs`.
 
 This is intentionally a local/publish-time step, not a GitHub Actions workflow step — GH Actions
 billing is org-wide blocked (see `AGENTS.md`), so anything load-bearing runs locally. `pnpm release`
