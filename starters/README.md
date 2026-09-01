@@ -16,11 +16,10 @@ generates the app's `src/cms.ts` from that selection (flags `--backends`/`--widg
 (`@laikacms/decap-cms/laika-app/bare`) — no CDN bundle, no laika-styled chrome — and registers only what
 `src/cms.ts` lists, so the admin bundle contains exactly what the site uses.
 
-> **Curated 5 of ~140 (LCMS-455).** In June 2026 the ~160 `starter-*` reference apps were moved out
-> of the monorepo. This is the curated set of five, each mapped to a Getting Started section and
-> (eventually) embedded as a StackBlitz preview, plus `starter-opfs-blog` (added for
-> `laikacms/storage/web-fs`). The remaining **~135 are deferred, not dropped** — they'll be
-> migrated as demand warrants.
+> **Curated 6 of ~140 (LCMS-455).** In June 2026 the ~160 `starter-*` reference apps were moved out
+> of the monorepo. This is the curated set of six, each mapped to a Getting Started section and
+> (eventually) embedded as a StackBlitz preview. The remaining **~134 are deferred, not dropped** —
+> they'll be migrated as demand warrants.
 
 ## The starters
 
