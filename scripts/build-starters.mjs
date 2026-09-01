@@ -25,9 +25,10 @@ const STARTERS = [
   'starter-opfs-blog',
 ];
 
-// Workspace packages the starters/ workspace links to via link: overrides.
-// Their dist/ must exist before `pnpm install` in starters/ can resolve them.
-const LINKED_PACKAGES = ['laikacms', '@laikacms/server', '@laikacms/vite-plugin', '@laikacms/github'];
+// Workspace packages the starters/ workspace links to via link: overrides
+// (starters/pnpm-workspace.yaml overrides block). Their dist/ must exist
+// before `pnpm install` in starters/ can resolve them.
+const LINKED_PACKAGES = ['laikacms', '@laikacms/github'];
 
 function run(cmd, args, cwd) {
   process.stdout.write(`  $ ${cmd} ${args.join(' ')}\n`);
