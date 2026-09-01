@@ -14,7 +14,7 @@ app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 // Blog index — list published posts via laika.documents (no extra HTTP round-trip).
 app.get('/', async c => {
   const { items: records } = await collectStream(
-    laika.documents.listRecordSummaries({
+    laika.documents.listRecords({
       pagination: { page: 1, perPage: 100 },
       folder: 'posts',
       depth: 1,
@@ -23,7 +23,7 @@ app.get('/', async c => {
   );
 
   const posts = records
-    .filter(r => r.type === 'published-summary')
+    .filter(r => r.type === 'published')
     .sort((a, b) => {
       if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
       return b.key.localeCompare(a.key);
@@ -31,9 +31,12 @@ app.get('/', async c => {
 
   const items = posts
     .map(post => {
-      const slug = post.key.replace(/^posts\//, '').replace(/\.md$/, '');
+      const slug = post.key.replace(/^posts\//, '').replace(/\.[^.]+$/, '');
+      const title = typeof (post.content as Record<string, unknown>)?.['title'] === 'string'
+        ? (post.content as Record<string, unknown>)['title'] as string
+        : slug;
       const date = post.updatedAt ? ` · <time>${new Date(post.updatedAt).toLocaleDateString()}</time>` : '';
-      return `<li style="margin-bottom:1rem"><a href="/blog/${slug}">${slug}</a>${date}</li>`;
+      return `<li style="margin-bottom:1rem"><a href="/blog/${slug}">${title}</a>${date}</li>`;
     })
     .join('\n      ');
 
@@ -58,7 +61,7 @@ app.get('/blog/:slug', async c => {
 
   let post;
   try {
-    post = await runTask(laika.documents.getDocument(`posts/${slug}`));
+    post = await runTask(laika.documents.getDocument(`posts/${slug}.json`));
   } catch {
     return c.notFound();
   }
