@@ -90,16 +90,16 @@ convention; populate `scopes` to gate AI access properly.
 
 All `DecapAiConfig` fields — the ones already in the Usage example above and the ones often missed:
 
-| Option | Type | Default | Description |
-| --- | --- | --- | --- |
-| `model` | `LanguageModel` | _(required)_ | Vercel AI SDK model. |
-| `authenticateAccessToken` | `(token: string) => Promise<User>` | _(required)_ | Verify a Bearer token and return the user (with `scopes`). |
-| `callbacks` | `AiSessionCallbacks` | _(required)_ | Session storage (create / get / list / update / delete). |
-| `basePath` | `string` | `'/api/ai'` | Route prefix for all AI endpoints. |
-| `requiredScope` | `Scope` | `'content:write'` | Scope enforced on every authenticated request. |
-| `tools` | `ToolSet` | `{}` | Extra server-side tools passed to `streamText`. Client-side tools (`getDocumentData`, `updateDocument`) are always injected by the framework. |
-| `systemPrompt` | `string` | built-in English prompt | **Replaces** the default prompt entirely — the built-in `getDocumentData`/`updateDocument` tool guidance is discarded when this is set. To extend the default rather than replace it, use `messages` instead (see below). |
-| `maxOutputTokens` | `number` | `4096` | Maximum tokens the model may emit per response. |
-| `temperature` | `number` | `0.7` | Sampling temperature. |
-| `messages` | `Translation` | English bundle | Localized error strings and system prompt. Import from `@laikacms/server/ai/i18n/en` to extend: `messages: { ...en, systemPrompt: 'Your prefix.\n\n' + en.systemPrompt }`. |
-| `logger` | `{ error(...args): void }` | _(none)_ | Receives internal diagnostic output. |
+| Option                    | Type                               | Default                 | Description                                                                                                                                                                                                               |
+| ------------------------- | ---------------------------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `model`                   | `LanguageModel`                    | _(required)_            | Vercel AI SDK model.                                                                                                                                                                                                      |
+| `authenticateAccessToken` | `(token: string) => Promise<User>` | _(required)_            | Verify a Bearer token and return the user (with `scopes`).                                                                                                                                                                |
+| `callbacks`               | `AiSessionCallbacks`               | _(required)_            | Session storage (create / get / list / update / delete).                                                                                                                                                                  |
+| `basePath`                | `string`                           | `'/api/ai'`             | Route prefix for all AI endpoints.                                                                                                                                                                                        |
+| `requiredScope`           | `Scope`                            | `'content:write'`       | Scope enforced on every authenticated request.                                                                                                                                                                            |
+| `tools`                   | `ToolSet`                          | `{}`                    | Extra server-side tools passed to `streamText`. Client-side tools (`getDocumentData`, `updateDocument`) are always injected by the framework.                                                                             |
+| `systemPrompt`            | `string`                           | built-in English prompt | **Replaces** the default prompt entirely — the built-in `getDocumentData`/`updateDocument` tool guidance is discarded when this is set. To extend the default rather than replace it, use `messages` instead (see below). |
+| `maxOutputTokens`         | `number`                           | `4096`                  | Maximum tokens the model may emit per response.                                                                                                                                                                           |
+| `temperature`             | `number`                           | `0.7`                   | Sampling temperature.                                                                                                                                                                                                     |
+| `messages`                | `Translation`                      | English bundle          | Localized error strings and system prompt. Import from `@laikacms/server/ai/i18n/en` to extend: `messages: { ...en, systemPrompt: 'Your prefix.\n\n' + en.systemPrompt }`.                                                |
+| `logger`                  | `{ error(...args): void }`         | _(none)_                | Receives internal diagnostic output.                                                                                                                                                                                      |
