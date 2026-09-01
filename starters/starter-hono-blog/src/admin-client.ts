@@ -21,7 +21,7 @@ init({
       api_root: '/api/decap',
       dev_token: 'dev-local-laika-token',
     },
-    media_folder: 'public/uploads',
+    media_folder: 'uploads',
     public_folder: '/uploads',
     collections: blogCollections,
   } as any,

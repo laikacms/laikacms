@@ -90,7 +90,7 @@ const defaultSerializers = {
  *   auth: { mode: 'dev' },
  *   decapConfig: {
  *     backend: { name: 'laika', api_root: '/api/decap' },
- *     media_folder: 'public/uploads',
+ *     media_folder: 'uploads',
  *     public_folder: '/uploads',
  *     collections: [...],
  *   },
