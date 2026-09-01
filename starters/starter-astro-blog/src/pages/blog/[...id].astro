@@ -1,0 +1,31 @@
+---
+/**
+ * Individual blog post page.
+ *
+ * `render(post)` returns a `<Content />` component that renders the markdown
+ * body as real HTML. The route is `[...id]` rather than `[slug]` because a Laika
+ * document key may be nested (`posts/2026/hello` → id `2026/hello`), and a rest
+ * parameter is what lets a slash survive in the URL.
+ */
+import { getCollection, render } from 'astro:content';
+
+import Base from '../../layouts/Base.astro';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('posts');
+  return posts.map(post => ({ params: { id: post.id }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+---
+
+<Base title={post.data.title} description={post.data.description}>
+  <article>
+    <h1>{post.data.title}</h1>
+    <time datetime={post.data.date.toISOString()}>{post.data.date.toLocaleDateString()}</time>
+    {post.data.description && <p><em>{post.data.description}</em></p>}
+    <Content />
+  </article>
+  <p><a href="/">← Back</a></p>
+</Base>

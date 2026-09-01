@@ -6,8 +6,6 @@ settings:
 
 overrides:
   laikacms: link:../packages/laikacms
-  '@laikacms/server': link:../packages/server
-  '@laikacms/vite-plugin': link:../packages/vite-plugin
   '@laikacms/github': link:../packages/github
 
 importers:
@@ -16,15 +14,15 @@ importers:
 
   starter-astro-blog:
     dependencies:
+      '@laikacms/astro':
+        specifier: ^6.0.0
+        version: 6.0.0(astro@7.2.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(tsx@4.23.11)(yaml@2.9.0))(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))
       '@laikacms/decap-cms':
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
-        specifier: link:../../packages/server
-        version: link:../../packages/server
-      '@laikacms/vite-plugin':
-        specifier: link:../../packages/vite-plugin
-        version: link:../../packages/vite-plugin
+        specifier: ^6.0.0
+        version: 6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(ai@7.0.58(zod@4.4.3))
       astro:
         specifier: ^7.1.6
         version: 7.2.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(tsx@4.23.11)(yaml@2.9.0)
@@ -69,8 +67,8 @@ importers:
         specifier: link:../../packages/github
         version: link:../../packages/github
       '@laikacms/server':
-        specifier: link:../../packages/server
-        version: link:../../packages/server
+        specifier: ^6.0.0
+        version: 6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(ai@7.0.58(zod@4.4.3))
       hono:
         specifier: ^4.12.31
         version: 4.13.1
@@ -112,8 +110,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
-        specifier: link:../../packages/server
-        version: link:../../packages/server
+        specifier: ^6.0.0
+        version: 6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(ai@7.0.58(zod@4.4.3))
       hono:
         specifier: ^4.12.31
         version: 4.13.1
@@ -192,8 +190,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
-        specifier: link:../../packages/server
-        version: link:../../packages/server
+        specifier: ^6.0.0
+        version: 6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(ai@7.0.58(zod@4.4.3))
       express:
         specifier: ^5.1.0
         version: 5.2.1(supports-color@10.2.2)
@@ -247,8 +245,8 @@ importers:
         specifier: ^4.1.0
         version: 4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
-        specifier: link:../../packages/server
-        version: link:../../packages/server
+        specifier: ^6.0.0
+        version: 6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(ai@7.0.58(zod@4.4.3))
       laikacms:
         specifier: link:../../packages/laikacms
         version: link:../../packages/laikacms
@@ -1614,6 +1612,15 @@ packages:
   '@jridgewell/trace-mapping@0.3.9':
     resolution: {integrity: sha512-3Belt6tdc8bPgAtbcmdtNJlirVoTmEb5e2gC94PnkwEW9jI6CAHUeoG85tjWP5WquqfavoMtMwiG4P926ZKKuQ==}
 
+  '@laikacms/astro@6.0.0':
+    resolution: {integrity: sha512-sZhmcf9dDHoM0VUmp2J0QzHwrgWjPlDTVfYu8mJeNjiLF/k9y78FDgHLk31FGfx+xGLX0hViGFi/sEoVFwoWLw==}
+    engines: {node: '>=24.0.0'}
+    peerDependencies:
+      astro: '>=7'
+    peerDependenciesMeta:
+      astro:
+        optional: true
+
   '@laikacms/decap-cms@4.1.0':
     resolution: {integrity: sha512-wdy/KThiLH6QDj8oJgJlarRbb5KdRO5rIkLCelPyYFv8x03lgpARAz/gCInUItL92CXruzQSWmt6gDoaOqaP+g==}
     engines: {node: '>=20.0.0'}
@@ -1649,6 +1656,36 @@ packages:
       uploadcare-widget-tab-effects:
         optional: true
       zod:
+        optional: true
+
+  '@laikacms/server@6.0.0':
+    resolution: {integrity: sha512-z/jTpa2DuYspVbKAkrrnKBLNFbTn/Vf0mEFXRcz8S7zyruP0bsd+izveRnOjRFQmOY5bkR1NUtTuu3fUeeyapQ==}
+    engines: {node: '>=22.0.0'}
+    peerDependencies:
+      '@ai-sdk/anthropic': ^4.0.16
+      '@ai-sdk/openai': ^4.0.16
+      ai: ^7.0.31
+    peerDependenciesMeta:
+      '@ai-sdk/anthropic':
+        optional: true
+      '@ai-sdk/openai':
+        optional: true
+      ai:
+        optional: true
+
+  '@laikacms/vite-plugin@6.0.0':
+    resolution: {integrity: sha512-assDZxYCxg8kZCmr0vgBTd+b48V6rMAbBAmnsbBpVM6Lx+XRJgYq8HoIHKaBhXb+nlbg+q7RtCGnafdMVx8ixg==}
+    engines: {node: '>=24.0.0'}
+    peerDependencies:
+      rolldown: '>=1'
+      typescript: '>=5'
+      vite: '>=8'
+    peerDependenciesMeta:
+      rolldown:
+        optional: true
+      typescript:
+        optional: true
+      vite:
         optional: true
 
   '@lexical/a11y@0.48.0':
@@ -2242,6 +2279,9 @@ packages:
   '@types/http-errors@2.0.5':
     resolution: {integrity: sha512-r8Tayk8HJnX0FztbZN7oVqGccWgw98T/0neJphO91KkmOzug1KkofZURD4UaD5uH8AqcFLfdPErnBod0u71/qg==}
 
+  '@types/json-schema@7.0.15':
+    resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
   '@types/linkify-it@5.0.0':
     resolution: {integrity: sha512-sVDA58zAw4eWAffKOaQH5/5j3XeayukzDk+ewSsnv3p4yJEZHCCzMDiZM8e0OUrRvmpGZ85jf4yDHkHsgBNr9Q==}
 
@@ -2683,6 +2723,9 @@ packages:
 
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
+
+  effect@4.0.0-beta.104:
+    resolution: {integrity: sha512-YSSaaMc8gBoHnabYXlgHpKVctsj4ezTSoojdd8SA3NWHoZ7LMPiUDhCnP1ZSOfQ7ly6P6XLhAw216NfLEHfg2A==}
 
   effect@4.0.0-beta.66:
     resolution: {integrity: sha512-4arEr62cziFa8BBVDUwJCJJmaVepXf/kRg7KtC0h8+bufngscrHbwWFhr9c+HonwOF+31U3iD3xUJmw9KzX7Dw==}
@@ -3359,6 +3402,9 @@ packages:
 
   msgpackr@1.12.1:
     resolution: {integrity: sha512-4EUH9tQHnMmEgzW/MdAP0KIfa1T9AF+htl0ffe2n5vb2EKn9y2co8ccpgWko6S52Jy1PQZKwRnx5/KkYjtd9MQ==}
+
+  msgpackr@2.1.0:
+    resolution: {integrity: sha512-p/pBCVO63CsvvpkomUnNNag6+n38rULuDA6HHe70o2gtC8ODI52foF/4ko2qQcp6OiErJXTmrZeXmsGGHsIQNQ==}
 
   muggle-string@0.4.1:
     resolution: {integrity: sha512-VNTrAak/KhO2i8dqqnqnAHOa3cYBwXEZe9h+D5h/1ZqFSTEFHdM65lR7RoIqq3tBBYavsOXV84NoHXZ0AkPyqQ==}
@@ -4043,6 +4089,10 @@ packages:
 
   uuid@13.0.2:
     resolution: {integrity: sha512-vzi9uRZ926x4XV73S/4qQaTwPXM2JBj6/6lI/byHH1jOpCzb0zDbfytgA9LcN/hzb2l7WQSQnxITOVx5un/wGw==}
+    hasBin: true
+
+  uuid@14.0.2:
+    resolution: {integrity: sha512-xZe/16rV4aa+HGSOCiY2YeLT1OybRLrrkL/Rqaq7p7GMVXjFh+6wN4oMYgjFmnSnhY8t6Xpdl2l9qmnHYuMHwQ==}
     hasBin: true
 
   vary@1.1.2:
@@ -5530,6 +5580,18 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.5
 
+  '@laikacms/astro@6.0.0(astro@7.2.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(tsx@4.23.11)(yaml@2.9.0))(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))':
+    dependencies:
+      '@laikacms/vite-plugin': 6.0.0(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))
+      '@types/json-schema': 7.0.15
+      laikacms: link:../packages/laikacms
+    optionalDependencies:
+      astro: 7.2.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(tsx@4.23.11)(yaml@2.9.0)
+    transitivePeerDependencies:
+      - rolldown
+      - typescript
+      - vite
+
   '@laikacms/decap-cms@4.1.0(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)':
     dependencies:
       '@ai-sdk/anthropic': 4.0.36(zod@4.4.3)
@@ -5627,6 +5689,26 @@ snapshots:
       - typescript
       - utf-8-validate
       - yjs
+
+  '@laikacms/server@6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(ai@7.0.58(zod@4.4.3))':
+    dependencies:
+      effect: 4.0.0-beta.104
+      laikacms: link:../packages/laikacms
+    optionalDependencies:
+      '@ai-sdk/anthropic': 4.0.36(zod@4.4.3)
+      '@ai-sdk/openai': 4.0.36(zod@4.4.3)
+      ai: 7.0.58(zod@4.4.3)
+
+  '@laikacms/vite-plugin@6.0.0(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))':
+    dependencies:
+      es-module-lexer: 2.3.1
+      laikacms: link:../packages/laikacms
+      magic-string: 1.1.0
+      minimatch: 10.2.6
+    optionalDependencies:
+      rolldown: 1.2.3
+      typescript: 6.0.3
+      vite: 8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0)
 
   '@lexical/a11y@0.48.0(typescript@6.0.3)':
     dependencies:
@@ -6257,6 +6339,8 @@ snapshots:
 
   '@types/http-errors@2.0.5': {}
 
+  '@types/json-schema@7.0.15': {}
+
   '@types/linkify-it@5.0.0': {}
 
   '@types/markdown-it@14.1.2':
@@ -6754,6 +6838,14 @@ snapshots:
       gopd: 1.2.0
 
   ee-first@1.1.1: {}
+
+  effect@4.0.0-beta.104:
+    dependencies:
+      '@standard-schema/spec': 1.1.0
+      fast-check: 4.9.0
+      kubernetes-types: 1.30.0
+      msgpackr: 2.1.0
+      uuid: 14.0.2
 
   effect@4.0.0-beta.66:
     dependencies:
@@ -7749,6 +7841,10 @@ snapshots:
     optionalDependencies:
       msgpackr-extract: 3.0.4
 
+  msgpackr@2.1.0:
+    optionalDependencies:
+      msgpackr-extract: 3.0.4
+
   muggle-string@0.4.1: {}
 
   multipasta@0.2.8: {}
@@ -8441,6 +8537,8 @@ snapshots:
       react: 19.2.8
 
   uuid@13.0.2: {}
+
+  uuid@14.0.2: {}
 
   vary@1.1.2: {}
 
