@@ -324,7 +324,7 @@ These are the things that consistently bite first-time integrators:
      'laikacms/storage-fs'`. Same for
      `laikacms/storage-api`, `laikacms/documents-api`, `laikacms/storage-serializers-*`, etc.
    - The Decap backend lives at `@laikacms/decap-cms/backends/laika` — a subpath of
-     `@laikacms/server`. Import `createLaikaBackend` from there.
+     `@laikacms/decap-cms`. Import `createLaikaBackend` from there.
 
 4. **`FileSystemStorageRepository` is Node-only.** It needs `node:fs` and a writable local
    filesystem, so it can't run in Workers/edge code. On the edge, construct an edge-compatible
