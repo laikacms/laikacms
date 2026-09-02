@@ -158,7 +158,7 @@ export default {
       const { documents } = await getOrCreate(env);
       try {
         const { items } = await collectStream(
-          documents.listRecordSummaries({
+          documents.listRecords({
             pagination: { page: 1, perPage: 100 },
             folder: 'posts',
             depth: 1,
@@ -167,11 +167,9 @@ export default {
         );
 
         const posts = items
-          .filter(r => r.type === 'published-summary')
+          .filter(r => r.type === 'published')
           .sort((a, b) => {
-            const aTime = 'updatedAt' in a && a.updatedAt ? a.updatedAt : '';
-            const bTime = 'updatedAt' in b && b.updatedAt ? b.updatedAt : '';
-            if (aTime && bTime) return bTime.localeCompare(aTime);
+            if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
             return b.key.localeCompare(a.key);
           });
 
@@ -180,10 +178,13 @@ export default {
           : `<ul style="list-style:none;padding:0">${
             posts.map(post => {
               const slug = post.key.replace(/^posts\//, '').replace(/\.md$/, '');
-              const time = 'updatedAt' in post && post.updatedAt
+              const title = typeof (post.content as Record<string, unknown>)?.['title'] === 'string'
+                ? (post.content as Record<string, unknown>)['title'] as string
+                : slug;
+              const time = post.updatedAt
                 ? ` · <time>${new Date(post.updatedAt).toLocaleDateString()}</time>`
                 : '';
-              return `<li style="margin-bottom:1.5rem"><a href="/blog/${slug}">${slug}</a>${time}</li>`;
+              return `<li style="margin-bottom:1.5rem"><a href="/blog/${slug}">${title}</a>${time}</li>`;
             }).join('')
           }</ul>`;
 

@@ -116,26 +116,40 @@ function PostPage({ slug }: { slug: string }) {
   );
 }
 
+interface PostSummary {
+  key: string,
+  title: string,
+}
+
 function HomePage() {
-  const [keys, setKeys] = useState<string[] | undefined>();
+  const [posts, setPosts] = useState<PostSummary[] | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [needsPermission, setNeedsPermission] = useState(false);
 
   const load = useCallback(() => {
-    LaikaStream.runPromiseCollect(getRepositories().documents.listRecordSummaries({
+    LaikaStream.runPromiseCollect(getRepositories().documents.listRecords({
       folder: POSTS_FOLDER,
       depth: 1,
       pagination: { perPage: 1000 },
       type: 'published',
     }))
       .then(({ data }) => {
-        setKeys(data.filter(record => record.type === 'published-summary').map(record => record.key));
+        setPosts(
+          data
+            .filter(record => record.type === 'published')
+            .map(record => ({
+              key: record.key,
+              title: typeof (record.content as Record<string, unknown>)?.['title'] === 'string'
+                ? (record.content as Record<string, unknown>)['title'] as string
+                : slugOf(record.key),
+            })),
+        );
       })
       .catch(async (err: unknown) => {
         // A missing posts/ folder just means nothing was written yet.
         const code = (err as { code?: string }).code;
         if (code === 'not_found') {
-          setKeys([]);
+          setPosts([]);
           return;
         }
         // Typed web-fs permission errors → offer the one-click recovery.
@@ -152,7 +166,7 @@ function HomePage() {
       <StorageBar needsPermission={needsPermission} />
       <h1>Blog</h1>
       {error && <p style={{ color: '#b91c1c' }}>{error}</p>}
-      {keys && keys.length === 0 && (
+      {posts && posts.length === 0 && (
         <p>
           No posts yet. <a href="/admin/">Open the CMS</a> and create one — it is stored
           {currentMode() === 'opfs'
@@ -160,11 +174,11 @@ function HomePage() {
             : ' as real files in your picked folder.'}
         </p>
       )}
-      {keys && keys.length > 0 && (
+      {posts && posts.length > 0 && (
         <ul>
-          {keys.map(key => (
+          {posts.map(({ key, title }) => (
             <li key={key}>
-              <a href={`#/post/${slugOf(key)}`}>{slugOf(key)}</a>
+              <a href={`#/post/${slugOf(key)}`}>{title}</a>
             </li>
           ))}
         </ul>
