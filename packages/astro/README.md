@@ -299,6 +299,34 @@ laika({ dir: 'content', api: { mode: 'route', basePath: '/api/laika', access: 'p
 `access` is `'published'` (reads of published content only), `'read'` (adds drafts and revisions) or
 `'all'` (adds writes). The route needs an adapter and `output: 'server'`.
 
+> **Constraint:** `api.mode: 'route'` only works with the `dir` / `catalog` options — it builds its
+> own repositories inside the SSR bundle. If you pass a `repositories` or `storage` instance
+> (constructed outside the bundle in `astro.config`), the integration throws at build time because
+> the live object cannot cross the SSR bundle boundary.
+
+### Custom repositories — `@laikacms/astro/api`
+
+When `mode: 'route'` is too limited (e.g. you already have a custom `LaikaRepositories` object),
+write the four-line route yourself using `createApiHandler` from `@laikacms/astro/api`:
+
+```ts
+// src/pages/api/laika/[...path].ts
+import { createApiHandler } from '@laikacms/astro/api';
+import { repositories } from '../../lib/laika'; // your LaikaRepositories instance
+
+const handler = createApiHandler({
+  repositories,
+  basePath: '/api/laika',
+  access: 'published', // 'published' | 'read' | 'all'
+});
+
+export const prerender = false;
+export const ALL = ({ request }: { request: Request }) => handler(request);
+```
+
+`createApiHandler` assembles the documents, storage, and assets sub-APIs under `basePath` with a
+single `access` policy. It accepts the same `access` values as `mode: 'route'`.
+
 ## Documentation
 
 See the [package reference](https://laikacms.com/docs/reference/packages/astro/).
