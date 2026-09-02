@@ -14,13 +14,13 @@ generates `src/cms.ts` from that selection. Flags `--starter`, `--backends`, `--
 
 ## The six starters
 
-| Starter                                                                                                         | Demonstrates                                          |
-| --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------- |
-| [`starter-vite-react-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-vite-react-blog) | Client-side content wiring                            |
-| [`starter-hono-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-hono-blog)             | Secure-by-default `decap-api` proxy (server, default) |
-| [`starter-workers-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-workers-blog)       | Runtime-agnostic Cloudflare edge deploy               |
-| [`starter-astro-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-astro-blog)           | Build-time via `@laikacms/astro` Content Layer        |
-| [`starter-github-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-github-blog)         | DB-free, git-backed collections                       |
+| Starter                                                                                                         | Demonstrates                                              |
+| --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
+| [`starter-vite-react-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-vite-react-blog) | Client-side content wiring                                |
+| [`starter-hono-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-hono-blog)             | Secure-by-default `decap-api` proxy (server, default)     |
+| [`starter-workers-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-workers-blog)       | Runtime-agnostic Cloudflare edge deploy                   |
+| [`starter-astro-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-astro-blog)           | Build-time via `@laikacms/astro` Content Layer            |
+| [`starter-github-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-github-blog)         | DB-free, git-backed collections                           |
 | [`starter-opfs-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-opfs-blog)             | Serverless in-browser storage via OPFS / `storage/web-fs` |
 
 See [`starters/README.md`](https://github.com/laikacms/laikacms/blob/develop/starters/README.md) for
