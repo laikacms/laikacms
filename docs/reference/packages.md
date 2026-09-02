@@ -208,12 +208,14 @@ The Astro integration. Content reaches pages through Astro's own Content Layer �
 `getEntry`, `render`, Zod schemas — rather than the `laika:` protocol, so `render(entry)` produces
 real HTML and collections get the incremental content store for free.
 
-| Subpath                   | Contents                                                               |
-| ------------------------- | ---------------------------------------------------------------------- |
-| `@laikacms/astro`         | the `laika()` integration: dev JSON:API, content hot-refresh, types    |
-| `@laikacms/astro/loader`  | `documentsLoader()`, `objectsLoader()`, `laikaCollections()`           |
-| `@laikacms/astro/live`    | `liveDocumentsLoader()` for `defineLiveCollection()` and draft preview |
-| `@laikacms/astro/testing` | a fake `LoaderContext` for testing loaders without booting Astro       |
+| Subpath                            | Contents                                                                                      |
+| ---------------------------------- | --------------------------------------------------------------------------------------------- |
+| `@laikacms/astro`                  | the `laika()` integration: dev JSON:API, content hot-refresh, types                           |
+| `@laikacms/astro/loader`           | `documentsLoader()`, `objectsLoader()`, `laikaCollections()`                                  |
+| `@laikacms/astro/live`             | `liveDocumentsLoader()` for `defineLiveCollection()` and draft preview                        |
+| `@laikacms/astro/api`              | `createApiHandler`, `authorizersFor` — deploy the Laika API from an Astro route               |
+| `@laikacms/astro/live-collections` | `LaikaLiveCollections` interface — module-augmentation target for live collection entry types |
+| `@laikacms/astro/testing`          | a fake `LoaderContext` for testing loaders without booting Astro                              |
 
 Sync is incremental and capability-driven: a change feed when the repository has one, version tokens
 when it tracks them, and a content digest otherwise — so it works on every backend without
