@@ -180,16 +180,17 @@ widgets (`@apollo/client`, `graphql`, `ol`, `uploadcare-widget`, `lucide-react`,
 
 ### Key subpaths
 
-| Subpath                            | Used by                                                 |
-| ---------------------------------- | ------------------------------------------------------- |
-| `@laikacms/decap-cms/core`         | Core CMS bootstrap                                      |
-| `@laikacms/decap-cms/lib/util`     | Internal utilities consumed by the Laika backend        |
-| `@laikacms/decap-cms/lib/auth`     | Auth primitives consumed by the Laika backend           |
-| `@laikacms/decap-cms/ui-default`   | Default editor UI (bundled into `admin/bundle.js`)      |
-| `@laikacms/decap-cms/laika-app`    | Full Laika-wired admin app (alternative to root export) |
-| `@laikacms/decap-cms/config-types` | TypeScript types for `config.yml` / `config.json`       |
-| `@laikacms/decap-cms/locales/*`    | Locale bundles (e.g. `./locales/nl`, `./locales/en`)    |
-| `@laikacms/decap-cms/widgets/*`    | Extra widgets (aichat, lucide-icon, radix-icon, …)      |
+| Subpath                              | Used by                                                                                                                         |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| `@laikacms/decap-cms/core`           | Core CMS bootstrap                                                                                                              |
+| `@laikacms/decap-cms/lib/util`       | Internal utilities consumed by the Laika backend                                                                                |
+| `@laikacms/decap-cms/lib/auth`       | Auth primitives consumed by the Laika backend                                                                                   |
+| `@laikacms/decap-cms/ui-default`     | Default editor UI (bundled into `admin/bundle.js`)                                                                              |
+| `@laikacms/decap-cms/laika-app`      | Full Laika-wired admin app (alternative to root export)                                                                         |
+| `@laikacms/decap-cms/laika-app/bare` | Bare (no pre-registered backend/widgets) Laika app — manual `CMS.register*` only; used by all curated starters for lean bundles |
+| `@laikacms/decap-cms/config-types`   | TypeScript types for `config.yml` / `config.json`                                                                               |
+| `@laikacms/decap-cms/locales/*`      | Locale bundles (e.g. `./locales/nl`, `./locales/en`)                                                                            |
+| `@laikacms/decap-cms/widgets/*`      | Extra widgets (aichat, lucide-icon, radix-icon, …)                                                                              |
 
 ## `@laikacms/vite-plugin`
 

@@ -21,6 +21,34 @@ Without it the esbuild step will fail with "Could not resolve" errors. `@emotion
 `@emotion/styled` are required (non-optional) peer dependencies of `@laikacms/decap-cms` — the admin
 shell is styled with Emotion.
 
+### Root import vs `laika-app/bare`
+
+`@laikacms/decap-cms` ships two entry points for the admin app:
+
+| Entry point                          | Bundle includes                                       | When to use                                                               |
+| ------------------------------------ | ----------------------------------------------------- | ------------------------------------------------------------------------- |
+| `@laikacms/decap-cms` (root)         | All built-in widgets, backend, locales pre-registered | Quick setup; you just call `CMS.init()`                                   |
+| `@laikacms/decap-cms/laika-app/bare` | Nothing pre-registered                                | Only register what you use — smaller bundle; used by all curated starters |
+
+The bare entry requires explicit `CMS.registerBackend(...)` and `CMS.registerWidget(...)` calls:
+
+```typescript
+// admin/index.ts (bare approach — used by all starters)
+import createLaikaBackend from '@laikacms/decap-cms/backends/laika';
+import { CMS, init } from '@laikacms/decap-cms/laika-app/bare';
+import en from '@laikacms/decap-cms/locales/en';
+import DecapCmsWidgetString from '@laikacms/decap-cms/widgets/string';
+
+CMS.registerLocale('en', en);
+CMS.registerBackend('laika', createLaikaBackend());
+CMS.registerWidget(DecapCmsWidgetString.Widget());
+// register only the widgets your collections actually use
+
+init({ config: {/* ... */} });
+```
+
+The root-import approach shown below is simpler but includes all widgets regardless of use:
+
 ### Create the admin entry point
 
 ```typescript
