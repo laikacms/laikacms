@@ -129,6 +129,130 @@ repository advertises through `getCapabilities()`, and degrades cleanly when it 
 `sync.strategy` defaults to `'auto'`. The filesystem path lands on `digest`; in dev, edits skip the
 listing entirely because the integration pushes changed keys straight into the refresh.
 
+## `documentsLoader()` options
+
+### `select` — filter documents
+
+| Option              | Type                                   | Default             | Description                                                                              |
+| ------------------- | -------------------------------------- | ------------------- | ---------------------------------------------------------------------------------------- |
+| `select.folder`     | `string`                               | —                   | Sub-folder inside the collection. Omit to read the whole collection.                     |
+| `select.depth`      | `number`                               | `64`                | How many levels below the folder to descend.                                             |
+| `select.type`       | `'published' \| 'unpublished'`         | `'published'`       | Which publication state to read. Set to `'unpublished'` for draft preview at build time. |
+| `select.statuses`   | `string[]`                             | —                   | Restrict to these unpublished statuses. Only meaningful with `type: 'unpublished'`.      |
+| `select.language`   | `string`                               | —                   | Keep only documents in this language.                                                    |
+| `select.pagination` | `{ page?, perPage?, offset?, limit? }` | `{ perPage: 1000 }` | Page size used while draining the listing.                                               |
+
+```ts
+// Build-time draft preview: read unpublished documents in a sub-folder
+drafts: defineCollection({
+  loader: documentsLoader({
+    dir: 'content',
+    select: {
+      folder: 'posts/drafts',
+      type: 'unpublished',
+      statuses: ['draft', 'review'],
+    },
+  }),
+});
+```
+
+### `render` — control how the body field becomes `entry.body` and `entry.rendered`
+
+| Option              | Type                                                | Default      | Description                                                                                                                                                          |
+| ------------------- | --------------------------------------------------- | ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `render.mode`       | `'markdown' \| 'none' \| 'deferred'`                | `'markdown'` | How the body field is rendered. `'deferred'` is the only route to MDX and custom remark/rehype plugins — it requires `render.filePath` and a file-backed repository. |
+| `render.bodyField`  | `string`                                            | `'body'`     | Which content field holds the prose.                                                                                                                                 |
+| `render.retainBody` | `boolean`                                           | `true`       | Keep the raw body string on `entry.body`.                                                                                                                            |
+| `render.filePath`   | `(ctx: { key, collection }) => string \| undefined` | —            | Resolve a Laika key to an on-disk path, required for `mode: 'deferred'`.                                                                                             |
+
+```ts
+// MDX + custom plugins via deferred rendering
+posts: defineCollection({
+  loader: documentsLoader({
+    dir: 'content',
+    defaultExtension: 'mdx',
+    render: {
+      mode: 'deferred',
+      filePath: ({ key }) => `./content/${key}.mdx`,
+    },
+  }),
+});
+```
+
+### `entry` — control how Laika keys become Astro entry ids
+
+| Option               | Type                                   | Default                 | Description                                                        |
+| -------------------- | -------------------------------------- | ----------------------- | ------------------------------------------------------------------ |
+| `entry.id`           | `(ctx: { key, collection }) => string` | strip collection prefix | Derive the Astro entry id from a Laika key.                        |
+| `entry.keyField`     | `string`                               | —                       | Copy the full Laika key into `entry.data` under this name.         |
+| `entry.versionField` | `string`                               | —                       | Copy the record's version token into `entry.data` under this name. |
+
+### `sync` — choose the incremental sync tier
+
+See [Incremental sync](#incremental-sync) for how tiers work.
+
+| Option          | Type                                                        | Default        | Description                                                                           |
+| --------------- | ----------------------------------------------------------- | -------------- | ------------------------------------------------------------------------------------- |
+| `sync.strategy` | `'auto' \| 'changes' \| 'versions' \| 'digest' \| 'reload'` | `'auto'`       | Force a specific tier instead of auto-selecting the best available.                   |
+| `sync.scope`    | `'collection' \| 'store'`                                   | `'collection'` | Whether the sync token is scoped to this collection or shared across the whole store. |
+
+### `name` — loader identity for `refreshContent`
+
+```ts
+documentsLoader({ dir: 'content', name: 'my-posts' });
+// Then: Astro.locals.refreshContent({ loaders: ['my-posts'] })
+```
+
+Default: `'laikacms'`.
+
+---
+
+## `objectsLoader()` options
+
+`objectsLoader()` reads storage objects — site settings, navigation trees, config rows — that have
+no publication state, no status, and no language. Its option set is narrower than
+`documentsLoader()`.
+
+```ts
+// src/content.config.ts
+import { objectsLoader } from '@laikacms/astro/loader';
+
+export const collections = {
+  settings: defineCollection({
+    loader: objectsLoader({
+      dir: 'content',
+      select: { folder: 'site-settings' },
+    }),
+  }),
+};
+```
+
+### `select`
+
+| Option              | Type                                   | Default               | Description                                                                                                                                        |
+| ------------------- | -------------------------------------- | --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `select.folder`     | `string`                               | Astro collection name | The storage folder to read. Must be set explicitly when schema derivation (`z`) is used — the collection name is not available before `load` runs. |
+| `select.depth`      | `number`                               | `64`                  | How many levels below the folder to descend.                                                                                                       |
+| `select.pagination` | `{ page?, perPage?, offset?, limit? }` | `{ perPage: 1000 }`   | Page size used while draining the listing.                                                                                                         |
+
+### `render`
+
+Same options as `documentsLoader()`. Objects rarely have a prose body field, but `render.bodyField`
+lets you name one if they do.
+
+| Option              | Type                                 | Default      |
+| ------------------- | ------------------------------------ | ------------ |
+| `render.mode`       | `'markdown' \| 'none' \| 'deferred'` | `'markdown'` |
+| `render.bodyField`  | `string`                             | `'body'`     |
+| `render.retainBody` | `boolean`                            | `true`       |
+| `render.filePath`   | `(ctx) => string \| undefined`       | —            |
+
+### `name`
+
+Loader name for `refreshContent({ loaders })`. Defaults to `'laikacms:objects'`.
+
+---
+
 ## Live collections
 
 Live collections read per request instead of per build, enabling draft preview without a rebuild.
