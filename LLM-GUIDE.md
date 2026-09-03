@@ -74,6 +74,7 @@ const laika = laikaApi({
   assets,
   basePath: '/api/decap',
   authenticateAccessToken: yourValidator, // throw to reject; see task (e) for production auth
+  authorize: () => true, // allow every authenticated principal; tighten in production (see task e)
 });
 
 // Serve the Decap CMS admin bundle (built by esbuild — see docs/guides/decap/admin-shell.md → "Serving the Decap admin shell"):
@@ -176,6 +177,7 @@ const makeLaika = (env: Env) => {
     assets: new CatalogAssetsRepository(storage, settings),
     basePath: '/api/decap',
     authenticateAccessToken: yourValidator,
+    authorize: () => true, // allow every authenticated principal; tighten in production (see task e)
   });
 };
 
@@ -232,6 +234,7 @@ const laika = laikaApi({
       name: payload.name as string,
     };
   },
+  authorize: () => true, // every JWT-authenticated user is an editor; restrict further if needed
 });
 ```
 
