@@ -12,7 +12,15 @@ import { fileURLToPath } from 'node:url';
 const rootDir = join(dirname(fileURLToPath(import.meta.url)), '..');
 const outDir = join(rootDir, 'sbom');
 
-const packages = ['laikacms', '@laikacms/server', '@laikacms/vite-plugin', '@laikacms/astro'];
+const packages = [
+  'laikacms',
+  '@laikacms/server',
+  '@laikacms/vite-plugin',
+  '@laikacms/astro',
+  '@laikacms/github',
+  '@laikacms/gitlab',
+  '@laikacms/bitbucket',
+];
 
 mkdirSync(outDir, { recursive: true });
 
