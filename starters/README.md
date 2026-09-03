@@ -89,10 +89,10 @@ workspace-protocol dependency.
 > `@laikacms/decap-cms/laika-app/bare` instead of the not-yet-published `app/bare` (TODO in its
 > `src/cms.ts`).
 >
-> `starter-github-blog` currently cannot install at all: `@laikacms/github` is pinned to the
-> workspace version (1.0.3) but the npm registry stopped at 1.0.0 — the version-sync machinery
-> compares against workspace versions, so it can't catch a missed publish. It is excluded from
-> [`pnpm-workspace.yaml`](./pnpm-workspace.yaml) until a release publishes the package.
+> `starter-github-blog` is included in [`pnpm-workspace.yaml`](./pnpm-workspace.yaml) via the
+> `starter-*` glob with a temporary `link:../packages/github` override — `@laikacms/github` is at
+> 2.0.0 in this workspace but the npm registry still has 1.0.0. Build `@laikacms/github` first
+> (`pnpm -C .. --filter @laikacms/github build`) before running `pnpm install` in this directory.
 >
 > CI validation (build each starter against the local library build via a dependency override)
 > lands with that migration.
