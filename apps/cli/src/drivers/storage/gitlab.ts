@@ -51,7 +51,7 @@ const readOptions = (raw: Record<string, unknown>): GitlabOptions => {
 export const gitlabDriver: StorageDriver = {
   name: 'gitlab',
   packageName: '@laikacms/gitlab',
-  version: '1.0.2',
+  version: '2.0.0',
   subpath: 'storage-gl',
   description: 'GitLab project (commits per write, via PAT/OAuth/CI job token)',
   build(raw, mod) {
