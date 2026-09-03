@@ -2,7 +2,6 @@ import { serve } from '@hono/node-server';
 import { serveStatic } from '@hono/node-server/serve-static';
 import { Hono } from 'hono';
 import { collectStream, runTask } from 'laikacms/compat';
-import type { RecordSummary } from 'laikacms/documents';
 
 import { laika } from './laika.js';
 
@@ -13,8 +12,8 @@ app.all('/api/decap/*', c => laika.fetch(c.req.raw));
 
 // Blog index
 app.get('/', async c => {
-  const { items } = await collectStream(
-    laika.documents.listRecordSummaries({
+  const { items: records } = await collectStream(
+    laika.documents.listRecords({
       pagination: { page: 1, perPage: 100 },
       folder: 'posts',
       depth: 1,
@@ -22,8 +21,8 @@ app.get('/', async c => {
     }),
   );
 
-  const posts = (items as RecordSummary[])
-    .filter(r => r.type === 'published-summary')
+  const posts = records
+    .filter(r => r.type === 'published')
     .sort((a, b) => {
       if (a.updatedAt && b.updatedAt) return b.updatedAt.localeCompare(a.updatedAt);
       return b.key.localeCompare(a.key);
@@ -31,11 +30,14 @@ app.get('/', async c => {
 
   const listItems = posts
     .map(post => {
-      const slug = post.key.replace(/^posts\//, '').replace(/\.md$/, '');
+      const slug = post.key.replace(/^posts\//, '').replace(/\.[^.]+$/, '');
+      const title = typeof (post.content as Record<string, unknown>)?.['title'] === 'string'
+        ? (post.content as Record<string, unknown>)['title'] as string
+        : slug;
       const date = post.updatedAt
         ? ` · <time>${new Date(post.updatedAt).toLocaleDateString()}</time>`
         : '';
-      return `<li style="margin-bottom:1rem"><a href="/blog/${slug}">${slug}</a>${date}</li>`;
+      return `<li style="margin-bottom:1rem"><a href="/blog/${slug}">${title}</a>${date}</li>`;
     })
     .join('\n      ');
 
