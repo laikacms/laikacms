@@ -1,3 +1,4 @@
+export { Octokit } from '@octokit/rest';
 export { GithubDataSource } from './github-datasource.js';
 export type { GithubDataSourceOptions } from './github-datasource.js';
 export { GithubStorageRepository } from './github-storage-repository.js';

@@ -119,10 +119,17 @@ Copies every atom (folder + object) from one storage repository to another. Thre
 laika local migrate -s ./content -d ./backup
 
 # Named backends (cross-backend: fs → github, webdav → s3, etc.)
+# PAT / fine-grained token:
 laika local migrate \
   --source-backend fs --source-options '{"root":"./content"}' \
   --destination-backend github \
   --destination-options '{"owner":"acme","repo":"content","branch":"main","token":"ghp_..."}'
+
+# GitHub App credentials (appId + privateKeyPath + installationId):
+laika local migrate \
+  --source-backend fs --source-options '{"root":"./content"}' \
+  --destination-backend github \
+  --destination-options '{"appId":"123","privateKeyPath":"/path/to/app.pem","installationId":"456","owner":"acme","repo":"content","branch":"main"}'
 
 # Config file
 laika local migrate --config migrate.yaml
