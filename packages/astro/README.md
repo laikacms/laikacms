@@ -284,6 +284,31 @@ Default tags: `['laika', 'laika:<collection>', 'laika:<key>']`. `lastModified` i
 entry's `updatedAt` when present; set `lastModified: false` to suppress it. The `LiveCacheOptions`
 type is exported from `@laikacms/astro/live`.
 
+## `laika()` options
+
+| Option    | Type                             | Default | Description                                                                              |
+| --------- | -------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
+| `refresh` | `boolean \| LaikaRefreshOptions` | `true`  | Refresh content loaders when the repository emits a change. `false` disables hot-reload. |
+| `types`   | `boolean`                        | `true`  | Emit `.astro/integrations/@laikacms-astro/types.d.ts`. `false` skips it.                 |
+
+When `refresh` is an object, two sub-options control the behaviour:
+
+| Option               | Type       | Default | Description                                                          |
+| -------------------- | ---------- | ------- | -------------------------------------------------------------------- |
+| `refresh.loaders`    | `string[]` | —       | Which loaders to refresh. Defaults to every registered loader.       |
+| `refresh.debounceMs` | `number`   | `50`    | How long to coalesce a burst of changes before triggering a refresh. |
+
+```js
+// Disable hot-reload — useful when you have a custom watch setup
+laika({ dir: 'content', refresh: false });
+
+// Scope refresh to a specific loader and widen the debounce window
+laika({ dir: 'content', refresh: { loaders: ['my-posts'], debounceMs: 200 } });
+
+// Skip type declaration emission into .astro/
+laika({ dir: 'content', types: false });
+```
+
 ## Serving the API
 
 While `astro dev` runs, the integration mounts Laika's JSON:API at `/__laika` so the Decap admin can
