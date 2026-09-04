@@ -11,10 +11,10 @@ Cloudflare Workers or AWS Lambda deployments see [deployment](../deployment).
 
 ## Prerequisites
 
-| Requirement | Version                   |
-| ----------- | ------------------------- |
-| Node.js     | ≥ 22 (22 LTS or 24 LTS)   |
-| npm or pnpm | any recent                |
+| Requirement | Version                 |
+| ----------- | ----------------------- |
+| Node.js     | ≥ 22 (22 LTS or 24 LTS) |
+| npm or pnpm | any recent              |
 
 ---
 

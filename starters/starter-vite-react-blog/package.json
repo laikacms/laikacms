@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
-    "dev": "pnpm build:admin && tsx watch src/server.tsx",
-    "build": "pnpm build:admin",
+    "dev": "npm run build:admin && tsx watch src/server.tsx",
+    "build": "npm run build:admin",
     "start": "tsx src/server.tsx",
     "typecheck": "tsc --noEmit"
   },
