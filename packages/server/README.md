@@ -53,10 +53,12 @@ object. It is Node.js-only — for edge runtimes (Cloudflare Workers, Deno Deplo
 import { resolve } from 'node:path';
 import { createEmbeddedLaika } from '@laikacms/server/embedded';
 
+// Development: any request with Authorization: Bearer dev-local-laika-token is accepted.
+// Override the token with `devToken` if the default clashes with another service.
 export const laika = createEmbeddedLaika({
   contentDir: resolve(process.cwd(), 'content'),
   basePath: '/api/decap',
-  auth: { mode: 'dev' }, // accepts DEFAULT_DEV_TOKEN; use mode: 'token' in production
+  auth: { mode: 'dev', devToken: 'my-local-token' }, // devToken is optional; defaults to DEFAULT_DEV_TOKEN
   decapConfig: {
     backend: { name: 'laika', api_root: '/api/decap' },
     media_folder: 'public/uploads',
@@ -67,6 +69,25 @@ export const laika = createEmbeddedLaika({
 
 // Await before starting the server so laika.documents.* is safe on first boot.
 await laika.ensureReady();
+```
+
+For production, switch to `mode: 'token'` and provide an `authenticate` callback — the callback
+receives the raw Bearer token and must return a `User` or throw to reject:
+
+```ts
+export const laika = createEmbeddedLaika({
+  contentDir: resolve(process.cwd(), 'content'),
+  basePath: '/api/decap',
+  auth: {
+    mode: 'token',
+    authenticate: async token => {
+      const session = await db.sessions.findByToken(token);
+      if (!session) throw new Error('Unauthorized');
+      return { id: session.userId, email: session.email };
+    },
+  },
+  decapConfig: { ... },
+});
 ```
 
 `laika.fetch` handles all `/api/decap/*` requests. `laika.documents` / `laika.storage` /
