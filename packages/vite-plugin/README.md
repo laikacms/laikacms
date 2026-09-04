@@ -277,12 +277,12 @@ laikacms({
 });
 ```
 
-…or supply both repositories yourself:
+…or derive all three repositories from your storage instance:
 
 ```ts
 import { createRepositories } from '@laikacms/vite-plugin';
 
-laikacms({ repositories: { storage, documents } });
+laikacms({ repositories: createRepositories(storage) });
 ```
 
 ## License
