@@ -123,8 +123,9 @@ app passwords, `Bearer <token>` for OAuth), so misconfiguration surfaces early.
   optimistic-concurrency on update — Bitbucket's commit endpoint doesn't accept an `If-Match`
   parallel.
 - **Pagination.** `next`-URL drained to completion, then in-memory `offset`/`page` styles applied.
-- **Errors.** 401 → `AuthenticationError`, 403 → `ForbiddenError`, 404 → `NotFoundError`, 429 →
-  `TooManyRequestsError`, 5xx → `ServiceUnavailableError`.
+- **Errors.** 401 → `UpstreamUnAuthorizedError` (Bitbucket is an upstream, so a rejected credential
+  surfaces as `UpstreamUnAuthorizedError`, not `AuthenticationError`), 403 → `ForbiddenError`, 404 →
+  `NotFoundError`, 429 → `TooManyRequestsError`, 5xx → `ServiceUnavailableError`.
 
 ### What this does not do
 
