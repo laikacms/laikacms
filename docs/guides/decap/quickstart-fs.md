@@ -13,7 +13,7 @@ Cloudflare Workers or AWS Lambda deployments see [deployment](../deployment).
 
 | Requirement | Version                   |
 | ----------- | ------------------------- |
-| Node.js     | ≥ 24 (24 LTS recommended) |
+| Node.js     | ≥ 22 (22 LTS or 24 LTS)   |
 | npm or pnpm | any recent                |
 
 ---
@@ -385,7 +385,7 @@ Open `http://localhost:5000` (or wherever `serve` binds) to access the Decap CMS
 ## 6. Production deployment
 
 The `laikaApi` server is a standard Node.js process and can be deployed anywhere that supports
-Node.js 24 or later.
+Node.js 22 or later.
 
 ### Key requirement
 
@@ -431,7 +431,7 @@ fly deploy
 ### Docker
 
 ```dockerfile
-FROM node:24-alpine
+FROM node:22-alpine
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
