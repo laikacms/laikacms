@@ -57,5 +57,5 @@ Blog routes call `laika.documents.listRecordSummaries` / `getDocument` directly 
 
 - **Collections** — edit `src/decap-config.ts`.
 - **Port** — set the `PORT` environment variable (default: `3000`).
-- **Auth** — change `auth: { mode: 'bearer', token: process.env.ADMIN_TOKEN }` in `src/laika.ts`.
+- **Auth** — change `auth: { mode: 'token', authenticate: async token => { if (token !== process.env.ADMIN_TOKEN) throw new Error('Unauthorized'); return { id: 'admin', email: 'admin@example.com' }; } }` in `src/laika.ts`.
 - **Hydration** — swap `renderToStaticMarkup` for `renderToString` + client `hydrateRoot` and pass server data via a `<script>` tag.
