@@ -25,7 +25,7 @@ generates the app's `src/cms.ts` from that selection (flags `--backends`/`--widg
 
 | Starter | Docs section | Demonstrates |
 | --- | --- | --- |
-| [`starter-vite-react-blog`](./starter-vite-react-blog) | Client | client-side content wiring |
+| [`starter-vite-react-blog`](./starter-vite-react-blog) | Server → bare Node.js | SSR with bare Express + React, no meta-framework |
 | [`starter-opfs-blog`](./starter-opfs-blog) | Client → local-first | serverless in-browser storage: OPFS or a picked local folder (`storage/web-fs`) |
 | [`starter-hono-blog`](./starter-hono-blog) | Server (default) | secure-by-default `decap-api` proxy |
 | [`starter-workers-blog`](./starter-workers-blog) | Server → edge | runtime-agnostic Cloudflare deploy |
