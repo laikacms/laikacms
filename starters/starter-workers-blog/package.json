@@ -6,9 +6,9 @@
   "type": "module",
   "scripts": {
     "build:admin": "esbuild src/admin-client.ts --bundle --outfile=public/admin/bundle.js --format=esm --platform=browser",
-    "dev": "pnpm build:admin && wrangler dev",
-    "build": "pnpm build:admin",
-    "deploy": "pnpm build:admin && wrangler deploy",
+    "dev": "npm run build:admin && wrangler dev",
+    "build": "npm run build:admin",
+    "deploy": "npm run build:admin && wrangler deploy",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
