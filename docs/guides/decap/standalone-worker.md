@@ -25,6 +25,7 @@ app.all('/api/decap/*', async c => {
     assets: new CatalogAssetsRepository(storage, settings),
     basePath: '/api/decap',
     authenticateAccessToken: yourValidator,
+    authorize: () => true,
   });
   return api.fetch(c.req.raw);
 });
@@ -174,6 +175,7 @@ const api = laikaApi({
   assets: new CatalogAssetsRepository(storage, settings),
   basePath: '/api/decap',
   authenticateAccessToken: yourValidator,
+  authorize: () => true,
 });
 
 export const laika = api;
