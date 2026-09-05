@@ -16,7 +16,7 @@ generates `src/cms.ts` from that selection. Flags `--starter`, `--backends`, `--
 
 | Starter                                                                                                         | Demonstrates                                              |
 | --------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| [`starter-vite-react-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-vite-react-blog) | Client-side content wiring                                |
+| [`starter-vite-react-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-vite-react-blog) | Server — SSR with bare Express + React, no meta-framework |
 | [`starter-hono-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-hono-blog)             | Secure-by-default `decap-api` proxy (server, default)     |
 | [`starter-workers-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-workers-blog)       | Runtime-agnostic Cloudflare edge deploy                   |
 | [`starter-astro-blog`](https://github.com/laikacms/laikacms/tree/develop/starters/starter-astro-blog)           | Build-time via `@laikacms/astro` Content Layer            |
