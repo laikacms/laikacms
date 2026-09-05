@@ -242,6 +242,7 @@ const api = laikaApi({
   documents,
   storage,
   authenticateAccessToken: yourValidator,
+  authorize: () => true,
   logger: console, // or a structured logger such as pino / winston
 });
 ```

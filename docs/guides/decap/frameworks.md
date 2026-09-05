@@ -463,6 +463,7 @@ export const laika = laikaApi({
   assets: new CatalogAssetsRepository(storage, settings),
   basePath: '/api/decap',
   authenticateAccessToken: yourValidator,
+  authorize: () => true,
 });
 ```
 
