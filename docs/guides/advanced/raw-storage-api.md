@@ -83,6 +83,7 @@ write runs.
 ## Cloudflare Workers
 
 ```typescript
+import { allowAll } from 'laikacms/json-api';
 import { buildJsonApi } from 'laikacms/storage-api';
 import { R2StorageRepository } from 'laikacms/storage-r2';
 import { rawSerializer } from 'laikacms/storage-serializers-raw';
