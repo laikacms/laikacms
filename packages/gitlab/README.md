@@ -64,10 +64,11 @@ new GitlabStorageRepository({
 
 ### Extra auth headers
 
-`auth.headers` are merged into every request, on top of whatever header the chosen auth method
-(`token`/`oauthToken`/`jobToken`) sets. Defaults to none. Useful for GitLab instances behind a
-reverse proxy that requires its own header (e.g. an internal gateway token) alongside your normal
-GitLab credentials:
+`auth.headers` are merged into every request alongside the auth-method header. The extra headers
+are applied first; the auth-method header (`PRIVATE-TOKEN`, `Authorization`, or `JOB-TOKEN`) is
+always written after them, so you cannot accidentally override credentials via `auth.headers`.
+Defaults to none. Useful for GitLab instances behind a reverse proxy that requires its own header
+(e.g. an internal gateway token) alongside your normal GitLab credentials:
 
 ```ts
 new GitlabStorageRepository({
