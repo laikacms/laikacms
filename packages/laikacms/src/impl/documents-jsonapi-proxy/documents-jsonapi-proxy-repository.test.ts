@@ -786,6 +786,148 @@ describe('DocumentsJsonApiProxyRepository.createRevision', () => {
   });
 });
 
+describe('DocumentsJsonApiProxyRepository.applyOperations', () => {
+  it('POSTs a single /operations request for a multi-op batch and returns per-op results in order', async () => {
+    let capturedUrl = '';
+    let capturedInit: RequestInit | undefined;
+    const fetchMock = vi.fn(async (url: string | URL, init: RequestInit) => {
+      capturedUrl = String(url);
+      capturedInit = init;
+      return jsonResponse({
+        results: [
+          { data: unpublishedDoc('drafts/new', 'draft') },
+          { data: publishedDoc('posts/hello') },
+          { meta: { deleted: true, ref: { id: 'drafts/old', type: 'unpublished' } } },
+        ],
+      });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const results = await LaikaTask.runPromise(
+      proxy.applyOperations([
+        {
+          kind: 'createUnpublished',
+          create: { key: 'drafts/new', type: 'unpublished', status: 'draft', language: 'en', content: {} },
+        },
+        { kind: 'publish', key: 'drafts/hello' },
+        { kind: 'deleteUnpublished', key: 'drafts/old' },
+      ]),
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(capturedUrl).toContain('/operations');
+    expect(capturedInit?.method).toBe('POST');
+
+    const body = parseBody(capturedInit?.body);
+    expect(body.operations).toHaveLength(3);
+    expect(body.operations[0]).toMatchObject({ op: 'add', data: { type: 'unpublished' } });
+    expect(body.operations[1]).toMatchObject({
+      op: 'update',
+      href: '/publish',
+      ref: { id: 'drafts/hello', type: 'unpublished' },
+    });
+    expect(body.operations[2]).toMatchObject({ op: 'remove', ref: { id: 'drafts/old', type: 'unpublished' } });
+
+    expect(results).toHaveLength(3);
+    expect(results[0]).toMatchObject({ kind: 'createUnpublished', unpublished: { key: 'drafts/new' } });
+    expect(results[1]).toMatchObject({ kind: 'publish', document: { key: 'posts/hello' } });
+    expect(results[2]).toEqual({ kind: 'deleteUnpublished', ok: true });
+  });
+
+  it('fails the whole task with the first op error on a partial-failure batch (fail-fast per ADR-004)', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        results: [
+          { data: publishedDoc('posts/a') },
+          {
+            errors: [{
+              status: '409',
+              code: 'conflict',
+              title: 'Conflict',
+              detail: 'posts/b already exists',
+            }],
+          },
+          // The server stops applying ops after the failure — no third entry.
+        ],
+      })
+    );
+    vi.stubGlobal('fetch', fetchMock);
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const result = await LaikaTask.runPromise(
+      proxy.applyOperations([
+        {
+          kind: 'createDocument',
+          create: { key: 'posts/a', type: 'published', status: 'published', language: 'en', content: {} },
+        },
+        {
+          kind: 'createDocument',
+          create: { key: 'posts/b', type: 'published', status: 'published', language: 'en', content: {} },
+        },
+        { kind: 'deleteDocument', key: 'posts/c' },
+      ]),
+    ).catch(e => e);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ code: 'conflict', message: expect.stringContaining('posts/b already exists') });
+  });
+
+  it('re-emits each result entry meta.warnings as local recoverableErrors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          results: [
+            {
+              data: publishedDoc('posts/a'),
+              meta: {
+                warnings: [{ code: 'invalid_data', status: '400', title: 'Warning', detail: 'normalised posts/a' }],
+              },
+            },
+            {
+              data: unpublishedDoc('drafts/b', 'draft'),
+              meta: {
+                warnings: [{ code: 'invalid_data', status: '400', title: 'Warning', detail: 'normalised drafts/b' }],
+              },
+            },
+          ],
+        })
+      ),
+    );
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaTask.runPromiseCollect(
+      proxy.applyOperations([
+        {
+          kind: 'createDocument',
+          create: { key: 'posts/a', type: 'published', status: 'published', language: 'en', content: {} },
+        },
+        {
+          kind: 'createUnpublished',
+          create: { key: 'drafts/b', type: 'unpublished', status: 'draft', language: 'en', content: {} },
+        },
+      ]),
+    );
+
+    expect(collected.value).toHaveLength(2);
+    expect(collected.recoverableErrors).toHaveLength(2);
+    expect(collected.recoverableErrors[0]!.message).toContain('normalised posts/a');
+    expect(collected.recoverableErrors[1]!.message).toContain('normalised drafts/b');
+  });
+
+  it('does not issue an HTTP call for an empty batch', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const proxy = new DocumentsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const results = await LaikaTask.runPromise(proxy.applyOperations([]));
+
+    expect(results).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
 describe('DocumentsJsonApiProxyRepository change signals', () => {
   it('getSyncToken parses attributes.syncToken and forwards filter[folder]', async () => {
     const fetchMock = vi.fn(async () =>

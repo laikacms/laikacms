@@ -62,7 +62,8 @@ import { type ChangeSummary, LockToken, SyncToken, toPublicLock } from 'laikacms
 
 import { JsonApiHttpTransport } from '../../shared/json-api/http-transport.js';
 import { paginationCodec } from '../../shared/json-api/pagination-codec.js';
-import { warningsFromMeta } from '../../shared/json-api/utilities.js';
+import type { JsonApiError } from '../../shared/json-api/types.js';
+import { laikaErrorFromJsonApiError, warningsFromMeta } from '../../shared/json-api/utilities.js';
 
 export interface DocumentsJsonApiProxyRepositoryOptions {
   baseUrl: string;
@@ -136,6 +137,82 @@ function ownedLockFromJsonApi(raw: LockJsonApi): Effect.Effect<OwnedLock, LaikaE
       token: LockToken.make(typeof attrs?.token === 'string' ? attrs.token : ''),
     };
   });
+}
+
+/**
+ * One document mutation submitted to {@link DocumentsJsonApiProxyRepository.applyOperations}.
+ * Mirrors the subset of `documents-api`'s `POST /operations` request vocabulary
+ * (see `server.ts`'s `AtomicOperationSchema`) that has a `Document`/`Unpublished`
+ * counterpart on this repository — `updateDocument` has no `/operations`
+ * equivalent (the server only accepts add/remove/publish/unpublish/update-unpublished),
+ * so it is intentionally not batchable here.
+ */
+export type DocumentBatchOperation =
+  | { kind: 'createDocument', create: DocumentCreate }
+  | { kind: 'createUnpublished', create: UnpublishedCreate }
+  | { kind: 'updateUnpublished', update: UnpublishedUpdate }
+  | { kind: 'deleteDocument', key: string }
+  | { kind: 'deleteUnpublished', key: string }
+  | { kind: 'publish', key: string }
+  | { kind: 'unpublish', key: string, status: string };
+
+/** The per-operation outcome returned by {@link DocumentsJsonApiProxyRepository.applyOperations}, in submission order. */
+export type DocumentBatchOperationResult =
+  | { kind: 'createDocument' | 'publish', document: Document }
+  | { kind: 'createUnpublished' | 'updateUnpublished' | 'unpublish', unpublished: Unpublished }
+  | { kind: 'deleteDocument' | 'deleteUnpublished', ok: true };
+
+/** Wire shape of one entry in `POST /operations`'s `{ results: [...] }` response. */
+interface OperationResultJsonApi {
+  data?: unknown;
+  meta?: { warnings?: unknown, [key: string]: unknown };
+  errors?: JsonApiError['errors'];
+}
+
+/** Translate one {@link DocumentBatchOperation} into the wire shape `POST /operations` expects. */
+function operationToJsonApi(operation: DocumentBatchOperation): Record<string, unknown> {
+  switch (operation.kind) {
+    case 'createDocument':
+      return { op: 'add', data: documentCreateToJsonApi(operation.create) };
+    case 'createUnpublished':
+      return { op: 'add', data: unpublishedCreateToJsonApi(operation.create) };
+    case 'updateUnpublished':
+      return { op: 'update', data: unpublishedUpdateToJsonApi(operation.update) };
+    case 'deleteDocument':
+      return { op: 'remove', ref: { id: operation.key, type: 'document' } };
+    case 'deleteUnpublished':
+      return { op: 'remove', ref: { id: operation.key, type: 'unpublished' } };
+    case 'publish':
+      // Publishing transitions an *unpublished* draft into a published document.
+      return { op: 'update', href: '/publish', ref: { id: operation.key, type: 'unpublished' } };
+    case 'unpublish':
+      // Unpublishing transitions a *published* document into an unpublished draft.
+      return {
+        op: 'update',
+        href: '/unpublish',
+        ref: { id: operation.key, type: 'document' },
+        data: { type: 'unpublished', attributes: { status: operation.status } },
+      };
+  }
+}
+
+/** Decode one `POST /operations` result entry back into a {@link DocumentBatchOperationResult}. */
+function batchResultFromJsonApi(
+  operation: DocumentBatchOperation,
+  entry: OperationResultJsonApi,
+): DocumentBatchOperationResult {
+  switch (operation.kind) {
+    case 'createDocument':
+    case 'publish':
+      return { kind: operation.kind, document: documentFromJsonApi(entry.data as DocumentJsonApi) };
+    case 'createUnpublished':
+    case 'updateUnpublished':
+    case 'unpublish':
+      return { kind: operation.kind, unpublished: unpublishedFromJsonApi(entry.data as UnpublishedJsonApi) };
+    case 'deleteDocument':
+    case 'deleteUnpublished':
+      return { kind: operation.kind, ok: true };
+  }
 }
 
 export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
@@ -581,6 +658,71 @@ export class DocumentsJsonApiProxyRepository extends DocumentsRepository {
               translation: { message: 'documentsJsonapiProxy.invalidResponse' },
             }),
         });
+      })
+    );
+  }
+
+  // ===== BATCH OPERATIONS =====
+
+  /**
+   * Apply several document mutations in a single `POST /operations` call
+   * instead of one HTTP request per op. Follows the upstream `documents-api`
+   * server's fail-fast contract (ADR-004, LCMS-402): ops apply in order, and
+   * the task fails with the first op's error the moment one fails — prior ops
+   * in the batch stay applied server-side, but this call surfaces no partial
+   * result, matching how every other write method here fails the whole task
+   * on any upstream error rather than returning a partial value.
+   *
+   * Each per-op result's `meta.warnings` is re-emitted as a local
+   * `recoverableError` via `warningsFromMeta`, same as the single-op write
+   * methods above.
+   */
+  applyOperations(
+    operations: ReadonlyArray<DocumentBatchOperation>,
+  ): LaikaTask.LaikaTask<ReadonlyArray<DocumentBatchOperationResult>> {
+    return LaikaTask.make<ReadonlyArray<DocumentBatchOperationResult>>(emit =>
+      Effect.gen({ self: this }, function*() {
+        if (operations.length === 0) return [];
+
+        const json = yield* this.fetchJson('/operations', {
+          method: 'POST',
+          body: { operations: operations.map(operationToJsonApi) },
+        });
+        const results = (json as { results?: OperationResultJsonApi[] }).results ?? [];
+
+        const decoded: DocumentBatchOperationResult[] = [];
+        for (let i = 0; i < results.length; i++) {
+          const entry = results[i]!;
+          if (entry.errors) {
+            return yield* Effect.fail(laikaErrorFromJsonApiError(entry.errors[0]!));
+          }
+          for (const w of warningsFromMeta(entry.meta)) yield* emit.recoverableError(w);
+          decoded.push(
+            yield* Effect.try({
+              try: () => batchResultFromJsonApi(operations[i]!, entry),
+              catch: e =>
+                new InvalidData((e as Error).message, {
+                  translation: { message: 'documentsJsonapiProxy.invalidResponse' },
+                }),
+            }),
+          );
+        }
+
+        if (results.length < operations.length) {
+          // Fail-fast per ADR-004: the server stops applying ops the moment
+          // one fails, and always reports that failure as an `errors` entry
+          // in the same slot — so a short `results` array with no `errors`
+          // entry among the ones we did get is an upstream contract breach,
+          // not a normal partial failure.
+          return yield* Effect.fail(
+            new InternalError(
+              `Upstream /operations returned ${results.length} result(s) for ${operations.length} submitted operation(s) without reporting a failure`,
+              { translation: { message: 'documentsJsonapiProxy.invalidResponse' } },
+            ),
+          );
+        }
+
+        return decoded;
       })
     );
   }
