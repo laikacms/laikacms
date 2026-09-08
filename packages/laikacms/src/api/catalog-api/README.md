@@ -61,14 +61,15 @@ export default { fetch: api.fetch };
 
 ## Endpoints
 
-| Method | Path                | Status | Description               |
-| ------ | ------------------- | ------ | ------------------------- |
-| GET    | `/openapi.json`     | 200    | OpenAPI 3.1 specification |
-| GET    | `/collections`      | 200    | List all collections      |
-| GET    | `/collections/:key` | 200    | Read a single collection  |
-| POST   | `/collections`      | 201    | Create a collection       |
-| PATCH  | `/collections/:key` | 200    | Update a collection       |
-| DELETE | `/collections/:key` | 204    | Delete a collection       |
+| Method | Path                | Status | Description                        |
+| ------ | ------------------- | ------ | ---------------------------------- |
+| GET    | `/openapi.json`     | 200    | OpenAPI 3.1 specification          |
+| GET    | `/openapi.yaml`     | 200    | OpenAPI 3.1 specification, as YAML |
+| GET    | `/collections`      | 200    | List all collections               |
+| GET    | `/collections/:key` | 200    | Read a single collection           |
+| POST   | `/collections`      | 201    | Create a collection                |
+| PATCH  | `/collections/:key` | 200    | Update a collection                |
+| DELETE | `/collections/:key` | 204    | Delete a collection                |
 
 All responses carry `Cache-Control: no-store`.
 
