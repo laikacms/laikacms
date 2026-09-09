@@ -8,7 +8,7 @@ status: accepted
 # ADR-007: Document locking & write preconditions — repository-native, Effect, capability-graded
 
 **Date:** 2026-08-05 **Status:** Accepted **Relates to:** [[ADR-001 - realtime-collaboration]] (this
-is the follow-through on its deferred "Option 2 — pessimistic locking"), [[ADR-003 -
+is the follow-through on its deferred "Option 2 — pessimistic locking"), [[ADR-008 -
 repository-effect-boundary-convention]] (LaikaTask target style), [[ADR-006 -
 cms-agnostic-protocol]] (decap is an adapter, not the owner of the mechanism)
 
