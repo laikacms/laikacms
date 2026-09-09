@@ -38,20 +38,6 @@ Deliberate cautions to avoid over-positioning Laika before adoption earns it.
 - [ ] Laika creates a homogeneous, backend-agnostic RAG architecture
 - [ ] Bundle skills using vercel's skills package. Skills identify how one could use laika cli to
 
-### Recoverable-warning pipeline — follow-ups
-
-The Effect-based warning pipeline is feature-complete (see Completed below). These items are small,
-lower-priority extensions to it.
-
-- [x] **i18n for recoverable warning messages** — translation-key convention documented at
-      `docs/concepts/recoverable-warning-translations.md` (LCMS-471); `storage-fs` is the reference
-      implementation. Remaining backends (`storage-r2`, `storage-s3`, `storage-drizzle`,
-      `storage-webdav`, `documents-jsonapi-proxy`, `catalog`, `obsidian`, …) still need the same
-      treatment — follow-up work, not blocking.
-- [ ] **`documents-jsonapi-proxy` atomic-batch warnings** — same pattern: when the proxy starts
-      sending `/operations` POSTs (rather than individual HTTP calls per op), it should forward
-      per-result `meta.warnings` from the upstream response.
-
 ## Completed
 
 - [x] Core architecture
@@ -73,9 +59,13 @@ lower-priority extensions to it.
       `runCollectForwarding` so warnings flow end-to-end through delegation chains. All three
       JSON:API servers serialize warnings into `meta.warnings` on collection, single-resource, void
       (delete), and per-op atomic results; JSON:API proxy backends read `meta.warnings` from
-      upstream responses and re-emit them locally. The Decap CMS backend exposes an `onWarning` hook
-      so host apps can route warnings into their own observability (Sentry, toasts, metrics) —
-      defaults to a `console.warn` line so devtools show them.
+      upstream responses and re-emit them locally, including `documents-jsonapi-proxy`'s
+      atomic-batch `/operations` path (LCMS-994, #1068). The Decap CMS backend exposes an
+      `onWarning` hook so host apps can route warnings into their own observability (Sentry,
+      toasts, metrics) — defaults to a `console.warn` line so devtools show them.
+- [x] i18n for recoverable warning messages across every storage/document backend — see
+      `docs/concepts/recoverable-warning-translations.md` ("Rollout status": Done, no backends
+      outstanding).
 - [x] Netlify git-gateway compatible HTTP handler (`@laikacms/git-gateway`) — lets Decap CMS
       configured with `backend: git-gateway` point at a Laika worker without changing client config
 - [x] Hosted multi-tenant gateway app (`laika-gateway`, moved to its own repo June 2026) — one
