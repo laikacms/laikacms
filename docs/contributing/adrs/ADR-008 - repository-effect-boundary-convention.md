@@ -1,11 +1,11 @@
 ---
-id: ADR-003
+id: ADR-008
 title: Repository Effect boundary convention (LaikaTask target style)
 date: 2026-07-04
 status: accepted
 ---
 
-# ADR-003: Repository Effect boundary convention (LaikaTask target style)
+# ADR-008: Repository Effect boundary convention (LaikaTask target style)
 
 **Date:** 2026-07-04 **Status:** Accepted **Deciders:** LaikaCMS maintainers
 
