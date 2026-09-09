@@ -61,8 +61,8 @@ Deliberate cautions to avoid over-positioning Laika before adoption earns it.
       (delete), and per-op atomic results; JSON:API proxy backends read `meta.warnings` from
       upstream responses and re-emit them locally, including `documents-jsonapi-proxy`'s
       atomic-batch `/operations` path (LCMS-994, #1068). The Decap CMS backend exposes an
-      `onWarning` hook so host apps can route warnings into their own observability (Sentry,
-      toasts, metrics) — defaults to a `console.warn` line so devtools show them.
+      `onWarning` hook so host apps can route warnings into their own observability (Sentry, toasts,
+      metrics) — defaults to a `console.warn` line so devtools show them.
 - [x] i18n for recoverable warning messages across every storage/document backend — see
       `docs/concepts/recoverable-warning-translations.md` ("Rollout status": Done, no backends
       outstanding).
