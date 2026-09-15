@@ -20,12 +20,12 @@ const api = buildJsonApi({ repo, authorize: allowAll });
 export default { fetch: api.fetch };`;
 
 const LINKS = [
-  { title: 'Getting Started', blurb: 'Five minutes to your first content API', href: '/docs/getting-started' },
-  { title: 'Architecture', blurb: 'How core, adapters and the gateway fit', href: '/docs/architecture' },
-  { title: 'API Reference', blurb: 'Every method on the JSON:API surface', href: '/docs/api-reference' },
-  { title: 'Decap Integration', blurb: 'Wire up the git-gateway + editor UI', href: '/docs/decap-integration' },
-  { title: 'Deployment', blurb: 'Node, Bun, Deno, Workers, the edge', href: '/docs/deployment' },
-  { title: 'Packages', blurb: 'The full map of subpath exports', href: '/docs/packages' },
+  { title: 'Getting Started', blurb: 'Five minutes to your first content API', href: '/docs/guides/getting-started' },
+  { title: 'Architecture', blurb: 'How core, adapters and the gateway fit', href: '/docs/concepts/architecture' },
+  { title: 'API Reference', blurb: 'Every method on the JSON:API surface', href: '/docs/reference/json-api/' },
+  { title: 'Decap Integration', blurb: 'Wire up the git-gateway + editor UI', href: '/docs/guides/decap/' },
+  { title: 'Deployment', blurb: 'Node, Bun, Deno, Workers, the edge', href: '/docs/guides/deployment' },
+  { title: 'Packages', blurb: 'The full map of subpath exports', href: '/docs/reference/packages' },
 ];
 
 /* Not mounted on any page today — the getting-started content is served by the
