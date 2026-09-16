@@ -46,6 +46,7 @@ describe('GET /openapi.json', () => {
       '/changes',
       '/openapi.json',
       '/openapi.yaml',
+      '/operations',
       '/resources',
       '/resources/{key}',
       '/sync-token',

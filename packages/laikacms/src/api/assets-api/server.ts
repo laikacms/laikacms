@@ -317,6 +317,118 @@ type JsonApiAssetUpdateData = S.Schema.Type<typeof JsonApiAssetUpdateSchema>;
 type JsonApiFolderCreateData = S.Schema.Type<typeof JsonApiFolderCreateSchema>;
 
 // ============================================
+// Batch Operations Schema (POST /operations)
+//
+// Fail-fast batch semantics ported from documents-api (ADR-004, LCMS-402):
+// pre-flight validate the whole request-shape before any I/O, then apply
+// sequentially and stop at the first repository failure. Wire vocabulary is
+// `operations` / `results` — NOT the `atomic:*` JSON:API Atomic Operations
+// extension vocabulary storage-api still uses: this endpoint never
+// negotiates that extension and cannot honour its all-or-nothing rollback
+// guarantee, so it does not borrow its member names either.
+// ============================================
+
+const AddAssetOpSchema = S.toStandardSchemaV1(S.Struct({
+  op: S.Literal('add'),
+  data: S.Struct({
+    type: S.Literal('asset'),
+    id: S.optional(S.String),
+    attributes: S.Struct({
+      mimeType: S.optional(S.String),
+      filename: S.optional(S.String),
+      cacheControl: S.optional(S.String),
+      customMetadata: S.optional(S.Record(S.String, S.String)),
+      content: S.optional(S.String), // base64-encoded content
+    }),
+  }),
+}));
+
+const AddFolderOpSchema = S.toStandardSchemaV1(S.Struct({
+  op: S.Literal('add'),
+  data: S.Struct({
+    type: S.Literal('folder'),
+    id: S.optional(S.String),
+    attributes: S.optional(S.Struct({ type: S.optional(S.Literal('folder')) })),
+  }),
+}));
+
+const UpdateAssetOpSchema = S.toStandardSchemaV1(S.Struct({
+  op: S.Literal('update'),
+  data: S.Struct({
+    type: S.Literal('asset'),
+    id: S.optional(S.String),
+    attributes: S.Struct({
+      mimeType: S.optional(S.String),
+      cacheControl: S.optional(S.String),
+      customMetadata: S.optional(S.Record(S.String, S.String)),
+    }),
+  }),
+}));
+
+const RemoveOpSchema = S.toStandardSchemaV1(S.Struct({
+  op: S.Literal('remove'),
+  ref: S.Struct({
+    type: S.Union([S.Literal('asset'), S.Literal('folder')]),
+    id: S.String,
+  }),
+}));
+
+const AssetOperationSchema = S.Union([AddAssetOpSchema, AddFolderOpSchema, UpdateAssetOpSchema, RemoveOpSchema]);
+
+const OperationsSchema = S.toStandardSchemaV1(S.Struct({
+  operations: S.Array(AssetOperationSchema),
+}));
+
+const decodeOperations = S.decodeUnknownSync(OperationsSchema);
+
+type AssetOperation = S.Schema.Type<typeof AssetOperationSchema>;
+type AddAssetOp = S.Schema.Type<typeof AddAssetOpSchema>;
+type AddFolderOp = S.Schema.Type<typeof AddFolderOpSchema>;
+type UpdateAssetOp = S.Schema.Type<typeof UpdateAssetOpSchema>;
+type RemoveOp = S.Schema.Type<typeof RemoveOpSchema>;
+
+/**
+ * Validate an operation's request shape without performing any I/O. Returns
+ * a LaikaError when the op is malformed, null when it is valid. Called in
+ * the pre-flight pass so a batch with any shape-invalid op returns HTTP 400
+ * with zero writes (ADR-004).
+ */
+function validateOperationShape(operation: AssetOperation, index: number): LaikaError | null {
+  if (operation.op === 'add') {
+    if (!operation.data.id) {
+      return new BadRequestError(
+        `operations[${index}].data.id is required — provide the asset/folder key`,
+      );
+    }
+    if (operation.data.type === 'asset') {
+      const op = operation as AddAssetOp;
+      if (!op.data.attributes.content) {
+        return new BadRequestError(
+          `operations[${index}].data.attributes.content is required (base64-encoded) — `
+            + 'use multipart/form-data via POST /resources for binary uploads outside a batch',
+        );
+      }
+    }
+    return null;
+  }
+  if (operation.op === 'update') {
+    const op = operation as UpdateAssetOp;
+    if (!op.data.id) {
+      return new BadRequestError(`operations[${index}].data.id is required`);
+    }
+    return null;
+  }
+  if (operation.op === 'remove') {
+    const { ref } = operation as RemoveOp;
+    if (ref.type !== 'asset' && ref.type !== 'folder') {
+      return new BadRequestError(`Cannot remove ${ref.type}`);
+    }
+    return null;
+  }
+  return new BadRequestError(`Unsupported operation: ${(operation as { op?: string }).op}`);
+}
+
+// ============================================
 // Server Builder
 // ============================================
 
@@ -407,6 +519,7 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
                 methods: ['GET', 'PATCH', 'DELETE'],
                 description: 'Read, update, or delete a resource',
               },
+              { path: '/operations', methods: ['POST'], description: 'Fail-fast batch write operations' },
             ],
           },
         },
@@ -1044,6 +1157,169 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
         return new Response(null, { status: 204 });
       }
       return json({ meta: { deleted: true, warnings } });
+    }
+
+    // Route: POST /operations
+    // Fail-fast batch write (ADR-004 semantics, ported from documents-api):
+    // pre-flight validate the whole batch for request-shape errors before any
+    // I/O (400, zero writes, on any bad op), then apply ops sequentially and
+    // stop at the first repository failure. A mid-batch repository failure
+    // leaves previously-applied ops applied — this is a fail-fast batch, not
+    // a transaction.
+    if (path === `${basePath}/operations` && method === 'POST') {
+      let rawBody: unknown;
+      try {
+        rawBody = await request.json();
+      } catch {
+        return respondError(new InvalidData('Invalid request body'), errorStatus.BAD_REQUEST);
+      }
+      let ops: ReadonlyArray<AssetOperation>;
+      try {
+        ({ operations: ops } = decodeOperations(rawBody));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : 'Invalid operations request';
+        return respondError(new InvalidData(msg), errorStatus.BAD_REQUEST);
+      }
+
+      // (a) Pre-flight: validate every op for request-shape errors before any I/O.
+      // Any shape failure → HTTP 400, zero writes.
+      const preflight: Array<{ index: number, error: LaikaError }> = [];
+      for (let i = 0; i < ops.length; i++) {
+        const err = validateOperationShape(ops[i]!, i);
+        if (err) preflight.push({ index: i, error: err });
+      }
+      if (preflight.length > 0) {
+        const errors = preflight.map(({ index, error }) => {
+          const jsonApiErr = errorToJsonApiMapper(error, logger);
+          return { ...jsonApiErr.errors[0]!, source: { pointer: `/operations/${index}` } };
+        });
+        return json({ errors }, 400);
+      }
+
+      // (a2) Authorize every sub-operation up front, mapped to its granular
+      // action. A single denial rejects the whole batch before any write.
+      for (const operation of ops) {
+        let authAction: AssetsAuthorizeAction | undefined;
+        if (operation.op === 'add' && operation.data.type === 'asset') {
+          authAction = { action: 'createAsset' };
+        } else if (operation.op === 'add' && operation.data.type === 'folder') {
+          authAction = { action: 'createFolder' };
+        } else if (operation.op === 'update') {
+          authAction = { action: 'updateAsset', key: (operation as UpdateAssetOp).data.id! };
+        } else if (operation.op === 'remove') {
+          authAction = { action: 'deleteResource', key: (operation as RemoveOp).ref.id };
+        }
+        if (authAction) {
+          const denied = await authorizeAction(request, authAction);
+          if (denied) return denied;
+        }
+      }
+
+      // (b) Execute ops sequentially; stop at first repository failure.
+      type OpEntry = {
+        op: LaikaResult<unknown>,
+        operation: AssetOperation,
+        transformer: ((data: unknown) => JsonApiResource) | null,
+      };
+      const opEntries: OpEntry[] = [];
+      for (let i = 0; i < ops.length; i++) {
+        const operation = ops[i]!;
+        let result: LaikaResult<unknown>;
+        let transformer: ((data: unknown) => JsonApiResource) | null = null;
+
+        if (operation.op === 'add' && operation.data.type === 'asset') {
+          const op = operation as AddAssetOp;
+          const base64Content = op.data.attributes.content!;
+          const binaryString = atob(base64Content);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let j = 0; j < binaryString.length; j++) bytes[j] = binaryString.charCodeAt(j);
+          const assetCreate: AssetCreate = {
+            key: op.data.id!,
+            mimeType: op.data.attributes.mimeType || 'application/octet-stream',
+            filename: op.data.attributes.filename,
+            cacheControl: op.data.attributes.cacheControl,
+            customMetadata: op.data.attributes.customMetadata,
+            content: bytes.buffer,
+          };
+          result = await firstResultWithMetadata(repository.createAsset(assetCreate));
+          transformer = assetToJsonApi as (data: unknown) => JsonApiResource;
+        } else if (operation.op === 'add' && operation.data.type === 'folder') {
+          const op = operation as AddFolderOp;
+          const folderCreate: FolderCreate = { key: op.data.id!, type: 'folder' };
+          result = await firstResultWithMetadata(repository.createFolder(folderCreate));
+          transformer = folderToJsonApi as (data: unknown) => JsonApiResource;
+        } else if (operation.op === 'update') {
+          const op = operation as UpdateAssetOp;
+          const assetUpdate: AssetUpdate = {
+            key: op.data.id!,
+            mimeType: op.data.attributes.mimeType,
+            cacheControl: op.data.attributes.cacheControl,
+            customMetadata: op.data.attributes.customMetadata,
+          };
+          result = await firstResultWithMetadata(repository.updateAsset(assetUpdate));
+          transformer = assetToJsonApi as (data: unknown) => JsonApiResource;
+        } else if (operation.op === 'remove') {
+          const op = operation as RemoveOp;
+          // Mirror DELETE /resources/:key's existence pre-check: deleteAsset
+          // treats a missing key as a silent no-op rather than a failure (it
+          // delegates to the storage layer's idempotent removeAtoms), so a
+          // remove op on a nonexistent resource would otherwise "succeed"
+          // with zero effect instead of reporting a 404 in `results`.
+          const existsResult = await firstResult(repository.getResource(op.ref.id));
+          if (Result.isFailure(existsResult)) {
+            result = Result.fail(existsResult.failure);
+          } else if (!existsResult.success[0]) {
+            result = Result.fail(new NotFoundError('Resource not found'));
+          } else {
+            const deleteTask = op.ref.type === 'folder'
+              ? repository.deleteFolder(op.ref.id)
+              : repository.deleteAsset(op.ref.id);
+            result = await firstResultWithMetadata(deleteTask);
+          }
+        } else {
+          result = Result.fail(
+            new BadRequestError(`Unsupported operation: ${(operation as { op?: string }).op}`),
+          );
+        }
+
+        opEntries.push({ op: result, operation, transformer });
+        if (Result.isFailure(result)) break;
+      }
+
+      const results = opEntries.map(({ op, operation, transformer }) => {
+        if (Result.isFailure(op)) {
+          const failure = op.failure as LaikaError;
+          const status = String(ErrorCodeToStatusMap[failure.code as keyof typeof ErrorCodeToStatusMap] ?? 500);
+          return { errors: [{ status, title: 'Operation Failed', detail: failure.message }] };
+        }
+
+        if (operation.op === 'remove') {
+          const removeOp = operation as RemoveOp;
+          const carrier = op.success as
+            | { value: void, recoverableErrors: ReadonlyArray<LaikaError> }
+            | undefined;
+          const warnings = carrier ? recoverableErrorsToWarnings(carrier.recoverableErrors) : undefined;
+          return {
+            meta: warnings
+              ? { deleted: true, ref: removeOp.ref, warnings }
+              : { deleted: true, ref: removeOp.ref },
+          };
+        }
+
+        if (transformer) {
+          const carrier = op.success as {
+            value: unknown,
+            recoverableErrors: ReadonlyArray<LaikaError>,
+          };
+          const warnings = recoverableErrorsToWarnings(carrier.recoverableErrors);
+          const data = transformer(carrier.value);
+          return warnings ? { data, meta: { warnings } } : { data };
+        }
+
+        return { data: null };
+      });
+
+      return json({ results });
     }
 
     // 404 Not Found — use the shared error formatter for envelope consistency with documents/storage.

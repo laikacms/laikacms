@@ -2048,3 +2048,348 @@ describe('assets-api onError / logger (LCMS-331)', () => {
     expect(logger.error).not.toHaveBeenCalled();
   });
 });
+
+// ---------------------------------------------------------------------------
+// POST /operations — fail-fast batch operations (LCMS-1002, ADR-004 semantics)
+// ---------------------------------------------------------------------------
+
+type OperationResultData = { data: { type: string, id: string, attributes: Record<string, unknown> } };
+type OperationResultMeta = { meta: { deleted: boolean, ref: { type: string, id: string } } };
+type OperationResultError = { errors: Array<{ status: string, title: string, detail?: string }> };
+type OperationsBody = { results: Array<OperationResultData | OperationResultMeta | OperationResultError> };
+type OperationsErrorBody = {
+  errors: Array<{ status: string, code: string, detail?: string, source?: { pointer: string } }>,
+};
+
+const postOperations = (api: ReturnType<typeof buildAssetsApi>, operations: unknown[]) =>
+  api.fetch(
+    new Request('http://localhost/api/assets/operations', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/vnd.api+json' },
+      body: JSON.stringify({ operations }),
+    }),
+  );
+
+const makeAssetResource = (key: string): Asset => ({
+  type: 'asset',
+  key,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+  content: { size: 1, etag: key },
+});
+
+const makeFolderResource = (key: string): Folder => ({
+  type: 'folder',
+  key,
+  createdAt: '2026-01-01T00:00:00Z',
+  updatedAt: '2026-01-01T00:00:00Z',
+});
+
+const base64 = (s: string) => Buffer.from(s, 'utf8').toString('base64');
+
+describe('POST /operations — add/asset', () => {
+  it('calls repository.createAsset and returns data.type === "asset"', async () => {
+    const repo = {
+      createAsset: (_create: unknown) => LaikaTask.make(() => Effect.succeed(makeAssetResource('images/new.jpg'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      {
+        op: 'add',
+        data: {
+          type: 'asset',
+          id: 'images/new.jpg',
+          attributes: { mimeType: 'image/jpeg', content: base64('bytes') },
+        },
+      },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as OperationsBody;
+    expect(body.results).toHaveLength(1);
+    const result = body.results[0] as OperationResultData;
+    expect(result.data.type).toBe('asset');
+    expect(result.data.id).toBe('images/new.jpg');
+  });
+});
+
+describe('POST /operations — add/folder', () => {
+  it('calls repository.createFolder and returns data.type === "folder"', async () => {
+    const repo = {
+      createFolder: (_create: unknown) => LaikaTask.make(() => Effect.succeed(makeFolderResource('images/thumbs'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      { op: 'add', data: { type: 'folder', id: 'images/thumbs' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as OperationsBody;
+    expect(body.results).toHaveLength(1);
+    const result = body.results[0] as OperationResultData;
+    expect(result.data.type).toBe('folder');
+    expect(result.data.id).toBe('images/thumbs');
+  });
+});
+
+describe('POST /operations — add/asset missing data.id', () => {
+  it('returns 400 with top-level errors (zero writes) when data.id is absent', async () => {
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
+    const res = await postOperations(api, [
+      { op: 'add', data: { type: 'asset', attributes: { mimeType: 'image/jpeg', content: base64('x') } } },
+    ]);
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as OperationsErrorBody;
+    expect(body.errors).toBeDefined();
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.detail).toContain('operations[0].data.id');
+  });
+
+  it('returns 400 and performs zero writes when a mixed batch contains an add/asset op without data.id', async () => {
+    const createAsset = vi.fn();
+    const repo = { createAsset } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      {
+        op: 'add',
+        data: { type: 'asset', id: 'images/first.jpg', attributes: { mimeType: 'image/jpeg', content: base64('x') } },
+      },
+      { op: 'add', data: { type: 'asset', attributes: { mimeType: 'image/jpeg', content: base64('y') } } },
+    ]);
+    expect(res.status).toBe(400);
+    expect(createAsset).not.toHaveBeenCalled();
+
+    const body = await res.json() as OperationsErrorBody;
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.detail).toContain('operations[1].data.id');
+  });
+});
+
+describe('POST /operations — add/asset missing content', () => {
+  it('returns 400 with top-level errors (zero writes) when attributes.content is absent', async () => {
+    const createAsset = vi.fn();
+    const repo = { createAsset } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      { op: 'add', data: { type: 'asset', id: 'images/new.jpg', attributes: { mimeType: 'image/jpeg' } } },
+    ]);
+    expect(res.status).toBe(400);
+    expect(createAsset).not.toHaveBeenCalled();
+
+    const body = await res.json() as OperationsErrorBody;
+    expect(body.errors[0]!.status).toBe('400');
+    expect(body.errors[0]!.detail).toContain('operations[0].data.attributes.content');
+  });
+});
+
+describe('POST /operations — update/asset', () => {
+  it('calls repository.updateAsset and returns data.type === "asset"', async () => {
+    const repo = {
+      updateAsset: (_update: unknown) => LaikaTask.make(() => Effect.succeed(makeAssetResource('images/existing.jpg'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      {
+        op: 'update',
+        data: { type: 'asset', id: 'images/existing.jpg', attributes: { cacheControl: 'public, max-age=3600' } },
+      },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as OperationsBody;
+    const result = body.results[0] as OperationResultData;
+    expect(result.data.type).toBe('asset');
+    expect(result.data.id).toBe('images/existing.jpg');
+  });
+});
+
+describe('POST /operations — remove/asset', () => {
+  it('calls repository.deleteAsset and returns meta.deleted === true', async () => {
+    const repo = {
+      getResource: (_key: string) =>
+        LaikaTask.make(() => Effect.succeed([makeAssetResource('images/old.jpg')] as Resource[])),
+      deleteAsset: (_key: string) => LaikaTask.make<void>(() => Effect.succeed(undefined)),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      { op: 'remove', ref: { type: 'asset', id: 'images/old.jpg' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as OperationsBody;
+    const result = body.results[0] as OperationResultMeta;
+    expect(result.meta.deleted).toBe(true);
+    expect(result.meta.ref).toEqual({ type: 'asset', id: 'images/old.jpg' });
+  });
+});
+
+describe('POST /operations — remove/folder', () => {
+  it('calls repository.deleteFolder and returns meta.deleted === true', async () => {
+    const repo = {
+      getResource: (_key: string) =>
+        LaikaTask.make(() => Effect.succeed([makeFolderResource('images/thumbs')] as Resource[])),
+      deleteFolder: (_key: string, _recursive?: boolean) => LaikaTask.make<void>(() => Effect.succeed(undefined)),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      { op: 'remove', ref: { type: 'folder', id: 'images/thumbs' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as OperationsBody;
+    const result = body.results[0] as OperationResultMeta;
+    expect(result.meta.deleted).toBe(true);
+  });
+
+  it('returns 400 (zero writes) when ref.type is not "asset" or "folder"', async () => {
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
+    const res = await postOperations(api, [
+      { op: 'remove', ref: { type: 'bogus', id: 'x' } },
+    ]);
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /operations — repo-failure status codes', () => {
+  it('returns per-operation status "409" when add/asset repo raises EntryAlreadyExistsError', async () => {
+    const repo = {
+      createAsset: (_create: unknown) =>
+        LaikaTask.make(() => Effect.fail(new EntryAlreadyExistsError('images/existing.jpg already exists'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      {
+        op: 'add',
+        data: {
+          type: 'asset',
+          id: 'images/existing.jpg',
+          attributes: { mimeType: 'image/jpeg', content: base64('x') },
+        },
+      },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as OperationsBody;
+    const result = body.results[0] as OperationResultError;
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]!.status).toBe('409');
+  });
+
+  it('returns per-operation status "404" when the resource does not exist', async () => {
+    const repo = {
+      getResource: (_key: string) =>
+        LaikaTask.make(() => Effect.fail(new NotFoundError('images/missing.jpg not found'))),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      { op: 'remove', ref: { type: 'asset', id: 'images/missing.jpg' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as OperationsBody;
+    const result = body.results[0] as OperationResultError;
+    expect(result.errors).toBeDefined();
+    expect(result.errors[0]!.status).toBe('404');
+  });
+
+  it('stops processing after the first repository failure — subsequent ops are not applied', async () => {
+    const getResource = vi.fn(() =>
+      LaikaTask.make(() => Effect.fail(new NotFoundError('images/missing.jpg not found')))
+    );
+    const createFolder = vi.fn();
+    const repo = { getResource, createFolder } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      { op: 'remove', ref: { type: 'asset', id: 'images/missing.jpg' } },
+      { op: 'add', data: { type: 'folder', id: 'images/new-folder' } },
+    ]);
+    expect(res.status).toBe(200);
+    expect(createFolder).not.toHaveBeenCalled();
+
+    const body = await res.json() as OperationsBody;
+    expect(body.results).toHaveLength(1);
+    expect((body.results[0] as OperationResultError).errors[0]!.status).toBe('404');
+  });
+});
+
+describe('POST /operations — malformed body', () => {
+  it('returns 400 when operations key is missing', async () => {
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({ notOperations: [] }),
+      }),
+    );
+    expect(res.status).toBe(400);
+
+    const body = await res.json() as { errors: Array<{ status: string }> };
+    expect(body.errors[0]!.status).toBe('400');
+  });
+
+  it('returns 400 when body is not valid JSON', async () => {
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: 'not-json',
+      }),
+    );
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /operations — multi-operation batch', () => {
+  it('processes multiple operations in a single request and returns all results', async () => {
+    const repo = {
+      createAsset: (_create: unknown) =>
+        LaikaTask.make(() => Effect.succeed(makeAssetResource('images/batch-new.jpg'))),
+      getResource: (_key: string) =>
+        LaikaTask.make(() => Effect.succeed([makeAssetResource('images/old.jpg')] as Resource[])),
+      deleteAsset: (_key: string) => LaikaTask.make<void>(() => Effect.succeed(undefined)),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: repo, authorize: allowAll });
+    const res = await postOperations(api, [
+      {
+        op: 'add',
+        data: {
+          type: 'asset',
+          id: 'images/batch-new.jpg',
+          attributes: { mimeType: 'image/jpeg', content: base64('x') },
+        },
+      },
+      { op: 'remove', ref: { type: 'asset', id: 'images/old.jpg' } },
+    ]);
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as OperationsBody;
+    expect(body.results).toHaveLength(2);
+    const addResult = body.results[0] as OperationResultData;
+    const removeResult = body.results[1] as OperationResultMeta;
+    expect(addResult.data.type).toBe('asset');
+    expect(removeResult.meta.deleted).toBe(true);
+  });
+});
+
+describe('POST /operations — discovery', () => {
+  it('advertises /operations in GET /api/assets root', async () => {
+    const api = buildAssetsApi({ repository: stubRepo, authorize: allowAll });
+    const res = await api.fetch(new Request('http://localhost/api/assets'));
+    const body = await res.json() as { data: { attributes: { endpoints: Array<{ path: string }> } } };
+    expect(body.data.attributes.endpoints.some(e => e.path === '/operations')).toBe(true);
+  });
+});
