@@ -127,20 +127,51 @@ describe('AssetsJsonApiProxyRepository.deleteAsset', () => {
 });
 
 describe('AssetsJsonApiProxyRepository.deleteAssets', () => {
-  it('re-emits per-key meta.warnings while reporting removed count', async () => {
-    const fetchMock = vi.fn(async (url: string | URL) => {
-      const u = new URL(url);
-      if (u.pathname.endsWith('/orphan.png')) {
-        return jsonResponse({
-          meta: {
-            deleted: true,
-            warnings: [{ code: 'not_found', status: '404', title: 'NF', detail: 'thumbnail missed' }],
-          },
-        });
-      }
-      return noContent();
+  it('batches all keys into a single POST /operations call', async () => {
+    const fetchMock = vi.fn(async (_url: string | URL, init?: RequestInit) => {
+      expect(init?.method).toBe('POST');
+      const body = parseBody(init?.body);
+      expect(body.operations).toEqual([
+        { op: 'remove', ref: { type: 'asset', id: 'orphan.png' } },
+        { op: 'remove', ref: { type: 'asset', id: 'clean.png' } },
+      ]);
+      return jsonResponse({
+        results: [
+          { meta: { deleted: true, ref: { type: 'asset', id: 'orphan.png' } } },
+          { meta: { deleted: true, ref: { type: 'asset', id: 'clean.png' } } },
+        ],
+      });
     });
     vi.stubGlobal('fetch', fetchMock);
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(
+      proxy.deleteAssets(['orphan.png', 'clean.png']),
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(collected.data).toEqual(['orphan.png', 'clean.png']);
+    expect(collected.done).toEqual({ removed: 2, skipped: 0 });
+  });
+
+  it('re-emits per-result meta.warnings as local recoverableErrors', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          results: [
+            {
+              meta: {
+                deleted: true,
+                ref: { type: 'asset', id: 'orphan.png' },
+                warnings: [{ code: 'not_found', status: '404', title: 'NF', detail: 'thumbnail missed' }],
+              },
+            },
+            { meta: { deleted: true, ref: { type: 'asset', id: 'clean.png' } } },
+          ],
+        })
+      ),
+    );
 
     const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
     const collected = await LaikaStream.runPromiseCollect(
@@ -151,6 +182,64 @@ describe('AssetsJsonApiProxyRepository.deleteAssets', () => {
     expect(collected.done).toEqual({ removed: 2, skipped: 0 });
     expect(collected.recoverableErrors).toHaveLength(1);
     expect(collected.recoverableErrors[0]!.message).toContain('thumbnail missed');
+  });
+
+  it('treats a failing op as skipped and keeps the rest as removed', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          results: [
+            { errors: [{ status: '404', title: 'Not Found', detail: 'missing.png not found' }] },
+            { meta: { deleted: true, ref: { type: 'asset', id: 'clean.png' } } },
+          ],
+        })
+      ),
+    );
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(
+      proxy.deleteAssets(['missing.png', 'clean.png']),
+    );
+
+    expect(collected.data).toEqual(['clean.png']);
+    expect(collected.done).toEqual({ removed: 1, skipped: 1 });
+    expect(collected.recoverableErrors).toHaveLength(1);
+    expect(collected.recoverableErrors[0]!.message).toContain('missing.png');
+  });
+
+  it('treats keys past a fail-fast stop (short results array) as skipped', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse({
+          results: [
+            { errors: [{ status: '404', title: 'Not Found', detail: 'missing.png not found' }] },
+          ],
+        })
+      ),
+    );
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(
+      proxy.deleteAssets(['missing.png', 'unprocessed.png']),
+    );
+
+    expect(collected.data).toEqual([]);
+    expect(collected.done).toEqual({ removed: 0, skipped: 2 });
+    expect(collected.recoverableErrors).toHaveLength(2);
+  });
+
+  it('is a no-op that issues no request for an empty key list', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    const proxy = new AssetsJsonApiProxyRepository({ baseUrl: 'http://upstream' });
+    const collected = await LaikaStream.runPromiseCollect(proxy.deleteAssets([]));
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(collected.data).toEqual([]);
+    expect(collected.done).toEqual({ removed: 0, skipped: 0 });
   });
 });
 

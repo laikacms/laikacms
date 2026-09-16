@@ -372,6 +372,145 @@ const assetUpdateDataSchema: OpenApiSchema = {
   },
 };
 
+const operationRefSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['type', 'id'],
+  properties: {
+    type: { type: 'string', enum: ['asset', 'folder'] },
+    id: { type: 'string' },
+  },
+};
+
+const addAssetOperationSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['op', 'data'],
+  properties: {
+    op: { const: 'add' },
+    data: ref('AssetCreateData'),
+  },
+};
+
+const addFolderOperationSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['op', 'data'],
+  properties: {
+    op: { const: 'add' },
+    data: ref('FolderCreateData'),
+  },
+};
+
+const operationAssetUpdateDataSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['type', 'id', 'attributes'],
+  properties: {
+    type: { const: 'asset' },
+    id: { type: 'string', description: 'The asset key to update.' },
+    attributes: {
+      type: 'object',
+      properties: {
+        mimeType: { type: 'string' },
+        cacheControl: { type: 'string' },
+        customMetadata: { type: 'object', additionalProperties: { type: 'string' } },
+      },
+    },
+  },
+};
+
+const updateAssetOperationSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['op', 'data'],
+  properties: {
+    op: { const: 'update' },
+    data: ref('OperationAssetUpdateData'),
+  },
+};
+
+const removeOperationSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['op', 'ref'],
+  properties: {
+    op: { const: 'remove' },
+    ref: ref('OperationRef'),
+  },
+};
+
+const operationsRequestSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['operations'],
+  properties: {
+    operations: {
+      type: 'array',
+      items: {
+        oneOf: [
+          ref('AddAssetOperation'),
+          ref('AddFolderOperation'),
+          ref('UpdateAssetOperation'),
+          ref('RemoveOperation'),
+        ],
+      },
+    },
+  },
+};
+
+const operationResultErrorSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['status', 'title'],
+  properties: {
+    status: { type: 'string' },
+    title: { type: 'string' },
+    detail: { type: 'string' },
+  },
+};
+
+const operationResultSchema: OpenApiSchema = {
+  oneOf: [
+    {
+      type: 'object',
+      required: ['data'],
+      properties: {
+        data: { oneOf: [ref('AssetResource'), ref('FolderResource')] },
+        meta: ref('WarningsMeta'),
+      },
+    },
+    {
+      type: 'object',
+      required: ['meta'],
+      properties: {
+        meta: {
+          type: 'object',
+          required: ['deleted', 'ref'],
+          properties: {
+            deleted: { const: true },
+            ref: ref('OperationRef'),
+            warnings: ref('Warnings'),
+          },
+        },
+      },
+    },
+    {
+      type: 'object',
+      required: ['errors'],
+      properties: {
+        errors: { type: 'array', items: ref('OperationResultError') },
+      },
+    },
+  ],
+};
+
+const operationsResponseSchema: OpenApiSchema = {
+  type: 'object',
+  required: ['results'],
+  properties: {
+    results: {
+      type: 'array',
+      description: 'One entry per applied operation, in request order. Processing stops at the first '
+        + 'repository failure — subsequent operations are not applied. A failing operation produces an '
+        + '`errors` entry; preceding ops that succeeded remain applied (fail-fast batch, not a transaction).',
+      items: ref('OperationResult'),
+    },
+  },
+};
+
 // ============================================
 // Reusable Parameters & Responses
 // ============================================
@@ -481,6 +620,7 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
     servers: [{ url: basePath }],
     tags: [
       { name: 'Resources', description: 'Assets and folders.' },
+      { name: 'Operations', description: 'Fail-fast batch write operations.' },
       { name: 'Capabilities', description: 'Introspection of what the underlying assets backend supports.' },
       { name: 'Changes', description: 'Capability-gated change signals (sync tokens + change feed).' },
       { name: 'Meta', description: 'API self-description.' },
@@ -764,6 +904,35 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
           },
         },
       },
+      '/operations': {
+        post: {
+          operationId: 'postBatchOperations',
+          summary: 'Batch write operations (add asset/folder, update asset, remove)',
+          description: 'Fail-fast batch: all operations are validated for request shape before any I/O. '
+            + 'A shape-invalid op (e.g. missing `data.id`, or a missing `content` on an asset add) returns '
+            + 'HTTP 400 with zero writes. Once validation passes, ops are applied sequentially; the first '
+            + 'repository failure stops processing and no subsequent ops run. A mid-batch repository '
+            + 'failure leaves previously-applied ops applied — this endpoint is a fail-fast batch, not a '
+            + 'transaction. Response vocabulary is `operations` / `results`, not the JSON:API Atomic '
+            + "Operations extension's `atomic:*` vocabulary — this endpoint never negotiates that extension.",
+          tags: ['Operations'],
+          requestBody: {
+            required: true,
+            content: jsonApiContent(ref('OperationsRequest')),
+          },
+          responses: {
+            '200': {
+              description: 'Results for all applied operations. Processing stopped if a repository failure occurred.',
+              content: jsonApiContent(ref('OperationsResponse')),
+            },
+            '400': errorResponse(
+              'Shape-invalid batch (missing required field, wrong type) — zero writes performed; '
+                + 'or malformed JSON / schema-invalid body.',
+            ),
+            '500': internalErrorResponse,
+          },
+        },
+      },
     },
     components: {
       schemas: {
@@ -804,6 +973,16 @@ export function buildAssetsOpenApi(options: { basePath?: string } = {}): OpenApi
         AssetCreateData: assetCreateDataSchema,
         FolderCreateData: folderCreateDataSchema,
         AssetUpdateData: assetUpdateDataSchema,
+        OperationRef: operationRefSchema,
+        AddAssetOperation: addAssetOperationSchema,
+        AddFolderOperation: addFolderOperationSchema,
+        OperationAssetUpdateData: operationAssetUpdateDataSchema,
+        UpdateAssetOperation: updateAssetOperationSchema,
+        RemoveOperation: removeOperationSchema,
+        OperationsRequest: operationsRequestSchema,
+        OperationResultError: operationResultErrorSchema,
+        OperationResult: operationResultSchema,
+        OperationsResponse: operationsResponseSchema,
       },
       responses: jsonApiErrorResponseComponents(),
     },

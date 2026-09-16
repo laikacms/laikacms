@@ -57,6 +57,13 @@ interface JsonApiResource {
   attributes?: Record<string, unknown>;
 }
 
+/** Wire shape of one entry in `POST /operations`'s `{ results: [...] }` response. */
+interface OperationResultEntry {
+  data?: unknown;
+  meta?: { warnings?: unknown, [key: string]: unknown };
+  errors?: unknown[];
+}
+
 /**
  * Proxies all assets operations through a remote JSON:API endpoint.
  */
@@ -495,26 +502,54 @@ export class AssetsJsonApiProxyRepository extends AssetsRepository {
     );
   }
 
+  /**
+   * Batch-remove several assets in a single `POST /operations` call instead
+   * of one DELETE per key. Follows the upstream `assets-api` server's
+   * fail-fast contract (ADR-004): ops apply in order and processing stops at
+   * the first repository failure, so `results` may be shorter than `keys`
+   * when a mid-batch failure occurred. Unlike the fail-fast server contract
+   * itself, this method's own contract (mirrors `storage-jsonapi-proxy`'s
+   * `removeAtoms`) is best-effort per key — every key is resolved to either a
+   * `data` (removed) or `recoverableError` (skipped) outcome, including keys
+   * left unprocessed by a fail-fast stop.
+   */
   deleteAssets(keys: readonly string[]): LaikaStream.LaikaStream<string, DeleteAssetsDone> {
     return LaikaStream.make<string, DeleteAssetsDone>(emit =>
       Effect.gen({ self: this }, function*() {
+        if (keys.length === 0) return { removed: 0, skipped: 0 };
+
+        const operations = keys.map(key => ({
+          op: 'remove' as const,
+          ref: { type: 'asset' as const, id: key },
+        }));
+        const json = yield* this.fetchJson<{ results?: OperationResultEntry[], meta?: unknown }>(
+          '/operations',
+          { method: 'POST', body: { operations } },
+        );
+        for (const w of warningsFromMeta(json.meta)) yield* emit.recoverableError(w);
+        const results = json.results ?? [];
+
         let removed = 0;
         let skipped = 0;
-        for (const key of keys) {
-          const r = yield* Effect.result(
-            this.fetchVoidWithWarnings(
-              `/resources/${encodeURIComponent(key)}`,
-              { method: 'DELETE' },
-              emit,
-            ),
-          );
-          if (r._tag === 'Failure') {
-            yield* emit.recoverableError(r.failure);
+        for (let i = 0; i < keys.length; i++) {
+          const key = keys[i]!;
+          const entry = results[i];
+          // A shorter `results` array than `keys` means the batch stopped
+          // early (ADR-004 fail-fast): every key past the last result is
+          // unprocessed, not just the one that failed.
+          if (!entry) {
+            yield* emit.recoverableError(new InvalidData(`Failed to remove "${key}": batch stopped early`));
             skipped += 1;
             continue;
           }
-          yield* emit.data(key);
-          removed += 1;
+          for (const w of warningsFromMeta(entry.meta)) yield* emit.recoverableError(w);
+          if (entry.errors) {
+            yield* emit.recoverableError(new InvalidData(`Failed to remove "${key}"`));
+            skipped += 1;
+          } else {
+            yield* emit.data(key);
+            removed += 1;
+          }
         }
         return { removed, skipped };
       })

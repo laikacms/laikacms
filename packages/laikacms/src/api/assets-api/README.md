@@ -87,6 +87,7 @@ interface AssetsApiOptions {
 | POST   | `/resources`      | 201       | Upload an asset or create a folder                    |
 | PATCH  | `/resources/:key` | 200       | Update asset metadata                                 |
 | DELETE | `/resources/:key` | 204 / 200 | Delete an asset or folder (200 when warnings present) |
+| POST   | `/operations`     | 200       | Fail-fast batch write operations                      |
 
 All responses carry `Content-Type: application/vnd.api+json` and `Cache-Control: no-store`.
 
@@ -291,6 +292,64 @@ could not be deleted), returns `200` with a body so the warnings can be conveyed
 
 ---
 
+### POST /operations
+
+Fail-fast batch write operations, mirroring `documents-api`'s post-ADR-004 semantics
+(`DECISIONS/ADR-004`). Accepts a batch of `add` / `update` / `remove` operations against assets and
+folders:
+
+```jsonc
+{
+  "operations": [
+    // Add an asset (base64-encoded content)
+    {
+      "op": "add",
+      "data": {
+        "type": "asset",
+        "id": "images/hero.jpg",
+        "attributes": { "mimeType": "image/jpeg", "content": "<base64-encoded bytes>" }
+      }
+    },
+    // Add a folder
+    { "op": "add", "data": { "type": "folder", "id": "images/thumbnails" } },
+    // Update asset metadata
+    {
+      "op": "update",
+      "data": {
+        "type": "asset",
+        "id": "images/hero.jpg",
+        "attributes": { "cacheControl": "public, max-age=3600" }
+      }
+    },
+    // Remove an asset or folder
+    { "op": "remove", "ref": { "type": "asset", "id": "images/hero.jpg" } }
+  ]
+}
+```
+
+**Fail-fast batch semantics** — not a transaction:
+
+1. **Pre-flight validation**: every op in the batch is validated for request shape (e.g. `data.id`
+   present on add, `data.attributes.content` present on an asset add) _before_ any I/O. If any op
+   fails shape validation, the endpoint returns HTTP 400 with zero writes.
+2. **Sequential application**: once validation passes, ops are applied in order. The first
+   repository failure stops processing — no subsequent ops run.
+3. **No rollback**: a mid-batch repository failure leaves previously-applied ops applied. This
+   endpoint is a fail-fast batch, not a transaction — it does not negotiate the JSON:API Atomic
+   Operations extension, and its response vocabulary (`operations` / `results`) intentionally does
+   not borrow that extension's `atomic:*` member names.
+
+The response is a `results` array with one entry per applied operation: a `data` object on success,
+a `meta: { deleted: true, ref }` on remove success, or an `errors` array on the failing op. The
+overall response status is `200` when ops were applied (even if one failed); it is `400` when the
+batch failed pre-flight validation.
+
+Binary content in a batch `add` must be base64-encoded on `attributes.content` — there is no
+multipart path inside a batch; use `POST /resources` directly for large binary uploads outside a
+batch.
+
+---
+
 ## Sideloading: `?include=`
 
 Pass `?include=<types>` as a comma-separated list to sideload related resources alongside `asset`
@@ -310,10 +369,10 @@ accepted:
 
 ## Partial success: `meta.warnings`
 
-Single-resource, collection, and delete responses may all carry a `meta.warnings` array. Each entry
-is a JSON:API error object describing a non-fatal recoverable issue surfaced by the backing
-repository — for example, an unreadable sub-folder skipped during a recursive walk, or a variation
-that could not be generated.
+Single-resource, collection, delete, and per-result inside `POST /operations`'s `results` responses
+may all carry a `meta.warnings` array. Each entry is a JSON:API error object describing a non-fatal
+recoverable issue surfaced by the backing repository — for example, an unreadable sub-folder skipped
+during a recursive walk, or a variation that could not be generated.
 
 `meta.warnings` is **additive** to the success of the operation. The HTTP status is still `200` (or
 `201` for create); the resource you asked for is delivered; the warnings list describes what else
