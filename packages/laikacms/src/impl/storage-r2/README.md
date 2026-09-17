@@ -68,6 +68,16 @@ export default {
 - **Capabilities.** `getCapabilities()` reports pagination as in-memory offset/page slicing (no
   cursor support) and `changes: unsupportedChanges` — R2 has no live change notifications, so
   `subscribeChanges` is not supported by this implementation.
+- **Listings on missing folders.** R2 has no real folder concept, so an empty prefix listing (no
+  objects, no common prefixes — not even a `.keep`) is indistinguishable from a nonexistent one.
+  This repository treats that case as missing: `listAtoms`/`listAtomSummaries` return `total: 0`
+  with no data, plus a `recoverableError` (`NotFoundError`) callers can inspect. This matches
+  `storage-fs`'s `listAtoms` (though not its `listAtomSummaries`, which is deliberately silent — see
+  LCMS-809 in that package's README), `storage-web`, `storage-web-fs`, WebDAV, GitLab, and Bitbucket
+  on both methods, but differs from `@laikacms/github`, `storage-drizzle`, and `storage-github-cdn`,
+  which silently return `total: 0` either way. `storage-s3` (any S3-compatible client wrapped via
+  `createS3Bucket`) inherits this exact behavior, since it plugs into the same
+  `R2StorageRepository`. See LCMS-1004.
 
 ## Testing
 

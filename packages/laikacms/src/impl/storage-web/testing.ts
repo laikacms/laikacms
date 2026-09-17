@@ -51,4 +51,6 @@ export const webStorageContractCase: StorageContractCase = {
       defaultExtension: 'json',
     });
   },
+  // A missing prefix surfaces as a recoverable NotFoundError. See LCMS-1004.
+  missingFolderBehavior: 'warning',
 };

@@ -40,4 +40,9 @@ export const storagefsContractCase: StorageContractCase = {
       'json',
     );
   },
+  // listAtoms surfaces a missing directory as a recoverable NotFoundError, but
+  // listAtomSummaries deliberately does not — see LCMS-809 (the assets/media
+  // browser calls listAtomSummaries, and a fresh deployment's not-yet-created
+  // upload folder isn't warning-worthy). See LCMS-1004.
+  missingFolderBehavior: { listAtoms: 'warning', listAtomSummaries: 'silent' },
 };

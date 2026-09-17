@@ -103,6 +103,13 @@ doesn't stick.
 - **Caching.** jsDelivr caches responses for hours; this repository does not add its own additional
   caching beyond the one in-memory tree fetch per instance, so repeated instantiation re-fetches the
   tree.
+- **Listings on missing folders.** `GithubCdnDataSource.listDirectory` returns an empty array (not
+  an error) when the path isn't found in the cached tree — a missing folder is indistinguishable
+  from an existing-but-empty one. `listAtoms`/`listAtomSummaries` return `total: 0` with no data and
+  **no** `recoverableError` either way. This matches `@laikacms/github` and `storage-drizzle`, but
+  differs from `storage-fs`, `storage-r2`/`storage-s3`, `storage-web`, `storage-web-fs`, WebDAV,
+  GitLab, and Bitbucket, which surface a `NotFoundError` recoverableError so callers can detect
+  stale or misspelled folder keys. See LCMS-1004.
 
 ## What this does not do
 

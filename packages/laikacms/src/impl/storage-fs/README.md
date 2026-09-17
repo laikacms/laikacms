@@ -60,6 +60,15 @@ const post = await runTask(repo.getObject('posts/hello-world'));
   unsubscribes.
 - **Capabilities.** `getCapabilities()` reports pagination as in-memory offset/page slicing (no
   cursor support) and `changes.subscription: true` with no sync token or change feed.
+- **Listings on missing folders differ by method.** On a `folderKey` that doesn't exist on disk,
+  both `listAtoms` and `listAtomSummaries` return `total: 0` with no data, but only `listAtoms` also
+  emits a `recoverableError` (`NotFoundError`). `listAtomSummaries` stays silent on purpose
+  (LCMS-809): it backs the assets/media browser, and a brand-new deployment's not-yet-created upload
+  folder isn't a warning-worthy condition — every fresh install would otherwise log a spurious
+  "recoverable warning" on first admin visit. `listAtoms`'s warning matches GitLab, Bitbucket,
+  WebDAV, `storage-r2`/`storage-s3`, `storage-web`, and `storage-web-fs`; the silent
+  `listAtomSummaries` matches `@laikacms/github`, `storage-drizzle`, and `storage-github-cdn` (which
+  are silent on both methods). See LCMS-1004.
 
 ## Testing
 

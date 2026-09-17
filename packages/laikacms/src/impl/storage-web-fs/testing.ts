@@ -172,4 +172,6 @@ export const webFsStorageContractCase: StorageContractCase = {
       defaultExtension: 'json',
     });
   },
+  // A missing directory handle surfaces as a recoverable NotFoundError. See LCMS-1004.
+  missingFolderBehavior: 'warning',
 };

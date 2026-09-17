@@ -87,4 +87,7 @@ export const drizzleStorageContractCase: StorageContractCase = {
     const { queryBuilders, callbacks } = makeInMemoryStore();
     return new DrizzleStorageRepository({ queryBuilders, callbacks });
   },
+  // listAtoms is a plain `key LIKE prefix%` query — a nonexistent folder just
+  // matches zero rows, same as an existing-but-empty one. See LCMS-1004.
+  missingFolderBehavior: 'silent',
 };

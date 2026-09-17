@@ -99,4 +99,8 @@ export const r2StorageContractCase: StorageContractCase = {
    * "skipped > 0" half under the same capability, so we skip both.
    */
   skip: ['removeAtoms'],
+  // R2 has no real folder concept; an empty prefix listing is synthesized
+  // into a NotFoundError so callers get the same warning contract as FS/WebDAV.
+  // See LCMS-1004.
+  missingFolderBehavior: 'warning',
 };

@@ -183,6 +183,8 @@ const makeSerializerRegistry = () => ({
 
 export const gitlabContractCase: StorageContractCase = {
   name: 'GitlabStorageRepository',
+  // A missing folder surfaces as a recoverableError (NotFoundError). See LCMS-1004.
+  missingFolderBehavior: 'warning',
   async makeRepo() {
     const server = createMockServer();
     return new GitlabStorageRepository({

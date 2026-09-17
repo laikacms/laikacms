@@ -128,4 +128,6 @@ export const webDavStorageContractCase: StorageContractCase = {
     activeServer?.store.clear();
     activeServer = null;
   },
+  // A missing collection PROPFINDs 404, surfaced as a recoverable warning. See LCMS-1004.
+  missingFolderBehavior: 'warning',
 };

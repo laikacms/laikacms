@@ -185,6 +185,10 @@ const makeSerializerRegistry = () => ({
 
 export const githubContractCase: StorageContractCase = {
   name: 'GithubStorageRepository',
+  // GitHub's Contents API can't distinguish an empty directory from a missing
+  // one (both 404), so a missing folder silently returns `total: 0` with no
+  // recoverableError. See LCMS-1004 and this package's README.
+  missingFolderBehavior: 'silent',
   async makeRepo() {
     const { octokit } = createMockOctokit();
     return new GithubStorageRepository({

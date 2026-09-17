@@ -380,6 +380,11 @@ export class FileSystemStorageRepository extends StorageRepository {
   ): LaikaStream.LaikaStream<AtomSummary, ListAtomsDone> {
     return LaikaStream.make<AtomSummary, ListAtomsDone>(emit =>
       Effect.gen({ self: this }, function*() {
+        // Deliberately does NOT surface `missingFolder` as a recoverableError here,
+        // unlike listAtoms below — see LCMS-809: the assets/media browser calls
+        // listAtomSummaries, and a brand-new deployment's not-yet-created upload
+        // folder isn't a warning-worthy condition. Keep in sync with the
+        // "Listings on missing folders" section of this package's README.
         const { summaries, total } = yield* this.collectFilteredSummaries(folderKey, options);
         if (summaries.length > 0) yield* emit.dataMany(summaries);
         return { total };
