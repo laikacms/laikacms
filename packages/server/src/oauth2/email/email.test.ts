@@ -9,6 +9,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { en, nl } from '../i18n/index.js';
 import type { User } from '../oauth2.js';
 import { requestPasswordReset, resetPassword } from './email.js';
 import type {
@@ -19,6 +20,8 @@ import type {
   PasswordResetConfig,
   PasswordResetToken,
 } from './email.js';
+import { renderPasswordResetEmail, renderPasswordResetText } from './templates/password-reset-email.js';
+import type { PasswordResetEmailVars } from './templates/password-reset-email.js';
 
 // ---------------------------------------------------------------------------
 // Mock laikacms/crypto so tests don't run bcrypt (slow) or timing delays
@@ -216,6 +219,65 @@ describe('requestPasswordReset', () => {
 
     expect(customHtml).toHaveBeenCalledOnce();
     expect(provider.sentMessages[0].html).toBe('<custom>html</custom>');
+  });
+
+  it('localizes the subject and email body when nl messages are provided', async () => {
+    const tokenStore = new Map<string, PasswordResetToken>();
+    const callbacks = makeCallbacks(tokenStore);
+    const provider = makeEmailProvider();
+    const config = makeConfig(callbacks, provider, { messages: nl });
+    const user = makeUser();
+
+    await requestPasswordReset(user, config);
+
+    const sentMsg = provider.sentMessages[0];
+    expect(sentMsg.subject).toContain(nl.email.passwordResetSubject);
+    expect(sentMsg.subject).not.toContain(en.email.passwordResetSubject);
+    expect(sentMsg.html).toContain(nl.email.passwordResetTitle);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// renderPasswordResetEmail / renderPasswordResetText (i18n)
+// ---------------------------------------------------------------------------
+
+describe('renderPasswordResetEmail / renderPasswordResetText', () => {
+  function makeVars(overrides: Partial<PasswordResetEmailVars> = {}): PasswordResetEmailVars {
+    return {
+      resetLink: 'https://example.com/reset-password?token=abc123',
+      userName: 'Jane',
+      userEmail: 'jane@example.com',
+      expiresIn: '1 hour',
+      appName: 'Test CMS',
+      supportEmail: 'support@example.com',
+      ...overrides,
+    };
+  }
+
+  it('defaults to English when no messages are provided', () => {
+    const html = renderPasswordResetEmail(makeVars());
+    expect(html).toContain(en.email.passwordResetSubject);
+    expect(html).toContain(en.email.passwordResetTitle);
+  });
+
+  it('renders nl subject/title different from en for the HTML email', () => {
+    const enHtml = renderPasswordResetEmail(makeVars({ messages: en }));
+    const nlHtml = renderPasswordResetEmail(makeVars({ messages: nl }));
+
+    expect(nlHtml).toContain(nl.email.passwordResetSubject);
+    expect(nlHtml).toContain(nl.email.passwordResetTitle);
+    expect(enHtml).not.toContain(nl.email.passwordResetSubject);
+    expect(nlHtml).not.toContain(en.email.passwordResetSubject);
+    expect(enHtml).not.toBe(nlHtml);
+  });
+
+  it('renders nl subject/title different from en for the plain-text email', () => {
+    const enText = renderPasswordResetText(makeVars({ messages: en }));
+    const nlText = renderPasswordResetText(makeVars({ messages: nl }));
+
+    expect(nlText).toContain(nl.email.passwordResetSubject);
+    expect(enText).toContain(en.email.passwordResetSubject);
+    expect(enText).not.toBe(nlText);
   });
 });
 

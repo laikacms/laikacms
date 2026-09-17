@@ -4,6 +4,7 @@
  * HTML email template for password reset requests, styled with the built-in design system.
  */
 
+import { defaultMessages, type OAuthMessages } from '../../i18n/index.js';
 import { defaultLogoSvgSmall, emailBaseStyles } from './styles.js';
 
 /**
@@ -16,21 +17,27 @@ export interface PasswordResetEmailVars {
   expiresIn: string;
   appName: string;
   supportEmail: string;
+  /** Localized messages for the email. Defaults to English if not provided. */
+  messages?: OAuthMessages;
 }
 
 /**
  * Generate password reset email HTML
  */
 export function renderPasswordResetEmail(vars: PasswordResetEmailVars): string {
-  const { resetLink, userName, userEmail, expiresIn, appName, supportEmail } = vars;
-  const greeting = userName ? ` ${userName}` : '';
+  const { resetLink, userName, userEmail, expiresIn, appName, supportEmail, messages } = vars;
+  const t = (messages ?? defaultMessages).email;
+  const greeting = t.passwordResetGreeting.replace('{{name}}', userName ? ` ${userName}` : '');
+  const intro = t.passwordResetIntro.replace('{{email}}', userEmail);
+  const warning = t.passwordResetWarning.replace('{{expiresIn}}', expiresIn);
+  const footer = t.passwordResetFooter.replace('{{appName}}', appName);
 
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Reset Your Password</title>
+  <title>${t.passwordResetSubject}</title>
   <style>${emailBaseStyles}</style>
 </head>
 <body>
@@ -39,29 +46,29 @@ export function renderPasswordResetEmail(vars: PasswordResetEmailVars): string {
       ${defaultLogoSvgSmall}
     </div>
     <div class="email-body">
-      <h1 class="email-title">Reset Your Password</h1>
-      <p class="email-text">Hi${greeting},</p>
+      <h1 class="email-title">${t.passwordResetTitle}</h1>
+      <p class="email-text">${greeting}</p>
       <p class="email-text">
-        We received a request to reset the password for your account associated with <strong>${userEmail}</strong>.
+        ${intro}
       </p>
       <p class="email-text">
-        Click the button below to reset your password:
+        ${t.passwordResetAction}
       </p>
       <p style="text-align: center;">
-        <a href="${resetLink}" class="email-button">Reset Password</a>
+        <a href="${resetLink}" class="email-button">${t.passwordResetButton}</a>
       </p>
       <p class="email-text email-muted">
-        Or copy and paste this link into your browser:
+        ${t.passwordResetLinkHint}
       </p>
       <div class="email-code">${resetLink}</div>
       <div class="email-warning">
-        ⚠️ This link will expire in <strong>${expiresIn}</strong>. If you didn't request a password reset, you can safely ignore this email.
+        ${warning}
       </div>
     </div>
     <div class="email-footer">
       <p class="email-footer-text">
-        This email was sent by ${appName}.<br>
-        If you have questions, contact <a href="mailto:${supportEmail}" class="email-link">${supportEmail}</a>
+        ${footer}<br>
+        ${t.passwordResetSupport} <a href="mailto:${supportEmail}" class="email-link">${supportEmail}</a>
       </p>
     </div>
   </div>
@@ -73,21 +80,26 @@ export function renderPasswordResetEmail(vars: PasswordResetEmailVars): string {
  * Generate password reset email plain text
  */
 export function renderPasswordResetText(vars: PasswordResetEmailVars): string {
-  const { resetLink, userName, userEmail, expiresIn, appName, supportEmail } = vars;
-  const greeting = userName ? ` ${userName}` : '';
+  const { resetLink, userName, userEmail, expiresIn, appName, supportEmail, messages } = vars;
+  const t = (messages ?? defaultMessages).email;
+  const greeting = t.passwordResetGreeting.replace('{{name}}', userName ? ` ${userName}` : '');
+  const intro = t.passwordResetIntro.replace('{{email}}', userEmail).replace(/<\/?strong>/g, '');
+  const warning = t.passwordResetWarning.replace('{{expiresIn}}', expiresIn).replace(/<\/?strong>/g, '')
+    .replace(/^⚠️\s*/, '');
+  const footer = t.passwordResetFooter.replace('{{appName}}', appName);
 
-  return `Reset Your Password
+  return `${t.passwordResetSubject}
 
-Hi${greeting},
+${greeting}
 
-We received a request to reset the password for your account associated with ${userEmail}.
+${intro}
 
-Click the link below to reset your password:
+${t.passwordResetAction}
 ${resetLink}
 
-This link will expire in ${expiresIn}. If you didn't request a password reset, you can safely ignore this email.
+${warning}
 
 ---
-This email was sent by ${appName}.
-If you have questions, contact ${supportEmail}`;
+${footer}
+${t.passwordResetSupport} ${supportEmail}`;
 }

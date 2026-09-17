@@ -16,6 +16,7 @@ import {
 } from './templates/password-reset-email.js';
 
 // Re-export templates under namespace to avoid conflicts
+import { defaultMessages, type OAuthMessages } from '../i18n/index.js';
 import type { User } from '../oauth2.js';
 import * as emailStyles from './templates/styles.js';
 export { emailStyles };
@@ -152,6 +153,9 @@ export interface PasswordResetConfig {
   /** Token expiration in seconds (default: 3600 = 1 hour) */
   tokenExpiration?: number;
 
+  /** Localized messages for the reset email. Defaults to English if not provided. */
+  messages?: OAuthMessages;
+
   /** Custom HTML email renderer (optional) */
   renderHtml?: (vars: PasswordResetEmailVars) => string;
 
@@ -209,6 +213,7 @@ export async function requestPasswordReset(
     appName = 'Laika CMS',
     supportEmail = fromEmail,
     tokenExpiration = 3600,
+    messages = defaultMessages,
     renderHtml = renderPasswordResetEmail,
     renderText = renderPasswordResetText,
   } = config;
@@ -238,6 +243,7 @@ export async function requestPasswordReset(
     expiresIn: formatDuration(tokenExpiration),
     appName,
     supportEmail,
+    messages,
   };
 
   const html = renderHtml(templateVars);
@@ -247,7 +253,7 @@ export async function requestPasswordReset(
   const result = await emailProvider.send({
     to: user.email,
     from: fromEmail,
-    subject: `Reset your ${appName} password`,
+    subject: `${messages.email.passwordResetSubject} - ${appName}`,
     html,
     text,
   });
