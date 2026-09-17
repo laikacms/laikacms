@@ -146,6 +146,9 @@ const serializerRegistry = {
 
 export const bitbucketContractCase: StorageContractCase = {
   name: 'BitbucketStorageRepository',
+  // Matches GitLab: a missing folder surfaces as a recoverableError (NotFoundError).
+  // See LCMS-1004.
+  missingFolderBehavior: 'warning',
   async makeRepo() {
     const mock = createMockBitbucket();
     return new BitbucketStorageRepository({

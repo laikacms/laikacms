@@ -165,6 +165,30 @@ describe('GithubCdnStorageRepository.listAtoms / listAtomSummaries', () => {
     expect(collected.data).toHaveLength(1);
     expect(collected.done.total).toBe(2);
   });
+
+  // LCMS-1004: unlike FS/R2/WebDAV/Web/WebFs, a missing folder is NOT surfaced
+  // as a recoverable warning here — the jsDelivr tree lookup for a nonexistent
+  // path just returns no matching node, which is indistinguishable from an
+  // existing-but-empty directory. See GithubCdnDataSource#listDirectory.
+  it('listAtoms on a missing folder: silently empty, no recoverable warning', async () => {
+    const { repo } = makeRepo();
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtoms('does-not-exist', { depth: 1, pagination: { offset: 0, limit: 100 } }),
+    );
+    expect(collected.data).toHaveLength(0);
+    expect(collected.done.total).toBe(0);
+    expect(collected.recoverableErrors).toHaveLength(0);
+  });
+
+  it('listAtomSummaries on a missing folder: silently empty, no recoverable warning', async () => {
+    const { repo } = makeRepo();
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('does-not-exist', { depth: 1, pagination: { offset: 0, limit: 100 } }),
+    );
+    expect(collected.data).toHaveLength(0);
+    expect(collected.done.total).toBe(0);
+    expect(collected.recoverableErrors).toHaveLength(0);
+  });
 });
 
 describe('GithubCdnStorageRepository.getCapabilities', () => {

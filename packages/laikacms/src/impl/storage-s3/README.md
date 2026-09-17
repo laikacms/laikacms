@@ -76,6 +76,13 @@ bucket API that `R2StorageRepository` uses: `head`, `get`, `put`, `delete`, and 
 - **`put` return value.** S3's `PutObjectCommand` response doesn't carry back the object's size or
   etag the way R2's `put` does, so the adapter synthesizes a minimal object
   (`{ key, size: 0, etag: '' }`) for API parity with `R2BucketLike`.
+- **Listings on missing folders.** `ListObjectsV2` never 404s on a nonexistent prefix — it just
+  returns empty `Contents`/`CommonPrefixes`, same as an existing-but-empty prefix. This adapter
+  passes that empty result straight through; `R2StorageRepository` is what turns "the listing came
+  back completely empty" into a synthesized `NotFoundError`. So a `StorageRepository` built on this
+  adapter reports `listAtoms`/`listAtomSummaries` on a missing folder as `total: 0` with a
+  `recoverableError`, exactly like `storage-r2` — see that package's README for the shared rationale
+  and how it compares to the other backends. See LCMS-1004.
 
 ## What this does not do
 

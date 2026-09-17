@@ -14,6 +14,27 @@ export type StorageContractCapability =
   | 'getAtom'
   | 'removeAtoms';
 
+/**
+ * How a listing method behaves when `folderKey` doesn't exist:
+ *
+ * - `'warning'` — the stream completes with `done.total === 0` and no items,
+ *   plus a recoverable `NotFoundError` the caller can inspect (surfaced via
+ *   `collectStream`'s `recoverableErrors`).
+ * - `'silent'` — the stream completes with `done.total === 0` and no items,
+ *   with no error at all; indistinguishable from an existing-but-empty folder.
+ *
+ * See LCMS-1004: this is a real, backend-specific (and in `storage-fs`'s case,
+ * even method-specific — see LCMS-809) difference, not a bug to paper over —
+ * so every registered case must declare which one it implements for each of
+ * `listAtoms` and `listAtomSummaries` independently.
+ */
+export type MissingFolderBehavior = 'warning' | 'silent';
+
+export interface MissingFolderBehaviors {
+  listAtoms: MissingFolderBehavior;
+  listAtomSummaries: MissingFolderBehavior;
+}
+
 export interface StorageContractCase {
   /** Human-readable name shown in test output. */
   name: string;
@@ -26,12 +47,22 @@ export interface StorageContractCase {
 
   /** Capabilities to skip (not supported by this backend). */
   skip?: StorageContractCapability[];
+
+  /**
+   * How listing a nonexistent folder behaves for this backend, per method.
+   * See {@link MissingFolderBehavior}. Most backends use the same value for
+   * both methods; pass a bare `MissingFolderBehavior` as shorthand for that.
+   */
+  missingFolderBehavior: MissingFolderBehavior | MissingFolderBehaviors;
 }
 
 const DEFAULT_PAGINATION = { offset: 0, limit: 100 };
 
 export function runStorageRepositoryContract(testCase: StorageContractCase): void {
   const { name, makeRepo, teardown, skip = [] } = testCase;
+  const missingFolderBehavior: MissingFolderBehaviors = typeof testCase.missingFolderBehavior === 'string'
+    ? { listAtoms: testCase.missingFolderBehavior, listAtomSummaries: testCase.missingFolderBehavior }
+    : testCase.missingFolderBehavior;
 
   describe(`StorageRepository contract: ${name}`, () => {
     let repo: StorageRepository;
@@ -257,5 +288,46 @@ export function runStorageRepositoryContract(testCase: StorageContractCase): voi
       const { done } = await collectStream(repo.removeAtoms([missingKey]));
       expect(done.skipped).toBeGreaterThan(0);
     });
+
+    // --- LCMS-1004: listAtoms/listAtomSummaries on a nonexistent folder ---
+    itOrSkip('listAtoms')(
+      `listAtoms on a missing folder: ${
+        missingFolderBehavior.listAtoms === 'warning' ? 'empty + recoverable warning' : 'silently empty'
+      }`,
+      async () => {
+        const missingFolder = `contract-test/missing-folder-atoms-${Date.now()}`;
+
+        const collected = await LaikaStream.runPromiseCollect(
+          repo.listAtoms(missingFolder, { depth: 1, pagination: DEFAULT_PAGINATION }),
+        );
+        expect(collected.data).toHaveLength(0);
+        expect(collected.done.total).toBe(0);
+        if (missingFolderBehavior.listAtoms === 'warning') {
+          expect(collected.recoverableErrors.length).toBeGreaterThan(0);
+        } else {
+          expect(collected.recoverableErrors).toHaveLength(0);
+        }
+      },
+    );
+
+    itOrSkip('listAtomSummaries')(
+      `listAtomSummaries on a missing folder: ${
+        missingFolderBehavior.listAtomSummaries === 'warning' ? 'empty + recoverable warning' : 'silently empty'
+      }`,
+      async () => {
+        const missingFolder = `contract-test/missing-folder-summaries-${Date.now()}`;
+
+        const collected = await LaikaStream.runPromiseCollect(
+          repo.listAtomSummaries(missingFolder, { depth: 1, pagination: DEFAULT_PAGINATION }),
+        );
+        expect(collected.data).toHaveLength(0);
+        expect(collected.done.total).toBe(0);
+        if (missingFolderBehavior.listAtomSummaries === 'warning') {
+          expect(collected.recoverableErrors.length).toBeGreaterThan(0);
+        } else {
+          expect(collected.recoverableErrors).toHaveLength(0);
+        }
+      },
+    );
   });
 }

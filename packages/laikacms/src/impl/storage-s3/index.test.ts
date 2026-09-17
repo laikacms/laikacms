@@ -1,4 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
+
+import { LaikaStream } from 'laikacms/core';
+
+import { jsonSerializer } from '../../serializers/storage-serializers-json/index.js';
+import { R2StorageRepository } from '../storage-r2/infrastructure/repositories/r2-storage-repository.js';
+
 import { createS3Bucket } from './index.js';
 import type { S3ClientLike, S3Commands } from './index.js';
 
@@ -360,5 +366,102 @@ describe('delete()', () => {
     await bucket.delete('file.md');
     const cmd = vi.mocked(client.send).mock.calls[0]![0] as { input: Record<string, unknown> };
     expect(cmd.input['Key']).toBe('ns/file.md');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// listAtoms/listAtomSummaries on a missing folder (LCMS-1004) — driven through
+// R2StorageRepository, since that's what interprets `bucket.list()` results
+// into the missing-vs-empty-folder distinction. ListObjectsV2 never 404s on a
+// nonexistent prefix — it just returns empty Contents/CommonPrefixes — so
+// R2StorageRepository synthesizes a NotFoundError whenever a listing comes
+// back completely empty (see r2-datasource.ts `listDirectory`). Because
+// `createS3Bucket` is a thin ListObjectsV2 passthrough, storage-s3 inherits
+// that exact same "empty + recoverable warning" contract.
+// ---------------------------------------------------------------------------
+
+interface InMemoryObject {
+  key: string;
+  body: string;
+}
+
+function makeInMemoryS3Client(objects: InMemoryObject[] = []): S3ClientLike {
+  return {
+    send: vi.fn(async (cmd: { input: object } & { readonly _name?: string }) => {
+      const name = (cmd as { _name?: string })._name;
+      const input = cmd.input as Record<string, unknown>;
+      if (name === 'ListObjectsV2Command') {
+        const prefix = (input['Prefix'] as string | undefined) ?? '';
+        const delimiter = input['Delimiter'] as string | undefined;
+        const matching = objects.filter(o => o.key.startsWith(prefix));
+        const contents: { Key: string, Size: number, ETag: string }[] = [];
+        const commonPrefixes = new Set<string>();
+        for (const o of matching) {
+          if (delimiter) {
+            const tail = o.key.slice(prefix.length);
+            const sepIdx = tail.indexOf(delimiter);
+            if (sepIdx !== -1) {
+              commonPrefixes.add(prefix + tail.slice(0, sepIdx + delimiter.length));
+              continue;
+            }
+          }
+          contents.push({ Key: o.key, Size: o.body.length, ETag: '"e"' });
+        }
+        return {
+          Contents: contents,
+          CommonPrefixes: Array.from(commonPrefixes).map(Prefix => ({ Prefix })),
+          IsTruncated: false,
+        };
+      }
+      if (name === 'GetObjectCommand' || name === 'HeadObjectCommand') {
+        const key = input['Key'] as string;
+        const obj = objects.find(o => o.key === key);
+        if (!obj) throw Object.assign(new Error('not found'), { name: 'NoSuchKey' });
+        if (name === 'HeadObjectCommand') return { ContentLength: obj.body.length, ETag: '"e"' };
+        return {
+          ContentLength: obj.body.length,
+          ETag: '"e"',
+          Body: { transformToString: async () => obj.body },
+        };
+      }
+      throw new Error(`Unexpected command ${name}`);
+    }),
+  };
+}
+
+function makeS3BackedRepo(objects: InMemoryObject[] = []) {
+  const client = makeInMemoryS3Client(objects);
+  const bucket = createS3Bucket({ client, bucketName: 'test-bucket', commands });
+  return new R2StorageRepository(bucket as never, { json: jsonSerializer }, 'json');
+}
+
+describe('storage-s3 missing-folder behavior (via R2StorageRepository)', () => {
+  it('listAtoms on a missing folder: empty + recoverable warning', async () => {
+    const repo = makeS3BackedRepo();
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtoms('does-not-exist', { depth: 1, pagination: { offset: 0, limit: 100 } }),
+    );
+    expect(collected.data).toHaveLength(0);
+    expect(collected.done.total).toBe(0);
+    expect(collected.recoverableErrors.length).toBeGreaterThan(0);
+  });
+
+  it('listAtomSummaries on a missing folder: empty + recoverable warning', async () => {
+    const repo = makeS3BackedRepo();
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtomSummaries('does-not-exist', { depth: 1, pagination: { offset: 0, limit: 100 } }),
+    );
+    expect(collected.data).toHaveLength(0);
+    expect(collected.done.total).toBe(0);
+    expect(collected.recoverableErrors.length).toBeGreaterThan(0);
+  });
+
+  it('listAtoms on an existing but empty folder: empty, no warning', async () => {
+    const repo = makeS3BackedRepo([{ key: 'posts/.keep', body: '' }]);
+    const collected = await LaikaStream.runPromiseCollect(
+      repo.listAtoms('posts', { depth: 1, pagination: { offset: 0, limit: 100 } }),
+    );
+    expect(collected.data).toHaveLength(0);
+    expect(collected.recoverableErrors).toHaveLength(0);
   });
 });

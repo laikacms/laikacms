@@ -14,6 +14,10 @@ let originalFetch: typeof fetch | null = null;
 export const jsonApiProxyStorageContractCase: StorageContractCase = {
   name: 'StorageJsonApiProxyRepository (in-process JSON:API + in-memory backing)',
   skip: [],
+  // Backed by InMemoryStorageRepository, whose listAtoms/listAtomSummaries are
+  // plain key-prefix filters — a nonexistent folder just matches zero entries,
+  // same as an existing-but-empty one. See LCMS-1004.
+  missingFolderBehavior: 'silent',
   makeRepo: async () => {
     const backing = new InMemoryStorageRepository();
     const api = buildJsonApi({ repo: backing, authorize: allowAll });
