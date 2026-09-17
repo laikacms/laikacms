@@ -45,8 +45,9 @@ Measured on `origin/develop`, 2026-07-12:
    extension's _member names_ without ever performing the JSON:API extension negotiation that would
    entitle a client to its guarantees.
 4. **The wire surface has zero in-repo consumers.** `atomic:operations` / `atomic:results` appear
-   only in the endpoint itself, its OpenAPI schema, its own tests, and `docs/api-reference.md`. The
-   Decap backend does not call `/operations`. Renaming the members breaks **no** internal caller.
+   only in the endpoint itself, its OpenAPI schema, its own tests, and
+   `docs/reference/json-api/documents.md`. The Decap backend does not call `/operations`. Renaming
+   the members breaks **no** internal caller.
 
 ## Decision
 
@@ -66,8 +67,8 @@ This is the "MUST NOT process any subsequent operations" clause, and it is free.
 **(c) Drop the `atomic:*` vocabulary.** Rename the request/response members and the endpoint
 description away from the extension's namespace (e.g. `operations:` / `operations:results`), and
 state the remaining deviation **explicitly** in the OpenAPI description, the package README, and
-`docs/api-reference.md`: _a mid-batch repository failure leaves previously-applied ops applied; this
-endpoint is a fail-fast batch, not a transaction._
+`docs/reference/json-api/documents.md`: _a mid-batch repository failure leaves previously-applied
+ops applied; this endpoint is a fail-fast batch, not a transaction._
 
 ### Why not option 1 (genuine atomicity)
 
