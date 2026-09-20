@@ -12,6 +12,15 @@
 packages:
   - "starter-*"
 
+# Dedupe laikacms to the starters' own range. @laikacms/decap-cms@4.x declares
+# an older laikacms dependency, and without this pnpm installs a second copy
+# whose repository types are incompatible with the starters' laikacms@6 — the
+# opfs starter, which injects repositories into the laika backend, then fails
+# to typecheck. Mirrors the `overrides` block in starter-opfs-blog/package.json
+# (honored on a standalone install; ignored for members of this workspace).
+overrides:
+  laikacms: "^6.0.0"
+
 # Dependencies whose install scripts are allowed to run (pnpm blocks build
 # scripts by default). esbuild ships its platform binary via postinstall.
 allowBuilds:

@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  laikacms: ^6.0.0
+
 importers:
 
   .: {}
@@ -15,7 +18,7 @@ importers:
         version: 6.0.0(@cloudflare/workers-types@4.20260702.1)(astro@7.2.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(tsx@4.23.11)(yaml@2.9.0))(rolldown@1.2.3)(typescript@6.0.3)(vite@8.2.1(@types/node@24.13.3)(esbuild@0.28.2)(tsx@4.23.11)(yaml@2.9.0))
       '@laikacms/decap-cms':
         specifier: ^4.1.0
-        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@hono/node-server@2.1.0(hono@4.13.1))(@types/node@24.13.3)(@types/react@19.2.18)(hono@4.13.1)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
+        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
         specifier: ^6.0.0
         version: 6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(@cloudflare/workers-types@4.20260702.1)(ai@7.0.58(zod@4.4.3))
@@ -58,10 +61,10 @@ importers:
         version: 2.1.0(hono@4.13.1)
       '@laikacms/decap-cms':
         specifier: ^4.1.0
-        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@hono/node-server@2.1.0(hono@4.13.1))(@types/node@24.13.3)(@types/react@19.2.18)(hono@4.13.1)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
+        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/github':
-        specifier: ^1.0.0
-        version: 1.0.0(@cloudflare/workers-types@4.20260702.1)(@hono/node-server@2.1.0(hono@4.13.1))(hono@4.13.1)
+        specifier: ^2.0.0
+        version: 2.0.0(@cloudflare/workers-types@4.20260702.1)
       '@laikacms/server':
         specifier: ^6.0.0
         version: 6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(@cloudflare/workers-types@4.20260702.1)(ai@7.0.58(zod@4.4.3))
@@ -104,7 +107,7 @@ importers:
         version: 2.1.0(hono@4.13.1)
       '@laikacms/decap-cms':
         specifier: ^4.1.0
-        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@hono/node-server@2.1.0(hono@4.13.1))(@types/node@24.13.3)(@types/react@19.2.18)(hono@4.13.1)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
+        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
         specifier: ^6.0.0
         version: 6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(@cloudflare/workers-types@4.20260702.1)(ai@7.0.58(zod@4.4.3))
@@ -144,7 +147,7 @@ importers:
     dependencies:
       '@laikacms/decap-cms':
         specifier: ^4.1.0
-        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@hono/node-server@2.1.0(hono@4.13.1))(@types/node@24.13.3)(@types/react@19.2.18)(hono@4.13.1)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
+        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       laikacms:
         specifier: ^6.0.0
         version: 6.0.0(@cloudflare/workers-types@4.20260702.1)
@@ -184,7 +187,7 @@ importers:
     dependencies:
       '@laikacms/decap-cms':
         specifier: ^4.1.0
-        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@hono/node-server@2.1.0(hono@4.13.1))(@types/node@24.13.3)(@types/react@19.2.18)(hono@4.13.1)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
+        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
         specifier: ^6.0.0
         version: 6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(@cloudflare/workers-types@4.20260702.1)(ai@7.0.58(zod@4.4.3))
@@ -239,7 +242,7 @@ importers:
     dependencies:
       '@laikacms/decap-cms':
         specifier: ^4.1.0
-        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@hono/node-server@2.1.0(hono@4.13.1))(@types/node@24.13.3)(@types/react@19.2.18)(hono@4.13.1)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
+        version: 4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)
       '@laikacms/server':
         specifier: ^6.0.0
         version: 6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(@cloudflare/workers-types@4.20260702.1)(ai@7.0.58(zod@4.4.3))
@@ -1654,9 +1657,9 @@ packages:
       zod:
         optional: true
 
-  '@laikacms/github@1.0.0':
-    resolution: {integrity: sha512-f3BE2b731gZnOk+hWExaup81A5UX67cC8Br46cCeHvRPQXjhnDp1Mbf9JY4CLT+3bSd23oe3xhd8S+rUB9KY/g==}
-    engines: {node: 22.x}
+  '@laikacms/github@2.0.0':
+    resolution: {integrity: sha512-jdXVy0wGvwr4G6Jb6iZx0VFnPw6kXlIQdCp/qisfPTH8X075B+nFyrBdTDXb065VwIKnk2et+DSyF9LNJSwXXw==}
+    engines: {node: 24.x}
 
   '@laikacms/server@6.0.0':
     resolution: {integrity: sha512-z/jTpa2DuYspVbKAkrrnKBLNFbTn/Vf0mEFXRcz8S7zyruP0bsd+izveRnOjRFQmOY5bkR1NUtTuu3fUeeyapQ==}
@@ -2348,10 +2351,6 @@ packages:
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
 
-  '@sindresorhus/chunkify@1.0.0':
-    resolution: {integrity: sha512-YJOcVaEasXWcttXetXn0jd6Gtm9wFHQ1gViTPcxhESwkMCOoA4kwFsNr9EGcmsARGx7jXQZWmOR4zQotRcI9hw==}
-    engines: {node: '>=18'}
-
   '@sindresorhus/df@1.0.1':
     resolution: {integrity: sha512-1Hyp7NQnD/u4DSxR2DGW78TF9k7R0wZ8ev0BpMAIzA6yTQSHqNb5wTuvtcPYf4FWbVse2rW7RgDsyL8ua2vXHw==}
     engines: {node: '>=0.10.0'}
@@ -2598,14 +2597,6 @@ packages:
     resolution: {integrity: sha512-COROpnaoap1E2F000S62r6A60uHZnmlvomhfyT2DlTcrY1OrBKn2UhH7qn5wTC9zMvD0AY7csdPSNwKP+7WiQw==}
     engines: {node: '>= 0.4'}
 
-  array-union@1.0.2:
-    resolution: {integrity: sha512-Dxr6QJj/RdU/hCaBjOfxW+q6lyuVE6JFWIrAUpuOOhoJJoQ99cUn3igRaHVB5P9WrgFVN0FfArM3x0cueOU8ng==}
-    engines: {node: '>=0.10.0'}
-
-  array-uniq@1.0.3:
-    resolution: {integrity: sha512-MNha4BWQ6JbwhFhj03YK552f7cb3AzoE8SzeljgChvL1dl3IcvggXVz1DilzySZkCja+CXuZbdW7yATchWn8/Q==}
-    engines: {node: '>=0.10.0'}
-
   astro@7.2.0:
     resolution: {integrity: sha512-lLTYzx3fOvCmtwD3JVBLQcbORbIOW1/j0R+3IvJx/XKwMGrk7mFnF0BYSOeRiNw1qHUR5mdA6+hRnyvyDfqrWQ==}
     engines: {node: '>=22.12.0', npm: '>=9.6.5', pnpm: '>=7.1.0'}
@@ -2627,9 +2618,6 @@ packages:
   bail@2.0.2:
     resolution: {integrity: sha512-0xO6mYd7JB2YesxDKplafRpsiOzPt9V02ddPCLbY1xYGPOX24NTyN50qnUxgCPcSoYMhKpAuBTjQoRZCAkUDRw==}
 
-  balanced-match@1.0.2:
-    resolution: {integrity: sha512-3oSeUO0TMV67hN1AmbXsK4yaqU7tjiHlbxRDZOpH0KW9+CeX4bRAaX0Anxt0tx2MrpRpWwQaPwIlISEJhYU5Pw==}
-
   balanced-match@4.0.4:
     resolution: {integrity: sha512-BLrgEcRTwX2o6gGxGOCNyMvGSp35YofuYzw9h1IMTRmKqttAZZVU67bdb9Pr2vUHA8+j3i2tJfjO6C6+4myGTA==}
     engines: {node: 18 || 20 || >=22}
@@ -2650,9 +2638,6 @@ packages:
 
   boolbase@1.0.0:
     resolution: {integrity: sha512-JZOSA7Mo9sNGB8+UjSgzdLtokWAky1zbztM3WRLCbZ70/3cTANmQmOdR7y2g+J0e2WXywy1yS468tY+IruqEww==}
-
-  brace-expansion@1.1.18:
-    resolution: {integrity: sha512-Edep/X9fGqVNmzKBVsDYIOtD+z1tuezV70LBjdCst9Tqu76lsnvRiZ6oTic1n+/BIwX6QDGAO94PN4N2SADvtw==}
 
   brace-expansion@5.0.9:
     resolution: {integrity: sha512-ScQ4IuvIEF1TMlP7Zt+vjJ//9zlPb2SDcxWxM3bk8s6t6GGdJ7KO1dCcTidOPJKePW30LE/2cT7wCyPho9/Wxg==}
@@ -2731,9 +2716,6 @@ packages:
   common-ancestor-path@2.0.0:
     resolution: {integrity: sha512-dnN3ibLeoRf2HNC+OlCiNc5d2zxbLJXOtiZUudNFSXZrNSydxcCsSpRzXwfu7BBWCIfHPw+xTayeBvJCP/D8Ng==}
     engines: {node: '>= 18'}
-
-  concat-map@0.0.1:
-    resolution: {integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==}
 
   content-disposition@1.1.0:
     resolution: {integrity: sha512-5jRCH9Z/+DRP7rkvY83B+yGIGX96OYdJmzngqnw2SBSxqCFPd0w2km3s5iawpGX8krnwSGmF0FW5Nhr0Hfai3g==}
@@ -2855,10 +2837,6 @@ packages:
   diff@8.0.4:
     resolution: {integrity: sha512-DPi0FmjiSU5EvQV0++GFDOJ9ASQUVFh5kD+OzOnYdi7n3Wpm9hWWGfB/O2blfHcMVTL5WkQXSnRiK9makhrcnw==}
     engines: {node: '>=0.3.1'}
-
-  dir-glob@2.2.2:
-    resolution: {integrity: sha512-f9LBi5QWzIW3I6e//uxZoLBlUt9kcp66qo0sSCxL6YZKc75R1c4MFCoe/LaZiBGmgujvQdxc5Bn3QhfyvK5Hsw==}
-    engines: {node: '>=4'}
 
   dnd-core@16.0.1:
     resolution: {integrity: sha512-HK294sl7tbw6F6IeuK16YSBUoorvHpY8RHO+9yFfaJyCDVb6n7PRcezrOEOa2SBCqiYpemh5Jx20ZcjKdFAVng==}
@@ -3100,9 +3078,6 @@ packages:
     resolution: {integrity: sha512-Rx/WycZ60HOaqLKAi6cHRKKI7zxWbJ31MhntmtwMoaTeF7XFH9hhBp8vITaMidfljRQ6eYWCKkaTK+ykVJHP2A==}
     engines: {node: '>= 0.8'}
 
-  fs.realpath@1.0.0:
-    resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
-
   fsevents@2.3.3:
     resolution: {integrity: sha512-5xoDfX+fL7faATnagmWPpbFtwh/R77WmMMqqHGS65C3vvB0YHrgF+B1YmZ3441tMj5n63k0212XNoJwzlhffQw==}
     engines: {node: ^8.16.0 || ^10.6.0 || >=11.0.0}
@@ -3142,17 +3117,9 @@ packages:
     resolution: {integrity: sha512-AOIgSQCepiJYwP3ARnGx+5VnTu2HBYdzbGP45eLw1vr3zB3vZLeyed1sC9hnbcOc9/SrMyM5RPQrkGz4aS9Zow==}
     engines: {node: '>= 6'}
 
-  glob@7.2.3:
-    resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
-    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
-
   globby@14.1.0:
     resolution: {integrity: sha512-0Ia46fDOaT7k4og1PDW4YbodWWr3scS2vAr2lTbsplOt2WkKp0vQbkI9wKis/T5LV/dqPjO3bpS/z6GTJB82LA==}
     engines: {node: '>=18'}
-
-  globby@7.1.1:
-    resolution: {integrity: sha512-yANWAN2DUcBtuus5Cpd+SKROzXHs2iVXFZt/Ykrfz6SAXqacLX25NZpltE+39ceMexYF4TtEadjuSTw8+3wX4g==}
-    engines: {node: '>=4'}
 
   gopd@1.2.0:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
@@ -3223,9 +3190,6 @@ packages:
     resolution: {integrity: sha512-IKXpvIzjnC9XTAUbVBcMfGS0EPaIXtW6v+zr+RRp+hqULEpo0owZax6wyRwPOJbWbzjYspQwusTsfVr0ifh4uQ==}
     engines: {node: '>=0.10.0'}
 
-  ignore@3.3.10:
-    resolution: {integrity: sha512-Pgs951kaMm5GXP7MOvxERINe3gsaVjUWFm+UZPSq9xYriQAksyhg0csnS0KXSNRD5NmNdapXEpjxG49+AKh/ug==}
-
   ignore@7.0.6:
     resolution: {integrity: sha512-BAg6QkE8W+TuQLrrw0Ugr7HegXduRuuj8/ti2kSOc+jz1dmx8/WNcjr6XGnq5YpDWxFwwaavqD0+jIUOKelTsw==}
     engines: {node: '>= 4'}
@@ -3236,10 +3200,6 @@ packages:
   import-fresh@3.3.1:
     resolution: {integrity: sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ==}
     engines: {node: '>=6'}
-
-  inflight@1.0.6:
-    resolution: {integrity: sha512-k92I/b08q4wvFscXCLvqfsHCrjrF7yiXsQuIVvVE7N82W3+aqpzuUdBbfhWcy/FZR3/4IgflMgKLOsvPDrGCJA==}
-    deprecated: This module is not supported, and leaks memory. Do not use it. Check out lru-cache if you want a good and tested way to coalesce async requests by a key value, which is much more comprehensive and powerful.
 
   inherits@2.0.4:
     resolution: {integrity: sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==}
@@ -3390,36 +3350,6 @@ packages:
 
   kubernetes-types@1.30.0:
     resolution: {integrity: sha512-Dew1okvhM/SQcIa2rcgujNndZwU8VnSapDgdxlYoB84ZlpAD43U6KLAFqYo17ykSFGHNPrg0qry0bP+GJd9v7Q==}
-
-  laikacms@1.0.0:
-    resolution: {integrity: sha512-OZ+kYIopVFmRbR23A7pOilQAqArAReIYM2axgeB7UGayZNTFdnJmSdWHNYqu2CNq3bmJUQ8JH4Gk7xfyUASvdg==}
-    engines: {node: 22.x}
-    peerDependencies:
-      '@cloudflare/workers-types': '*'
-      '@hono/node-server': ^1.19.11
-      hono: ^4.12.9
-    peerDependenciesMeta:
-      '@cloudflare/workers-types':
-        optional: true
-      '@hono/node-server':
-        optional: true
-      hono:
-        optional: true
-
-  laikacms@2.1.1:
-    resolution: {integrity: sha512-yrMd12NBstqx+ghPTVJQiXeaJYBQ+BE0f6HO3DgrGx53qgcpCRQ5WRefRbrDLtiyvp5JMXsO4B00+zfbHbst5w==}
-    engines: {node: '>=22.0.0'}
-    peerDependencies:
-      '@cloudflare/workers-types': '*'
-      '@hono/node-server': ^2.0.10
-      hono: ^4.12.31
-    peerDependenciesMeta:
-      '@cloudflare/workers-types':
-        optional: true
-      '@hono/node-server':
-        optional: true
-      hono:
-        optional: true
 
   laikacms@6.0.0:
     resolution: {integrity: sha512-s4OJlpl6iCupxCD4Rxz85BgOZzrqmDP/Oz7xdV/uKUBawdVDVomFDEP4R+UepjLM6UZuoGSbsJb+KnapJ/ECEg==}
@@ -3746,16 +3676,9 @@ packages:
     resolution: {integrity: sha512-vpLQEs+VLCr1nU0BXS07maYoFwlDAH0gngQuuttxIwutDFEMHq2blX+8vpgxDdK3J1PwjCJiep77OitTZ4Ll1A==}
     engines: {node: 18 || 20 || >=22}
 
-  minimatch@3.1.5:
-    resolution: {integrity: sha512-VgjWUsnnT6n+NUk6eZq77zeFdpW2LWDzP6zFGrCbHXiYNul5Dzqk2HHQ5uFH2DNW5Xbp8+jVzaeNt94ssEEl4w==}
-
   mount-point@3.0.0:
     resolution: {integrity: sha512-jAhfD7ZCG+dbESZjcY1SdFVFqSJkh/yGbdsifHcPkvuLRO5ugK0Ssmd9jdATu29BTd4JiN+vkpMzVvsUgP3SZA==}
     engines: {node: '>=0.10.0'}
-
-  move-file@3.1.0:
-    resolution: {integrity: sha512-4aE3U7CCBWgrQlQDMq8da4woBWDGHioJFiOZ8Ie6Yq2uwYQ9V2kGhTz4x3u6Wc+OU17nw0yc3rJ/lQ4jIiPe3A==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   move-file@4.1.0:
     resolution: {integrity: sha512-YE06K9XLIvMlqSfoZTl32qvbZLPgL70Za41wS8pEhsSOhy71xz2fn8J07nuz/LEEtPSuUzLUFGAJSx499eKDSw==}
@@ -3907,14 +3830,6 @@ packages:
   path-browserify@1.0.1:
     resolution: {integrity: sha512-b7uo2UCUOYZcnF/3ID0lulOJi/bafxa1xPe7ZPsammBSpjSWQkjNxlt635YGS2MiR9GjvuXCtz2emr3jbsz98g==}
 
-  path-exists@5.0.0:
-    resolution: {integrity: sha512-RjhtfwJOxzcFmNOi6ltcbcu4Iu+FL3zEj83dk4kAS+fVpTxXLO1b38RvJgT/0QwvV/L3aY9TAnyv0EOqW4GoMQ==}
-    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
-
-  path-is-absolute@1.0.1:
-    resolution: {integrity: sha512-AVbw3UJ2e9bq64vSaS9Am0fje1Pa8pbGqTTsmXfaIiMpnr5DlDhfJOuLj9Sf95ZPVDAUerDfEk88MPmPe7UCQg==}
-    engines: {node: '>=0.10.0'}
-
   path-key@3.1.1:
     resolution: {integrity: sha512-ojmeN0qd+y0jszEtoY48r0Peq5dwMEkIlCOu6Q5f41lfkswXuKtYrhgoTpLnyIcHm24Uhqx+5Tqm2InSwLhE6Q==}
     engines: {node: '>=8'}
@@ -3927,10 +3842,6 @@ packages:
 
   path-to-regexp@8.4.2:
     resolution: {integrity: sha512-qRcuIdP69NPm4qbACK+aDogI5CBDMi1jKe0ry5rSQJz8JVLsC7jV8XpiJjGRLLol3N+R5ihGYcrPLTno6pAdBA==}
-
-  path-type@3.0.0:
-    resolution: {integrity: sha512-T2ZUsdZFHgA3u4e5PfPbjd7HDDpxPnQb5jN0SrDsjNSuVXHJqtwTnWqG0B1jZrgmJ/7lj1EmVIByWt1gxGkWvg==}
-    engines: {node: '>=4'}
 
   path-type@4.0.0:
     resolution: {integrity: sha512-gDKb8aZMDeD/tZWs9P6+q0J9Mwkdl6xMV8TjnGP3qJVJ06bdMgkbBlLU8IdfOsIsFz2BW1rNVT3XuNEl8zPAvw==}
@@ -3960,10 +3871,6 @@ packages:
   pify@2.3.0:
     resolution: {integrity: sha512-udgsAY+fTnvv7kI7aaxbqwWNb0AHiB0qBO89PZKPkoTmGOgdbrHDKD+0B2X4uTfJ/FT1R09r9gTsjUjNJotuog==}
     engines: {node: '>=0.10.0'}
-
-  pify@3.0.0:
-    resolution: {integrity: sha512-C3FsVNH1udSEX48gGX1xfvwTWfsYWj5U+8/uK15BGzIGrKoUpghX8hWZwa/OFnakBiiVNmBvemTJR5mcy7iPcg==}
-    engines: {node: '>=4'}
 
   pinkie-promise@2.0.1:
     resolution: {integrity: sha512-0Gni6D4UcLTbv9c57DfxDGdr41XfgUjqWZu492f0cIGr16zDU06BWP/RAEvOuo7CQ0CNjHaLlM59YJJFm3NWlw==}
@@ -4290,10 +4197,6 @@ packages:
   sisteransi@1.0.5:
     resolution: {integrity: sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg==}
 
-  slash@1.0.0:
-    resolution: {integrity: sha512-3TYDR7xWt4dIqV2JauJr+EJeW356RXijHeUlO+8djJ+uBXPn8/2dpzBc8yQhh583sVvc9CvFAeQVgijsH+PNNg==}
-    engines: {node: '>=0.10.0'}
-
   slash@5.1.0:
     resolution: {integrity: sha512-ZA6oR3T/pEyuqwMgAKT0/hAv8oAXckzbkmR0UkUosQ+Mc4RxGoJkRmwHgHufaenlyAgE1Mxgpdcrf75y6XcnDg==}
     engines: {node: '>=14.16'}
@@ -4408,10 +4311,6 @@ packages:
   trash@10.1.1:
     resolution: {integrity: sha512-L/mu8sfblMwaS+exj1MxpmihlIRwVQyB6ieKuTTmBJG0lXWBPfx3pMGQG8i3NT/S8vvNZrflDUOp+j0o7Cnxzw==}
     engines: {node: '>=20'}
-
-  trash@9.0.0:
-    resolution: {integrity: sha512-6U3A0olN4C16iiPZvoF93AcZDNZtv/nI2bHb2m/sO3h/m8VPzg9tPdd3n3LVcYLWz7ui0AHaXYhIuRjzGW9ptg==}
-    engines: {node: '>=18'}
 
   trim-lines@3.0.1:
     resolution: {integrity: sha512-kRj8B+YHZCc9kQYdWfJB2/oUl9rA99qbowYYBtr4ui4mZyAQ2JpvVBd/6U2YloATfqBhBTSMhTpgBHtU0Mf3Rg==}
@@ -6123,7 +6022,7 @@ snapshots:
       - typescript
       - vite
 
-  '@laikacms/decap-cms@4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@hono/node-server@2.1.0(hono@4.13.1))(@types/node@24.13.3)(@types/react@19.2.18)(hono@4.13.1)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)':
+  '@laikacms/decap-cms@4.1.0(@cloudflare/workers-types@4.20260702.1)(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@emotion/styled@11.14.1(@emotion/react@11.14.0(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/react@19.2.18)(react@19.2.8)(supports-color@10.2.2))(@types/node@24.13.3)(@types/react@19.2.18)(prop-types@15.8.1)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)(supports-color@10.2.2)(typescript@6.0.3)(yjs@13.6.32)(zod@4.4.3)':
     dependencies:
       '@ai-sdk/anthropic': 4.0.36(zod@4.4.3)
       '@ai-sdk/openai': 4.0.36(zod@4.4.3)
@@ -6176,7 +6075,7 @@ snapshots:
       immer: 11.1.16
       ini: 7.0.0
       jwt-decode: 4.0.0
-      laikacms: 2.1.1(@cloudflare/workers-types@4.20260702.1)(@hono/node-server@2.1.0(hono@4.13.1))(hono@4.13.1)
+      laikacms: 6.0.0(@cloudflare/workers-types@4.20260702.1)
       lexical: 0.48.0(typescript@6.0.3)
       lodash-es: 4.18.1
       mdast-util-from-markdown: 2.0.3(supports-color@10.2.2)
@@ -6211,30 +6110,26 @@ snapshots:
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
       - '@date-fns/tz'
-      - '@hono/node-server'
       - '@types/hoist-non-react-statics'
       - '@types/node'
       - '@types/react'
       - bufferutil
       - date-fns
-      - hono
       - prop-types
       - supports-color
       - typescript
       - utf-8-validate
       - yjs
 
-  '@laikacms/github@1.0.0(@cloudflare/workers-types@4.20260702.1)(@hono/node-server@2.1.0(hono@4.13.1))(hono@4.13.1)':
+  '@laikacms/github@2.0.0(@cloudflare/workers-types@4.20260702.1)':
     dependencies:
       '@octokit/auth-app': 7.2.2
       '@octokit/rest': 22.0.1
-      effect: 4.0.0-beta.66
-      laikacms: 1.0.0(@cloudflare/workers-types@4.20260702.1)(@hono/node-server@2.1.0(hono@4.13.1))(hono@4.13.1)
+      effect: 4.0.0-beta.104
+      laikacms: 6.0.0(@cloudflare/workers-types@4.20260702.1)
       minimatch: 10.2.6
     transitivePeerDependencies:
       - '@cloudflare/workers-types'
-      - '@hono/node-server'
-      - hono
 
   '@laikacms/server@6.0.0(@ai-sdk/anthropic@4.0.36(zod@4.4.3))(@ai-sdk/openai@4.0.36(zod@4.4.3))(@cloudflare/workers-types@4.20260702.1)(ai@7.0.58(zod@4.4.3))':
     dependencies:
@@ -6985,8 +6880,6 @@ snapshots:
 
   '@shikijs/vscode-textmate@10.0.2': {}
 
-  '@sindresorhus/chunkify@1.0.0': {}
-
   '@sindresorhus/df@1.0.1': {}
 
   '@sindresorhus/df@3.1.1':
@@ -7234,12 +7127,6 @@ snapshots:
 
   aria-query@5.3.2: {}
 
-  array-union@1.0.2:
-    dependencies:
-      array-uniq: 1.0.3
-
-  array-uniq@1.0.3: {}
-
   astro@7.2.0(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)(@types/node@24.13.3)(tsx@4.23.11)(yaml@2.9.0):
     dependencies:
       '@astrojs/compiler-rs': 0.3.2(@emnapi/core@1.11.1)(@emnapi/runtime@1.11.3)
@@ -7340,8 +7227,6 @@ snapshots:
 
   bail@2.0.2: {}
 
-  balanced-match@1.0.2: {}
-
   balanced-match@4.0.4: {}
 
   bcryptjs@3.0.3: {}
@@ -7365,11 +7250,6 @@ snapshots:
       - supports-color
 
   boolbase@1.0.0: {}
-
-  brace-expansion@1.1.18:
-    dependencies:
-      balanced-match: 1.0.2
-      concat-map: 0.0.1
 
   brace-expansion@5.0.9:
     dependencies:
@@ -7432,8 +7312,6 @@ snapshots:
   commander@11.1.0: {}
 
   common-ancestor-path@2.0.0: {}
-
-  concat-map@0.0.1: {}
 
   content-disposition@1.1.0: {}
 
@@ -7532,10 +7410,6 @@ snapshots:
       dequal: 2.0.3
 
   diff@8.0.4: {}
-
-  dir-glob@2.2.2:
-    dependencies:
-      path-type: 3.0.0
 
   dnd-core@16.0.1:
     dependencies:
@@ -7879,8 +7753,6 @@ snapshots:
 
   fresh@2.0.0: {}
 
-  fs.realpath@1.0.0: {}
-
   fsevents@2.3.3:
     optional: true
 
@@ -7922,15 +7794,6 @@ snapshots:
     dependencies:
       is-glob: 4.0.3
 
-  glob@7.2.3:
-    dependencies:
-      fs.realpath: 1.0.0
-      inflight: 1.0.6
-      inherits: 2.0.4
-      minimatch: 3.1.5
-      once: 1.4.0
-      path-is-absolute: 1.0.1
-
   globby@14.1.0:
     dependencies:
       '@sindresorhus/merge-streams': 2.3.0
@@ -7939,15 +7802,6 @@ snapshots:
       path-type: 6.0.0
       slash: 5.1.0
       unicorn-magic: 0.3.0
-
-  globby@7.1.1:
-    dependencies:
-      array-union: 1.0.2
-      dir-glob: 2.2.2
-      glob: 7.2.3
-      ignore: 3.3.10
-      pify: 3.0.0
-      slash: 1.0.0
 
   gopd@1.2.0: {}
 
@@ -8070,8 +7924,6 @@ snapshots:
     dependencies:
       safer-buffer: 2.1.2
 
-  ignore@3.3.10: {}
-
   ignore@7.0.6: {}
 
   immer@11.1.16: {}
@@ -8080,11 +7932,6 @@ snapshots:
     dependencies:
       parent-module: 1.0.1
       resolve-from: 4.0.0
-
-  inflight@1.0.6:
-    dependencies:
-      once: 1.4.0
-      wrappy: 1.0.2
 
   inherits@2.0.4: {}
 
@@ -8185,37 +8032,6 @@ snapshots:
   kleur@4.1.5: {}
 
   kubernetes-types@1.30.0: {}
-
-  laikacms@1.0.0(@cloudflare/workers-types@4.20260702.1)(@hono/node-server@2.1.0(hono@4.13.1))(hono@4.13.1):
-    dependencies:
-      '@standard-schema/spec': 1.1.0
-      ajv: 8.20.0
-      bcryptjs: 3.0.3
-      effect: 4.0.0-beta.66
-      gray-matter: 4.0.3
-      js-yaml: 4.3.1
-      json-schema: 0.4.0
-      minimatch: 10.2.6
-      trash: 9.0.0
-    optionalDependencies:
-      '@cloudflare/workers-types': 4.20260702.1
-      '@hono/node-server': 2.1.0(hono@4.13.1)
-      hono: 4.13.1
-
-  laikacms@2.1.1(@cloudflare/workers-types@4.20260702.1)(@hono/node-server@2.1.0(hono@4.13.1))(hono@4.13.1):
-    dependencies:
-      '@standard-schema/spec': 1.1.0
-      bcryptjs: 3.0.3
-      effect: 4.0.0-beta.66
-      gray-matter: 4.0.3
-      js-yaml: 5.4.1
-      json-schema: 0.4.0
-      minimatch: 10.2.6
-      trash: 10.1.1
-    optionalDependencies:
-      '@cloudflare/workers-types': 4.20260702.1
-      '@hono/node-server': 2.1.0(hono@4.13.1)
-      hono: 4.13.1
 
   laikacms@6.0.0(@cloudflare/workers-types@4.20260702.1):
     dependencies:
@@ -8758,19 +8574,11 @@ snapshots:
     dependencies:
       brace-expansion: 5.0.9
 
-  minimatch@3.1.5:
-    dependencies:
-      brace-expansion: 1.1.18
-
   mount-point@3.0.0:
     dependencies:
       '@sindresorhus/df': 1.0.1
       pify: 2.3.0
       pinkie-promise: 2.0.1
-
-  move-file@3.1.0:
-    dependencies:
-      path-exists: 5.0.0
 
   move-file@4.1.0: {}
 
@@ -8915,10 +8723,6 @@ snapshots:
 
   path-browserify@1.0.1: {}
 
-  path-exists@5.0.0: {}
-
-  path-is-absolute@1.0.1: {}
-
   path-key@3.1.1: {}
 
   path-parse@1.0.7: {}
@@ -8926,10 +8730,6 @@ snapshots:
   path-to-regexp@6.3.0: {}
 
   path-to-regexp@8.4.2: {}
-
-  path-type@3.0.0:
-    dependencies:
-      pify: 3.0.0
 
   path-type@4.0.0: {}
 
@@ -8946,8 +8746,6 @@ snapshots:
   picomatch@4.0.5: {}
 
   pify@2.3.0: {}
-
-  pify@3.0.0: {}
 
   pinkie-promise@2.0.1:
     dependencies:
@@ -9360,8 +9158,6 @@ snapshots:
 
   sisteransi@1.0.5: {}
 
-  slash@1.0.0: {}
-
   slash@5.1.0: {}
 
   smol-toml@1.7.1: {}
@@ -9459,16 +9255,6 @@ snapshots:
       p-map: 7.0.6
       powershell-utils: 0.2.0
       wsl-utils: 0.4.0
-      xdg-trashdir: 3.1.0
-
-  trash@9.0.0:
-    dependencies:
-      '@sindresorhus/chunkify': 1.0.0
-      '@stroncium/procfs': 1.2.1
-      globby: 7.1.1
-      is-path-inside: 4.0.0
-      move-file: 3.1.0
-      p-map: 7.0.6
       xdg-trashdir: 3.1.0
 
   trim-lines@3.0.1: {}
