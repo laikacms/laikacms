@@ -1,7 +1,9 @@
 {
   "name": "@laikacms/gitlab",
   "version": "2.0.0",
-  "private": true,
+  "publishConfig": {
+    "access": "public"
+  },
   "description": "GitLab-backed StorageRepository for Laika CMS. Stores content in a GitLab project via the REST v4 API; authenticates with a Personal Access Token or OAuth bearer token. Runtime-agnostic — only depends on `fetch`.",
   "keywords": [
     "headless-cms",
