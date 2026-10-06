@@ -39,7 +39,7 @@ it from the **project root** (so it can read that project's `node_modules`).
    ```
 
    Prefer reading one or two targeted pages over dumping the whole tree into context. Good entry
-   points: `docs/index.md`, `docs/guides/getting-started.md`, `docs/reference/packages.md`, and the
+   points: `docs/index.md`, `docs/guides/getting-started.md`, `docs/reference/imports.md`, and the
    section index files.
 
 3. **Answer from what you read**, citing the doc path. If the ref was not version-pinned (see

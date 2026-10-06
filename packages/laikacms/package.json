@@ -4,7 +4,7 @@
   "publishConfig": {
     "access": "public"
   },
-  "description": "The basis for modern content management.",
+  "description": "A modular, runtime-agnostic content API for any storage backend.",
   "keywords": [
     "headless-cms",
     "content-management",

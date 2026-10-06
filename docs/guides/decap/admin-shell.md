@@ -5,9 +5,10 @@ with esbuild, then serve the resulting files as static assets.
 
 > **Why not esm.sh / import maps?** esm.sh re-bundles packages on the fly but does not fully resolve
 > deep `export *` barrel chains. The `@laikacms/decap-cms/backends/laika` subpath depends on symbols
-> re-exported through several barrel layers (e.g. `DocumentsCompatibilityDate`) that esm.sh's
-> bundler drops, so the admin silently fails to load. esbuild resolves all transitive imports at
-> build time and produces a self-contained bundle with no runtime CDN dependency.
+> re-exported through several barrel layers (e.g.
+> [`DocumentsCompatibilityDate`](../../reference/api/laikacms/documents/type-aliases/DocumentsCompatibilityDate))
+> that esm.sh's bundler drops, so the admin silently fails to load. esbuild resolves all transitive
+> imports at build time and produces a self-contained bundle with no runtime CDN dependency.
 
 ### Install build dependencies
 
@@ -77,8 +78,8 @@ CMS.init({
 
 > **`base_url` is required.** Without it, Decap cannot locate the Laika API and the admin shows
 > "Missing required configuration: base_url and app_id are required". Set it to the origin where
-> your `laikaApi` handler runs (e.g. `http://localhost:3000` locally, your public URL in
-> production).
+> your [`laikaApi`](../../reference/api/server/api/functions/laikaApi) handler runs (e.g.
+> `http://localhost:3000` locally, your public URL in production).
 >
 > **`dev_token`** lets the Decap admin authenticate without a full OAuth2 flow during development —
 > any non-empty string works as long as your `authenticateAccessToken` callback accepts it. Remove

@@ -1,11 +1,11 @@
 # Contributing
 
-Notes for people working _on_ LaikaCMS rather than _with_ it. If you're building an app that uses
-LaikaCMS, see the [Guides](../guides/) instead — this section is for changes to this repo.
+Notes for people working _on_ Laika rather than _with_ it. If you're building an app that uses
+Laika, see the [Guides](../guides/) instead — this section is for changes to this repo.
 
 ## Orientation
 
-LaikaCMS is a monorepo carrying **two core packages**, released together:
+Laika is a monorepo carrying **two core packages**, released together:
 
 | Package            | What it is                                                                                     |
 | ------------------ | ---------------------------------------------------------------------------------------------- |
@@ -42,8 +42,6 @@ Other pages in this section:
 
 - **[Starter templates](./starters)** — status of the `starter-*` reference apps and the core
   building blocks they demonstrated.
-- **[Package reference docs](./package-docs)** — where package-specific reference/usage docs live
-  and how they're aggregated into this site.
 
 Design decisions (ADRs, incident write-ups) are recorded internally, not on this public site.
 

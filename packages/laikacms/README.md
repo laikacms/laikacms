@@ -1,10 +1,10 @@
 # laikacms
 
-> Modular, runtime-agnostic content management. The basis for modern CMS apps.
+> A modular, runtime-agnostic content API.
 
-API-first headless CMS designed to work with [Decap CMS](https://decapcms.org/) or your own UI. Swap
-storage backends (filesystem, R2, GitHub, …) without rewriting code. Runs on Node, Bun, and
-Cloudflare Workers.
+One content API over any storage backend. Use it with [Decap CMS](https://decapcms.org/) or your own
+UI, and swap storage backends (filesystem, R2, GitHub, …) without rewriting code. Runs on Node, Bun,
+and Cloudflare Workers.
 
 ```bash
 pnpm add laikacms

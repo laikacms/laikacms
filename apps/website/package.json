@@ -1,6 +1,6 @@
 {
   "name": "@laikacms/website",
-  "description": "laikacms.com \u2014 the marketing website for Laika CMS.",
+  "description": "laikacms.com \u2014 the marketing website for Laika.",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -24,6 +24,7 @@
     "@types/react": "catalog:types",
     "@types/react-dom": "catalog:types",
     "astro": "catalog:astro",
+    "js-yaml": "catalog:",
     "tailwindcss": "catalog:default",
     "typescript": "catalog:tools"
   }

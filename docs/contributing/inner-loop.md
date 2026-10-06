@@ -67,5 +67,6 @@ depend on **domain**, not on implementations (see [Architecture](../concepts/arc
 
 ## Docs for a package you're changing
 
-If your change is package-specific reference/usage material, it belongs in `packages/<pkg>/docs/`
-(see [Package reference docs](./package-docs)), not hand-authored in `docs/reference/`.
+Document the feature on the `docs/` page for that feature (a guide, an adapter, or a reference
+page), not on a page per package. If the feature needs an extra install, show the install command
+there.

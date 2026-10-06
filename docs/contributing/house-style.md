@@ -53,8 +53,8 @@ a task into a `Promise`, test setup, etc.
 
 ## Docs
 
-- Package-specific reference/usage docs live in `packages/<pkg>/docs/`, not hand-authored centrally
-  — see [Package reference docs](./package-docs).
+- Organize docs by feature, never by package. Readers don't know or care which package a feature
+  ships in; the only place that difference shows is the install command.
 - This `contributing/` section and `docs/` in general stay evergreen: no dated point-in-time
   snapshots. Design decisions (ADRs, incident write-ups) are recorded internally, not published
   here.

@@ -19,7 +19,7 @@ interface FooterProps {
 export function Footer({ tagline, legal, columns }: FooterProps) {
   return (
     <footer className="border-t border-hairline bg-surface py-[60px] pb-11">
-      <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px] grid grid-cols-[1.3fr_2fr] max-[760px]:grid-cols-1 gap-[56px] max-[760px]:gap-10">
+      <div className="site-container grid grid-cols-[1.3fr_2fr] max-[760px]:grid-cols-1 gap-[56px] max-[760px]:gap-10">
         <div>
           <Logo height={28} />
           <p className="mt-[18px] text-ink-2 text-[14.5px] max-w-[36ch] leading-[1.6]">{tagline}</p>

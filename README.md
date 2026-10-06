@@ -1,7 +1,7 @@
-# Laika CMS
+# Laika
 
 <p align="center">
-  <strong>Modular, runtime-agnostic content management software</strong>
+  <strong>A modular, runtime-agnostic content API</strong>
 </p>
 
 <p align="center">
@@ -17,8 +17,8 @@
 
 ---
 
-API-first CMS designed to work with [Decap CMS](https://decapcms.org/) or your own UI. Swap storage
-backends without rewriting code.
+One content API over any storage backend. Use it with [Decap CMS](https://decapcms.org/) or your own
+UI, and swap storage backends without rewriting code.
 
 ## Quick Start
 
@@ -67,15 +67,15 @@ export default {
 This repository carries the two core packages. The storage/asset adapters (`@laikacms/aws`,
 `@laikacms/github`, …), `laikacli`, `@laikacms/git-gateway`, the `portable-text-*` mappers, and the
 example apps were moved out into their own repositories in June 2026 — see
-[Packages](./docs/reference/packages.md) for their current locations.
+[Imports](./docs/reference/imports.md) for how to install each one.
 
 | Package            | Description                                                                                                                                                                           |
 | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `laikacms`         | Core domain, APIs, default implementations, serializers, shared utilities (subpath exports: `laikacms/storage-api`, `laikacms/storage-fs`, `laikacms/storage-r2`, `laikacms/core`, …) |
 | `@laikacms/server` | Decap CMS integrations: backend, OAuth2, widgets, server adapters.                                                                                                                    |
 
-See [docs/reference/packages.md](./docs/reference/packages.md) for the full list of subpath exports,
-including the packages that now live in separate repositories.
+See [docs/reference/imports.md](./docs/reference/imports.md) for every import path and its install
+command, including the packages that now live in separate repositories.
 
 ## Documentation
 
@@ -86,7 +86,7 @@ including the packages that now live in separate repositories.
 - [API Reference](./docs/reference/json-api/index.md)
 - [Decap Integration](./docs/guides/decap/index.md)
 - [Deployment](./docs/guides/deployment.md)
-- [Packages](./docs/reference/packages.md)
+- [Imports](./docs/reference/imports.md)
 
 ## Contributing
 
@@ -107,8 +107,8 @@ pnpm changeset publish
 
 ## History
 
-Laika CMS predates LLMs. I started it in 2016 with the schema-to-form generator I used for client
-CMS systems. Once I could model a client's content schema with a higher-order schema, I had a
+Laika predates LLMs. I started it in 2016 with the schema-to-form generator I used for client CMS
+systems. Once I could model a client's content schema with a higher-order schema, I had a
 content-model editor—a Turing-complete schema-to-form generator, if you will. That started the
 rabbit hole toward a perfectly loosely coupled CMS.
 
@@ -121,20 +121,20 @@ worth using.
 
 Without a team or a big budget, I could not have turned these ideas into a useful library. Claude
 made that possible. It allowed me to build a large project from one mental model instead of
-splitting it across a team, which I believe has led to an amazing result. Some parts of Laika CMS
-may look strange at first. They have been designed, created, discarded, and rebuilt repeatedly until
-the core became truly headless, backend-agnostic, and modular.
+splitting it across a team, which I believe has led to an amazing result. Some parts of Laika may
+look strange at first. They have been designed, created, discarded, and rebuilt repeatedly until the
+core became truly headless, backend-agnostic, and modular.
 
 Claude made it possible to revive the project and fix the assumptions that stopped the earlier
 version from shipping.
 
 This matters more now than it did then, and it is becoming more relevant. Writing code is cheaper,
-and LLMs need homogeneous access to information from different sources. Laika CMS is more than a CMS
+and LLMs need homogeneous access to information from different sources. Laika is more than a CMS
 core: it is a protocol for making content from those sources addressable through one surface.
 
-If you do not trust AI-assisted code, don't use Laika CMS for now. I am choosing highly creative and
+If you do not trust AI-assisted code, don't use Laika for now. I am choosing highly creative and
 fast growth over stability at this stage. Stability will come from production use, open-source
-contributions, sponsorship, and the commercial success of projects using Laika CMS.
+contributions, sponsorship, and the commercial success of projects using Laika.
 
 Read the [roadmap](./ROADMAP.md), [security policy](./SECURITY.md),
 [changelog](./docs/CHANGELOG.md), and [contribution guide](./CONTRIBUTING.md) before adopting it.

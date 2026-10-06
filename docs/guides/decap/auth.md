@@ -78,8 +78,8 @@ authorize: ctx => ctx.operation === 'read',
 ### Role-based authorization
 
 Because authorization is entirely in your hands, "scopes" and "roles" are just identity fields you
-attach to the `User` and check in `authorize`. Augment the `User` interface with whatever your
-policy needs:
+attach to the [`User`](../../reference/api/server/api/interfaces/User) and check in `authorize`.
+Augment the `User` interface with whatever your policy needs:
 
 ```ts
 declare module '@laikacms/server/api' {
@@ -117,9 +117,10 @@ authenticateApiToken: async key => {
 ### Scope-based authorization with `createScopePolicy`
 
 For the common pattern of granting access based on fine-grained scopes (rather than flat roles),
-`@laikacms/server/api` ships `createScopePolicy()` — a drop-in `authorize` factory that maps every
-CMS request to a required scope and checks the principal's granted scopes. The scope vocabulary
-lives in `laikacms/auth`:
+`@laikacms/server/api` ships
+[`createScopePolicy()`](../../reference/api/server/api/functions/createScopePolicy) — a drop-in
+`authorize` factory that maps every CMS request to a required scope and checks the principal's
+granted scopes. The scope vocabulary lives in `laikacms/auth`:
 
 | Scope           | Grants                                                              |
 | --------------- | ------------------------------------------------------------------- |
@@ -151,10 +152,10 @@ const api = laikaApi({
 
 `createScopePolicy` accepts an optional `options` object:
 
-| Option             | Type                                          | Description                                                                            |
-| ------------------ | --------------------------------------------- | -------------------------------------------------------------------------------------- |
-| `requiredScopeFor` | `(ctx: AuthorizeContext) => Scope \| null`    | Override the request → required-scope mapping. Return `null` to allow unconditionally. |
-| `scopesOf`         | `(ctx: AuthorizeContext) => readonly Scope[]` | How to read the principal's granted scopes. Defaults to `ctx.user.scopes ?? []`.       |
+| Option                                                                          | Type                                          | Description                                                                            |
+| ------------------------------------------------------------------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------- |
+| [`requiredScopeFor`](../../reference/api/server/api/functions/requiredScopeFor) | `(ctx: AuthorizeContext) => Scope \| null`    | Override the request → required-scope mapping. Return `null` to allow unconditionally. |
+| `scopesOf`                                                                      | `(ctx: AuthorizeContext) => readonly Scope[]` | How to read the principal's granted scopes. Defaults to `ctx.user.scopes ?? []`.       |
 
 `hasScope(granted, required)` from `laikacms/auth` resolves wildcards: `admin`/`*` satisfies
 anything, and `resource:*` satisfies any `resource:action` on that resource. Use it directly if you
@@ -171,11 +172,13 @@ authorize: ctx => {
 
 ### PAT bearer verification with `resolveBearer`
 
-When you issue Personal Access Tokens (PATs) as well as session tokens, use `resolveBearer` from
-`laikacms/auth` as the single seam in `authenticateAccessToken`. It detects a `lk_pat_…` prefix,
-looks up the PAT record by hash, checks revocation/expiry, and falls back to your session verifier
-for all other bearers — returning a unified `AuthContext` with the principal and their granted
-scopes:
+When you issue Personal Access Tokens (PATs) as well as session tokens, use
+[`resolveBearer`](../../reference/api/laikacms/auth/functions/resolveBearer) from `laikacms/auth` as
+the single seam in `authenticateAccessToken`. It detects a `lk_pat_…` prefix, looks up the PAT
+record by hash, checks revocation/expiry, and falls back to your session verifier for all other
+bearers — returning a unified
+[`AuthContext`](../../reference/api/laikacms/auth/interfaces/AuthContext) with the principal and
+their granted scopes:
 
 ```ts
 import { resolveBearer } from 'laikacms/auth';
@@ -201,7 +204,8 @@ bad input — throw or return the error from `authenticateAccessToken` yourself.
 
 ## SSR auth guard with `authenticateRequest`
 
-`laikaApi(...)` returns a `LaikaApi` object with two methods:
+`laikaApi(...)` returns a [`LaikaApi`](../../reference/api/server/api/interfaces/LaikaApi) object
+with two methods:
 
 ```ts
 interface LaikaApi {
@@ -234,8 +238,9 @@ boundary (Next.js App Router, TanStack Start, Hono middleware, etc.).
 ## Logging with `logger`
 
 Pass any `logger` compatible with the `Console` interface (`error`, `warn`, `info`, `debug`) to
-receive structured diagnostic output from `laikaApi`. The option is optional — if omitted, no output
-is produced.
+receive structured diagnostic output from
+[`laikaApi`](../../reference/api/server/api/functions/laikaApi). The option is optional — if
+omitted, no output is produced.
 
 ```ts
 const api = laikaApi({
@@ -252,7 +257,8 @@ unified log stream from a single option.
 
 ## Production auth with `decap-oauth2`
 
-Rather than building an OAuth2 server from scratch, use the bundled `laikaOauth2` helper. It is a
+Rather than building an OAuth2 server from scratch, use the bundled
+[`laikaOauth2`](../../reference/api/server/oauth2/functions/laikaOauth2) helper. It is a
 self-contained PKCE authorization server with email/password login, optional passkey (WebAuthn), and
 optional TOTP 2FA. You wire it alongside the `laikaApi(...)` handler in the same Express or Hono
 app.
@@ -397,7 +403,8 @@ Use this same `decapConfig` when building the admin shell (see
 
 See
 [`packages/server/src/oauth2/README.md`](https://github.com/laikacms/laikacms/blob/develop/packages/server/src/oauth2/README.md)
-for the full `OAuthConfig` option reference.
+for the full [`OAuthConfig`](../../reference/api/server/oauth2/interfaces/OAuthConfig) option
+reference.
 
 ---
 

@@ -10,7 +10,6 @@ export interface Rival {
 }
 
 export interface CompareProps {
-  eyebrow: string;
   heading: string;
   lead: string;
   columns: string[];
@@ -19,14 +18,11 @@ export interface CompareProps {
 
 const ROW = 'grid grid-cols-[150px_1.15fr_1fr] max-[880px]:grid-cols-1 gap-x-8 gap-y-2 px-[26px] py-[22px]';
 
-export function Compare({ eyebrow, heading, lead, columns, rivals }: CompareProps) {
+export function Compare({ heading, lead, columns, rivals }: CompareProps) {
   return (
     <section className="border-t border-hairline py-28 max-[760px]:py-[76px]">
-      <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px]">
-        <span className="font-mono text-[12.5px] tracking-[0.12em] uppercase text-indigo font-medium inline-flex items-center gap-[9px] whitespace-nowrap before:content-[''] before:w-[22px] before:h-[1.5px] before:bg-indigo before:inline-block">
-          {eyebrow}
-        </span>
-        <h2 className="text-[clamp(32px,4.2vw,50px)] mt-5 max-w-[20ch] font-display font-semibold tracking-[-0.02em] leading-[1.05]">
+      <div className="site-container">
+        <h2 className="text-[clamp(32px,4.2vw,50px)] max-w-[20ch] font-display font-semibold tracking-[-0.02em] leading-[1.05]">
           {heading}
         </h2>
         <p className="mt-[22px] text-[clamp(17px,1.5vw,20px)] text-ink-2 max-w-[56ch] leading-[1.55]">

@@ -17,8 +17,8 @@ export const CATALOGUE_ASSETS: Omit<BackendGroupData, 'id'> = {
     { name: 'Cloudinary', sub: '@laikacms/cloudinary', icon: { si: 'cloudinary' } },
     { name: 'Cloudflare Images', sub: '@laikacms/cloudflare', icon: { si: 'cloudflare' } },
     { name: 'S3 assets', sub: '@laikacms/aws', icon: { img: 'aws' } },
-    { name: 'R2 assets', sub: 'laikacms/storage-r2', icon: { si: 'cloudflare' } },
-    { name: 'Obsidian vault', sub: '@laikacms/obsidian', icon: { si: 'obsidian' } },
+    { name: 'R2 assets', sub: 'laikacms/assets-r2', icon: { adapter: 'r2' } },
+    { name: 'Obsidian vault', sub: 'laikacms/assets-obsidian', icon: { adapter: 'obsidian' } },
   ],
 };
 

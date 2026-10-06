@@ -12,11 +12,11 @@ becomes natural once you work with content this way, and the jargon quickly disa
 background. Most CMSs contain these concepts too. They hide the complexity by tightly coupling
 concepts that do not need to be coupled, in the name of convenience.
 
-Laika CMS is layered so applications can adopt only the assumptions they need. At the core is a
+Laika is layered so applications can adopt only the assumptions they need. At the core is a
 [storage object](./content-model.md#atoms-and-folders): content that is uniquely addressable through
 a key. It is comparable to an AWS S3 object: a generic thing that is uniquely addressable. An object
 can be each of the choices `red`, `green`, and `blue` in a select input (even when they have no
-value), a database record, a page, or a sensor metric. Laika CMS supplies the address and transport
+value), a database record, a page, or a sensor metric. Laika supplies the address and transport
 contracts. The application owns the content shape.
 
 Each conceptual layer adds assumptions on top of that foundation:
@@ -37,11 +37,11 @@ not use those concepts can expose a constant `published` status; language defaul
 valid BCP 47 tag for undetermined language.
 
 Common data sources have implementations you can pick and compose like a banquet. You can use one,
-extend one for your infrastructure, or implement a contract directly. The reason to use Laika CMS is
+extend one for your infrastructure, or implement a contract directly. The reason to use Laika is
 that you don't want to model your domain around your CMS. The goal is to get you 90% there; you will
 most likely implement or extend a repository to make the last part fit your infrastructure. See
 [Repositories](./repositories.md) for composition and implementation guidance and
-[Packages](../reference/packages.md) for the available implementations and exports.
+[Adapters](../adapters/) for the available implementations.
 
 ## Layers
 
@@ -116,7 +116,7 @@ console.log(items); // Atom[]
 
 ## Standard Schema
 
-LaikaCMS exports its entity types as
+Laika exports its entity types as
 [Standard Schema v1](https://github.com/standard-schema/standard-schema) compatible schemas.
 Consumers can use these directly with Zod, Valibot, ArkType, or any Standard-Schema-compatible
 validator.

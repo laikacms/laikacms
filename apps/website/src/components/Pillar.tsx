@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import {
   IconBook,
   IconCube,
+  IconDecap,
   IconGlobe,
   IconLayers,
   IconLayout,
@@ -22,6 +23,7 @@ const ICONS = {
   cube: IconCube,
   book: IconBook,
   spark: IconSpark,
+  decap: IconDecap,
   plug: IconPlug,
 };
 
@@ -37,15 +39,12 @@ export function Pillar({ icon, title, badge, children }: PillarProps) {
   const Glyph = ICONS[icon];
 
   const card = badge
-    ? 'relative px-[26px] py-[28px] border rounded-[14px] bg-indigo-tint border-[color-mix(in_oklab,var(--color-indigo),white_60%)]'
+    ? 'relative px-[26px] py-[28px] border rounded-[14px] bg-indigo-tint border-indigo-edge'
     : 'relative px-[26px] py-[28px] border rounded-[14px] bg-surface border-hairline';
 
   return (
     <div className={card}>
-      <span
-        className={'inline-grid place-items-center w-11 h-11 rounded-[11px] text-indigo border border-indigo-tint-2 '
-          + (badge ? 'bg-white' : 'bg-surface')}
-      >
+      <span className="inline-grid place-items-center w-11 h-11 rounded-[11px] text-indigo border border-indigo-tint-2 bg-surface">
         <Glyph size={20} />
       </span>
       <h3 className="text-[20px] mt-[18px] font-display font-semibold tracking-[-0.02em] leading-[1.05]">

@@ -1,22 +1,24 @@
 # Recoverable-warning translation-key convention
 
-`LaikaError` carries an optional `translation` field:
+[`LaikaError`](../reference/api/laikacms/core/errors/classes/LaikaError) carries an optional
+`translation` field:
 
 ```ts
 public translation?: { title?: TranslationKey, message?: TranslationKey };
 ```
 
-`TranslationKey` (`import type { TranslationKey } from 'laikacms/i18n'`) is `keyof Translation`,
-where `Translation` is the flat key→string catalog declared in
-`packages/laikacms/src/shared/i18n/types.ts` and populated per-locale in
-`packages/laikacms/src/shared/i18n/translations/{en,nl}.ts`. `en.ts` is the source of truth: every
-key added there must get a matching entry in every other locale file (enforced by
-`translations.test.ts`).
+[`TranslationKey`](../reference/api/laikacms/i18n/type-aliases/TranslationKey)
+(`import type { TranslationKey } from 'laikacms/i18n'`) is `keyof Translation`, where `Translation`
+is the flat key→string catalog declared in `packages/laikacms/src/shared/i18n/types.ts` and
+populated per-locale in `packages/laikacms/src/shared/i18n/translations/{en,nl}.ts`. `en.ts` is the
+source of truth: every key added there must get a matching entry in every other locale file
+(enforced by `translations.test.ts`).
 
 This doc defines the key-naming convention for warnings emitted via `emit.recoverableError(...)`
-(the `LaikaStream` partial-success channel — see `ROADMAP.md`, "Recoverable-warning pipeline"), and
-the code pattern for attaching `translation.message` (and optionally `translation.title`) when a
-backend constructs a recoverable `LaikaError`.
+(the [`LaikaStream`](../reference/api/laikacms/core/namespaces/LaikaStream/) partial-success channel
+— see `ROADMAP.md`, "Recoverable-warning pipeline"), and the code pattern for attaching
+`translation.message` (and optionally `translation.title`) when a backend constructs a recoverable
+`LaikaError`.
 
 ## Key naming scheme
 

@@ -1,7 +1,6 @@
 # Tone rule: describe competitors neutrally, then state the concrete difference.
-eyebrow: The field
 heading: Where Laika sits.
-lead: 'The headless CMS field is full of good tools: here is the honest map. What sets Laika apart is never a gimmick: it is who owns the code, who owns the content, and who decides what you pay for.'
+lead: 'Laika is not another headless CMS: it is the content API layer. Here is the honest map of the tools it sits next to. What sets Laika apart is never a gimmick: it is who owns the code, who owns the content, and who decides what you pay for.'
 columns:
   - What it is
   - The Laika difference

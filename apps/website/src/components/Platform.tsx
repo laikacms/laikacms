@@ -32,7 +32,7 @@ export function Platform({
 }: PlatformProps) {
   return (
     <section className="py-28 max-[760px]:py-[76px] relative min-h-[70vh] grid place-items-center text-center">
-      <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px]">
+      <div className="site-container">
         <div className="max-w-[760px] mx-auto flex flex-col items-center">
           <span className="font-mono text-xs tracking-[0.1em] uppercase text-indigo bg-indigo-tint border border-indigo-tint-2 px-3.5 py-[7px] rounded-full">
             {badge}

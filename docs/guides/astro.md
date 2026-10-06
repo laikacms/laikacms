@@ -1,20 +1,15 @@
----
-title: '@laikacms/astro'
-order: 3
----
+# Astro
 
-# @laikacms/astro
-
-Astro integration for Laika CMS. Content reaches your pages through Astro's own Content Layer —
+Astro integration for Laika. Content reaches your pages through Astro's own Content Layer —
 `getCollection`, `getEntry`, `render`, Zod schemas — rather than a Laika-specific import protocol.
 
 Three pieces, usable independently:
 
-| Export                   | What it gives you                                                                   |
-| ------------------------ | ----------------------------------------------------------------------------------- |
-| `@laikacms/astro/loader` | `documentsLoader()` / `objectsLoader()` for `defineCollection({ loader })`          |
-| `@laikacms/astro`        | the `laika()` integration — dev JSON:API, content hot-refresh, types                |
-| `@laikacms/astro/live`   | `liveDocumentsLoader()` for `defineLiveCollection()` — runtime reads, draft preview |
+| Export                   | What it gives you                                                                                                                                                                              |
+| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@laikacms/astro/loader` | [`documentsLoader()`](../reference/api/astro/loader/functions/documentsLoader) / [`objectsLoader()`](../reference/api/astro/loader/functions/objectsLoader) for `defineCollection({ loader })` |
+| `@laikacms/astro`        | the [`laika()`](../reference/api/astro/functions/laika) integration — dev JSON:API, content hot-refresh, types                                                                                 |
+| `@laikacms/astro/live`   | [`liveDocumentsLoader()`](../reference/api/astro/live/functions/liveDocumentsLoader) for `defineLiveCollection()` — runtime reads, draft preview                                               |
 
 ## Install
 
@@ -56,9 +51,9 @@ survives.
 ## Declaring your fields once
 
 If your collections are already described somewhere — a Decap `config.yml`, a persisted catalog, a
-`CatalogProvider` you wrote — you do not need to restate them as a Zod schema. Pass `z` and the
-loader derives the schema from the catalog, and generates matching entry types so `entry.data` stays
-fully typed:
+[`CatalogProvider`](../reference/api/laikacms/catalog/classes/CatalogProvider) you wrote — you do
+not need to restate them as a Zod schema. Pass `z` and the loader derives the schema from the
+catalog, and generates matching entry types so `entry.data` stays fully typed:
 
 ```ts
 import { documentsLoader } from '@laikacms/astro/loader';
@@ -85,7 +80,9 @@ description of today's content, not a rule about it.
 Either way the types go through Astro's own `Loader.createSchema()`, which writes them to
 `.astro/loaders/<collection>.ts`; nothing is written behind Astro's back.
 
-To skip naming the collections too, `laikaCollections()` enumerates them from the catalog:
+To skip naming the collections too,
+[`laikaCollections()`](../reference/api/astro/loader/functions/laikaCollections) enumerates them
+from the catalog:
 
 ```ts
 export const collections = await laikaCollections({ dir: 'content', catalog: 'decap', z });
@@ -123,9 +120,10 @@ An `overrides` entry wins over both the derived schema and the shared options fo
 
 ## Where content comes from
 
-Every loader accepts any `DocumentsRepository`. With none given, a filesystem repository over `dir`
-is built for you. Reading from a running Laika server is not a separate option — it is a different
-repository:
+Every loader accepts any
+[`DocumentsRepository`](../reference/api/laikacms/documents/classes/DocumentsRepository). With none
+given, a filesystem repository over `dir` is built for you. Reading from a running Laika server is
+not a separate option — it is a different repository:
 
 ```ts
 import { DocumentsJsonApiProxyRepository } from 'laikacms/documents/jsonapi-proxy';
@@ -151,9 +149,10 @@ through `getCapabilities()`, and degrades cleanly when it advertises none:
 | `reload`   | nothing                        | rebuild the store                        |
 
 `sync.strategy` defaults to `'auto'`. The filesystem and Catalog path lands on `digest`, because
-`CatalogDocumentsRepository` reports neither optional capability today; it will move up a tier
-automatically if that changes. In dev, edits skip listing entirely — the integration pushes the
-changed keys straight into the refresh.
+[`CatalogDocumentsRepository`](../reference/api/laikacms/documents/catalog/classes/CatalogDocumentsRepository)
+reports neither optional capability today; it will move up a tier automatically if that changes. In
+dev, edits skip listing entirely — the integration pushes the changed keys straight into the
+refresh.
 
 ## Storage objects
 
@@ -198,7 +197,8 @@ const { entry, error } = await getLiveEntry(
 
 The loader stays policy-free: **gating who may see a draft is your application's job.** A missing
 entry resolves to `undefined` so Astro raises its own not-found error; any other failure is returned
-as `{ error }` with the `LaikaError` code and status intact.
+as `{ error }` with the [`LaikaError`](../reference/api/laikacms/core/errors/classes/LaikaError)
+code and status intact.
 
 Rendering is off by default here — bundling a markdown parser would put it in the server bundle of
 every page that reads a live collection. Pass `render: { mode: 'markdown', markdown }` with a
@@ -248,8 +248,10 @@ liveDocumentsLoader({
 ```
 
 The schema is derived once per collection, not once per request. A mismatch comes back as
-`{ error }` with `ValidationError`'s code, alongside every other failure the loader reports. With
-validation on, dates _are_ coerced — the `Date` half of `string | Date` becomes the real one.
+`{ error }` with
+[`ValidationError`](../reference/api/laikacms/core/errors/classes/ValidationError)'s code, alongside
+every other failure the loader reports. With validation on, dates _are_ coerced — the `Date` half of
+`string | Date` becomes the real one.
 
 ### Caching
 
@@ -268,7 +270,8 @@ liveDocumentsLoader({
 
 Default tags: `['laika', 'laika:<collection>', 'laika:<key>']`. When `lastModified` is not `false`
 and the entry carries an `updatedAt` field, the hint's `lastModified` is set from it. The
-`LiveCacheOptions` type is re-exported from `@laikacms/astro/live`.
+[`LiveCacheOptions`](../reference/api/astro/live/interfaces/LiveCacheOptions) type is re-exported
+from `@laikacms/astro/live`.
 
 ## `laika()` options
 
@@ -351,5 +354,6 @@ Note that Astro's own origin check rejects cross-site non-`GET` requests before 
 them, so an `'all'` deployment written to from another origin needs `security.checkOrigin`
 configured accordingly.
 
-For a deployment that needs real authentication rather than a public read, `laikaApi` from
-`@laikacms/server/api` takes `authenticateAccessToken` and `authorize` and mounts the same way.
+For a deployment that needs real authentication rather than a public read,
+[`laikaApi`](../reference/api/server/api/functions/laikaApi) from `@laikacms/server/api` takes
+`authenticateAccessToken` and `authorize` and mounts the same way.

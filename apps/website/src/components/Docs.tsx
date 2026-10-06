@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 
 import { IconArrowUpRight } from './icons';
 
-const EYEBROW = 'Getting started';
 const HEADING = 'Install the package, hand back a fetch.';
 const LEAD =
   'One package, subpath exports for everything else. Install it, pick a storage repository, and you have a content API you can deploy anywhere.';
@@ -25,7 +24,7 @@ const LINKS = [
   { title: 'API Reference', blurb: 'Every method on the JSON:API surface', href: '/docs/reference/json-api/' },
   { title: 'Decap Integration', blurb: 'Wire up the git-gateway + editor UI', href: '/docs/guides/decap/' },
   { title: 'Deployment', blurb: 'Node, Bun, Deno, Workers, the edge', href: '/docs/guides/deployment' },
-  { title: 'Packages', blurb: 'The full map of subpath exports', href: '/docs/reference/packages' },
+  { title: 'Imports', blurb: 'Every import and how to install it', href: '/docs/reference/imports' },
 ];
 
 /* Not mounted on any page today — the getting-started content is served by the
@@ -48,11 +47,8 @@ interface DocsProps {
 export function Docs({ copy, starter }: DocsProps) {
   return (
     <section className="py-28 max-[760px]:py-[76px] relative">
-      <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px]">
-        <span className="font-mono text-[12.5px] tracking-[0.12em] uppercase text-indigo font-medium inline-flex items-center gap-[9px] whitespace-nowrap before:content-[''] before:w-[22px] before:h-[1.5px] before:bg-indigo before:inline-block">
-          {EYEBROW}
-        </span>
-        <h2 className="text-[clamp(32px,4.2vw,50px)] mt-5 max-w-[18ch] font-display font-semibold tracking-[-0.02em] leading-[1.05]">
+      <div className="site-container">
+        <h2 className="text-[clamp(32px,4.2vw,50px)] max-w-[18ch] font-display font-semibold tracking-[-0.02em] leading-[1.05]">
           {HEADING}
         </h2>
         <p className="mt-[22px] text-[clamp(17px,1.5vw,20px)] text-ink-2 max-w-[56ch] leading-[1.55]">

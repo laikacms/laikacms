@@ -6,11 +6,13 @@ them with exactly these meanings. Background for the first three entries is in
 
 ## protocol
 
-The entire `laikacms` bounded context: the repository contracts (`DocumentsRepository`,
-`AssetsRepository`, `StorageRepository`) plus the default implementations built on top of other
-repositories. It knows only atoms, folders, keys, metadata, and summaries; the `content` field is
-the user's own arbitrary JSON and is never interpreted. Laika minus the CMS is "basically a
-protocol".
+The entire `laikacms` bounded context: the repository contracts
+([`DocumentsRepository`](./api/laikacms/documents/classes/DocumentsRepository),
+[`AssetsRepository`](./api/laikacms/assets/classes/AssetsRepository),
+[`StorageRepository`](./api/laikacms/storage/classes/StorageRepository)) plus the default
+implementations built on top of other repositories. It knows only atoms, folders, keys, metadata,
+and summaries; the `content` field is the user's own arbitrary JSON and is never interpreted. Laika
+minus the CMS is "basically a protocol".
 
 ## repository
 
@@ -22,8 +24,9 @@ repositories (catalog, JSON:API proxy).
 
 The opinionated layer of the protocol: the named collections — document folders and media folders —
 that a store's content is organised into, each with a directory, an optional JSON Schema, and (for
-media) accepted content types. The contract is `CatalogProvider`; `laikacms/documents/catalog` and
-`laikacms/assets/catalog` are the repositories that project those collections onto generic
+media) accepted content types. The contract is
+[`CatalogProvider`](./api/laikacms/catalog/classes/CatalogProvider); `laikacms/documents/catalog`
+and `laikacms/assets/catalog` are the repositories that project those collections onto generic
 [atoms and folders](#atom--folder). A catalog is optional: a backend can implement
 `DocumentsRepository` directly and never expose one.
 
@@ -38,10 +41,18 @@ is a package-manager concern and never appears in library code.
 
 ## adapter
 
-A CMS-specific integration built on repositories, also called a backend. The adapter owns every
-opinionated choice its CMS needs (entry shapes, slugs, workflow states, deploy previews, commit
-messages). For Decap this is the laika backend in the decap-cms repo. CMS features never move from
-an adapter into the protocol; swapping one CMS's adapter for another's is a migration by design.
+A repository implementation for one specific service: a `StorageRepository`, `DocumentsRepository`,
+or `AssetsRepository` backed by R2, the filesystem, a git host, a SQL database, and so on. Adapters
+are interchangeable behind their contract; everything above the repository works unchanged whichever
+one is plugged in. See [Adapters](../adapters/) for the full list.
+
+## CMS integration
+
+The CMS-specific layer built on repositories. It owns every opinionated choice its CMS needs (entry
+shapes, slugs, workflow states, deploy previews, commit messages). For Decap this is the laika
+backend in the decap-cms repo. CMS features never move from a CMS integration into the protocol;
+swapping one CMS's integration for another's is a migration by design. ADR-006 predates this term
+and calls it an "adapter".
 
 ## version
 
@@ -79,9 +90,13 @@ abstractions — internally they are Effects, so they carry the typed error chan
 interruption semantics Effect provides, and an Effect consumer can `yield*` them directly inside an
 `Effect.gen`.
 
-They are deliberately **not** raw `Effect` values. Wrapping Effect behind `LaikaTask`/`LaikaStream`
+They are deliberately **not** raw `Effect` values. Wrapping Effect behind
+[`LaikaTask`](./api/laikacms/core/namespaces/LaikaTask/)/[`LaikaStream`](./api/laikacms/core/namespaces/LaikaStream/)
 keeps Effect an implementation detail of the protocol rather than a hard requirement on the caller:
 the library can be consumed with or without adopting Effect. See [dual API](#dual-api).
+
+API reference: [`LaikaTask`](./api/laikacms/core/namespaces/LaikaTask/) and
+[`LaikaStream`](./api/laikacms/core/namespaces/LaikaStream/).
 
 ## dual API
 

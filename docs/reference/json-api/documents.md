@@ -7,27 +7,28 @@ states:
 - **Unpublished** (`type: "unpublished"`) — drafts, pending-review, archived, or trashed content
   distinguished by a `status` string.
 
-> ⚠️ **You must state an access policy.** `buildJsonApi` requires an `authorize` callback — it runs
-> before every action below, including the two OpenAPI routes, and receives the action descriptor
-> plus the originating `Request`. Return `true` to allow, `false` for a 403, or a `LaikaError` for a
-> custom status. It decides _what a caller may do_; authenticating them is still your job — validate
-> the credential inside the callback, or mount the handler behind `@laikacms/server/api`, which
-> checks a Bearer token first. For a deliberately open surface, say so with `authorize: allowAll`
-> from `laikacms/json-api`.
+> ⚠️ **You must state an access policy.**
+> [`buildJsonApi`](../api/laikacms/documents/api/functions/buildJsonApi) requires an `authorize`
+> callback — it runs before every action below, including the two OpenAPI routes, and receives the
+> action descriptor plus the originating `Request`. Return `true` to allow, `false` for a 403, or a
+> [`LaikaError`](../api/laikacms/core/errors/classes/LaikaError) for a custom status. It decides
+> _what a caller may do_; authenticating them is still your job — validate the credential inside the
+> callback, or mount the handler behind `@laikacms/server/api`, which checks a Bearer token first.
+> For a deliberately open surface, say so with `authorize: allowAll` from `laikacms/json-api`.
 
 Revisions record snapshots of published documents.
 
 ### Resource Types
 
-| JSON:API type            | Domain entity           | Description                                              |
-| ------------------------ | ----------------------- | -------------------------------------------------------- |
-| `published`              | `Document`              | Live published document                                  |
-| `published-summary`      | `DocumentSummary`       | Published document without content                       |
-| `unpublished`            | `Unpublished`           | Draft or otherwise unpublished document                  |
-| `unpublished-summary`    | `UnpublishedSummary`    | Unpublished document without content                     |
-| `revision`               | `Revision`              | Immutable historical snapshot                            |
-| `revision-summary`       | `RevisionSummary`       | Revision without content                                 |
-| `documents-capabilities` | `DocumentsCapabilities` | Repository capabilities; returned by `GET /capabilities` |
+| JSON:API type            | Domain entity                                                                           | Description                                              |
+| ------------------------ | --------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `published`              | [`Document`](../api/laikacms/documents/type-aliases/Document)                           | Live published document                                  |
+| `published-summary`      | [`DocumentSummary`](../api/laikacms/documents/type-aliases/DocumentSummary)             | Published document without content                       |
+| `unpublished`            | [`Unpublished`](../api/laikacms/documents/type-aliases/Unpublished)                     | Draft or otherwise unpublished document                  |
+| `unpublished-summary`    | [`UnpublishedSummary`](../api/laikacms/documents/type-aliases/UnpublishedSummary)       | Unpublished document without content                     |
+| `revision`               | [`Revision`](../api/laikacms/documents/type-aliases/Revision)                           | Immutable historical snapshot                            |
+| `revision-summary`       | [`RevisionSummary`](../api/laikacms/documents/type-aliases/RevisionSummary)             | Revision without content                                 |
+| `documents-capabilities` | [`DocumentsCapabilities`](../api/laikacms/documents/type-aliases/DocumentsCapabilities) | Repository capabilities; returned by `GET /capabilities` |
 
 ### Endpoints
 
@@ -1106,10 +1107,10 @@ When scoped to a folder the response includes a `folder` attribute:
 
 **Error Responses**
 
-| Status | Condition                                                          |
-| ------ | ------------------------------------------------------------------ |
-| `501`  | Backend does not support change signals (`NotImplementedError`)    |
-| `403`  | Caller is not authorised to call `getSyncToken` (`ForbiddenError`) |
+| Status | Condition                                                                                                                  |
+| ------ | -------------------------------------------------------------------------------------------------------------------------- |
+| `501`  | Backend does not support change signals ([`NotImplementedError`](../api/laikacms/core/errors/classes/NotImplementedError)) |
+| `403`  | Caller is not authorised to call `getSyncToken` ([`ForbiddenError`](../api/laikacms/core/errors/classes/ForbiddenError))   |
 
 ---
 

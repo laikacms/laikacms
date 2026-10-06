@@ -55,8 +55,10 @@ file, for example:
 ```
 
 This is just a convention: the protocol itself never interprets the `content` object. Serializers,
-however, build on it — `rawSerializer` persists exactly the `body` field as plain text, and the
-markdown serializer writes `body` as the document body with the remaining fields as frontmatter.
+however, build on it —
+[`rawSerializer`](../reference/api/laikacms/serializers/raw/variables/rawSerializer) persists
+exactly the `body` field as plain text, and the markdown serializer writes `body` as the document
+body with the remaining fields as frontmatter.
 
 Keeping content inside an object leaves room to add fields without changing the surrounding
 protocol. This is why content cannot be encoded as a bare primitive. A number cannot later gain

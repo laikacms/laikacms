@@ -6,16 +6,28 @@ note: >-
 items:
   - name: Filesystem
     sub: laikacms/storage-fs
-    icon: { svg: folder }
+    icon: { adapter: fs }
   - name: Cloudflare R2
     sub: laikacms/storage-r2
-    icon: { si: cloudflare }
+    icon: { adapter: r2 }
+  - name: S3-compatible
+    sub: laikacms/storage-s3
+    icon: { adapter: s3 }
   - name: WebDAV
     sub: laikacms/storage-webdav
-    icon: { svg: cloud }
-  - name: JSON:API proxy
-    sub: laikacms/storage-jsonapi-proxy
-    icon: { svg: proxy }
+    icon: { adapter: webdav }
   - name: Drizzle (SQL)
     sub: laikacms/storage-drizzle
-    icon: { si: drizzle }
+    icon: { adapter: drizzle }
+  - name: GitHub CDN
+    sub: laikacms/storage-github-cdn
+    icon: { adapter: github-cdn }
+  - name: Browser File System
+    sub: laikacms/storage-web-fs
+    icon: { adapter: web-fs }
+  - name: Web Storage
+    sub: laikacms/storage-web
+    icon: { adapter: web }
+  - name: JSON:API proxy
+    sub: laikacms/storage-jsonapi-proxy
+    icon: { adapter: jsonapi-proxy }

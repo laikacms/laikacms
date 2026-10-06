@@ -38,6 +38,22 @@ export const IconGitHub = ({ size = 18 }: { size?: number }) => (
   </svg>
 );
 
+export const IconSun = ({ size = 16 }: { size?: number }) => (
+  <Icon
+    size={size}
+    d={
+      <>
+        <circle cx="12" cy="12" r="4" />
+        <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+      </>
+    }
+  />
+);
+
+export const IconMoon = ({ size = 16 }: { size?: number }) => (
+  <Icon size={size} d={<path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z" />} />
+);
+
 export const IconArrow = ({ size = 17 }: { size?: number }) => (
   <Icon
     size={size}
@@ -157,6 +173,13 @@ export const IconSpark = ({ size = 17 }: { size?: number }) => (
     size={size}
     d={<path d="M12 3c.5 4 1.5 5 5.5 5.5C13.5 9 12.5 10 12 14c-.5-4-1.5-5-5.5-5.5C10.5 8 11.5 7 12 3Z" />}
   />
+);
+
+/* The official Decap CMS mark (simple-icons `decapcms`), filled with the accent instead of its pink. */
+export const IconDecap = ({ size = 17 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="inline-block shrink-0">
+    <path d="M18.947 13.177c0 3.263-2 5.649-4.736 5.649h-2.773v-5.65H6.282v10.387h7.93c5.403 0 9.788-4.668 9.788-10.386h-5.052ZM7.894.476 0 1.212l.948 10.352 5.157-.456-.526-5.615 2.737-.245c2.737-.246 4.91 1.93 5.227 5.193l5.052-.458c-.49-5.752-5.297-9.998-10.7-9.507Z" />
+  </svg>
 );
 
 export const IconBan = ({ size = 17 }: { size?: number }) => (
@@ -333,7 +356,7 @@ export const Logo = ({ height = 30 }: { height?: number }) => (
       className="font-display font-semibold tracking-[-0.02em] text-ink"
       style={{ fontSize: height * 0.7 }}
     >
-      Laika<span className="text-indigo">CMS</span>
+      Laika
     </span>
   </span>
 );

@@ -4,13 +4,14 @@ The Storage API manages a flat namespace of **atoms** (objects and folders). Key
 path-like strings (e.g. `posts/hello-world`). The API serves the root endpoint for meta-information
 and then routes on the first path segment.
 
-> ⚠️ **You must state an access policy.** `buildJsonApi` requires an `authorize` callback — it runs
-> before every action below, including the two OpenAPI routes, and receives the action descriptor
-> plus the originating `Request`. Return `true` to allow, `false` for a 403, or a `LaikaError` for a
-> custom status. It decides _what a caller may do_; authenticating them is still your job — validate
-> the credential inside the callback, or mount the handler behind `@laikacms/server/api`, which
-> checks a Bearer token first. For a deliberately open surface, say so with `authorize: allowAll`
-> from `laikacms/json-api`.
+> ⚠️ **You must state an access policy.**
+> [`buildJsonApi`](../api/laikacms/storage/api/functions/buildJsonApi) requires an `authorize`
+> callback — it runs before every action below, including the two OpenAPI routes, and receives the
+> action descriptor plus the originating `Request`. Return `true` to allow, `false` for a 403, or a
+> [`LaikaError`](../api/laikacms/core/errors/classes/LaikaError) for a custom status. It decides
+> _what a caller may do_; authenticating them is still your job — validate the credential inside the
+> callback, or mount the handler behind `@laikacms/server/api`, which checks a Bearer token first.
+> For a deliberately open surface, say so with `authorize: allowAll` from `laikacms/json-api`.
 
 ### Key Encoding
 
@@ -487,9 +488,11 @@ Content-Type: application/vnd.api+json
 }
 ```
 
-> **Note:** When using `rawSerializer` (the default in the Getting Started guide), only the `body`
-> field is persisted. Passing any other fields (e.g. `title`) will throw an error at write time. Use
-> `jsonSerializer` if you need to store multi-field content.
+> **Note:** When using [`rawSerializer`](../api/laikacms/serializers/raw/variables/rawSerializer)
+> (the default in the Getting Started guide), only the `body` field is persisted. Passing any other
+> fields (e.g. `title`) will throw an error at write time. Use
+> [`jsonSerializer`](../api/laikacms/serializers/json/variables/jsonSerializer) if you need to store
+> multi-field content.
 >
 > `content` must always be an object — raw strings cannot be stored directly. To transport a raw
 > string, the convention is to wrap it as `{ "body": "<content>" }`; markdown with frontmatter

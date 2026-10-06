@@ -249,7 +249,8 @@ This allows:
 ### HTTP Connection Reuse in Proxy Repositories
 
 The `*-jsonapi-proxy` repositories (storage, documents, assets) send every request through an Effect
-`HttpClient` (`effect/unstable/http`) owned by a shared `JsonApiHttpTransport`
+`HttpClient` (`effect/unstable/http`) owned by a shared
+[`JsonApiHttpTransport`](../reference/api/laikacms/json-api/classes/JsonApiHttpTransport)
 (`laikacms/json-api`). Each repository accepts an optional `httpClient` in its constructor options;
 when omitted, a process-wide default backed by `globalThis.fetch` is used, which already reuses
 connections on Node ≥ 18 (undici's pooled fetch) and on Cloudflare Workers (runtime-managed).

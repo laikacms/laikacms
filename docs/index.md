@@ -1,73 +1,56 @@
----
-layout: home
+# Welcome to <span class="laika-accent">Laika</span>
 
-hero:
-  name: Laika CMS
-  text: Composable, runtime-agnostic content management.
-  tagline: Modular packages for storage, documents, and assets — bring your own UI, run anywhere JavaScript runs.
-  actions:
-    - theme: brand
-      text: Get Started
-      link: /guides/getting-started
-    - theme: alt
-      text: Concepts
-      link: /concepts/
-    - theme: alt
-      text: View on GitHub
-      link: https://github.com/laikacms/laikacms
+Laika is a unified abstraction for accessing files, API's and other content. It takes care of all
+the complexities like pagination, batching, concurrency, streaming and discovery. Along with that
+Laika provides easy to use integrations for common web frameworks and a ton of premade opinionated
+adapters.
 
-features:
-  - title: Modular by Design
-    details: Pick only the packages you need — storage, documents, assets, auth, crypto, sanitizer, i18n.
-  - title: Runtime Agnostic
-    details: Works on Node.js, Cloudflare Workers, AWS Lambda, Deno, and anywhere modern JavaScript runs.
-  - title: Minimal Dependencies
-    details: Extremely slim bundles so your edge and serverless deployments stay fast.
-  - title: Standard Schema Compatible
-    details: Use Zod, Valibot, ArkType, or any Standard Schema validator interchangeably.
-  - title: Security First
-    details: Quantum-safe cryptography, file sanitization, and built-in defaults to harden production.
-  - title: API-First
-    details: JSON:API endpoints out of the box — pair with Decap CMS or any frontend you already use.
----
+## Why Laika
 
-## Quick Links
+### Laika is the transport, you provide the domain
 
-**Guides**
+The reason to use Laika is that you don't want to model your domain around your CMS or storage
+implementation. The goal of Laika is to get you 90% there. Laika attempts to not hide any details
+from you, or to be opinionated about how you model your data and data retrieval. You can read more
+about the architecture of Laika [here](./concepts/architecture).
 
-- [Getting Started](./guides/getting-started) — Installation and basic usage
-- [Decap CMS Integration](./guides/decap/) — Using Decap CMS as a frontend
-- [Deployment](./guides/deployment) — Production deployment guides
-- [Security](./guides/security) — Security best practices
+### Built for AI
 
-**Concepts**
+Laika is also extremely useful as a homogeneous data access layer in the age of LLMs. Laika provides
+a built-in MCP server which it feeds with the OpenAPI spec of the JSON:API. Unlike EmDash CMS, it
+only has one 'request' tool.
 
-- [Architecture](./concepts/architecture) — How Laika CMS is structured
-- [Repositories](./concepts/repositories) — The repository pattern and its implementations
-- [Content Model](./concepts/content-model) — Atoms, folders, the `body` convention, change tracking
+### What Laika offers
 
-**Reference**
+<table>
+  <tr><th colspan="2">Out of the box</th></tr>
+  <tr><td>40+ official adapters</td><td>Real-time updates</td></tr>
+  <tr><td>Pagination and filtering</td><td>Batch operations</td></tr>
+  <tr><td>Streaming listings</td><td>Change feeds and sync tokens</td></tr>
+  <tr><td>Capability discovery</td><td>Any file format</td></tr>
+  <tr><td>Drafts and publishing</td><td>Revision history</td></tr>
+  <tr><td>Linked assets and image variants</td><td>Conflict detection and locks</td></tr>
+  <tr><td>OAuth2, passkeys and 2FA</td><td>Upload sanitization</td></tr>
+  <tr><td>Astro, Vite and Decap integrations</td><td>Starters and CLI bootstrapping</td></tr>
+</table>
 
-- [JSON:API Reference](./reference/json-api/) — Complete API documentation
-- [Packages](./reference/packages) — Overview of all packages
-- [Glossary](./reference/glossary) — Shared vocabulary (protocol, repository, adapter, version, sync
-  token, change feed)
+<!--@include: ./.vitepress/adapters/logos.md-->
 
-**Contributing**
-
-- [Contributing](./contributing/) — starter templates and the contribution workflow
+Laika's core sits on top of [Effect.ts](https://effect.website/). It provides the primitives that
+Laika uses, along with some custom primitives like
+[`LaikaTask`](./reference/api/laikacms/core/namespaces/LaikaTask/) and
+[`LaikaStream`](./reference/api/laikacms/core/namespaces/LaikaStream/).
 
 ## Architecture Overview
 
-```mermaid
-flowchart TD
-  api["API Layer<br/><small>storage-api, documents-api, assets-api, catalog-api</small>"]
-  domain["Domain Layer<br/><small>storage, documents, assets, catalog</small>"]
-  implementation["Implementation Layer<br/><small>storage-r2, storage-fs, documents-drizzle, assets-r2</small>"]
-  shared["Shared Layer<br/><small>core, auth, crypto, sanitizer, i18n, json-api</small>"]
+| Layer          | Packages                                             |
+| -------------- | ---------------------------------------------------- |
+| API            | storage-api, documents-api, assets-api, catalog-api  |
+| Domain         | storage, documents, assets, catalog                  |
+| Implementation | storage-r2, storage-fs, documents-drizzle, assets-r2 |
+| Shared         | core, auth, crypto, sanitizer, i18n, json-api        |
 
-  api --> domain --> implementation --> shared
-```
+Each layer depends only on the layers below it.
 
 ## Getting Help
 
@@ -78,4 +61,4 @@ flowchart TD
 
 ## License
 
-Laika CMS is [MIT licensed](https://github.com/laikacms/laikacms/blob/develop/LICENSE).
+Laika is [MIT licensed](https://github.com/laikacms/laikacms/blob/develop/LICENSE).

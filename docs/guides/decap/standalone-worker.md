@@ -1,9 +1,9 @@
 # Standalone Worker (BYO storage)
 
-This is the primary integration path. Wire the pieces by hand: pick a `StorageRepository`, wrap it
-in the Catalog document/asset repos, and expose them through `laikaApi(...)`. The resulting
-`api.fetch` is a Web-standard `(Request) => Promise<Response>` handler you mount on a catch-all
-route.
+This is the primary integration path. Wire the pieces by hand: pick a
+[`StorageRepository`](../../reference/api/laikacms/storage/classes/StorageRepository), wrap it in
+the Catalog document/asset repos, and expose them through `laikaApi(...)`. The resulting `api.fetch`
+is a Web-standard `(Request) => Promise<Response>` handler you mount on a catch-all route.
 
 ```ts
 import { laikaApi } from '@laikacms/server/api';
@@ -31,16 +31,16 @@ app.all('/api/decap/*', async c => {
 });
 ```
 
-Swap `R2StorageRepository` for any other `StorageRepository` implementation to change where content
-lives:
+Swap [`R2StorageRepository`](../../reference/api/laikacms/storage/r2/classes/R2StorageRepository)
+for any other `StorageRepository` implementation to change where content lives:
 
-| Subpath                    | Class                           | Where                           |
-| -------------------------- | ------------------------------- | ------------------------------- |
-| `laikacms/storage-fs`      | `FileSystemStorageRepository`   | Node.js local disk              |
-| `laikacms/storage-r2`      | `R2StorageRepository`           | Cloudflare R2                   |
-| `laikacms/storage-s3`      | S3 shim → `R2StorageRepository` | AWS S3 / MinIO / B2 / DO Spaces |
-| `laikacms/storage-drizzle` | `DrizzleStorageRepository`      | Any SQL DB via Drizzle ORM      |
-| `laikacms/storage-webdav`  | `WebDavStorageRepository`       | Any RFC 4918 WebDAV server      |
+| Subpath                    | Class                                                                                                        | Where                           |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------- |
+| `laikacms/storage-fs`      | [`FileSystemStorageRepository`](../../reference/api/laikacms/storage/fs/classes/FileSystemStorageRepository) | Node.js local disk              |
+| `laikacms/storage-r2`      | `R2StorageRepository`                                                                                        | Cloudflare R2                   |
+| `laikacms/storage-s3`      | S3 shim → `R2StorageRepository`                                                                              | AWS S3 / MinIO / B2 / DO Spaces |
+| `laikacms/storage-drizzle` | [`DrizzleStorageRepository`](../../reference/api/laikacms/storage/drizzle/classes/DrizzleStorageRepository)  | Any SQL DB via Drizzle ORM      |
+| `laikacms/storage-webdav`  | [`WebDavStorageRepository`](../../reference/api/laikacms/storage/webdav/classes/WebDavStorageRepository)     | Any RFC 4918 WebDAV server      |
 
 > `FileSystemStorageRepository` requires `node:fs` and a writable local filesystem, so it runs on
 > **Node.js** and **Deno 2** (which supports `node:` built-ins) but not on edge runtimes (Cloudflare
@@ -53,10 +53,11 @@ constructed.
 
 ### Seeding the server-side Decap config
 
-`DecapCatalogProvider` reads your Decap config object from storage on **every** content request — it
-uses the `collections` array to resolve collection → folder mappings, field schemas, and media
-paths. Before any document or asset operation will succeed, seed that config into storage once (e.g.
-in a setup script, a one-time migration, or a first-boot handler):
+[`DecapCatalogProvider`](../../reference/api/laikacms/catalog-decap/classes/DecapCatalogProvider)
+reads your Decap config object from storage on **every** content request — it uses the `collections`
+array to resolve collection → folder mappings, field schemas, and media paths. Before any document
+or asset operation will succeed, seed that config into storage once (e.g. in a setup script, a
+one-time migration, or a first-boot handler):
 
 ```ts
 import { runTask } from 'laikacms/compat';
@@ -86,10 +87,14 @@ await runTask(
 ```
 
 **Serializer requirement.** The config object is structured data. Your storage instance must
-register a serializer that round-trips arbitrary objects — `yamlSerializer`, `jsonSerializer`, or
-`markdownSerializer` all work. Do **not** use `rawSerializer`: it stores only a plain `body` string
-and discards all other fields, so seeding with it silently writes an empty config and every content
-request still fails.
+register a serializer that round-trips arbitrary objects —
+[`yamlSerializer`](../../reference/api/laikacms/serializers/yaml/variables/yamlSerializer),
+[`jsonSerializer`](../../reference/api/laikacms/serializers/json/variables/jsonSerializer), or
+[`markdownSerializer`](../../reference/api/laikacms/serializers/markdown/variables/markdownSerializer)
+all work. Do **not** use
+[`rawSerializer`](../../reference/api/laikacms/serializers/raw/variables/rawSerializer): it stores
+only a plain `body` string and discards all other fields, so seeding with it silently writes an
+empty config and every content request still fails.
 
 **Server config vs. browser config.** There are two separate copies of your Decap config:
 

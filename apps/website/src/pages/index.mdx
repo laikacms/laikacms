@@ -23,33 +23,29 @@ import { PromiseGrid } from '../components/PromiseGrid';
     directive only works in an `.astro`/`.mdx` file. */}
 
 <Hero
-  tag="MIT licensed · open source · self-hostable"
-  headline="Components for dashboards & CMSs."
-  headlineAccent="One content API, any backend."
+  headline="One content API."
+  headlineAccent="Any backend."
   primaryCta={{ label: 'Get started', href: '/docs/guides/getting-started' }}
   secondaryCta={{ label: 'View source', href: 'https://github.com/laikacms/laikacms' }}
   runtimesLabel="runs in"
   runtimes={['Node', 'Bun', 'Deno', 'Cloudflare Workers', 'Browser']}
 >
-  Laika CMS is a component library for building dashboards and CMSs, paired with a content API.
-  Compose an admin from ready-made modules, define your content once, and serve it as a JSON:API.
-  Self-hosted by default, backed by the filesystem, a database, a Git repo, or the CMS you already
-  run. 40+ backends in all.
+  Laika CMS is a content API. Define your content once and serve it as a JSON:API to your editors,
+  your sites and your apps. Self-hosted by default, backed by the filesystem, a database, a Git
+  repo, or the CMS you already run. 40+ backends in all.
 
   <CodePanel client:load slot="panel" {...codeSwap} />
 </Hero>
 
-<Features eyebrow="What Laika is" heading="An open-source content layer you actually own.">
-  Laika CMS is two things: a component library for building dashboards and CMSs, and a content API.
-  The admin is a modular dashboard you compose and extend, not a UI you inherit. And the storage
-  backend is a swappable detail, not an architecture you marry, so it ships with 40+ of them,
-  including the headless CMS you may already run. All of it yours, self-hosted, under the MIT license.
+<Features heading="An open-source content layer you actually own.">
+  Laika CMS is a content API, and the storage backend behind it is a swappable detail, not an
+  architecture you marry, so it ships with 40+ of them, including the headless CMS you may already
+  run. All of it yours, self-hosted, under the MIT license.
 
   <PillarGrid>
     <Pillar icon="scales" title="MIT licensed, forever" badge="MIT">
-      Dashboard components, the content API, storage adapters, the Decap bridge: every line is MIT. No
-      proprietary tier, no upsell, no vendor capture. Self-hosting is the default. Read the source
-      before you adopt it.
+      The content API, storage adapters, the Decap bridge: every line is MIT. No proprietary tier, no
+      upsell, no vendor capture. Self-hosting is the default. Read the source before you adopt it.
     </Pillar>
 
     <Pillar icon="layers" title="Headless by design">
@@ -62,9 +58,9 @@ import { PromiseGrid } from '../components/PromiseGrid';
       Notion, Neo4j, IPFS: 40+ stores in all. Change the repository in a single line.
     </Pillar>
 
-    <Pillar icon="layout" title="A component library for dashboards">
-      The admin is not a fixed UI: compose your dashboard from ready-made components and extend it
-      with your own screens. The same library powers production back offices today.
+    <Pillar icon="spark" title="One API, every consumer">
+      The same endpoints serve your editors, your site's build, and your apps at runtime. No separate
+      delivery API to keep in sync.
     </Pillar>
 
     <Pillar icon="globe" title="Runtime-agnostic">
@@ -82,7 +78,7 @@ import { PromiseGrid } from '../components/PromiseGrid';
       choice, not a constraint.
     </Pillar>
 
-    <Pillar icon="spark" title="Decap-native">
+    <Pillar icon="decap" title="Decap-native">
       A git-gateway-compatible HTTP handler with OAuth2 + PKCE built in. Point Decap CMS straight at
       Laika, or self-install the hosted gateway. All MIT.
     </Pillar>
@@ -96,15 +92,15 @@ import { PromiseGrid } from '../components/PromiseGrid';
 
 <Compare {...compare} />
 
-<Pledge eyebrow="Why this exists" heading="Open Source">
+<Pledge heading="Open Source">
   Too many beloved CMSes went fully commercial and then shut down, taking a generation of workflows
   with them. That is the failure mode this project is built to rule out: a tool you build on should
   not be able to change its mind about you.
 
   <PromiseGrid>
     <PledgePromise icon="check" title="Free, forever">
-      The complete CMS: content modeling, the JSON:API, every storage backend, the dashboard, the
-      Decap bridge, auth. If you need it to run Laika in production, it is MIT.
+      The complete content API: content modeling, the JSON:API, every storage backend, the Decap
+      bridge, auth. If you need it to run Laika in production, it is MIT.
     </PledgePromise>
 
     <PledgePromise icon="spark" title="Paid, eventually">

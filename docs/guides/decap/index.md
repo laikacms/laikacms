@@ -1,13 +1,13 @@
 # Decap CMS Integration
 
-[Decap CMS](https://decapcms.org/) is a Git-based admin UI for content. LaikaCMS ships a
-Decap-compatible backend (`@laikacms/server`) so you can pair that admin with any LaikaCMS storage
+[Decap CMS](https://decapcms.org/) is a Git-based admin UI for content. Laika ships a
+Decap-compatible backend (`@laikacms/server`) so you can pair that admin with any Laika storage
 repository — filesystem, R2, S3, WebDAV, and more.
 
-Laika CMS works with upstream Decap CMS and maintains a standalone
+Laika works with upstream Decap CMS and maintains a standalone
 [`@laikacms/decap-cms` fork](https://github.com/laikacms/decap-cms). The fork follows the same
-separation of an agnostic core from opinionated outer packages and can be used without Laika CMS. It
-is a general-purpose continuation of Decap CMS, not an admin UI coupled exclusively to this project.
+separation of an agnostic core from opinionated outer packages and can be used without Laika. It is
+a general-purpose continuation of Decap CMS, not an admin UI coupled exclusively to this project.
 See [the fork overview](./fork) for its documentation and the boundary between the admin UI and the
 Laika backend.
 
@@ -19,9 +19,9 @@ Two integration shapes are supported, in increasing order of complexity:
 | **[Standalone Worker](./standalone-worker)**             | You want full control of storage, auth, and routing    | Your own Hono/Worker app                                                               | JWT (or your scheme)             |
 
 The primary documented integration path is the **Standalone Worker (BYO storage)** wiring: you
-construct a `StorageRepository`, wrap it in the Catalog document/asset repos, and expose them
-through `laikaApi(...)`. Everything else (admin shell, OAuth2, framework bridges) builds on top of
-that handler.
+construct a [`StorageRepository`](../../reference/api/laikacms/storage/classes/StorageRepository),
+wrap it in the Catalog document/asset repos, and expose them through `laikaApi(...)`. Everything
+else (admin shell, OAuth2, framework bridges) builds on top of that handler.
 
 ## In this section
 
@@ -38,5 +38,6 @@ that handler.
   editor component.
 - **[Framework setup notes](./frameworks)** — per-framework request bridges (Express, Next.js,
   SvelteKit, Astro, Nuxt, AdonisJS, FoalTS, and more).
-- **[AI assistant](/reference/packages/server/ai)** — mount `@laikacms/server/ai` for the editor's
-  chat and session endpoints; `DecapAiConfig` options, session callbacks, and authorization.
+- **[AI assistant](../ai-assistant)** — mount `@laikacms/server/ai` for the editor's chat and
+  session endpoints; [`DecapAiConfig`](../../reference/api/server/ai/interfaces/DecapAiConfig)
+  options, session callbacks, and authorization.

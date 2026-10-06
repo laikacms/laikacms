@@ -1,7 +1,7 @@
 # AI Agents Guide
 
-Laika CMS is **modular, runtime-agnostic content management software**. API-first, works with any
-JavaScript runtime.
+Laika CMS is a **modular, runtime-agnostic content API**. One API over any storage backend, works
+with any JavaScript runtime.
 
 ## Principles
 

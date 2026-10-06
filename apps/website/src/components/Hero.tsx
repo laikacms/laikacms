@@ -4,8 +4,6 @@ import { BackendIcon } from './BackendIcon';
 import { CATALOGUE_SERIALIZERS, LAIKA_GROUPS } from './Backends';
 import { IconArrow, IconGitHub, IconGlobe } from './icons';
 
-const TAG_DOT_SHADOW = 'shadow-[0_0_0_3px_color-mix(in_oklab,oklch(0.7_0.17_150),transparent_78%)]';
-
 const BTN_PRIMARY =
   'font-body font-medium text-[15.5px] rounded-[10px] py-[13px] px-[22px] inline-flex items-center gap-[9px] cursor-pointer border border-transparent whitespace-nowrap bg-indigo text-white shadow-[0_1px_2px_rgba(31,38,95,0.18),0_8px_22px_-12px_rgba(63,81,181,0.55)] transition-[background,color,border-color,transform,box-shadow] duration-150 hover:bg-indigo-700 active:translate-y-px';
 
@@ -22,7 +20,6 @@ interface HeroCta {
 }
 
 interface HeroProps {
-  tag: string;
   headline: string;
   headlineAccent: string;
   primaryCta: HeroCta;
@@ -36,7 +33,6 @@ interface HeroProps {
 }
 
 export function Hero({
-  tag,
   headline,
   headlineAccent,
   primaryCta,
@@ -48,14 +44,9 @@ export function Hero({
 }: HeroProps) {
   return (
     <section className="relative overflow-clip pt-16 pb-[88px]">
-      <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px] grid grid-cols-[1fr_1.02fr] max-[940px]:grid-cols-1 gap-16 max-[940px]:gap-[44px] items-center relative z-[1]">
+      <div className="site-container grid grid-cols-[1fr_1.02fr] max-[940px]:grid-cols-1 gap-16 max-[940px]:gap-[44px] items-center relative z-[1]">
         <div className="max-[940px]:order-1">
-          <div className="font-mono inline-flex items-center gap-[9px] text-[12.5px] text-ink-2 px-[13px] py-[7px] rounded-full whitespace-nowrap border border-hairline-2 bg-surface">
-            <span className={`w-[7px] h-[7px] rounded-full bg-[oklch(0.7_0.17_150)] ${TAG_DOT_SHADOW}`} />
-            {tag}
-          </div>
-
-          <h1 className="mt-[26px] text-[clamp(40px,6vw,74px)] leading-[0.98] tracking-[-0.035em] font-display font-semibold">
+          <h1 className="text-[clamp(40px,6vw,74px)] leading-[0.98] tracking-[-0.035em] font-display font-semibold">
             {headline}
             <br />
             <span className="text-ink-3">{headlineAccent}</span>
@@ -93,7 +84,7 @@ export function Hero({
 
         <div className="relative min-w-0 max-[940px]:order-2">
           <img
-            className="absolute w-[128%] h-[128%] max-w-none top-1/2 left-[64%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-55 z-0 pointer-events-none"
+            className="absolute w-[128%] h-[128%] max-w-none top-1/2 left-[64%] -translate-x-1/2 -translate-y-1/2 object-contain opacity-55 dark:opacity-20 z-0 pointer-events-none"
             src="/assets/laika-dog-mid.png"
             alt=""
             aria-hidden="true"
@@ -102,7 +93,7 @@ export function Hero({
         </div>
       </div>
 
-      <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px]">
+      <div className="site-container">
         <div className="mt-[60px] overflow-hidden marquee-mask" aria-hidden="true">
           <div className="flex gap-3.5 w-max animate-marquee motion-reduce:animate-none [&:hover]:[animation-play-state:paused]">
             {loop.map((b, i) => (

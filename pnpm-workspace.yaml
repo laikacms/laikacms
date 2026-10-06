@@ -49,6 +49,12 @@ catalogs:
     "ws": "^8.21.0"
     "yaml": "^2.9.0"
 
+  docs:
+    "mermaid": "^12.1.0"
+    "typedoc": "^0.28.20"
+    "typedoc-plugin-markdown": "^4.13.1"
+    "typedoc-vitepress-theme": "^1.1.4"
+
   lint:
     "@eslint/js": "^10.0.1"
     "@typescript-eslint/eslint-plugin": "^8.66.0"

@@ -1,4 +1,4 @@
-import { IconGitHub, Logo } from './icons';
+import { IconGitHub, IconMoon, IconSun, Logo } from './icons';
 
 /* A tab with `to` is a page on this site; a tab with `href` leaves it (the docs
    are a separate static site under /docs/). The hosted platform is hidden for
@@ -8,7 +8,10 @@ import { IconGitHub, Logo } from './icons';
    scroll listener in Base.astro toggles `#site-nav.is-scrolled` (styles.css) —
    so the header needs no hydration.
 
-   `path` also comes from the layout: a React component has no `Astro.url`. */
+   `path` also comes from the layout: a React component has no `Astro.url`.
+
+   The theme toggle is the same kind of hydration-free markup: Base.astro wires
+   `[data-theme-toggle]`, and `.dark` on <html> picks which icon shows. */
 
 const TAB =
   'font-body text-[15px] font-[450] cursor-pointer px-3.5 py-2 rounded-[9px] inline-flex items-center gap-[7px] whitespace-nowrap transition-[color,background] duration-150 ';
@@ -37,8 +40,8 @@ export function Nav({ path, tabs, githubLabel, githubHref, cta }: NavProps) {
       id="site-nav"
       className="sticky top-0 z-50 transition-[background,border-color,backdrop-filter] duration-[250ms] border-b border-transparent"
     >
-      <div className="max-w-[1200px] mx-auto px-10 max-[760px]:px-[22px] h-[70px] flex items-center justify-between">
-        <a href="/" aria-label="Laika CMS" className="bg-none border-0 p-0 cursor-pointer inline-flex">
+      <div className="site-container h-16 flex items-center justify-between">
+        <a href="/" aria-label="Laika" className="bg-none border-0 p-0 cursor-pointer inline-flex">
           <Logo height={30} />
         </a>
 
@@ -56,6 +59,19 @@ export function Nav({ path, tabs, githubLabel, githubHref, cta }: NavProps) {
         </nav>
 
         <div className="flex items-center gap-3.5">
+          <button
+            type="button"
+            data-theme-toggle
+            aria-label="Toggle dark mode"
+            className="inline-grid place-items-center w-[38px] h-[38px] rounded-[9px] border border-hairline-2 bg-surface text-ink-2 cursor-pointer transition-[border-color,color] duration-150 hover:border-ink-3 hover:text-ink"
+          >
+            <span className="dark:hidden">
+              <IconMoon />
+            </span>
+            <span className="hidden dark:inline">
+              <IconSun />
+            </span>
+          </button>
           <a
             className="inline-flex items-center gap-2 text-[13px] text-ink-2 whitespace-nowrap px-3 py-2 rounded-[9px] border border-hairline-2 bg-surface transition-[border-color,color] duration-150 hover:border-ink-3 hover:text-ink"
             href={githubHref}

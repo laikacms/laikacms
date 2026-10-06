@@ -1,11 +1,10 @@
 # Self-Hosting Quickstart: FileSystem + Decap CMS
 
-This guide walks you through running LaikaCMS on a plain Node.js server using filesystem storage
+This guide walks you through running Laika on a plain Node.js server using filesystem storage
 (`laikacms/storage-fs`) and the Laika backend for Decap CMS (`@laikacms/server`). It is the simplest
 possible self-hosted setup — no cloud provider account required.
 
-For a broader overview of the system see [architecture](../../concepts/architecture), and for
-Cloudflare Workers or AWS Lambda deployments see [deployment](../deployment).
+For a broader overview of the system see [architecture](../../concepts/architecture).
 
 ---
 
@@ -20,7 +19,7 @@ Cloudflare Workers or AWS Lambda deployments see [deployment](../deployment).
 
 ## 1. Install packages
 
-Install the LaikaCMS packages and a Node.js server runtime. Storage repos, document/asset repos, API
+Install the Laika packages and a Node.js server runtime. Storage repos, document/asset repos, API
 factories, and serializers are all subpath exports of the single `laikacms` package. The Decap
 integration lives in `@laikacms/server`:
 
@@ -59,9 +58,8 @@ pnpm add --allow-build=esbuild --allow-build=msgpackr-extract \
 
 > **Subpath exports:** the snippet below imports from `laikacms/storage-fs`,
 > `laikacms/documents-catalog`, `laikacms/assets-catalog`, `laikacms/catalog-convention`, and
-> `laikacms/storage-serializers-json`. These are subpath exports of the single `laikacms` package —
-> there is no separate `@laikacms/storage-fs` package on npm. See
-> [packages.md](../../reference/packages) for the full list of subpaths.
+> `laikacms/storage-serializers-json`. All of them come with `pnpm add laikacms`. See
+> [Imports](../../reference/imports) for every import path.
 
 > **Other formats:** swap `laikacms/storage-serializers-json` for
 > `laikacms/storage-serializers-yaml` if you prefer YAML files, and change `'json'` to `'yaml'` in
@@ -147,21 +145,25 @@ const api = laikaApi({
 
 // 5. Start listening.
 serve({ fetch: api.fetch, port: 3000 }, () => {
-  console.log('LaikaCMS API listening on http://localhost:3000');
+  console.log('Laika API listening on http://localhost:3000');
   console.log('Health check: http://localhost:3000/api/health');
 });
 ```
 
-> **Which settings provider?** `ConventionCatalogProvider` maps collection names to same-name
-> storage folders and auto-creates its settings object on first use — no seeding required. It is the
-> right choice for this quickstart and for most simple setups. Switch to `DecapCatalogProvider`
+> **Which settings provider?**
+> [`ConventionCatalogProvider`](../../reference/api/laikacms/catalog-convention/classes/ConventionCatalogProvider)
+> maps collection names to same-name storage folders and auto-creates its settings object on first
+> use — no seeding required. It is the right choice for this quickstart and for most simple setups.
+> Switch to
+> [`DecapCatalogProvider`](../../reference/api/laikacms/catalog-decap/classes/DecapCatalogProvider)
 > (`laikacms/catalog-decap`) when you need the server and browser Decap configs to stay in sync from
 > one source of truth (it derives collection/folder/media mappings from a Decap config JSON you seed
 > into storage), or when you need multi-folder or nested collection support.
 
 > **Production auth:** the `authenticateAccessToken` callback above accepts a hard-coded dev token.
 > For production, replace it with a real validator (JWT verification, database session lookup, etc.)
-> or use the bundled `laikaOauth2` helper — see [Decap Integration](./auth).
+> or use the bundled [`laikaOauth2`](../../reference/api/server/oauth2/functions/laikaOauth2) helper
+> — see [Decap Integration](./auth).
 
 > **Other base paths:** if you mount behind a reverse proxy at a different prefix, change
 > `basePath: '/api'` here and update `api_root` in `admin/config.yml` to match.
@@ -256,7 +258,7 @@ The static file server needs an `index.html` to load your compiled bundle:
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Admin — LaikaCMS</title>
+    <title>Admin — Laika</title>
   </head>
   <body>
     <!-- esbuild compiles admin/index.ts → admin/bundle.js (see §5) -->
@@ -317,22 +319,23 @@ collections:
 > ``Laika backend currently only supports JSON-format collections; set
 > `format: json` on collection `<name>`.``
 
-> **`language` field in stored content:** `CatalogDocumentsRepository` co-locates the document
-> language with its content in storage. When Decap saves an entry that has no i18n configuration, it
-> sends `language: "und"` (undetermined per BCP 47). As a result, every stored `.json` file includes
-> a `language: "und"` key alongside your declared fields:
+> **`language` field in stored content:**
+> [`CatalogDocumentsRepository`](../../reference/api/laikacms/documents/catalog/classes/CatalogDocumentsRepository)
+> co-locates the document language with its content in storage. When Decap saves an entry that has
+> no i18n configuration, it sends `language: "und"` (undetermined per BCP 47). As a result, every
+> stored `.json` file includes a `language: "und"` key alongside your declared fields:
 >
 > ```json
 > { "title": "My post", "body": "...", "language": "und" }
 > ```
 >
-> Treat `language` as a LaikaCMS-managed field — do not declare it in Decap's `fields:` list and
-> filter it out when reading content files directly for rendering. If you configure i18n, the field
-> will contain the active locale instead.
+> Treat `language` as a Laika-managed field — do not declare it in Decap's `fields:` list and filter
+> it out when reading content files directly for rendering. If you configure i18n, the field will
+> contain the active locale instead.
 
 The backend constructs its API URL as `base_url + api_root` → `http://localhost:3000/api`. All
-document, asset, storage, and health endpoints are served under that prefix by the `laikaApi` server
-started in §2.
+document, asset, storage, and health endpoints are served under that prefix by the
+[`laikaApi`](../../reference/api/server/api/functions/laikaApi) server started in §2.
 
 The `dev_token` value is sent as a Bearer token by the Decap admin; the server's
 `authenticateAccessToken` callback checks it. **Never use a dev token in production** — replace it
@@ -389,8 +392,9 @@ Node.js 22 or later.
 
 ### Key requirement
 
-`FileSystemStorageRepository` reads and writes files at `rootDirectory`. In production you need a
-**persistent volume** attached to that path so content survives restarts and redeploys.
+[`FileSystemStorageRepository`](../../reference/api/laikacms/storage/fs/classes/FileSystemStorageRepository)
+reads and writes files at `rootDirectory`. In production you need a **persistent volume** attached
+to that path so content survives restarts and redeploys.
 
 ### Railway
 
@@ -468,5 +472,4 @@ docker run -p 3000:3000 -v $(pwd)/content:/app/content laika-api
 - [Architecture](../../concepts/architecture) — understand the layered design
 - [Decap Integration](./) — OAuth2, widgets, media library
 - [API Reference](../../reference/json-api/) — full JSON:API endpoint reference
-- [Deployment](../deployment) — Cloudflare Workers, AWS Lambda, and more
 - [Repositories](../../concepts/repositories) — swap to R2, S3, or other backends

@@ -1,6 +1,6 @@
 # @laikacms/astro
 
-Astro integration for Laika CMS. Content reaches your pages through Astro's own
+Astro integration for Laika. Content reaches your pages through Astro's own
 [Content Layer](https://docs.astro.build/en/guides/content-collections/) — `getCollection()`,
 `getEntry()`, `render()`, Zod schemas — instead of a Laika-specific import protocol.
 
@@ -354,7 +354,7 @@ single `access` policy. It accepts the same `access` values as `mode: 'route'`.
 
 ## Documentation
 
-See the [package reference](https://laikacms.com/docs/reference/packages/astro/).
+See the [Astro guide](https://laikacms.com/docs/guides/astro).
 
 ## License
 

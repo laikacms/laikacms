@@ -1,0 +1,92 @@
+# Every backend Laika ships an adapter for. Single source of truth for the docs adapter list and the
+# per-adapter pages (compiled by docs/scripts/generate-adapter-docs.mjs).
+#
+#   key       unique, stable identifier — also the docs URL (/adapters/<key>). Matches the CLI's
+#             `backend` name and the `laikacms/storage/<key>` subpath where those exist.
+#   name      display name
+#   icon      path (from the repo root) to the adapter's SVG, shown in light mode
+#   iconDark  optional: the SVG for dark mode, for logos that disappear on a dark background.
+#             Defaults to `icon`.
+#   storage / documents / assets
+#             folder (from the repo root) holding that repository's implementation and README.md.
+#             Omit the ones the adapter doesn't provide.
+#
+# Paths are repo-relative so the adapters can live anywhere (core subpaths or their own packages).
+
+- key: github
+  name: GitHub
+  icon: packages/github/icon.svg
+  iconDark: packages/github/icon-dark.svg
+  storage: packages/github
+
+- key: gitlab
+  name: GitLab
+  icon: packages/gitlab/icon.svg
+  storage: packages/gitlab
+
+- key: bitbucket
+  name: Bitbucket
+  icon: packages/bitbucket/icon.svg
+  iconDark: packages/bitbucket/icon-dark.svg
+  storage: packages/bitbucket
+
+- key: github-cdn
+  name: GitHub CDN
+  icon: packages/laikacms/src/impl/storage-github-cdn/icon.svg
+  storage: packages/laikacms/src/impl/storage-github-cdn
+
+- key: r2
+  name: Cloudflare R2
+  icon: packages/laikacms/src/impl/storage-r2/icon.svg
+  storage: packages/laikacms/src/impl/storage-r2
+  assets: packages/laikacms/src/impl/assets-r2
+
+- key: s3
+  name: S3-compatible
+  icon: packages/laikacms/src/impl/storage-s3/icon.svg
+  iconDark: packages/laikacms/src/impl/storage-s3/icon-dark.svg
+  storage: packages/laikacms/src/impl/storage-s3
+
+- key: drizzle
+  name: Drizzle ORM
+  icon: packages/laikacms/src/impl/storage-drizzle/icon.svg
+  storage: packages/laikacms/src/impl/storage-drizzle
+  documents: packages/laikacms/src/impl/documents-drizzle
+
+- key: fs
+  name: Filesystem
+  icon: packages/laikacms/src/impl/storage-fs/icon.svg
+  iconDark: packages/laikacms/src/impl/storage-fs/icon-dark.svg
+  storage: packages/laikacms/src/impl/storage-fs
+
+- key: web-fs
+  name: Browser File System
+  icon: packages/laikacms/src/impl/storage-web-fs/icon.svg
+  iconDark: packages/laikacms/src/impl/storage-web-fs/icon-dark.svg
+  storage: packages/laikacms/src/impl/storage-web-fs
+
+- key: web
+  name: Web Storage
+  icon: packages/laikacms/src/impl/storage-web/icon.svg
+  iconDark: packages/laikacms/src/impl/storage-web/icon-dark.svg
+  storage: packages/laikacms/src/impl/storage-web
+
+- key: webdav
+  name: WebDAV
+  icon: packages/laikacms/src/impl/storage-webdav/icon.svg
+  iconDark: packages/laikacms/src/impl/storage-webdav/icon-dark.svg
+  storage: packages/laikacms/src/impl/storage-webdav
+
+- key: obsidian
+  name: Obsidian
+  icon: packages/laikacms/src/impl/documents-obsidian/icon.svg
+  documents: packages/laikacms/src/impl/documents-obsidian
+  assets: packages/laikacms/src/impl/assets-obsidian
+
+- key: jsonapi-proxy
+  name: JSON:API proxy
+  icon: packages/laikacms/src/impl/storage-jsonapi-proxy/icon.svg
+  iconDark: packages/laikacms/src/impl/storage-jsonapi-proxy/icon-dark.svg
+  storage: packages/laikacms/src/impl/storage-jsonapi-proxy
+  documents: packages/laikacms/src/impl/documents-jsonapi-proxy
+  assets: packages/laikacms/src/impl/assets-jsonapi-proxy

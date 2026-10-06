@@ -1,0 +1,167 @@
+/* Docs theme, aligned with apps/website (src/styles.css): same typefaces, same
+   neutrals, same logo indigo — light and dark. The light/dark choice itself is
+   shared with the website through VitePress's `vitepress-theme-appearance`
+   storage key (see apps/website/src/layouts/Base.astro). */
+
+:root {
+  --laika-indigo: #3f51b5;
+
+  --vp-font-family-base: 'IBM Plex Sans', system-ui, sans-serif;
+  --vp-font-family-mono: 'IBM Plex Mono', ui-monospace, monospace;
+  --laika-font-display: 'Archivo', system-ui, sans-serif;
+
+  --vp-c-brand-1: var(--laika-indigo);
+  --vp-c-brand-2: color-mix(in oklab, var(--laika-indigo), white 15%);
+  --vp-c-brand-3: var(--laika-indigo);
+  --vp-c-brand-soft: color-mix(in oklab, var(--laika-indigo), transparent 86%);
+
+  --vp-c-bg: #fbfbfd;
+  --vp-c-bg-alt: #f5f6fa;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-bg-soft: #f5f6fa;
+  --vp-c-text-1: #16171d;
+  --vp-c-text-2: #54586a;
+  --vp-c-text-3: #888da0;
+  --vp-c-divider: #e8e9f1;
+  --vp-c-border: #dcdee9;
+  --vp-c-gutter: #e8e9f1;
+
+  --vp-code-block-bg: #f5f6fa;
+  --vp-button-brand-bg: var(--laika-indigo);
+  --vp-button-brand-hover-bg: color-mix(in oklab, var(--laika-indigo), black 24%);
+  --vp-button-brand-active-bg: color-mix(in oklab, var(--laika-indigo), black 40%);
+}
+
+/* Matches the website's `.dark` palette. The indigo is lifted for text and
+   accents; solid fills keep the logo value. */
+.dark {
+  --vp-c-brand-1: color-mix(in oklab, var(--laika-indigo), white 45%);
+  --vp-c-brand-2: color-mix(in oklab, var(--laika-indigo), white 30%);
+  --vp-c-brand-3: color-mix(in oklab, var(--laika-indigo), white 18%);
+  --vp-c-brand-soft: color-mix(in oklab, var(--laika-indigo), transparent 76%);
+
+  --vp-c-bg: #101119;
+  --vp-c-bg-alt: #0c0d14;
+  --vp-c-bg-elv: #161822;
+  --vp-c-bg-soft: #1d202c;
+  --vp-c-text-1: #ebecf3;
+  --vp-c-text-2: #a9adc0;
+  --vp-c-text-3: #7b8096;
+  --vp-c-divider: #252836;
+  --vp-c-border: #303446;
+  --vp-c-gutter: #0c0d14;
+
+  --vp-code-block-bg: #161822;
+  --vp-button-brand-bg: color-mix(in oklab, var(--laika-indigo), white 18%);
+  --vp-button-brand-hover-bg: var(--laika-indigo);
+  --vp-button-brand-active-bg: color-mix(in oklab, var(--laika-indigo), black 12%);
+}
+
+/* Display type: the website sets headings in Archivo, semibold, tight tracking. */
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3,
+.vp-doc h4,
+.VPHero .name,
+.VPHero .text,
+.VPNavBarTitle .title {
+  font-family: var(--laika-font-display);
+  letter-spacing: -0.02em;
+}
+
+.vp-doc h1,
+.vp-doc h2,
+.vp-doc h3 {
+  font-weight: 600;
+}
+
+/* Wordmark: "Laika", like the website nav. */
+.VPNavBarTitle .title {
+  font-weight: 600;
+  font-size: 19px;
+}
+
+.VPNavBarTitle .logo {
+  border-radius: 50%;
+}
+
+.laika-accent {
+  color: var(--vp-c-brand-1);
+}
+
+/* Intro heading: neutral "Welcome to", brand-coloured "Laika". */
+.vp-doc h1 .laika-accent {
+  color: var(--vp-c-brand-1);
+}
+
+/* Adapter logos (docs/adapters, generated from adapters.yaml). */
+.vp-doc img.adapter-icon {
+  display: inline-block;
+  width: 1.5em;
+  height: 1.5em;
+  vertical-align: middle;
+  object-fit: contain;
+}
+
+.vp-doc h1 img.adapter-icon {
+  margin-right: 0.25em;
+}
+
+/* Each logo is emitted twice (adapters.yaml `icon` / `iconDark`); show the one for the theme. */
+.dark img.adapter-icon-light,
+html:not(.dark) img.adapter-icon-dark {
+  display: none !important;
+}
+
+/* Adapter logos in the sidebar (docs/.vitepress/config.ts). */
+.VPSidebarItem img.adapter-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  margin-right: 8px;
+  vertical-align: -3px;
+  object-fit: contain;
+}
+
+/* Row of linked adapter logos (docs/index.md, getting started). */
+.vp-doc p.adapter-logos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.vp-doc p.adapter-logos a {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 10px;
+  background: var(--vp-c-bg-soft);
+  transition: border-color 0.15s;
+}
+
+.vp-doc p.adapter-logos a:hover {
+  border-color: var(--vp-c-brand-1);
+}
+
+.vp-doc p.adapter-logos img.adapter-icon {
+  width: 24px;
+  height: 24px;
+}
+
+/* Mermaid diagrams (theme/mermaid.ts). Unrendered source stays readable as a code block. */
+.vp-doc pre.mermaid {
+  margin: 16px 0;
+  padding: 16px;
+  overflow-x: auto;
+  border-radius: 8px;
+  background: var(--vp-code-block-bg);
+  font-family: var(--vp-font-family-mono);
+  font-size: 13px;
+}
+
+.vp-doc pre.mermaid[data-rendered] {
+  text-align: center;
+  background: transparent;
+}

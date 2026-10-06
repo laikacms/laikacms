@@ -140,7 +140,7 @@ const ORIENTATION = [
   'docs/guides/getting-started.md',
   'docs/concepts/index.md',
   'docs/reference/index.md',
-  'docs/reference/packages.md',
+  'docs/reference/imports.md',
 ];
 
 function groupDocs(docs) {

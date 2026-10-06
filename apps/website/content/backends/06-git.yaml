@@ -6,13 +6,13 @@ note: >-
 items:
   - name: GitHub
     sub: '@laikacms/github'
-    icon: { si: github }
+    icon: { adapter: github }
   - name: GitLab
     sub: '@laikacms/gitlab'
-    icon: { si: gitlab }
+    icon: { adapter: gitlab }
   - name: Bitbucket
     sub: '@laikacms/bitbucket'
-    icon: { si: bitbucket }
+    icon: { adapter: bitbucket }
   - name: Gist
     sub: '@laikacms/gist'
     icon: { si: github }

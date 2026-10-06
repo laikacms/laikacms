@@ -1,15 +1,16 @@
 # Catalog API
 
 The Catalog API manages collection settings — the named document and media folders that structure a
-store's content. It is served by `buildJsonApi` from `laikacms/catalog-api`.
+store's content. It is served by
+[`buildJsonApi`](../api/laikacms/catalog-api/functions/buildJsonApi) from `laikacms/catalog-api`.
 
 > ⚠️ **You must state an access policy.** `buildJsonApi` requires an `authorize` callback — it runs
 > before every action below, including the two OpenAPI routes, and receives the action descriptor
-> plus the originating `Request`. Return `true` to allow, `false` for a 403, or a `LaikaError` for a
-> custom status. It decides _what a caller may do_; authenticating them is still your job — validate
-> the credential inside the callback, or mount the handler behind `@laikacms/server/api`, which
-> checks a Bearer token first. For a deliberately open surface, say so with `authorize: allowAll`
-> from `laikacms/json-api`.
+> plus the originating `Request`. Return `true` to allow, `false` for a 403, or a
+> [`LaikaError`](../api/laikacms/core/errors/classes/LaikaError) for a custom status. It decides
+> _what a caller may do_; authenticating them is still your job — validate the credential inside the
+> callback, or mount the handler behind `@laikacms/server/api`, which checks a Bearer token first.
+> For a deliberately open surface, say so with `authorize: allowAll` from `laikacms/json-api`.
 
 ### Resource Types
 
