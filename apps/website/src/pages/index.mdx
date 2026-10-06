@@ -30,61 +30,61 @@ import { PromiseGrid } from '../components/PromiseGrid';
   runtimesLabel="runs in"
   runtimes={['Node', 'Bun', 'Deno', 'Cloudflare Workers', 'Browser']}
 >
-  Laika CMS is a content API. Define your content once and serve it as a JSON:API to your editors,
-  your sites and your apps. Self-hosted by default, backed by the filesystem, a database, a Git
-  repo, or the CMS you already run. 40+ backends in all.
+  Laika is a content API. Define your content once and serve it as a JSON:API to your editors, sites
+  and apps. It runs on your own infrastructure, on top of the filesystem, a database, a Git
+  repository or a content service you already use. More than 40 backends are supported.
 
   <CodePanel client:load slot="panel" {...codeSwap} />
 </Hero>
 
-<Features heading="An open-source content layer you actually own.">
-  Laika CMS is a content API, and the storage backend behind it is a swappable detail, not an
-  architecture you marry, so it ships with 40+ of them, including the headless CMS you may already
-  run. All of it yours, self-hosted, under the MIT license.
+<Features heading="Open source, on your own infrastructure.">
+  Laika puts an API in front of your content. The storage behind it is a configuration choice, so
+  you can switch backends without rewriting your application. Everything is MIT licensed and
+  self-hosted.
 
   <PillarGrid>
-    <Pillar icon="scales" title="MIT licensed, forever" badge="MIT">
-      The content API, storage adapters, the Decap bridge: every line is MIT. No proprietary tier, no
-      upsell, no vendor capture. Self-hosting is the default. Read the source before you adopt it.
+    <Pillar icon="scales" title="MIT licensed" badge="MIT">
+      The license won't change in newer releases. Self-hosting is the default, and the source is on
+      GitHub.
     </Pillar>
 
-    <Pillar icon="layers" title="Headless by design">
-      Your content lives behind an API, not inside a theme. Render it with React, Vue, Astro, a static
-      site generator, a mobile app, or all of them at once, from the same source of truth.
+    <Pillar icon="layers" title="Headless">
+      Your content lives behind an API, separate from any theme. Render it with React, Vue, Astro, a
+      static site generator or a mobile app, all from the same source.
     </Pillar>
 
-    <Pillar icon="swap" title="Backend-agnostic: 40+ stores">
-      Back your content with the filesystem, object storage, a Git repo, any SQL database, MongoDB,
-      Notion, Neo4j, IPFS: 40+ stores in all. Change the repository in a single line.
+    <Pillar icon="swap" title="40+ backends">
+      Store your content on the filesystem, object storage, a Git repository, any SQL database,
+      MongoDB, Notion, Neo4j or IPFS. Switching backends is a one-line change.
     </Pillar>
 
-    <Pillar icon="spark" title="One API, every consumer">
-      The same endpoints serve your editors, your site's build, and your apps at runtime. No separate
+    <Pillar icon="spark" title="One API for everything">
+      Your editors, your site build and your apps use the same endpoints. There is no separate
       delivery API to keep in sync.
     </Pillar>
 
-    <Pillar icon="globe" title="Runtime-agnostic">
-      The API hands back a standard fetch handler, so the same code runs on Node, Bun, Deno,
-      Cloudflare Workers, or in the browser.
+    <Pillar icon="globe" title="Any JavaScript runtime">
+      The API returns a standard fetch handler, so the same code runs on Node, Bun, Deno, Cloudflare
+      Workers and in the browser.
     </Pillar>
 
     <Pillar icon="cube" title="API-first">
-      A clean JSON:API over your content. Point Decap CMS at it, or build your own front end on the
-      very same endpoints.
+      A JSON:API over your content. Connect Decap CMS to it, or build your own front end on the same
+      endpoints.
     </Pillar>
 
     <Pillar icon="book" title="Pluggable serializers">
-      Store content as JSON, YAML, Markdown with frontmatter, or raw bytes. The on-disk format is a
-      choice, not a constraint.
+      Store content as JSON, YAML, Markdown with frontmatter or raw bytes. You choose the format on
+      disk.
     </Pillar>
 
-    <Pillar icon="decap" title="Decap-native">
-      A git-gateway-compatible HTTP handler with OAuth2 + PKCE built in. Point Decap CMS straight at
-      Laika, or self-install the hosted gateway. All MIT.
+    <Pillar icon="decap" title="Works with Decap">
+      A git-gateway-compatible HTTP handler with OAuth2 and PKCE built in. Connect Decap CMS to Laika
+      directly, or run the gateway yourself. All MIT.
     </Pillar>
 
     <Pillar icon="plug" title="Developed in the open">
-      Built publicly on GitHub with changesets and open issues. Contributions, adapters and issues
+      Developed on GitHub with changesets and public issues. Contributions and new adapters are
       welcome.
     </Pillar>
   </PillarGrid>
@@ -93,24 +93,21 @@ import { PromiseGrid } from '../components/PromiseGrid';
 <Compare {...compare} />
 
 <Pledge heading="Open Source">
-  Too many beloved CMSes went fully commercial and then shut down, taking a generation of workflows
-  with them. That is the failure mode this project is built to rule out: a tool you build on should
-  not be able to change its mind about you.
+  Several well-known projects went fully commercial and later shut down, and the teams that built on
+  them had to migrate. A tool you build on should not change its terms after you adopt it.
 
   <PromiseGrid>
-    <PledgePromise icon="check" title="Free, forever">
-      The complete content API: content modeling, the JSON:API, every storage backend, the Decap
-      bridge, auth. If you need it to run Laika in production, it is MIT.
+    <PledgePromise icon="check" title="Stable licensing">
+      Every release ships under the MIT license, the same terms you adopted it under.
     </PledgePromise>
 
-    <PledgePromise icon="spark" title="Paid, eventually">
-      Optional conveniences that save you time and raise productivity. Everything paid is something
-      you could self-host or simply skip. Self-hosting stays the default.
+    <PledgePromise icon="spark" title="Self-hosted by default">
+      Laika runs on your infrastructure with your storage. Your content stays where you put it.
     </PledgePromise>
 
-    <PledgePromise icon="ban" title="Never">
-      Features moved behind a paywall after you adopted them. An enterprise edition. Rent charged on
-      access to your own content.
+    <PledgePromise icon="spark" title="Managed, if you want it">
+      The paid service is managed infrastructure: ready-to-use backends, hosting and operations, for
+      when you prefer not to run them yourself.
     </PledgePromise>
   </PromiseGrid>
 </Pledge>

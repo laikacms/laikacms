@@ -1,25 +1,25 @@
 # Tone rule: describe competitors neutrally, then state the concrete difference.
 heading: Where Laika sits.
-lead: 'Laika is not another headless CMS: it is the content API layer. Here is the honest map of the tools it sits next to. What sets Laika apart is never a gimmick: it is who owns the code, who owns the content, and who decides what you pay for.'
+lead: 'Laika is the API layer between your content and the apps that use it. These are the tools it is most often compared with, and where Laika differs.'
 columns:
   - What it is
   - The Laika difference
 rivals:
   - name: Contentful
-    what: 'The enterprise SaaS standard. Polished and proven. And fully proprietary, metered per seat, with your content living in their cloud.'
-    laika: 'The same API-first workflow, MIT end to end, with content in a store you own.'
+    what: 'The enterprise SaaS standard. Polished and proven. Proprietary, priced per seat, with your content stored in their cloud.'
+    laika: 'The same API-first workflow, MIT licensed, with content in a store you own.'
   - name: Sanity
     what: 'An open-source Studio in front of the proprietary hosted Content Lake: the editor is yours, the data layer is theirs.'
-    laika: 'Open all the way down: the API layer is MIT too, and it fronts your database, bucket or repo.'
+    laika: 'The API layer is MIT as well, and it runs in front of your own database, bucket or repository.'
   - name: Strapi
     what: 'Self-hosted open core on Node and SQL, with an Enterprise Edition and a cloud for the advanced features.'
-    laika: 'One MIT tier, no enterprise edition, and it runs beyond Node: Bun, Deno, workers, the browser.'
+    laika: 'MIT licensed throughout, and it runs on more than Node: Bun, Deno, Cloudflare Workers and the browser.'
   - name: Payload
     what: 'MIT, code-first and Next.js-native, backed by Postgres or MongoDB. Now part of Figma.'
-    laika: 'Framework-free and independent, with 40+ interchangeable backends instead of two.'
+    laika: 'Independent of any framework, with 40+ interchangeable backends instead of two.'
   - name: Tina
     what: 'The successor to Forestry: visual editing over Markdown, with the commercial TinaCloud at the centre.'
-    laika: 'Git is one backend here, not the business model. The whole stack self-hosts.'
+    laika: 'Git is one of many backends, and the whole stack can be self-hosted.'
   - name: EmDash
     what: 'An open-source, Astro-native CMS built for humans and agents.'
-    laika: 'Framework-agnostic by design: bring Astro, or anything else that speaks fetch.'
+    laika: 'Works with any framework: Astro, or anything else that speaks fetch.'

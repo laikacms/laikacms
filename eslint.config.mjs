@@ -88,6 +88,7 @@ export default tseslint.config(
       // Other framework-generated artifact directories
       '**/.marko-run/**',
       '**/.nitro/**',
+      'docs/.vitepress/cache/**',
     ],
   },
 );
