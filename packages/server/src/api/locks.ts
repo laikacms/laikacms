@@ -1,7 +1,7 @@
 import { DateTime, Result } from 'effect';
 import { errorCode, LaikaTask, Url } from 'laikacms/core';
 import type { DocumentsRepository } from 'laikacms/documents';
-import type { Lock, LockOwner, OwnedLock } from 'laikacms/storage';
+import type { Key, Lock, LockOwner, OwnedLock } from 'laikacms/storage';
 import { LockToken } from 'laikacms/storage';
 
 export type { Lock, LockOwner, OwnedLock } from 'laikacms/storage';
@@ -27,9 +27,44 @@ export type { Lock, LockOwner, OwnedLock } from 'laikacms/storage';
  * the editor UI before someone clobbers a concurrent edit.
  */
 
+/**
+ * A standalone lock manager — the four atomic lock primitives without the rest
+ * of a documents repository. `InProcessLockManager` (from `laikacms/locks/in-process`)
+ * satisfies this interface.
+ *
+ * Pass an instance as `locks` in {@link BuildLocksApiOptions} (or in
+ * {@link LaikaApiOptions} from `@laikacms/server/api`) to override the default
+ * duck-typed documents-repo path and get real locking without a lock-capable
+ * documents backend.
+ */
+export interface LockManager {
+  acquireLock(
+    key: Key,
+    owner: LockOwner,
+    options?: { ttlMs?: number | undefined, force?: boolean | undefined },
+  ): LaikaTask.LaikaTask<OwnedLock>;
+  refreshLock(
+    key: Key,
+    token: LockToken,
+    owner: LockOwner,
+    options?: { ttlMs?: number | undefined },
+  ): LaikaTask.LaikaTask<OwnedLock>;
+  releaseLock(key: Key, token: LockToken): LaikaTask.LaikaTask<void>;
+  getLock(key: Key): LaikaTask.LaikaTask<Lock | null>;
+}
+
 export interface BuildLocksApiOptions {
   /** The repository that actually arbitrates locks. */
   documents: DocumentsRepository;
+  /**
+   * Explicit lock manager. Takes precedence over duck-typing `documents` for
+   * lock support. Use `InProcessLockManager` from `laikacms/locks/in-process`
+   * for single-node deployments.
+   *
+   * When omitted and `documents` does not implement the lock methods, every
+   * `/locks` route returns `204 No Content` (no-op) instead of `501`.
+   */
+  lockManager?: LockManager | undefined;
   /** Endpoint prefix, e.g. `/locks`. */
   basePath: string;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
@@ -79,15 +114,14 @@ interface LockRequestBody {
  * - `POST   {base}/locks/:key/refresh` -> `200 { data: OwnedLock }` | `423 { data: currentLock }`
  * - `DELETE {base}/locks/:key`         -> `200 { meta: { released: true } }`
  *
- * Capability-gated: when the documents repository does not support locking,
- * every route answers `501`, which the client reads as "locking unsupported"
- * and degrades on. That is deliberately not a 404: the endpoint exists, the
- * backend just cannot honour it, and the client should stop asking rather than
- * treat it as a routing mistake.
+ * Lock source priority: an explicit `lockManager` option takes precedence; if
+ * absent the documents repository's lock methods are used (duck-typed). When
+ * neither supports locking, every route answers `204 No Content` (no-op).
  */
 export function buildLocksApi(options: BuildLocksApiOptions): LocksApi {
   const base = Url.normalize(options.basePath);
-  const { documents } = options;
+  // Prefer an explicit lock manager; fall back to the documents repo (duck-typed).
+  const locks: LockManager = options.lockManager ?? options.documents;
 
   const run = <T>(task: LaikaTask.LaikaTask<T>) => LaikaTask.runPromiseResult(task);
 
@@ -128,14 +162,16 @@ export function buildLocksApi(options: BuildLocksApiOptions): LocksApi {
       /** Map a repository failure onto the wire, including the 423 holder body. */
       const onFailure = async (failure: { code: string, message: string }): Promise<Response> => {
         if (failure.code === errorCode.NOT_IMPLEMENTED) {
-          return json(501, {
-            errors: [{ status: '501', detail: 'This backend does not support entry locking' }],
-          });
+          // No lock backend is wired: treat as no-op rather than an error.
+          // Decap POSTs a lock on every entry open; returning 501 fills the
+          // console with errors on every navigation. 204 is transparent to the
+          // client — it still opens the entry, it just skips the lock banner.
+          return new Response(null, { status: 204 });
         }
         if (failure.code === errorCode.LOCK_CONFLICT) {
           // Include the current holder so the client renders the banner from
           // the rejection itself, with no follow-up request.
-          const current = await run(documents.getLock(key));
+          const current = await run(locks.getLock(key));
           const holder = Result.isSuccess(current) && current.success ? publicLock(current.success) : null;
           return json(423, { data: holder, errors: [{ status: '423', detail: failure.message }] });
         }
@@ -145,7 +181,7 @@ export function buildLocksApi(options: BuildLocksApiOptions): LocksApi {
 
       try {
         if (method === 'GET') {
-          const result = await run(documents.getLock(key));
+          const result = await run(locks.getLock(key));
           if (Result.isFailure(result)) return onFailure(result.failure);
           return json(200, { data: result.success ? publicLock(result.success) : null });
         }
@@ -154,7 +190,7 @@ export function buildLocksApi(options: BuildLocksApiOptions): LocksApi {
           if (!body.token) {
             return json(400, { errors: [{ status: '400', detail: 'A lock token is required to release a lock' }] });
           }
-          const result = await run(documents.releaseLock(key, LockToken.make(body.token)));
+          const result = await run(locks.releaseLock(key, LockToken.make(body.token)));
           if (Result.isFailure(result)) return onFailure(result.failure);
           return json(200, { meta: { released: true } });
         }
@@ -164,7 +200,7 @@ export function buildLocksApi(options: BuildLocksApiOptions): LocksApi {
             return json(400, { errors: [{ status: '400', detail: 'A lock token is required to refresh a lock' }] });
           }
           const result = await run(
-            documents.refreshLock(
+            locks.refreshLock(
               key,
               LockToken.make(body.token),
               owner,
@@ -177,7 +213,7 @@ export function buildLocksApi(options: BuildLocksApiOptions): LocksApi {
 
         if (method === 'POST') {
           const result = await run(
-            documents.acquireLock(key, owner, {
+            locks.acquireLock(key, owner, {
               ...(body.ttlMs === undefined ? {} : { ttlMs: body.ttlMs }),
               ...(body.force === undefined ? {} : { force: body.force === true }),
             }),

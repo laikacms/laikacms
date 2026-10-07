@@ -72,13 +72,14 @@ export interface AuthorizeContext {
 
 ## Optional options
 
-| Option                 | Type                                                    | Default | Description                                                                                                            |
-| ---------------------- | ------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------- |
-| `assets`               | `AssetsRepository`                                      | —       | When provided, mounts the `/assets` sub-API. Omitted, `/assets` does not exist.                                        |
-| `basePath`             | `string`                                                | `''`    | Prefix under which every sub-API is mounted, e.g. `/api` puts documents at `/api/documents`.                           |
-| `authenticateApiToken` | `(token: string) => Promise<User>`                      | —       | Authenticates an API key sent via `X-API-Key` or `Authorization: ApiKey <key>`. Required only if callers use API keys. |
-| `cors`                 | `CorsOptions`                                           | —       | See [CORS](#cors) below. Omitted, no CORS headers are emitted and `OPTIONS` preflights 404.                            |
-| `logger`               | `Pick<Console, 'error' \| 'warn' \| 'info' \| 'debug'>` | —       | Structured logger for internal diagnostics — `console` or any subset-compatible logger.                                |
+| Option                 | Type                                                    | Default | Description                                                                                                                                                                                                                    |
+| ---------------------- | ------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `assets`               | `AssetsRepository`                                      | —       | When provided, mounts the `/assets` sub-API. Omitted, `/assets` does not exist.                                                                                                                                                |
+| `locks`                | `LockManager`                                           | —       | Advisory lock backend for the `/locks` sub-API (Decap "being edited by …" banner). Use `InProcessLockManager` from `laikacms/locks/in-process`. When omitted and documents lacks lock support, `/locks` returns `204` (no-op). |
+| `basePath`             | `string`                                                | `''`    | Prefix under which every sub-API is mounted, e.g. `/api` puts documents at `/api/documents`.                                                                                                                                   |
+| `authenticateApiToken` | `(token: string) => Promise<User>`                      | —       | Authenticates an API key sent via `X-API-Key` or `Authorization: ApiKey <key>`. Required only if callers use API keys.                                                                                                         |
+| `cors`                 | `CorsOptions`                                           | —       | See [CORS](#cors) below. Omitted, no CORS headers are emitted and `OPTIONS` preflights 404.                                                                                                                                    |
+| `logger`               | `Pick<Console, 'error' \| 'warn' \| 'info' \| 'debug'>` | —       | Structured logger for internal diagnostics — `console` or any subset-compatible logger.                                                                                                                                        |
 
 ## Scope-based authorization
 
@@ -152,14 +153,14 @@ responses.
 `laikaApi` resolves every request to one of five domains under `basePath` and dispatches
 accordingly. A path matching none of these 404s before authorization runs:
 
-| Path                   | Domain      | Requires                               | Handled by                                                                                                                      |
-| ---------------------- | ----------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
-| `{basePath}/health`    | —           | nothing (no auth)                      | Inline — `{ status: 'ok', timestamp }`                                                                                          |
-| `{basePath}/session`   | `session`   | auth only                              | Inline — returns the authenticated `User`, minus `passwordHash`                                                                 |
-| `{basePath}/storage`   | `storage`   | auth + authorize                       | `buildJsonApi` from `laikacms/storage/api`, given `options.storage`                                                             |
-| `{basePath}/documents` | `documents` | auth + authorize                       | `buildJsonApi` from `laikacms/documents/api`, given `options.documents`                                                         |
-| `{basePath}/assets`    | `assets`    | auth + authorize, `options.assets` set | `buildAssetsApi` from `laikacms/assets/api`, given `options.assets`                                                             |
-| `{basePath}/locks`     | `locks`     | auth + authorize, repo supports locks  | `buildLocksApi` from `./locks.js`; auto-mounted when `documents` implements `getLock`/`acquireLock`/`releaseLock`/`refreshLock` |
+| Path                   | Domain      | Requires                               | Handled by                                                                                                                                |
+| ---------------------- | ----------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `{basePath}/health`    | —           | nothing (no auth)                      | Inline — `{ status: 'ok', timestamp }`                                                                                                    |
+| `{basePath}/session`   | `session`   | auth only                              | Inline — returns the authenticated `User`, minus `passwordHash`                                                                           |
+| `{basePath}/storage`   | `storage`   | auth + authorize                       | `buildJsonApi` from `laikacms/storage/api`, given `options.storage`                                                                       |
+| `{basePath}/documents` | `documents` | auth + authorize                       | `buildJsonApi` from `laikacms/documents/api`, given `options.documents`                                                                   |
+| `{basePath}/assets`    | `assets`    | auth + authorize, `options.assets` set | `buildAssetsApi` from `laikacms/assets/api`, given `options.assets`                                                                       |
+| `{basePath}/locks`     | `locks`     | auth + authorize                       | `buildLocksApi` from `./locks.js`; uses `options.locks` if provided, else duck-types `documents`; 204 no-op when neither supports locking |
 
 Each sub-API is built per-request and mounted at `{basePath}/{domain}` as its own `basePath`, so
 each one owns its own JSON:API routing beneath that prefix.
@@ -171,9 +172,25 @@ and then `authorize(ctx)` before reaching its sub-API.
 ### Locks sub-API
 
 `/locks` is Decap's advisory entry-locking backend — the server side of the "being edited by X"
-banner. It is automatically mounted when `options.documents` implements the four lock methods:
-`getLock`, `acquireLock`, `releaseLock`, `refreshLock`. If the repository does not implement them,
-`/locks` returns `501 Not Implemented` and the Decap admin's lock banner degrades gracefully.
+banner. Wire a lock manager via the `locks` option to enable it:
+
+```typescript
+import { InProcessLockManager } from 'laikacms/locks/in-process';
+
+laikaApi({
+  documents,
+  storage,
+  locks: new InProcessLockManager(), // single-node; advisory only
+  // …
+});
+```
+
+`InProcessLockManager` is safe for single-node deployments. For multi-node deployments you need a
+lock backend whose datasource has a real atomic conditional write (e.g. a Redis-backed manager).
+
+When `locks` is omitted and the documents repository does not implement the lock methods, `/locks`
+returns `204 No Content` for every request (no-op) instead of `501`. Decap silently skips the lock
+banner rather than logging console errors on every entry navigation.
 
 The lock owner is always derived from the authenticated principal
 (`{ id: user.email, name: user.name ?? user.email }`) — never trusted from the request body — so a

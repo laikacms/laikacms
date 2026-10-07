@@ -244,16 +244,36 @@ describe('buildLocksApi — release', () => {
   });
 });
 
-describe('buildLocksApi — unsupported backend', () => {
-  it('501s on every route so the client degrades rather than retrying', async () => {
+describe('buildLocksApi — unsupported backend (no lockManager, no doc lock methods)', () => {
+  it('204s on every route so decap does not fill the console with 501 errors', async () => {
     const api = buildLocksApi({ documents: new PlainDocumentsRepository(), basePath: '/locks' });
     const url = 'https://x/locks/posts%2Fhello';
 
-    expect((await api.fetch(new Request(url), ALICE)).status).toBe(501);
-    expect((await api.fetch(new Request(url, { method: 'POST' }), ALICE)).status).toBe(501);
+    expect((await api.fetch(new Request(url), ALICE)).status).toBe(204);
+    expect((await api.fetch(new Request(url, { method: 'POST' }), ALICE)).status).toBe(204);
     expect(
       (await api.fetch(new Request(url, { method: 'DELETE', body: JSON.stringify({ token: 't' }) }), ALICE)).status,
-    ).toBe(501);
+    ).toBe(204);
+  });
+});
+
+describe('buildLocksApi — explicit lockManager option', () => {
+  it('acquires a lock via the injected manager, independently of documents', async () => {
+    const manager = new InProcessLockManager({ now: () => 1_000_000 });
+    const api = buildLocksApi({
+      documents: new PlainDocumentsRepository(),
+      lockManager: manager,
+      basePath: '/locks',
+    });
+
+    const res = await api.fetch(
+      new Request('https://x/locks/posts%2Fhello', { method: 'POST' }),
+      ALICE,
+    );
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.key).toBe('posts/hello');
+    expect(data.owner).toEqual(ALICE);
   });
 });
 
@@ -308,10 +328,21 @@ describe('laikaApi /locks integration', () => {
     expect(data.key).toBe('posts/hello');
   });
 
-  it('501s when the documents repository does not support locking', async () => {
+  it('204s (no-op) when the documents repository does not support locking and no locks option', async () => {
     const api = laikaApi(makeOptions({ documents: new PlainDocumentsRepository() }));
     const res = await api.fetch(authed('/locks/posts%2Fhello', 'POST'));
-    expect(res.status).toBe(501);
+    expect(res.status).toBe(204);
+  });
+
+  it('acquires via the `locks` option when documents lacks lock support', async () => {
+    const api = laikaApi(makeOptions({
+      documents: new PlainDocumentsRepository(),
+      locks: new InProcessLockManager({ now: () => 1_000_000 }),
+    }));
+    const res = await api.fetch(authed('/locks/posts%2Fhello', 'POST'));
+    expect(res.status).toBe(200);
+    const { data } = await res.json();
+    expect(data.owner.id).toBe('alice@example.com');
   });
 
   it('requires authentication (401 without a token)', async () => {

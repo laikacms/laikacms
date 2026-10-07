@@ -86,6 +86,7 @@ import { laikaApi } from '@laikacms/server/api';
 import { CatalogAssetsRepository } from 'laikacms/assets-catalog';
 import { ConventionCatalogProvider } from 'laikacms/catalog-convention';
 import { CatalogDocumentsRepository } from 'laikacms/documents-catalog';
+import { InProcessLockManager } from 'laikacms/locks/in-process';
 import { FileSystemStorageRepository } from 'laikacms/storage-fs';
 import { jsonSerializer } from 'laikacms/storage-serializers-json';
 
@@ -122,10 +123,15 @@ const assets = new CatalogAssetsRepository(storage, settings);
 //      *    /api/documents/* — documents JSON:API
 //      *    /api/assets/*    — assets JSON:API
 //      *    /api/storage/*   — raw storage JSON:API
+//      *    /api/locks/*     — advisory entry-locking (Decap "being edited by …" banner)
 const api = laikaApi({
   documents,
   storage,
   assets,
+  // Advisory entry-locking — enables the Decap "being edited by X" banner when
+  // two tabs open the same entry. InProcessLockManager is safe for single-node
+  // deployments; omit it for multi-node until you have a shared lock backend.
+  locks: new InProcessLockManager(),
   basePath: '/api',
   // For local development: accept a single pre-shared bearer token.
   // Replace this with a real session/JWT validator before deploying to production.
