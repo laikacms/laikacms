@@ -8,8 +8,9 @@ import { allowAll, errorToJsonApiMapper, isLaikaError } from 'laikacms/json-api'
 import type { StorageRepository } from 'laikacms/storage';
 import { buildJsonApi as buildStorageApi } from 'laikacms/storage/api';
 import { buildLocksApi } from './locks.js';
+import type { LockManager } from './locks.js';
 
-export type { Lock, LockOwner, OwnedLock } from './locks.js';
+export type { Lock, LockManager, LockOwner, OwnedLock } from './locks.js';
 
 export {
   ADMIN_SCOPE,
@@ -218,6 +219,29 @@ export interface LaikaApiOptions {
    * ```
    */
   authorize: (ctx: AuthorizeContext) => boolean | Promise<boolean>;
+  /**
+   * Optional advisory lock manager for the `/locks` sub-API (DCMS-1414
+   * "being edited by …" banner). Takes precedence over the documents
+   * repository's own lock methods.
+   *
+   * Use `InProcessLockManager` from `laikacms/locks/in-process` for
+   * single-node deployments (dev + most production setups). Omit for
+   * multi-node deployments until a shared lock backend is available.
+   *
+   * When omitted and the documents repository does not implement locks,
+   * `/locks` returns `204 No Content` (no-op) instead of `501`.
+   *
+   * @example
+   * ```ts
+   * import { InProcessLockManager } from 'laikacms/locks/in-process';
+   *
+   * laikaApi({
+   *   // …
+   *   locks: new InProcessLockManager(),
+   * });
+   * ```
+   */
+  locks?: LockManager | undefined;
   logger?: Pick<Console, 'error' | 'warn' | 'info' | 'debug'> | undefined;
   /**
    * Optional CORS configuration. Required when the admin UI is served
@@ -600,6 +624,7 @@ export const laikaApi = (options: LaikaApiOptions): LaikaApi => {
       } else if (domain === 'locks') {
         const locksApi = buildLocksApi({
           documents,
+          lockManager: options.locks,
           basePath: `${base}/locks`,
           logger: options.logger,
         });
