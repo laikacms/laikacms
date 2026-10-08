@@ -130,6 +130,32 @@ describe('assets-api meta.warnings', () => {
     expect(body.meta?.page?.total).toBe(0);
   });
 
+  it('keeps a per-item not_found warning when the listing is non-empty (LCMS-1009 scope)', async () => {
+    const partialRepo = {
+      listResources: (_folderKey: string, _options: ListResourcesOptions) =>
+        LaikaStream.make<Resource, ListResourcesDone>(emit =>
+          Effect.gen(function*() {
+            yield* emit.data({
+              type: 'folder',
+              key: 'uploads/visible',
+              createdAt: '2026-01-01T00:00:00Z',
+              updatedAt: '2026-01-01T00:00:00Z',
+            });
+            yield* emit.recoverableError(new NotFoundError('The file at uploads/gone.png does not exist'));
+            return { total: 1 };
+          })
+        ),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter[folder]=uploads'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as { meta?: { warnings?: Array<{ code: string }> } };
+    expect(body.meta?.warnings).toHaveLength(1);
+    expect(body.meta?.warnings?.[0]?.code).toBe('not_found');
+  });
+
   it('returns 200 + meta.warnings on a delete that emits a recoverable warning', async () => {
     const partialRepo = {
       // First the route does a lookup to determine type.
