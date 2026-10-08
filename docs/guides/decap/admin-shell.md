@@ -102,7 +102,7 @@ CMS.init({
   </head>
   <body>
     <!-- esbuild compiles admin/index.ts → admin/bundle.js -->
-    <script src="bundle.js"></script>
+    <script src="bundle.js" type="module"></script>
   </body>
 </html>
 ```
@@ -111,7 +111,7 @@ CMS.init({
 
 ```bash
 # Build the bundle (re-run after editing admin/index.ts)
-npx esbuild admin/index.ts --bundle --outfile=admin/bundle.js --format=iife --target=es2020
+npx esbuild admin/index.ts --bundle --outfile=admin/bundle.js --format=esm --platform=browser
 
 # Terminal 1 — LaikaCMS API (with CORS if admin runs on a different port)
 npm start
