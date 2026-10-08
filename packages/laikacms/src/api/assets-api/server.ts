@@ -828,7 +828,15 @@ export function buildAssetsApi(options: AssetsApiOptions): AssetsApi {
       // `meta.page` carries aggregate counts; `meta.warnings` carries
       // per-item recoverable errors collected during the walk (an
       // unreadable subfolder, a missing variation, etc.).
-      const warnings = recoverableErrorsToWarnings(batch.success.recoverableErrors);
+      // A not_found error on an EMPTY listing means the listed folder itself doesn't
+      // exist — the normal first-run state for a fresh deployment that has never had
+      // a file uploaded. Suppress it so the client sees a clean empty listing, not a
+      // spurious console warning (LCMS-1009). On a non-empty listing a not_found is a
+      // per-item problem (e.g. an entry vanished mid-walk) and stays a warning.
+      const listRecoverableErrors = batchData.length === 0
+        ? batch.success.recoverableErrors.filter(e => e.code !== 'not_found')
+        : batch.success.recoverableErrors;
+      const warnings = recoverableErrorsToWarnings(listRecoverableErrors);
       const page = typeof batchDone.total === 'number' ? { total: batchDone.total } : undefined;
       const meta: Record<string, unknown> | undefined = page || warnings
         ? { ...(page ? { page } : {}), ...(warnings ? { warnings } : {}) }
