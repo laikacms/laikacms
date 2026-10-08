@@ -873,7 +873,7 @@ processing stopped at a failure). Remove operations return a `meta` entry.
 }
 ```
 
-**Error entries** (when a repository operation fails mid-batch)
+**Error entries** (when a repository operation fails mid-batch — e.g. a `remove` whose target does not exist)
 
 ```json
 {
@@ -883,7 +883,7 @@ processing stopped at a failure). Remove operations return a `meta` entry.
         {
           "status": "404",
           "title": "Operation Failed",
-          "detail": "Asset not found: images/missing.jpg"
+          "detail": "Resource not found"
         }
       ]
     }
