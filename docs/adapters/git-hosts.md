@@ -26,17 +26,22 @@ with a personal access token).
 Auth is a discriminated union — supply either a pre-built `octokit` instance **or** the three GitHub
 App credential fields:
 
-| Option            | Type                | Required when           | Description                                                                                      |
-| ----------------- | ------------------- | ----------------------- | ------------------------------------------------------------------------------------------------ |
-| `octokit`         | `Octokit`           | using PAT / custom auth | Pre-configured Octokit instance. When provided, App credentials (`appId` etc.) are not required. |
-| `appId`           | `string \| number`  | App auth (no `octokit`) | GitHub App ID.                                                                                   |
-| `privateKey`      | `string`            | App auth (no `octokit`) | GitHub App private key (PEM). Literal `\n` sequences and surrounding quotes are normalised.      |
-| `installationId`  | `string \| number`  | App auth (no `octokit`) | GitHub App installation ID for the target repository.                                            |
-| `owner`           | `string`            | always                  | GitHub repository owner (user or org).                                                           |
-| `repo`            | `string`            | always                  | GitHub repository name.                                                                          |
-| `branch`          | `string`            | always                  | Branch to read from and commit to.                                                               |
-| `tokenTtlSeconds` | `number` (optional) | —                       | Installation token TTL in seconds. Defaults to 50 minutes (tokens last ~1 h).                    |
-| `userAgent`       | `string` (optional) | —                       | Custom User-Agent header for GitHub API requests. Defaults to `@laikacms/github`.                |
+| Option                 | Type                                         | Required when           | Description                                                                                        |
+| ---------------------- | -------------------------------------------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
+| `octokit`              | `Octokit`                                    | using PAT / custom auth | Pre-configured Octokit instance. When provided, App credentials (`appId` etc.) are not required.   |
+| `appId`                | `string \| number`                           | App auth (no `octokit`) | GitHub App ID.                                                                                     |
+| `privateKey`           | `string`                                     | App auth (no `octokit`) | GitHub App private key (PEM). Literal `\n` sequences and surrounding quotes are normalised.        |
+| `installationId`       | `string \| number`                           | App auth (no `octokit`) | GitHub App installation ID for the target repository.                                              |
+| `owner`                | `string`                                     | always                  | GitHub repository owner (user or org).                                                             |
+| `repo`                 | `string`                                     | always                  | GitHub repository name.                                                                            |
+| `branch`               | `string`                                     | always                  | Branch to read from and commit to.                                                                 |
+| `serializerRegistry`   | `StorageSerializerRegistry`                  | always                  | Map of file extension → serializer (e.g. `{ md: markdownSerializer }`).                            |
+| `defaultFileExtension` | `string`                                     | always                  | Extension used when creating objects (e.g. `'md'`).                                                |
+| `commitAuthor`         | `{ name: string, email: string }` (optional) | —                       | Author attached to every commit. Omit to let GitHub fall back to the App installation's identity.  |
+| `ignoreList`           | `readonly string[]` (optional)               | —                       | Glob patterns to exclude from directory listings. Defaults hide `.keep`, `.DS_Store`, etc.         |
+| `determineExtension`   | `DetermineExtension` (optional)              | —                       | Custom strategy for picking the on-server file extension. Defaults to `defaultDetermineExtension`. |
+| `tokenTtlSeconds`      | `number` (optional)                          | —                       | App mode only. Installation token TTL in seconds. Defaults to 50 minutes (tokens last ~1 h).       |
+| `userAgent`            | `string` (optional)                          | —                       | Custom User-Agent header for GitHub API requests. Defaults to `@laikacms/github`.                  |
 
 ## GitLab
 
