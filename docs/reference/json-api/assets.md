@@ -873,7 +873,8 @@ processing stopped at a failure). Remove operations return a `meta` entry.
 }
 ```
 
-**Error entries** (when a repository operation fails mid-batch — e.g. a `remove` whose target does not exist)
+**Error entries** (when a repository operation fails mid-batch — e.g. a `remove` whose target does
+not exist)
 
 ```json
 {
