@@ -105,6 +105,31 @@ describe('assets-api meta.warnings', () => {
     expect(body.meta?.warnings?.[0]?.detail).toContain('forbidden/');
   });
 
+  it('suppresses not_found recoverable error from listResources — missing media folder is normal first-run state (LCMS-1009)', async () => {
+    const partialRepo = {
+      listResources: (_folderKey: string, _options: ListResourcesOptions) =>
+        LaikaStream.make<Resource, ListResourcesDone>(emit =>
+          Effect.gen(function*() {
+            yield* emit.recoverableError(new NotFoundError('The directory at content/uploads does not exist'));
+            return { total: 0 };
+          })
+        ),
+    } as unknown as AssetsRepository;
+
+    const api = buildAssetsApi({ repository: partialRepo, authorize: allowAll });
+    const res = await api.fetch(new Request('http://localhost/api/assets/resources?filter[folder]=uploads'));
+    expect(res.status).toBe(200);
+
+    const body = await res.json() as {
+      data: Array<{ id: string }>,
+      meta?: { warnings?: Array<{ code: string, detail: string }>, page?: { total: number } },
+    };
+
+    expect(body.data).toEqual([]);
+    expect(body.meta?.warnings).toBeUndefined();
+    expect(body.meta?.page?.total).toBe(0);
+  });
+
   it('returns 200 + meta.warnings on a delete that emits a recoverable warning', async () => {
     const partialRepo = {
       // First the route does a lookup to determine type.
