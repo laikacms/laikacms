@@ -4,6 +4,23 @@ Shared vocabulary for the `laikacms` bounded context. Terms here are load-bearin
 them with exactly these meanings. Background for the first three entries is in
 [Architecture](../concepts/architecture).
 
+## local mode
+
+The `@laikacms/vite-plugin` is running under `vite dev` **and** `localApi: true` is set. In local
+mode the plugin mounts LaikaCMS's own JSON:API under `/__laika` on the Vite dev server so a JSON:API
+client (e.g. the Decap admin) can read and write content without a remote backend. The API is
+unauthenticated by design and only ever live while the dev server is running — a production build
+has no route to it.
+
+See [Local Mode Dev Editing](../guides/decap/local-mode) and [Vite plugin](../guides/vite).
+
+## remote mode
+
+The opposite of local mode: the admin communicates with a deployed LaikaCMS API (e.g. a Hono server
+or a Cloudflare Worker). The Vite dev server may or may not be running; the distinguishing factor is
+that content reads and writes go to a remote HTTP endpoint, not to `/__laika` on localhost.
+`resolveLaikaBackend` selects remote mode whenever `import.meta.env.DEV` is not truthy.
+
 ## protocol
 
 The entire `laikacms` bounded context: the repository contracts

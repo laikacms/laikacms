@@ -132,6 +132,7 @@ export default defineConfig({
               { text: 'Overview', link: '/guides/decap/' },
               { text: 'The decap-cms Fork', link: '/guides/decap/fork' },
               { text: 'Quickstart: FileSystem + Decap', link: '/guides/decap/quickstart-fs' },
+              { text: 'Local Mode Dev Editing', link: '/guides/decap/local-mode' },
               { text: 'Standalone Worker', link: '/guides/decap/standalone-worker' },
               { text: 'Serving the Admin Shell', link: '/guides/decap/admin-shell' },
               { text: 'Authentication', link: '/guides/decap/auth' },

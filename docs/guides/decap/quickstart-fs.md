@@ -475,6 +475,9 @@ docker run -p 3000:3000 -v $(pwd)/content:/app/content laika-api
 
 ## Next steps
 
+- [Local Mode Dev Editing](./local-mode) — skip the separate API server in dev: mount the JSON:API
+  on the Vite dev server and use `resolveLaikaBackend` to switch automatically between local and
+  remote
 - [Architecture](../../concepts/architecture) — understand the layered design
 - [Decap Integration](./) — OAuth2, widgets, media library
 - [API Reference](../../reference/json-api/) — full JSON:API endpoint reference
