@@ -230,6 +230,87 @@ describe('assets-api authorize — create actions (LCMS-519)', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// POST /operations — authorization pre-flight (LCMS-1010)
+// ---------------------------------------------------------------------------
+
+describe('assets-api authorize — POST /operations pre-flight (LCMS-1010)', () => {
+  it('rejects the whole batch before any write when createAsset is denied', async () => {
+    const createAsset = vi.fn();
+    const deleteAsset = vi.fn();
+    const repo = { ...readonlyRepo, createAsset, deleteAsset } as unknown as AssetsRepository;
+    const authorize = vi.fn((input: AssetsAuthorizeInput) => input.action !== 'createAsset');
+    const api = buildAssetsApi({ repository: repo, authorize });
+
+    const content = btoa('fake binary');
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          operations: [
+            { op: 'remove', ref: { type: 'asset', id: 'old.png' } },
+            { op: 'add', data: { type: 'asset', id: 'new.png', attributes: { mimeType: 'image/png', content } } },
+          ],
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(createAsset).not.toHaveBeenCalled();
+    expect(deleteAsset).not.toHaveBeenCalled();
+  });
+
+  it('rejects the whole batch before any write when deleteResource is denied', async () => {
+    const deleteAsset = vi.fn();
+    const repo = { ...readonlyRepo, deleteAsset } as unknown as AssetsRepository;
+    const authorize = vi.fn((input: AssetsAuthorizeInput) => input.action !== 'deleteResource');
+    const api = buildAssetsApi({ repository: repo, authorize });
+
+    const res = await api.fetch(
+      new Request('http://localhost/api/assets/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          operations: [
+            { op: 'remove', ref: { type: 'asset', id: 'old.png' } },
+          ],
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(403);
+    expect(deleteAsset).not.toHaveBeenCalled();
+  });
+
+  it('passes the correct granular action to authorize for each operation type', async () => {
+    const authorize = vi.fn(async () => true as const);
+    const api = buildAssetsApi({ repository: readonlyRepo as AssetsRepository, authorize });
+
+    const content = btoa('fake binary');
+    await api.fetch(
+      new Request('http://localhost/api/assets/operations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/vnd.api+json' },
+        body: JSON.stringify({
+          operations: [
+            { op: 'add', data: { type: 'asset', id: 'img.png', attributes: { mimeType: 'image/png', content } } },
+            { op: 'add', data: { type: 'folder', id: 'photos/' } },
+            { op: 'update', data: { type: 'asset', id: 'existing.png', attributes: {} } },
+            { op: 'remove', ref: { type: 'asset', id: 'old.png' } },
+          ],
+        }),
+      }),
+    );
+
+    const actions = authorize.mock.calls.map(([input]) => input.action);
+    expect(actions).toContain('createAsset');
+    expect(actions).toContain('createFolder');
+    expect(actions).toContain('updateAsset');
+    expect(actions).toContain('deleteResource');
+  });
+});
+
 describe('assets-api authorize — OpenAPI routes (LCMS-519)', () => {
   it('authorizes the OpenAPI document like any other action', async () => {
     const authorize = vi.fn(async (_input: AssetsAuthorizeInput) => true as const);
