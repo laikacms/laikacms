@@ -45,17 +45,18 @@ it runs on Node.js, Bun, Deno, Cloudflare Workers, or anything else that speaks 
 
 ## Options
 
-| Option                    | Type                                                                                     | Required | Description                                                                             |
-| ------------------------- | ---------------------------------------------------------------------------------------- | -------- | --------------------------------------------------------------------------------------- |
-| `documents`               | [`DocumentsRepository`](../reference/api/laikacms/documents/classes/DocumentsRepository) | yes      | Document storage backend                                                                |
-| `storage`                 | [`StorageRepository`](../reference/api/laikacms/storage/classes/StorageRepository)       | yes      | Raw file storage backend                                                                |
-| `assets`                  | [`AssetsRepository`](../reference/api/laikacms/assets/classes/AssetsRepository)          | no       | Binary asset storage; enables the `/assets` endpoint when provided                      |
-| `basePath`                | `string`                                                                                 | no       | URL prefix for all endpoints (e.g. `'/api'`)                                            |
-| `authenticateAccessToken` | `(token: string) => Promise<User>`                                                       | yes      | Validates a Bearer access token and returns the principal's **identity**                |
-| `authenticateApiToken`    | `(key: string) => Promise<User>`                                                         | no       | Validates an API key sent via `X-API-Key` or `Authorization: ApiKey` for M2M access     |
-| `authorize`               | `(ctx: AuthorizeContext) => boolean \| Promise<boolean>`                                 | yes      | The authorization gate; return `false` to reject with `403`. Fails closed if it throws. |
-| `logger`                  | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>`                                        | no       | Receives structured diagnostic output                                                   |
-| `cors`                    | [`CorsOptions`](../reference/api/server/api/interfaces/CorsOptions)                      | no       | Required when the client is served from a different origin than the API                 |
+| Option                    | Type                                                                                     | Required | Description                                                                                                                                                                                                   |
+| ------------------------- | ---------------------------------------------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `documents`               | [`DocumentsRepository`](../reference/api/laikacms/documents/classes/DocumentsRepository) | yes      | Document storage backend                                                                                                                                                                                      |
+| `storage`                 | [`StorageRepository`](../reference/api/laikacms/storage/classes/StorageRepository)       | yes      | Raw file storage backend                                                                                                                                                                                      |
+| `assets`                  | [`AssetsRepository`](../reference/api/laikacms/assets/classes/AssetsRepository)          | no       | Binary asset storage; enables the `/assets` endpoint when provided                                                                                                                                            |
+| `basePath`                | `string`                                                                                 | no       | URL prefix for all endpoints (e.g. `'/api'`)                                                                                                                                                                  |
+| `authenticateAccessToken` | `(token: string) => Promise<User>`                                                       | yes      | Validates a Bearer access token and returns the principal's **identity**                                                                                                                                      |
+| `authenticateApiToken`    | `(key: string) => Promise<User>`                                                         | no       | Validates an API key sent via `X-API-Key` or `Authorization: ApiKey` for M2M access                                                                                                                           |
+| `authorize`               | `(ctx: AuthorizeContext) => boolean \| Promise<boolean>`                                 | yes      | The authorization gate; return `false` to reject with `403`. Fails closed if it throws.                                                                                                                       |
+| `logger`                  | `Pick<Console, 'error'\|'warn'\|'info'\|'debug'>`                                        | no       | Receives structured diagnostic output                                                                                                                                                                         |
+| `locks`                   | `LockManager`                                                                            | no       | Advisory lock backend for the `/locks` sub-API (Decap "being edited by …" banner). Use `InProcessLockManager` from `laikacms/locks/in-process` for single-node. When omitted, `/locks` returns `204` (no-op). |
+| `cors`                    | [`CorsOptions`](../reference/api/server/api/interfaces/CorsOptions)                      | no       | Required when the client is served from a different origin than the API                                                                                                                                       |
 
 ## `authorize`: the authorization gate
 
@@ -74,9 +75,9 @@ authorize: ctx =>
   ctx.operation === 'read' ? true : ctx.user.roles.includes('editor'),
 ```
 
-`ctx` carries the `user`, the `domain` (`documents`, `storage`, `assets`, …), the `operation`
-(`read`, `create`, `update`, `delete`, `publish`, `unpublish`), the `collection` and `itemId` when
-present, the upper-cased HTTP `method`, and the raw `request`.
+`ctx` carries the `user`, the `domain` (`documents`, `storage`, `assets`, `session`, or `locks`),
+the `operation` (`read`, `create`, `update`, `delete`, `publish`, `unpublish`), the `collection` and
+`itemId` when present, the upper-cased HTTP `method`, and the raw `request`.
 
 See [Authentication](./decap/auth) for API keys, scope-based policies, personal access tokens, and a
 complete OAuth2 login server.
