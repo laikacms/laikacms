@@ -90,6 +90,11 @@ Returns meta-information about the Assets API and its available endpoints.
           "path": "/resources/{key}",
           "methods": ["GET", "PATCH", "DELETE"],
           "description": "Read, update, or delete a resource"
+        },
+        {
+          "path": "/operations",
+          "methods": ["POST"],
+          "description": "Fail-fast batch write operations"
         }
       ]
     }
@@ -733,3 +738,162 @@ token.
 | `400`  | `filter[since]` is absent                                         |
 | `501`  | Backend does not support change signals (`NotImplementedError`)   |
 | `403`  | Caller is not authorised to call `listChanges` (`ForbiddenError`) |
+
+---
+
+#### POST /operations
+
+Execute a fail-fast batch of write operations against assets and folders. Supports adding assets
+(base64-encoded content), adding folders, updating asset metadata, and removing assets or folders.
+
+All operations are validated for request shape before any I/O. A shape-invalid batch returns `400`
+with zero writes. Authorization is checked for every sub-operation up front — a single denial
+rejects the whole batch before any write. Valid batches are applied sequentially; the first
+repository failure stops processing. A mid-batch failure leaves previously-applied ops applied —
+this endpoint is a fail-fast batch, not a transaction.
+
+> Binary content in a batch `add` must be base64-encoded in `attributes.content`. There is no
+> multipart path inside a batch; use `POST /resources` directly for large binary uploads.
+
+**Request Headers**
+
+```
+Content-Type: application/vnd.api+json
+```
+
+**Supported Operations**
+
+| `op`     | Required fields                                               | Description                          |
+| -------- | ------------------------------------------------------------- | ------------------------------------ |
+| `add`    | `data` with `type: "asset"` and `attributes.content` (base64) | Upload a new asset                   |
+| `add`    | `data` with `type: "folder"`                                  | Create a new folder                  |
+| `update` | `data` with `type: "asset"` and `id`                          | Update metadata on an existing asset |
+| `remove` | `ref` with `type: "asset"` or `"folder"`                      | Delete an asset or folder            |
+
+**Request Body**
+
+```json
+{
+  "operations": [
+    {
+      "op": "add",
+      "data": {
+        "type": "asset",
+        "id": "images/hero.jpg",
+        "attributes": {
+          "mimeType": "image/jpeg",
+          "content": "<base64-encoded bytes>"
+        }
+      }
+    },
+    {
+      "op": "add",
+      "data": {
+        "type": "folder",
+        "id": "images/thumbnails"
+      }
+    },
+    {
+      "op": "update",
+      "data": {
+        "type": "asset",
+        "id": "images/hero.jpg",
+        "attributes": {
+          "cacheControl": "public, max-age=3600"
+        }
+      }
+    },
+    {
+      "op": "remove",
+      "ref": {
+        "type": "asset",
+        "id": "images/old-banner.jpg"
+      }
+    }
+  ]
+}
+```
+
+**Response**
+
+Results are returned in the same order as the applied operations (may be fewer than submitted if
+processing stopped at a failure). Remove operations return a `meta` entry.
+
+```json
+{
+  "results": [
+    {
+      "data": {
+        "type": "asset",
+        "id": "images/hero.jpg",
+        "attributes": {
+          "type": "asset",
+          "mimeType": "image/jpeg",
+          "size": 204800,
+          "createdAt": "2024-01-15T10:30:00Z",
+          "updatedAt": "2024-01-15T10:30:00Z"
+        }
+      }
+    },
+    {
+      "data": {
+        "type": "folder",
+        "id": "images/thumbnails",
+        "attributes": {
+          "type": "folder",
+          "createdAt": "2024-01-15T10:30:00Z",
+          "updatedAt": "2024-01-15T10:30:00Z"
+        }
+      }
+    },
+    {
+      "data": {
+        "type": "asset",
+        "id": "images/hero.jpg",
+        "attributes": {
+          "type": "asset",
+          "mimeType": "image/jpeg",
+          "cacheControl": "public, max-age=3600",
+          "size": 204800,
+          "createdAt": "2024-01-15T10:30:00Z",
+          "updatedAt": "2024-01-15T10:35:00Z"
+        }
+      }
+    },
+    {
+      "meta": {
+        "deleted": true,
+        "ref": {
+          "type": "asset",
+          "id": "images/old-banner.jpg"
+        }
+      }
+    }
+  ]
+}
+```
+
+**Error entries** (when a repository operation fails mid-batch)
+
+```json
+{
+  "results": [
+    {
+      "errors": [
+        {
+          "status": "404",
+          "title": "Operation Failed",
+          "detail": "Asset not found: images/missing.jpg"
+        }
+      ]
+    }
+  ]
+}
+```
+
+**Error Responses**
+
+| Status | Condition                                                                        |
+| ------ | -------------------------------------------------------------------------------- |
+| `400`  | Shape-invalid batch (missing required field, wrong type) — zero writes performed |
+| `403`  | A sub-operation authorization check was denied (`ForbiddenError`)                |
