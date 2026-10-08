@@ -66,29 +66,36 @@ laikacms({ dir: 'content', localApi: { basePath: '/__laika' } });
 **local** backend when the dev flag is truthy and the **remote** backend otherwise, failing safe to
 remote whenever `import.meta.env.DEV` is not set.
 
+`resolveLaikaBackend` returns a plain Decap `backend:` config block, not a backend class — pass it
+as the `backend` field of the config handed to `init`:
+
 ```ts
 // admin/index.ts
-import { DecapCmsApp as CMS } from '@laikacms/decap-cms';
 import { resolveLaikaBackend } from '@laikacms/decap-cms/backends/laika';
+import { init } from '@laikacms/decap-cms/laika-app/bare';
 
-// resolveLaikaBackend({ local, remote }) — selects on import.meta.env.DEV.
-// In `vite dev`: local backend → targets /__laika, no real auth (DevAuthenticationPage).
-// In production build: remote backend → the full OAuth2 flow you pass in `remote`.
-const LaikaBackend = resolveLaikaBackend({
-  local: {}, // use defaults: base path /__laika, no auth required
-  remote: {
-    // Your production backend options for createLaikaBackend:
-    base_url: 'https://your-laika-api.example.com',
-    api_root: '/api',
+init({
+  config: {
+    // In `vite dev`: local config → targets /__laika with a dummy dev token
+    // (DevAuthenticationPage logs in automatically, no OAuth prompt).
+    // In a production build: `remote` is returned unchanged → the full OAuth2 flow.
+    backend: resolveLaikaBackend({
+      // Optional — omit to use the defaults (basePath '/__laika', devToken 'laika-local-dev').
+      // basePath must match the plugin's `localApi.basePath`.
+      local: { basePath: '/__laika' },
+      remote: {
+        name: 'laika',
+        base_url: 'https://your-laika-api.example.com',
+        api_root: '/api',
+      },
+    }),
+    // ...rest of your config.yml equivalent (collections, media_folder, …)
   },
 });
-
-CMS.registerBackend('laika', LaikaBackend);
-CMS.init();
 ```
 
-The `remote` shape is the same options object you would pass to `createLaikaBackend` directly (see
-[Authentication](./auth) for the full production OAuth2 setup).
+`remote` is the same `backend:` block you would otherwise write in `config.yml` for the laika
+backend (see [Authentication](./auth) for the full production OAuth2 setup, e.g. `app_id`).
 
 ### Vite-bundled admin is required
 

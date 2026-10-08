@@ -68,10 +68,10 @@ provide — with typed errors, tracing, and interruptibility — and the caller 
 
 **4. Local mode (dev) solves the opposite problem.** The motivation for the shim was partly
 developer experience: seeing content update live during `vite
-dev`. Local mode (ADR-008, LCMS-449
-Slice 1, GitHub #847) already solves this by mounting a real JSON:API under `/__laika` on the dev
-server, using `resolveLaikaBackend` to switch automatically between the local and remote backends.
-No fetch shim is needed for that use case either.
+dev`. Local mode (LCMS-449 Slice 1,
+GitHub #847) already solves this by mounting a real JSON:API under `/__laika` on the dev server,
+using `resolveLaikaBackend` to switch automatically between the local and remote backends. No fetch
+shim is needed for that use case either.
 
 ## Consequences
 
