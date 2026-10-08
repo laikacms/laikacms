@@ -50,6 +50,7 @@ catalogs:
     "yaml": "^2.9.0"
 
   docs:
+    "@scalar/api-reference": "^1.73.1"
     "mermaid": "^12.1.0"
     "typedoc": "^0.28.20"
     "typedoc-plugin-markdown": "^4.13.1"
@@ -123,9 +124,31 @@ strictPeerDependencies: false
 minimumReleaseAgeExclude:
   - "@ai-sdk/*"
   - "ai"
+  # Exact-version pins for the docs-only Scalar reference (LCMS-1017), published 2026-10-07T23:3xZ.
+  # Safe to remove once they are older than a day (after 2026-10-09).
+  - '@scalar/agent-chat@0.12.42'
+  - '@scalar/api-client@3.22.0'
+  - '@scalar/api-reference@1.73.1'
+  - '@scalar/asyncapi-upgrader@0.1.16'
+  - '@scalar/blocks@0.5.1'
+  - '@scalar/components@0.31.0'
+  - '@scalar/helpers@0.16.2'
+  - '@scalar/json-magic@0.15.6'
+  - '@scalar/localization@0.2.6'
+  - '@scalar/oas-utils@0.20.11'
+  - '@scalar/openapi-to-markdown@1.5.3'
+  - '@scalar/openapi-upgrader@0.4.3'
+  - '@scalar/schemas@0.13.1'
+  - '@scalar/sidebar@0.11.13'
+  - '@scalar/snippetz@0.10.7'
+  - '@scalar/themes@0.19.0'
+  - '@scalar/types@0.23.1'
+  - '@scalar/use-hooks@0.4.19'
+  - '@scalar/workspace-store@0.68.2'
 
 allowBuilds:
   "@parcel/watcher": true
   dprint: true
   esbuild: true
   msgpackr-extract: true
+  vue-demi: true

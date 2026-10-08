@@ -167,6 +167,16 @@ export default defineConfig({
               { text: 'Assets API', link: '/reference/json-api/assets' },
               { text: 'Catalog API', link: '/reference/json-api/catalog' },
               { text: 'Error Responses', link: '/reference/json-api/errors' },
+              {
+                text: 'OpenAPI Reference',
+                collapsed: true,
+                items: [
+                  { text: 'Storage API', link: '/reference/json-api/openapi-storage' },
+                  { text: 'Documents API', link: '/reference/json-api/openapi-documents' },
+                  { text: 'Assets API', link: '/reference/json-api/openapi-assets' },
+                  { text: 'Catalog API', link: '/reference/json-api/openapi-catalog' },
+                ],
+              },
             ],
           },
           { text: 'Imports', link: '/reference/imports' },

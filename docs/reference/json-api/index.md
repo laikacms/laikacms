@@ -10,6 +10,16 @@ section documents every endpoint, grouped by API server.
 - [Locks API](./locks) — advisory entry locking for admin UIs
 - [Error Responses](./errors) — shared error format and codes
 
+### Interactive OpenAPI Reference
+
+Rendered from the type-checked `openapi.ts` sources at build time — updated automatically on every
+docs rebuild.
+
+- [Storage API →](./openapi-storage)
+- [Documents API →](./openapi-documents)
+- [Assets API →](./openapi-assets)
+- [Catalog API →](./openapi-catalog)
+
 ## Overview
 
 LaikaCMS exposes three HTTP API servers, each following the [JSON:API v1.1](https://jsonapi.org/)

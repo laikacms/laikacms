@@ -1,6 +1,6 @@
 import { type Theme, useRoute } from 'vitepress';
 import DefaultTheme from 'vitepress/theme';
-import { nextTick, onMounted, watch } from 'vue';
+import { type App, defineAsyncComponent, nextTick, onMounted, watch } from 'vue';
 
 import './custom.css';
 
@@ -9,6 +9,11 @@ const renderMermaid = () => nextTick(() => import('./mermaid').then(m => m.rende
 
 export default {
   extends: DefaultTheme,
+  enhanceApp({ app }: { app: App }) {
+    // Registered as an async component so @scalar/api-reference is never loaded server-side.
+    // Pages use <ClientOnly><ScalarApiReference url="..." /></ClientOnly>.
+    app.component('ScalarApiReference', defineAsyncComponent(() => import('./ScalarApiReference.vue')));
+  },
   setup() {
     const route = useRoute();
     onMounted(() => {
