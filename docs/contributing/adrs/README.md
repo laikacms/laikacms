@@ -17,3 +17,4 @@ Filename pattern: `ADR-NNN - kebab-title.md`
 | [ADR-006](./ADR-006%20-%20cms-agnostic-protocol.md)                    | The protocol stays CMS-agnostic; every CMS integrates via an opinionated adapter      | accepted | 2026-07-16 |
 | [ADR-007](./ADR-007%20-%20document-locking-and-write-preconditions.md) | Document locking & write preconditions — repository-native, Effect, capability-graded | accepted | 2026-08-05 |
 | [ADR-008](./ADR-008%20-%20repository-effect-boundary-convention.md)    | Repository Effect boundary convention (LaikaTask target style)                        | accepted | 2026-07-04 |
+| [ADR-009](./ADR-009%20-%20laika-import-is-static-compilation-only.md)  | `laika:` import is static-compilation only — no SSR async-fetch shim                  | accepted | 2026-10-08 |

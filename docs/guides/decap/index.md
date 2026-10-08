@@ -29,6 +29,9 @@ else (admin shell, OAuth2, framework bridges) builds on top of that handler.
   documentation on GitHub (overview, skills, CSP, contributing).
 - **[Self-Hosting Quickstart (FileSystem + Decap)](./quickstart-fs)** — the end-to-end starting
   point: a plain Node.js server with filesystem storage and the Decap admin, no cloud account.
+- **[Local Mode Dev Editing](./local-mode)** — enable `localApi: true` in the Vite plugin and wire
+  `resolveLaikaBackend` so Decap edits go to a local JSON:API during `vite dev` and the remote
+  backend in production, with no manual switching.
 - **[Standalone Worker (BYO storage)](./standalone-worker)** — wire `laikaApi(...)` by hand over any
   storage repository; seeding the server-side config; WebDAV storage.
 - **[Serving the Decap admin shell](./admin-shell)** — compile and serve the admin browser bundle.
