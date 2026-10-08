@@ -37,8 +37,8 @@ App credential fields:
 | `branch`               | `string`                                     | always                  | Branch to read from and commit to.                                                                 |
 | `serializerRegistry`   | `StorageSerializerRegistry`                  | always                  | Map of file extension → serializer (e.g. `{ md: markdownSerializer }`).                            |
 | `defaultFileExtension` | `string`                                     | always                  | Extension used when creating objects (e.g. `'md'`).                                                |
-| `commitAuthor`         | `{ name: string, email: string }` (optional) | —                       | Author attached to every commit. Omit to let GitHub fall back to the App installation's identity.  |
-| `ignoreList`           | `readonly string[]` (optional)               | —                       | Glob patterns to exclude from directory listings. Defaults hide `.keep`, `.DS_Store`, etc.         |
+| `commitAuthor`         | `{ name: string, email: string }` (optional) | —                       | Author attached to every commit. Omit to let GitHub use the authenticated identity.                |
+| `ignoreList`           | `string[]` (optional)                        | —                       | Glob patterns to exclude from directory listings. Defaults hide `.keep`, `.DS_Store`, etc.         |
 | `determineExtension`   | `DetermineExtension` (optional)              | —                       | Custom strategy for picking the on-server file extension. Defaults to `defaultDetermineExtension`. |
 | `tokenTtlSeconds`      | `number` (optional)                          | —                       | App mode only. Installation token TTL in seconds. Defaults to 50 minutes (tokens last ~1 h).       |
 | `userAgent`            | `string` (optional)                          | —                       | Custom User-Agent header for GitHub API requests. Defaults to `@laikacms/github`.                  |
