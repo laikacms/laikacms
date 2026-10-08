@@ -124,6 +124,8 @@ strictPeerDependencies: false
 minimumReleaseAgeExclude:
   - "@ai-sdk/*"
   - "ai"
+  # Exact-version pins for the docs-only Scalar reference (LCMS-1017), published 2026-10-07T23:3xZ.
+  # Safe to remove once they are older than a day (after 2026-10-09).
   - '@scalar/agent-chat@0.12.42'
   - '@scalar/api-client@3.22.0'
   - '@scalar/api-reference@1.73.1'
