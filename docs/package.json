@@ -7,13 +7,15 @@
   "scripts": {
     "generate-adapter-docs": "node scripts/generate-adapter-docs.mjs",
     "generate-api-docs": "node scripts/generate-api-docs.mjs",
-    "prebuild-docs": "npm run generate-adapter-docs && npm run generate-api-docs",
+    "generate-openapi-docs": "node scripts/generate-openapi-docs.mjs",
+    "prebuild-docs": "npm run generate-adapter-docs && npm run generate-api-docs && npm run generate-openapi-docs",
     "dev": "npm run prebuild-docs && vitepress dev",
     "build": "npm run prebuild-docs && vitepress build",
     "preview": "vitepress preview",
     "test": "vitest run"
   },
   "devDependencies": {
+    "@scalar/api-reference": "catalog:docs",
     "js-yaml": "catalog:",
     "laikacms": "workspace:*",
     "mermaid": "catalog:docs",
