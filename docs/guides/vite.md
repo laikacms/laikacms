@@ -61,6 +61,10 @@ Rollup/ Rolldown tree-shakes whatever you don't read.
 | `doc`     | documents (Catalog) | `getDocument(key)` |
 | `store`   | storage             | `getObject(key)`   |
 
+The plugin also accepts longer spellings as aliases: `docs`, `document`, and `documents` all resolve
+to `doc`; `storage` resolves to `store`. The canonical forms (`doc` / `store`) are what TypeScript
+error messages name.
+
 ## Local mode
 
 The `laika:` protocol above is build-time-inline and stays the default. Separately, and off by
