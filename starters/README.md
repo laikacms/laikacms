@@ -38,18 +38,10 @@ Like `examples/`, this directory is its **own pnpm workspace**
 ([`pnpm-workspace.yaml`](./pnpm-workspace.yaml)): running `pnpm install` here (or inside a starter)
 never climbs up into the monorepo's root workspace, and gets its own lockfile and `node_modules`.
 In the canonical state, starters install against **published** LaikaCMS versions so they resolve
-exactly what a user who downloaded one folder would get. Currently, `pnpm-workspace.yaml` carries
-temporary `link:` overrides for packages that are ahead of npm (`laikacms`, `@laikacms/server`,
-`@laikacms/vite-plugin`, `@laikacms/github`) — those overrides are removed once the corresponding
-versions are published. To validate a starter against the working tree without overrides, use
-`examples/` (workspace-linked `laikacms`).
-
-Because of those link: overrides, the linked packages must be built before typechecking:
+exactly what a user who downloaded one folder would get. To validate a starter against the working
+tree, use `examples/` (workspace-linked `laikacms`).
 
 ```sh
-# Build the packages that are linked into this workspace
-pnpm -C .. --filter laikacms --filter @laikacms/server --filter @laikacms/vite-plugin --filter @laikacms/github build
-
 cd starters
 pnpm install          # one isolated install for all starters
 pnpm -r typecheck     # or -F @laikacms/starter-<name> for one
@@ -70,29 +62,3 @@ starter's `laikacms` / `@laikacms/*` dependency to the just-published version. C
 `pnpm check:starters` (`scripts/check-starter-versions.mjs`), which fails on version drift or any
 workspace-protocol dependency.
 
-## Status: source migration pending
-
-> ⚠️ These trees were migrated from the pre-restructure app set (their `package.json` files are
-> already on current published versions). The **admin UI is migrated**: every starter now bundles
-> the bare, non-laika `@laikacms/decap-cms/laika-app/bare` with registrations in a wizard-generated
-> `src/cms.ts` — no CDN `decap-cms@3` bundle, no `@laikacms/decap-integrations` /
-> `@laikacms/decap-cms/backends/laika` admin imports. Before a starter's StackBlitz embed goes live
-> its **server side** must still:
->
-> - adopt the `decap-api` `authorize` callback (secure-by-default); and
-> - for `starter-vite-react-blog`, adopt `WebStorageRepository` — **blocked on LCMS-451**.
->
-> `starter-opfs-blog` is fully client-side (no server half to migrate), but its published
-> dependency range gains `laikacms/storage/web-fs` only with the next release. Until then two
-> **temporary, revert-at-release** measures keep it runnable from this repo: a `laikacms` `link:`
-> override in [`pnpm-workspace.yaml`](./pnpm-workspace.yaml) (build the library first), and booting
-> `@laikacms/decap-cms/laika-app/bare` instead of the not-yet-published `app/bare` (TODO in its
-> `src/cms.ts`).
->
-> `starter-github-blog` is included in [`pnpm-workspace.yaml`](./pnpm-workspace.yaml) via the
-> `starter-*` glob with a temporary `link:../packages/github` override — `@laikacms/github` is at
-> 2.0.0 in this workspace but the npm registry still has 1.0.0. Build `@laikacms/github` first
-> (`pnpm -C .. --filter @laikacms/github build`) before running `pnpm install` in this directory.
->
-> CI validation (build each starter against the local library build via a dependency override)
-> lands with that migration.
