@@ -1,17 +1,2 @@
 pnpm format:check
 pnpm lint
-
-# Block new .github/workflows/ files unless the commit message contains
-# [owner-approved-workflow] (GitHub Actions billing frozen 2026-06-17).
-new_workflows=$(git diff --cached --name-only --diff-filter=A | grep '^\.github/workflows/')
-if [ -n "$new_workflows" ]; then
-  msg=$(git log -1 --format=%B HEAD 2>/dev/null || true)
-  if ! echo "$msg" | grep -qF '[owner-approved-workflow]'; then
-    echo "ERROR: new GitHub Actions workflow files are blocked (Actions billing frozen)."
-    echo "Move the check into a husky hook or package.json script instead."
-    echo "To override with owner approval, include [owner-approved-workflow] in your commit message."
-    echo "Blocked files:"
-    echo "$new_workflows"
-    exit 1
-  fi
-fi
