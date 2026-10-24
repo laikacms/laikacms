@@ -92,6 +92,29 @@ Adding one means writing a sibling of `src/cms/decap.ts` that implements `CmsAda
 a Decap import looks like. Note that a CMS **backend** (a content source the admin UI talks to) is a
 different axis from a **storage backend** (`local migrate`, `local list-backends`).
 
+### `local serve` — storage server
+
+Starts a JSON:API HTTP server in front of a storage backend. The default is a local filesystem
+backend rooted at the current directory; pass `--backend` to use any registered backend instead.
+
+```sh
+laika local serve                              # serve ./cwd over JSON:API on port 3030
+laika local serve --root ./content --port 4000
+laika local serve --backend github --backend-options '{"owner":"acme","repo":"content","branch":"main","token":"ghp_..."}'
+laika local serve --json                       # machine-readable output (VS Code extension)
+```
+
+| Flag                  | Alias | Description                                                                                                    |
+| --------------------- | ----- | -------------------------------------------------------------------------------------------------------------- |
+| `--root`              | `-r`  | FS shortcut: root directory to serve (default: cwd)                                                            |
+| `--port`              | `-p`  | Listen port; `0` picks a free one (default: `3030`)                                                            |
+| `--host`              | `-H`  | Listen host (default: `127.0.0.1`)                                                                             |
+| `--default-extension` | —     | FS shortcut: default file extension for new objects (default: `md`)                                            |
+| `--auth-token`        | —     | Require `Authorization: Bearer <token>` on every request (or set `LAIKA_AUTH_TOKEN`)                           |
+| `--backend`           | —     | Storage backend to serve (e.g. `fs`, `s3`, `github`). See `list-backends`. Default: `fs` on `--root`           |
+| `--backend-options`   | —     | JSON-encoded options for `--backend` (or set `LAIKA_BACKEND_OPTIONS` to keep credentials off the process list) |
+| `--json`              | —     | Print machine-readable JSON lines on stdout (for editors and scripts); never prompts to install packages       |
+
 ### `local generate` — config codegen
 
 Reads the CMS config file (Decap's `config.yaml` by default) and writes a typed TypeScript module
