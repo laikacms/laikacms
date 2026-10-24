@@ -169,6 +169,43 @@ export const collections = {
 };
 ```
 
+## Filtering with `select`
+
+Both `documentsLoader()` and `objectsLoader()` accept a `select` option to narrow what gets loaded
+without changing the collection's folder mapping.
+
+### `documentsLoader` `select` options
+
+| Option              | Type                           | Default       | Description                                                                            |
+| ------------------- | ------------------------------ | ------------- | -------------------------------------------------------------------------------------- |
+| `select.folder`     | `string`                       | —             | A sub-folder inside the collection. Omit to read the whole collection.                 |
+| `select.depth`      | `number`                       | `64`          | How many directory levels below the folder to descend.                                 |
+| `select.type`       | `'published' \| 'unpublished'` | `'published'` | Load published documents or draft/unpublished ones.                                    |
+| `select.statuses`   | `string[]`                     | —             | Restrict to specific unpublished statuses. Only meaningful with `type: 'unpublished'`. |
+| `select.language`   | `string`                       | —             | Keep only documents in this language.                                                  |
+| `select.pagination` | `LoaderPagination`             | —             | Control page size for the initial listing.                                             |
+
+```ts
+// Load only the first level inside posts/
+documentsLoader({ dir: 'content', select: { folder: 'posts', depth: 1 } });
+
+// Draft-preview build: load unpublished documents in a specific workflow status
+documentsLoader({ dir: 'content', select: { type: 'unpublished', statuses: ['review'] } });
+```
+
+### `objectsLoader` `select` options
+
+| Option              | Type               | Default | Description                                                        |
+| ------------------- | ------------------ | ------- | ------------------------------------------------------------------ |
+| `select.folder`     | `string`           | —       | The storage folder to read. Defaults to the Astro collection name. |
+| `select.depth`      | `number`           | `64`    | How many directory levels below the folder to descend.             |
+| `select.pagination` | `LoaderPagination` | —       | Control page size for the initial listing.                         |
+
+```ts
+// Load objects from a sub-folder, scoped to one level deep
+objectsLoader({ dir: 'content', select: { folder: 'config/nav', depth: 1 } });
+```
+
 ## Live collections
 
 Live collections read per request instead of per build, which is what makes draft preview possible.
@@ -275,10 +312,19 @@ from `@laikacms/astro/live`.
 
 ## `laika()` options
 
-| Option    | Type                             | Default | Description                                                                              |
-| --------- | -------------------------------- | ------- | ---------------------------------------------------------------------------------------- |
-| `refresh` | `boolean \| LaikaRefreshOptions` | `true`  | Refresh content loaders when the repository emits a change. `false` disables hot-reload. |
-| `types`   | `boolean`                        | `true`  | Emit `.astro/integrations/@laikacms-astro/types.d.ts`. `false` skips it.                 |
+| Option    | Type                             | Default | Description                                                                                                    |
+| --------- | -------------------------------- | ------- | -------------------------------------------------------------------------------------------------------------- |
+| `api`     | `boolean \| LaikaApiOptions`     | `true`  | Mount the JSON:API on the dev server. `false` disables it entirely; an object configures the production route. |
+| `refresh` | `boolean \| LaikaRefreshOptions` | `true`  | Refresh content loaders when the repository emits a change. `false` disables hot-reload.                       |
+| `types`   | `boolean`                        | `true`  | Emit `.astro/integrations/@laikacms-astro/types.d.ts`. `false` skips it.                                       |
+
+When `api` is an object, three sub-options are available:
+
+| Option         | Type                             | Default       | Description                                                                                                                             |
+| -------------- | -------------------------------- | ------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `api.basePath` | `string`                         | `'/__laika'`  | Where the JSON:API is mounted.                                                                                                          |
+| `api.mode`     | `'dev' \| 'route'`               | `'dev'`       | `'dev'` serves from the dev server only. `'route'` additionally injects a persistent SSR route (needs an adapter + `output: 'server'`). |
+| `api.access`   | `'published' \| 'read' \| 'all'` | `'published'` | What the injected route exposes. Ignored in `'dev'` mode.                                                                               |
 
 When `refresh` is an object, two sub-options are available:
 
