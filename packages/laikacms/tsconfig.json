@@ -77,6 +77,9 @@
       "laikacms/documents/drizzle": [
         "src/impl/documents-drizzle/index.ts"
       ],
+      "laikacms/documents/electric": [
+        "src/impl/documents-electric/index.ts"
+      ],
       "laikacms/documents/jsonapi-proxy": [
         "src/impl/documents-jsonapi-proxy/index.ts"
       ],
