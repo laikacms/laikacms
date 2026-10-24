@@ -65,8 +65,9 @@ Remote connections show whichever trees have a URL configured.
 
 ## Authentication
 
-Remote connections require a bearer token. Set it with the **Laika: Set Access Token** command — VS
-Code stores it in its secret storage, never in settings or on disk.
+Remote connections send a bearer token when one is set (requests go unauthenticated otherwise). Set
+it with the **Laika: Set Access Token** command — VS Code stores it in its secret storage, never in
+settings or on disk.
 
 Local connections generate a random token internally; no configuration is needed.
 
@@ -76,7 +77,7 @@ For local connections, the extension runs the project's own `laikacli`. Resoluti
 
 1. The `laika.cli.path` setting (absolute path to the CLI binary).
 2. The `LAIKA_CLI_PATH` environment variable.
-3. `<first workspace folder>/node_modules/.bin/laika`.
+3. `node_modules/.bin/laika` in the first workspace folder that has one.
 4. `npx laikacli` (fallback).
 
 CLI output and recoverable warnings appear in the **Laika** output channel.
