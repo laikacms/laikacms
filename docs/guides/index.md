@@ -14,6 +14,11 @@ Task-oriented walkthroughs for getting Laika running and wired into your stack.
 - **[Vite](./vite)** — import content as ES modules at build time through the `laika:` protocol, for
   fully static builds.
 
+## Tools
+
+- **[VS Code Extension](./vscode)** — browse storage folders, objects, and document collections from
+  the editor; local and remote connections.
+
 ## Decap CMS
 
 Pair Laika with the [Decap CMS](https://decapcms.org/) admin UI. Start with the quickstart, then
