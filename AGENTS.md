@@ -29,6 +29,7 @@ Docs are in `docs/` folder (no separate website). Use relative links:
 - Add Node.js-specific APIs to domain packages
 - Avoid exposing Effect types in public APIs
 - Add heavy dependencies without discussion
+- **Create `.github/workflows/*.yml` files.** GitHub Actions billing is frozen fleet-wide (2026-06-17). New checks belong in husky hooks / `package.json` scripts. Existing workflows are grandfathered — do not delete them. The only override is a commit message containing `[owner-approved-workflow]`.
 
 ## Recoverable warnings & delegation: `runValueForwarding`
 

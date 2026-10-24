@@ -1,0 +1,1 @@
+<!-- Does this PR add a new .github/workflows/*.yml file? If yes, stop — GitHub Actions billing is frozen. Move the check into a husky hook instead. Owner override: include [owner-approved-workflow] in your commit message. -->
