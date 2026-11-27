@@ -146,6 +146,11 @@
       "import": "./dist/impl/documents-drizzle/index.js",
       "default": "./dist/impl/documents-drizzle/index.js"
     },
+    "./documents/electric": {
+      "types": "./dist/impl/documents-electric/index.d.ts",
+      "import": "./dist/impl/documents-electric/index.js",
+      "default": "./dist/impl/documents-electric/index.js"
+    },
     "./documents/jsonapi-proxy": {
       "types": "./dist/impl/documents-jsonapi-proxy/index.d.ts",
       "import": "./dist/impl/documents-jsonapi-proxy/index.js",
