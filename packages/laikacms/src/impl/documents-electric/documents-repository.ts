@@ -24,6 +24,8 @@ import { DocumentsCompatibilityDate, DocumentsRepository, pathToSegments } from 
 import type { StorageObjectContent } from 'laikacms/storage';
 
 const PUBLISHED_STATUS = 'published';
+/** Upper bound on shape-log chunk requests per snapshot read. */
+const MAX_SHAPE_REQUESTS = 1000;
 
 /** The Postgres column shape that Electric syncs to clients. */
 export interface ElectricDocumentRow {
@@ -99,30 +101,60 @@ export class ElectricDocumentsRepository extends DocumentsRepository {
     this.logger.debug(`[documents-electric] ${op}${detail !== undefined ? ` ${detail}` : ''}`);
   }
 
-  private shapeUrl(): string {
-    return `${this.baseUrl}/v1/shape?table=${encodeURIComponent(this.table)}&offset=-1`;
+  private shapeUrl(offset: string, handle: string | null): string {
+    const base = `${this.baseUrl}/v1/shape?table=${encodeURIComponent(this.table)}&offset=${
+      encodeURIComponent(offset)
+    }`;
+    return handle === null ? base : `${base}&handle=${encodeURIComponent(handle)}`;
   }
 
-  /** Fetch the full shape snapshot and return all current rows. */
+  /**
+   * Fetch the full shape snapshot and return all current rows. Electric
+   * chunks the initial log, so keep following `electric-offset` /
+   * `electric-handle` until an `up-to-date` control message arrives.
+   */
   private fetchShape(): Effect.Effect<ElectricDocumentRow[], LaikaError> {
     return Effect.tryPromise({
       try: async () => {
         this.debug('fetchShape', this.table);
-        const res = await this.fetchImpl(this.shapeUrl());
-        if (!res.ok) {
-          throw new Error(`Electric shape fetch failed: ${res.status} ${res.statusText}`);
-        }
-        const msgs = await res.json() as ElectricMessage[];
         const rows = new Map<string, ElectricDocumentRow>();
-        for (const msg of msgs) {
-          if (!isDataMessage(msg)) continue;
-          if (msg.headers.action === 'delete') {
-            rows.delete(msg.value.key);
-          } else {
-            rows.set(msg.value.key, msg.value);
+        let offset = '-1';
+        let handle: string | null = null;
+        for (let request = 0; request < MAX_SHAPE_REQUESTS; request++) {
+          const res: Response = await this.fetchImpl(this.shapeUrl(offset, handle));
+          if (res.status === 409) {
+            // must-refetch: the shape was rotated; restart from scratch.
+            rows.clear();
+            offset = '-1';
+            handle = null;
+            continue;
           }
+          if (!res.ok) {
+            throw new Error(`Electric shape fetch failed: ${res.status} ${res.statusText}`);
+          }
+          const msgs = await res.json() as ElectricMessage[];
+          let upToDate = false;
+          for (const msg of msgs) {
+            if (!isDataMessage(msg)) {
+              if (msg.headers.control === 'up-to-date') upToDate = true;
+              continue;
+            }
+            if (msg.headers.action === 'delete') {
+              rows.delete(msg.value.key);
+            } else {
+              // update messages may carry only changed columns; merge onto the prior row.
+              rows.set(msg.value.key, { ...rows.get(msg.value.key), ...msg.value });
+            }
+          }
+          if (upToDate) return Array.from(rows.values());
+          const nextOffset = res.headers.get('electric-offset');
+          if (nextOffset === null) {
+            throw new Error('Electric shape response missing electric-offset header before up-to-date');
+          }
+          offset = nextOffset;
+          handle = res.headers.get('electric-handle') ?? handle;
         }
-        return Array.from(rows.values());
+        throw new Error(`Electric shape not up-to-date after ${MAX_SHAPE_REQUESTS} requests`);
       },
       catch: e =>
         new InvalidData(
