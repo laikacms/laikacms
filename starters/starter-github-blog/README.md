@@ -12,14 +12,6 @@ from the same repo that powers your CMS.
 
 ## Quick start
 
-> **Temporarily unavailable for standalone use.** This starter requires `@laikacms/github@>=2.0.0`
-> which is not yet published to npm (registry has 1.0.0; the `/storage-gh` subpath this starter
-> imports was added post-1.0). Running `npm install` gets the old version and the server fails at
-> runtime. Use the [Working from the monorepo](#working-from-the-monorepo) steps below until
-> `@laikacms/github@2.0.0` is released.
-
-Once the package is published:
-
 ```bash
 # 1. Copy and fill in credentials
 cp .env.example .env
@@ -37,16 +29,17 @@ Open <http://localhost:3000> for the blog and <http://localhost:3000/admin/> for
 ## Working from the monorepo
 
 If you cloned the `laikacms` repository and are running this starter in-place (not via the wizard),
-the `starters/pnpm-workspace.yaml` carries `link:` overrides pointing at local builds of packages
-that are ahead of npm. Build those packages first, then install and run:
+install and run from the `starters/` directory (which is its own pnpm workspace, isolated from the
+repo root):
 
 ```sh
-# Build the linked packages (run from this directory)
-pnpm -C ../.. --filter laikacms --filter @laikacms/server --filter @laikacms/github build
-
 pnpm install
 pnpm dev
 ```
+
+Packages resolve from npm — `starters/pnpm-workspace.yaml` carries no `link:` overrides.
+If you need to test against local package builds, add an explicit `link:` entry for each package
+in `starters/pnpm-workspace.yaml` before running `pnpm install`.
 
 ## Creating a GitHub App
 
