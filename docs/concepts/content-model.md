@@ -117,9 +117,12 @@ from the key alone.
 Three optional, capability-gated primitives let clients track what changed without re-reading
 everything. They are all **opaque** — comparable only by equality, never parsed:
 
-- **version** — a per-record change token, exposed as the optional `version` field. It changes if
-  and only if a record's content changed. A git blob sha, a database row version, and an R2 ETag are
-  all valid implementations.
+- **version** — a per-record change token, exposed as the optional `version` field on `Document` and
+  `Asset`. It changes if and only if a record's content changed. A git blob sha, a database row
+  version, and an R2 ETag are all valid implementations. **This primitive is specific to
+  `DocumentsRepository` and `AssetsRepository`** — `StorageRepository` does not expose a
+  `versionTracking` capability. Storage objects carry an opaque `metadata.revisionId` field provided
+  by the backend, but it is not capability-gated and is not guaranteed to change on every write.
 - **sync token** — a per-scope change token from `getSyncToken(options?)`. One token covers one
   scope (a folder, or the whole store). It changes whenever anything inside that scope changes — a
   cheap "did anything change?" polling primitive.
@@ -127,6 +130,8 @@ everything. They are all **opaque** — comparable only by equality, never parse
   inside a scope since a previously obtained sync token. Its done value carries the new sync token
   to resume from.
 
-Each is gated behind `getCapabilities()` (`versionTracking`, `changes.syncToken`,
-`changes.changeFeed`) — not every backend supports them. See the [Glossary](../reference/glossary)
-for the precise contracts.
+The sync token and change feed are gated behind `getCapabilities()` (`changes.syncToken`,
+`changes.changeFeed`) on all three repository types. The `versionTracking` capability is gated
+behind `getCapabilities()` on `DocumentsRepository` and `AssetsRepository` only — it is not part of
+`StorageRepository.getCapabilities()`. See the [Glossary](../reference/glossary) for the precise
+contracts.
