@@ -410,6 +410,26 @@
       "types": "./dist/serializers/storage-serializers-yaml/index.d.ts",
       "import": "./dist/serializers/storage-serializers-yaml/index.js",
       "default": "./dist/serializers/storage-serializers-yaml/index.js"
+    },
+    "./documents/trailbase": {
+      "types": "./dist/impl/documents-trailbase/index.d.ts",
+      "import": "./dist/impl/documents-trailbase/index.js",
+      "default": "./dist/impl/documents-trailbase/index.js"
+    },
+    "./storage/trailbase": {
+      "types": "./dist/impl/storage-trailbase/index.d.ts",
+      "import": "./dist/impl/storage-trailbase/index.js",
+      "default": "./dist/impl/storage-trailbase/index.js"
+    },
+    "./documents-trailbase": {
+      "types": "./dist/impl/documents-trailbase/index.d.ts",
+      "import": "./dist/impl/documents-trailbase/index.js",
+      "default": "./dist/impl/documents-trailbase/index.js"
+    },
+    "./storage-trailbase": {
+      "types": "./dist/impl/storage-trailbase/index.d.ts",
+      "import": "./dist/impl/storage-trailbase/index.js",
+      "default": "./dist/impl/storage-trailbase/index.js"
     }
   },
   "scripts": {
